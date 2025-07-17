@@ -7,7 +7,7 @@ import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf";
 import { GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf";
 
 // Reemplaza el valor de sasToken con el nuevo token generado desde Azure
-const sasToken = "sp=rwl&st=2025-07-14T23:28:25Z&se=2025-07-31T07:28:25Z&spr=https&sv=2024-11-04&sr=c&sig=hv3Ed0HlR1Oj%2Bo9VvgabJokRGllFYMkWPR4soEIHBNU%3D";
+const sasToken = "sv=2024-11-04&ss=bfqt&srt=sco&sp=rwdlacupiytfx&se=2026-07-18T00:00:00Z&st=2025-07-17T12:00:00Z&spr=https&sig=5bOczB2JntgCnxgUF621l2zNepka4FohFR8hzCUuMt0%3D";
 const containerName = "conciliacionesv1";
 const storageAccountName = "autoconsumofileserver"; 
 
