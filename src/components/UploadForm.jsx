@@ -261,14 +261,21 @@ const UploadForm = () => {
     setUploading(true);
     setMessage("");
     try {
-      await fetch("https://renediaz2025.app.n8n.cloud/webhook/a4784977-134a-4f09-9ea3-04c85c5ba3b7",  // <-- comilla cerrada
+      await fetch("https://renediaz2025.app.n8n.cloud/webhook-test/a4784977-134a-4f09-9ea3-04c85c5ba3b7",  // <-- comilla cerrada
         {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           archivos: [excelFile?.name, pdfFile?.name],
           deseaSubirMateriales,
-          materiales: materiales.map(f => f.name)
+          materiales: materiales.map(f => f.name),
+          id: crypto.randomUUID(),
+          data: debugExcelValues.reduce((acc, curr) => {
+            // curr is like "Agencia: XYZ"
+            const [key, ...rest] = curr.split(':');
+            acc[key.trim()] = rest.join(':').trim();
+            return acc;
+          }, {}),
         })
       });
       setMessage("");
