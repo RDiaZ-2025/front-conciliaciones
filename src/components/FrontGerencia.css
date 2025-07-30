@@ -1,0 +1,89 @@
+/* Estilos básicos para el dashboard general */
+.dashboard-container {
+  padding: 32px;
+  background: #f7f9fa;
+  min-height: 100vh;
+}
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+.dashboard-summary {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+.summary-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  padding: 24px 32px;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.summary-title {
+  font-size: 1.1rem;
+  color: #888;
+  margin-bottom: 8px;
+}
+.summary-value {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+.summary-change {
+  font-size: 1rem;
+  color: #4caf50;
+}
+.summary-icon {
+  font-size: 2.2rem;
+  margin-bottom: 8px;
+}
+.dashboard-filters {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.dashboard-tasks {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  padding: 24px 32px;
+  margin-bottom: 32px;
+}
+.dashboard-tasks h3 {
+  margin-bottom: 16px;
+}
+.dashboard-tasks ul {
+  list-style: none;
+  padding: 0;
+}
+.dashboard-tasks li {
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+.dashboard-chart {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  padding: 24px 32px;
+  margin-bottom: 32px;
+}
+.dashboard-upload {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  padding: 24px 32px;
+  margin-bottom: 32px;
+}
+.dashboard-upload label {
+  font-weight: bold;
+  margin-right: 12px;
+}
+.dashboard-upload input[type="file"] {
+  margin-top: 8px;
+}
