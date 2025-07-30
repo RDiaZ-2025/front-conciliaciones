@@ -378,7 +378,7 @@ const UploadForm = () => {
     setUploading(true);
     setMessage("");
     try {
-      await fetch("https://renediaz2025.app.n8n.cloud/webhook/a4784977-134a-4f09-9ea3-04c85c5ba3b7",  // <-- comilla cerrada
+      await fetch("https://renediaz2025.app.n8n.cloud/webhook-test/a4784977-134a-4f09-9ea3-04c85c5ba3b7",  // <-- comilla cerrada
         {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -581,7 +581,7 @@ const UploadForm = () => {
                 <Button
                   variant="outlined"
                   color="primary"
-                  sx={{ mt: 3, fontWeight: 600, fontSize: 16, py: 1, borderRadius: 2, background: '#222', '&:hover': { background: '#111' } }}
+                  sx={{ mt: 3, fontWeight: 600, fontSize: 16, py: 1, borderRadius: 2, background: '#222', color: '#fff', '&:hover': { background: '#111' } }}
                   onClick={() => window.location.reload()}
                 >
                   Reiniciar
