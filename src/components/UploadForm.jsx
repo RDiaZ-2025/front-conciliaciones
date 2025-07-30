@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Box, Button, LinearProgress, Typography, Alert, Stepper, Step, StepLabel, Paper, Fade } from "@mui/material";
 import { BlobServiceClient } from "@azure/storage-blob";
-import claroMediaLogo from "../assets/Claro-Media-logo.jpg";
+import claroMediaLogo from "../assets/Claro-Media-Logo.jpg";
 import * as XLSX from "xlsx";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf";
 import { GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf";
