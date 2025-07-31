@@ -18,6 +18,28 @@ function HeartbeatGlobalStyle() {
           42% { transform: scale(1.15); }
           70% { transform: scale(1); }
         }
+        
+        /* Sobrescribir el color amarillo del autocompletado */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 30px white inset !important;
+          -webkit-text-fill-color: #181C32 !important;
+          background-color: white !important;
+          background: white !important;
+        }
+        
+        /* Para modo oscuro */
+        .dark-mode input:-webkit-autofill,
+        .dark-mode input:-webkit-autofill:hover,
+        .dark-mode input:-webkit-autofill:focus,
+        .dark-mode input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 30px #232946 inset !important;
+          -webkit-text-fill-color: #fff !important;
+          background-color: #232946 !important;
+          background: #232946 !important;
+        }
       `}
     />
   );
@@ -46,6 +68,7 @@ const Login = ({ onLogin, onBack, darkMode, setDarkMode }) => {
 
   return (
     <Box
+      className={darkMode ? "dark-mode" : ""}
       sx={{
         minHeight: "100vh",
         minWidth: "100vw",
