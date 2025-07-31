@@ -1,38 +1,70 @@
 import React, { useState } from 'react';
-import UploadForm from './components/UploadForm';
-import Login from './components/Login';
 import DashboardGeneral from './components/DashboardGeneral';
-import loginIcon from './assets/CLARO_MEDIA_2_converted.jpg';
+import Login from './components/Login';
+import UploadForm from './components/UploadForm';
+import DarkModeToggle from './components/DarkModeToggle';
 
 function App() {
-  const [showLogin, setShowLogin] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentView, setCurrentView] = useState('upload'); // 'upload', 'login', 'dashboard'
+  const [darkMode, setDarkMode] = useState(false);
 
-  const handleLoginClick = () => {
-    setShowLogin(true);
+  const handleUploadComplete = () => {
+    setCurrentView('login');
   };
 
-  const handleLoginSuccess = () => {
-    setIsAuthenticated(true);
-    setShowLogin(false);
+  const handleLogin = () => {
+    setCurrentView('dashboard');
   };
 
-  if (isAuthenticated) {
-    return <DashboardGeneral />;
-  }
+  const handleBackToUpload = () => {
+    setCurrentView('upload');
+  };
+
+  const handleBackToLogin = () => {
+    setCurrentView('login');
+  };
+
+  const renderCurrentView = () => {
+    switch (currentView) {
+      case 'upload':
+        return (
+          <UploadForm 
+            onUploadComplete={handleUploadComplete}
+            darkMode={darkMode}
+            setDarkMode={setDarkMode}
+          />
+        );
+      case 'login':
+        return (
+          <Login 
+            onLogin={handleLogin} 
+            onBack={handleBackToUpload}
+            darkMode={darkMode}
+            setDarkMode={setDarkMode}
+          />
+        );
+      case 'dashboard':
+        return (
+          <DashboardGeneral 
+            darkMode={darkMode}
+            setDarkMode={setDarkMode}
+            onBack={handleBackToLogin}
+          />
+        );
+      default:
+        return (
+          <UploadForm 
+            onUploadComplete={handleUploadComplete}
+            darkMode={darkMode}
+            setDarkMode={setDarkMode}
+          />
+        );
+    }
+  };
 
   return (
-    <div className="App" style={{ position: 'relative', minHeight: '100vh' }}>
-      {!showLogin && (
-        <span
-          style={{ position: 'absolute', top: 24, right: 32, width: 36, height: 36, zIndex: 2000, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={handleLoginClick}
-          title="Iniciar sesión"
-        >
-          <img src={loginIcon} alt="Login" style={{ width: 36, height: 36, borderRadius: '50%' }} />
-        </span>
-      )}
-      {showLogin ? <Login onLogin={handleLoginSuccess} onBack={() => setShowLogin(false)} /> : <UploadForm />}
+    <div style={{ position: 'relative', minHeight: '100vh', background: darkMode ? '#181C32' : '#f8fafc', transition: 'background 0.3s' }}>
+      {renderCurrentView()}
     </div>
   );
 }

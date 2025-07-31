@@ -1,372 +1,391 @@
-import React, { useRef, useState } from "react";
-import "./FrontGerencia.css";
-import loginIcon from '../assets/CLARO_MEDIA_2_converted.jpg';
-import { useEffect } from "react";
-import { FiLogOut } from "react-icons/fi";
+import React, { useState } from "react";
+import DarkModeToggle from "./DarkModeToggle";
 
-const resumen = [
-  { title: "EBITDA Presupuestado", value: "$1,200,000", change: 5.2, icon: "📈", color: "blue" },
-  { title: "EBITDA Ejecutado", value: "$1,050,000", change: -3.8, icon: "💸", color: "red" },
-  { title: "EBITDA Proyección", value: "$1,180,000", change: 2.1, icon: "🔮", color: "green" },
-];
-
-const tareas = [
-  {
-    hora: "Hoy, 2:30PM - 3:00PM",
-    titulo: "Revisión de presupuesto mensual",
-    descripcion: "Verifica el avance del presupuesto y ajusta proyecciones.",
-    prioridad: "Alta Prioridad",
+// 1. Estructura de datos con subcategorías
+const initialData = {
+  2023: {
+    presupuestado: 950000,
+    ejecutado: 1025000,
+    categorias: [
+      { nombre: "SMS POR SUSCRIPCION", presupuestado: 200000, ejecutado: 210000, subcategorias: [
+        { nombre: "Campañas", presupuestado: 120000, ejecutado: 125000 },
+        { nombre: "Alertas", presupuestado: 80000, ejecutado: 85000 },
+      ] },
+      { nombre: "COMERCIAL", presupuestado: 180000, ejecutado: 175000, subcategorias: [
+        { nombre: "Ventas", presupuestado: 100000, ejecutado: 95000 },
+        { nombre: "Promociones", presupuestado: 80000, ejecutado: 80000 },
+      ] },
+      { nombre: "REVISTA 15 MINUTOS", presupuestado: 150000, ejecutado: 170000, subcategorias: [
+        { nombre: "Edición impresa", presupuestado: 90000, ejecutado: 100000 },
+        { nombre: "Edición digital", presupuestado: 60000, ejecutado: 70000 },
+      ] },
+      { nombre: "PORTAL WEB", presupuestado: 140000, ejecutado: 135000, subcategorias: [
+        { nombre: "Publicidad", presupuestado: 80000, ejecutado: 75000 },
+        { nombre: "Contenido", presupuestado: 60000, ejecutado: 60000 },
+      ] },
+      { nombre: "NOTICIERO", presupuestado: 160000, ejecutado: 180000, subcategorias: [
+        { nombre: "Producción", presupuestado: 100000, ejecutado: 110000 },
+        { nombre: "Distribución", presupuestado: 60000, ejecutado: 70000 },
+      ] },
+      { nombre: "MOBILEMARKETING", presupuestado: 120000, ejecutado: 115000, subcategorias: [
+        { nombre: "SMS", presupuestado: 70000, ejecutado: 65000 },
+        { nombre: "Push", presupuestado: 50000, ejecutado: 50000 },
+      ] },
+    ],
+    historico: [
+      { mes: "Ene", presupuestado: 70000, ejecutado: 80000 },
+      { mes: "Feb", presupuestado: 75000, ejecutado: 78000 },
+      { mes: "Mar", presupuestado: 80000, ejecutado: 85000 },
+      { mes: "Abr", presupuestado: 85000, ejecutado: 90000 },
+      { mes: "May", presupuestado: 90000, ejecutado: 95000 },
+      { mes: "Jun", presupuestado: 95000, ejecutado: 100000 },
+      { mes: "Jul", presupuestado: 100000, ejecutado: 105000 },
+      { mes: "Ago", presupuestado: 105000, ejecutado: 110000 },
+      { mes: "Sep", presupuestado: 110000, ejecutado: 115000 },
+      { mes: "Oct", presupuestado: 115000, ejecutado: 120000 },
+      { mes: "Nov", presupuestado: 120000, ejecutado: 125000 },
+      { mes: "Dic", presupuestado: 125000, ejecutado: 128000 },
+    ]
   },
-];
+  2024: {
+    presupuestado: 1100000,
+    ejecutado: 1080000,
+    categorias: [
+      { nombre: "SMS POR SUSCRIPCION", presupuestado: 220000, ejecutado: 215000 },
+      { nombre: "COMERCIAL", presupuestado: 200000, ejecutado: 205000 },
+      { nombre: "REVISTA 15 MINUTOS", presupuestado: 170000, ejecutado: 168000 },
+      { nombre: "PORTAL WEB", presupuestado: 160000, ejecutado: 155000 },
+      { nombre: "NOTICIERO", presupuestado: 180000, ejecutado: 182000 },
+      { nombre: "MOBILEMARKETING", presupuestado: 150000, ejecutado: 139000 },
+    ],
+    historico: [
+      { mes: "Ene", presupuestado: 80000, ejecutado: 82000 },
+      { mes: "Feb", presupuestado: 85000, ejecutado: 83000 },
+      { mes: "Mar", presupuestado: 90000, ejecutado: 91000 },
+      { mes: "Abr", presupuestado: 95000, ejecutado: 97000 },
+      { mes: "May", presupuestado: 100000, ejecutado: 98000 },
+      { mes: "Jun", presupuestado: 105000, ejecutado: 104000 },
+      { mes: "Jul", presupuestado: 110000, ejecutado: 108000 },
+      { mes: "Ago", presupuestado: 115000, ejecutado: 112000 },
+      { mes: "Sep", presupuestado: 120000, ejecutado: 118000 },
+      { mes: "Oct", presupuestado: 125000, ejecutado: 123000 },
+      { mes: "Nov", presupuestado: 130000, ejecutado: 128000 },
+      { mes: "Dic", presupuestado: 135000, ejecutado: 134000 },
+    ]
+  },
+  2025: {
+    presupuestado: 420000,
+    ejecutado: 430000,
+    categorias: [
+      { nombre: "SMS POR SUSCRIPCION", presupuestado: 70000, ejecutado: 72000, subcategorias: [
+        { nombre: "SMS Nacional", presupuestado: 40000, ejecutado: 42000 },
+        { nombre: "SMS Internacional", presupuestado: 30000, ejecutado: 30000 }
+      ] },
+      { nombre: "COMERCIAL", presupuestado: 65000, ejecutado: 67000, subcategorias: [
+        { nombre: "TV", presupuestado: 35000, ejecutado: 37000 },
+        { nombre: "Radio", presupuestado: 30000, ejecutado: 30000 }
+      ] },
+      { nombre: "REVISTA 15 MINUTOS", presupuestado: 60000, ejecutado: 61000 },
+      { nombre: "PORTAL WEB", presupuestado: 55000, ejecutado: 54000 },
+      { nombre: "NOTICIERO", presupuestado: 80000, ejecutado: 82000 },
+      { nombre: "MOBILEMARKETING", presupuestado: 90000, ejecutado: 94000 },
+    ],
+    historico: [
+      { mes: "Ene", presupuestado: 35000, ejecutado: 37000 },
+      { mes: "Feb", presupuestado: 40000, ejecutado: 41000 },
+      { mes: "Mar", presupuestado: 45000, ejecutado: 46000 },
+      { mes: "Abr", presupuestado: 50000, ejecutado: 52000 },
+      { mes: "May", presupuestado: 55000, ejecutado: 57000 },
+      { mes: "Jun", presupuestado: 60000, ejecutado: 61000 },
+      { mes: "Jul", presupuestado: 65000, ejecutado: 67000 },
+      { mes: "Ago", presupuestado: 70000, ejecutado: 72000 },
+      { mes: "Sep", presupuestado: 0, ejecutado: 0 },
+      { mes: "Oct", presupuestado: 0, ejecutado: 0 },
+      { mes: "Nov", presupuestado: 0, ejecutado: 0 },
+      { mes: "Dic", presupuestado: 0, ejecutado: 0 },
+    ]
+  }
+};
+const years = [2023, 2024, 2025];
+const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
-const anios = [2022, 2023, 2024];
-const mesesFiltro = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+export default function DashboardGeneral({ darkMode, setDarkMode, onBack }) {
+  const [selectedYear, setSelectedYear] = useState(2025);
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [tipoSeguimiento, setTipoSeguimiento] = useState("ingresos"); // opciones: ingresos, costos, ebitda
+  const [selectedCategoria, setSelectedCategoria] = useState("");
+  const [expandedCategoria, setExpandedCategoria] = useState(null);
+  const [tooltip, setTooltip] = useState(null);
+  
+  const data = initialData[selectedYear];
 
-// Datos mock para la gráfica
-const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-const presupuestado = [100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210];
-const ejecutado = [98, 108, 115, 125, 135, 140, 155, 165, 175, 185, 195, 205];
-const prevision = [99, 109, 118, 128, 138, 145, 158, 168, 178, 188, 198, 208];
-
-function getLinePoints(data, maxY, width, height) {
-  const stepX = width / (data.length - 1);
-  return data
-    .map((y, i) => {
-      const x = i * stepX;
-      const yPos = height - (y / maxY) * height;
-      return `${x},${yPos}`;
-    })
-    .join(" ");
-}
-
-const FrontGerencia = () => {
-  const width = 420;
-  const height = 160;
-  const maxY = 220;
-  const fileInputRef = useRef();
-  const [anio, setAnio] = useState(2024);
-  const [mes, setMes] = useState("Septiembre");
-  const [utcTime, setUtcTime] = useState(new Date().toUTCString());
-
-  // Actualiza la hora UTC cada segundo
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setUtcTime(new Date().toUTCString());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleFileClick = () => {
-    fileInputRef.current.click();
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      alert(`Archivo seleccionado: ${file.name} (funcionalidad próximamente)`);
+  // Simulación de datos para ingresos y costos (puedes ajustar según tu lógica real)
+  const getTipoData = () => {
+    if (tipoSeguimiento === "ingresos") {
+      return {
+        presupuestado: data.presupuestado * 0.6,
+        ejecutado: data.ejecutado * 0.6,
+        categorias: data.categorias.map(cat => ({ ...cat, presupuestado: cat.presupuestado * 0.6, ejecutado: cat.ejecutado * 0.6 })),
+        historico: data.historico.map(h => ({ ...h, presupuestado: h.presupuestado * 0.6, ejecutado: h.ejecutado * 0.6 }))
+      };
+    } else if (tipoSeguimiento === "costos") {
+      return {
+        presupuestado: data.presupuestado * 0.4,
+        ejecutado: data.ejecutado * 0.4,
+        categorias: data.categorias.map(cat => ({ ...cat, presupuestado: cat.presupuestado * 0.4, ejecutado: cat.ejecutado * 0.4 })),
+        historico: data.historico.map(h => ({ ...h, presupuestado: h.presupuestado * 0.4, ejecutado: h.ejecutado * 0.4 }))
+      };
     }
+    return data;
+  };
+  const tipoData = getTipoData();
+
+  const presupuestado = tipoData.presupuestado;
+  const ejecutado = tipoData.ejecutado;
+  const desviacion = ejecutado - presupuestado;
+  const desviacionPorc = ((ejecutado - presupuestado) / presupuestado) * 100;
+
+  const exportToCSV = () => {
+    const rows = [
+      ["Categoría", "Presupuestado", "Ejecutado", "Desviación"],
+      ...tipoData.categorias.map(cat => [cat.nombre, cat.presupuestado, cat.ejecutado, cat.ejecutado - cat.presupuestado])
+    ];
+    const csvContent = rows.map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `presupuesto_categorias_${selectedYear}_${tipoSeguimiento}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
-  const handleLogout = () => {
-    window.location.href = "/";
+  const maxY = Math.max(...tipoData.historico.map(h => Math.max(h.presupuestado, h.ejecutado)));
+  const width = 900;
+  const height = 220;
+  
+  // Definir variables para la gráfica ANTES del return
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(v => height - v * height);
+  const yLabels = [0, 0.25, 0.5, 0.75, 1].map(v => `$${Math.round(maxY * v).toLocaleString()}`);
+  const yPositions = yTicks;
+  
+  const getLinePoints = (arr) => {
+    const stepX = width / (arr.length - 1);
+    return arr.map((v, i) => `${i * stepX},${height - (v / maxY) * height}`).join(" ");
   };
+  const historicoFiltrado = selectedMonth
+    ? tipoData.historico.filter(h => h.mes === selectedMonth)
+    : tipoData.historico;
 
   return (
-    <div className="dashboard-container">
-      {/* Header profesional */}
-      <div className="dashboard-header bvc-header">
-        <div className="logo-area">
-          {/* Aquí puedes poner el logo de tu empresa */}
-          <img src="/vite.svg" alt="Logo" className="logo-img" />
-          <span className="bvc-title">Seguimiento Presupuesto</span>
-        </div>
-        <div className="user-area">
-          <span className="user-name">Usuario</span>
-          <img src="/src/assets/react.svg" alt="Avatar" className="user-avatar-img" />
-        </div>
-      </div>
-      {/* Filtros visuales */}
-      <div className="dashboard-filters">
-        <label>
-          Año:
-          <select value={anio} onChange={e => setAnio(Number(e.target.value))}>
-            {anios.map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
-        </label>
-        <label>
-          Mes:
-          <select value={mes} onChange={e => setMes(e.target.value)}>
-            {mesesFiltro.map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
-        </label>
-        <button className="add-btn" onClick={handleFileClick} style={{marginLeft: 12}}>Cargar presupuesto</button>
-        <input
-          type="file"
-          accept=".xlsx,.xls,.csv"
-          style={{ display: "none" }}
-          ref={fileInputRef}
-          onChange={handleFileChange}
+    <div style={{ minHeight: "100vh", width: "100vw", background: darkMode ? "#23272F" : "linear-gradient(120deg, #f5f7fa 0%, #e3eafc 100%)", color: darkMode ? "#E6EDF3" : "#181C32", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", fontFamily: "'Inter', 'Roboto', Arial, sans-serif", transition: "background 0.3s, color 0.3s", position: "relative" }}>
+      {/* DarkModeToggle en la esquina superior derecha */}
+      <div style={{ position: "absolute", top: 20, right: 20, zIndex: 1000 }}>
+        <DarkModeToggle 
+          darkMode={darkMode} 
+          setDarkMode={setDarkMode}
+          onLogoClick={onBack} // El icono circular rojo manejará el logout
         />
       </div>
+      {/* Header */}
+      <div style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: "40px 0 24px 0", display: "flex", alignItems: "center", justifyContent: "center", gap: 32 }}>
+        <div style={{ display: "flex", alignItems: "center", background: darkMode ? "#181C32" : "#fff", borderRadius: 8, boxShadow: darkMode ? "0 2px 8px #0008" : "0 2px 8px #1976d220", padding: "4px 12px", gap: 8, border: darkMode ? "1.5px solid #232946" : "none" }}>
+          <button onClick={() => setTipoSeguimiento("ingresos")}
+            style={{ padding: "8px 18px", borderRadius: 6, border: tipoSeguimiento === "ingresos" ? "2px solid #43a047" : "1px solid #bdbdbd", background: tipoSeguimiento === "ingresos" ? (darkMode ? "#1E2A3A" : "#e8f5e9") : (darkMode ? "#181C32" : "#f0f0f0"), color: tipoSeguimiento === "ingresos" ? "#43a047" : (darkMode ? "#E6EDF3" : "#333"), fontWeight: 700, fontSize: 16, cursor: "pointer", transition: "all 0.2s" }}>Ingresos</button>
+          <button onClick={() => setTipoSeguimiento("costos")}
+            style={{ padding: "8px 18px", borderRadius: 6, border: tipoSeguimiento === "costos" ? "2px solid #e53935" : "1px solid #bdbdbd", background: tipoSeguimiento === "costos" ? (darkMode ? "#1E2A3A" : "#ffebee") : (darkMode ? "#181C32" : "#f0f0f0"), color: tipoSeguimiento === "costos" ? "#e53935" : (darkMode ? "#E6EDF3" : "#333"), fontWeight: 700, fontSize: 16, cursor: "pointer", transition: "all 0.2s" }}>Costos</button>
+          <button onClick={() => setTipoSeguimiento("ebitda")}
+            style={{ padding: "8px 18px", borderRadius: 6, border: tipoSeguimiento === "ebitda" ? "2px solid #1976d2" : "1px solid #bdbdbd", background: tipoSeguimiento === "ebitda" ? (darkMode ? "#1E2A3A" : "#e3eafc") : (darkMode ? "#181C32" : "#f0f0f0"), color: tipoSeguimiento === "ebitda" ? "#1976d2" : (darkMode ? "#E6EDF3" : "#333"), fontWeight: 700, fontSize: 16, cursor: "pointer", transition: "all 0.2s" }}>Ebitda</button>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+          <label style={{ fontWeight: 600, color: darkMode ? "#E6EDF3" : "#333" }}>Año:
+            <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} style={{ marginLeft: 8, padding: 6, borderRadius: 6, border: darkMode ? "1.5px solid #232946" : "1px solid #bdbdbd", background: darkMode ? "#181C32" : "#f0f0f0", color: darkMode ? "#E6EDF3" : "#181C32" }}>
+              {years.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </label>
+          <label style={{ fontWeight: 600, color: darkMode ? "#E6EDF3" : "#333" }}>Mes:
+            <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ marginLeft: 8, padding: 6, borderRadius: 6, border: darkMode ? "1.5px solid #232946" : "1px solid #bdbdbd", background: darkMode ? "#181C32" : "#f0f0f0", color: darkMode ? "#E6EDF3" : "#181C32" }}>
+              <option value="">Todos</option>
+              {months.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </label>
+        </div>
+      </div>
       {/* Indicadores principales */}
-      <div className="dashboard-summary bvc-summary">
-        {resumen.map((card) => (
-          <div className={`summary-card bvc-card ${card.color}`} key={card.title}>
-            <div className="summary-icon">{card.icon}</div>
-            <div className="summary-title">{card.title}</div>
-            <div className="summary-value">{card.value}</div>
-            <div className={`summary-change ${card.change < 0 ? "down" : "up"}`}>
-              {card.change}%
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="dashboard-main">
-        <div className="dashboard-left">
-          <div className="task-section">
-            <div className="section-header">
-              <span>Tarea</span>
-              <button className="add-btn">+ Agregar</button>
-            </div>
-            {tareas.map((t, idx) => (
-              <div className="task-card" key={idx}>
-                <div className="task-time">{t.hora}</div>
-                <div className="task-title">{t.titulo}</div>
-                <div className="task-desc">{t.descripcion}</div>
-                <span className="task-priority">{t.prioridad}</span>
-              </div>
-            ))}
-          </div>
-          <div className="deal-stage-section">
-            <div className="section-header">
-              <span>Etapa del trato</span>
-            </div>
-            <div className="deal-stage-chart">
-              <svg width="100" height="100">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="#eee" strokeWidth="12" />
-                <circle cx="50" cy="50" r="40" fill="none" stroke="#4f8cff" strokeWidth="12" strokeDasharray="251.2" strokeDashoffset="0" />
-              </svg>
-              <div className="deal-stage-label">100%</div>
-            </div>
-          </div>
+      <div style={{ width: "100%", maxWidth: 1400, margin: "0 auto", display: "flex", gap: 36, justifyContent: "center", alignItems: "stretch", marginBottom: 40 }}>
+        <div style={{ flex: 1, background: darkMode ? "#23272F" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #0008" : "0 2px 12px #0001", padding: 32, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: darkMode ? "1.5px solid #232946" : "none" }}>
+          <div style={{ fontWeight: 700, fontSize: 18, color: "#e53935", marginBottom: 6 }}>Presupuestado</div>
+          <div style={{ fontSize: 38, fontWeight: 900, color: "#e53935", letterSpacing: 1 }}>${presupuestado.toLocaleString()}</div>
         </div>
-        <div className="dashboard-center">
-          <div className="revenue-section">
-            <div className="section-header">
-              <span>EBITDA CLARO MEDIA - Resultados Financieros</span>
-            </div>
-            <svg width={width} height={height} className="revenue-chart bvc-chart">
-              {/* Presupuestado */}
-              <polyline
-                fill="none"
-                stroke="#4f8cff"
-                strokeWidth="3"
-                points={getLinePoints(presupuestado, maxY, width, height)}
-              />
-              {/* Ejecutado */}
-              <polyline
-                fill="none"
-                stroke="#00c48c"
-                strokeWidth="3"
-                points={getLinePoints(ejecutado, maxY, width, height)}
-              />
-              {/* Previsión */}
-              <polyline
-                fill="none"
-                stroke="#ffb200"
-                strokeWidth="3"
-                strokeDasharray="6,4"
-                points={getLinePoints(prevision, maxY, width, height)}
-              />
-              {/* Ejes y labels */}
-              {meses.map((mes, i) => (
-                <text
-                  key={mes}
-                  x={(i * width) / (meses.length - 1)}
-                  y={height + 15}
-                  fontSize="12"
-                  textAnchor="middle"
-                  fill="#888"
-                >
-                  {mes}
-                </text>
-              ))}
-            </svg>
-            <div className="legend">
-              <span className="legend-item"><span className="legend-dot blue"></span>Presupuestado</span>
-              <span className="legend-item"><span className="legend-dot green"></span>Ejecutado</span>
-              <span className="legend-item"><span className="legend-dot yellow"></span>Previsión</span>
-            </div>
-          </div>
+        <div style={{ flex: 1, background: darkMode ? "#23272F" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #0008" : "0 2px 12px #0001", padding: 32, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: darkMode ? "1.5px solid #232946" : "none" }}>
+          <div style={{ fontWeight: 700, fontSize: 18, color: "#43a047", marginBottom: 6 }}>Ejecutado</div>
+          <div style={{ fontSize: 38, fontWeight: 900, color: "#43a047", letterSpacing: 1 }}>${ejecutado.toLocaleString()}</div>
+        </div>
+        <div style={{ flex: 1, background: darkMode ? "#23272F" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #0008" : "0 2px 12px #0001", padding: 32, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ fontWeight: 700, fontSize: 18, color: darkMode ? "#fff" : "#000", marginBottom: 6 }}>Desviación</div>
+          <div style={{ fontSize: 38, fontWeight: 900, color: desviacionPorc < 0 ? "#e53935" : "#43a047", letterSpacing: 1 }}>{desviacionPorc > 0 ? "+" : ""}{desviacionPorc.toFixed(1)}%</div>
+          <div style={{ fontSize: 20, color: "#888", marginTop: 4 }}>{desviacion > 0 ? "+" : ""}${desviacion.toLocaleString()}</div>
         </div>
       </div>
-    </div>
-  );
-};
-
-const DashboardGeneral = () => {
-  const width = 420;
-  const height = 160;
-  const maxY = 220;
-  const fileInputRef = useRef();
-  const [anio, setAnio] = useState(2024);
-  const [mes, setMes] = useState("Septiembre");
-  const [colombiaTime, setColombiaTime] = useState(new Date().toLocaleString("es-CO", { timeZone: "America/Bogota" }));
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setColombiaTime(new Date().toLocaleString("es-CO", { timeZone: "America/Bogota" }));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleFileClick = () => {
-    fileInputRef.current.click();
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      alert(`Archivo seleccionado: ${file.name} (funcionalidad próximamente)`);
-    }
-  };
-
-  const handleLogout = () => {
-    window.location.href = "/";
-  };
-
-  return (
-    <div style={{
-      minHeight: "100vh",
-      minWidth: "100vw",
-      background: "linear-gradient(120deg, #e0e7ff 0%, #f5f7fa 100%)",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "flex-start",
-      padding: "0",
-      fontFamily: "'Inter', 'Roboto', Arial, sans-serif",
-      position: "relative"
-    }}>
-      <div style={{ width: "100%", display: "flex", justifyContent: "center", alignItems: "center", marginTop: 48, marginBottom: 24, position: "relative" }}>
-        {/* Colombian time at top left */}
-        <div style={{ position: "absolute", left: 0, top: 0, display: "flex", alignItems: "center", height: "100%", paddingLeft: 24, color: "#000", fontWeight: 500, fontSize: 18 }}>
-          <span>{colombiaTime}</span>
-        </div>
-        <img src={loginIcon} alt="Logo" style={{ height: 60, marginRight: 16 }} />
-        <span style={{ fontWeight: 700, fontSize: 32, color: "#000", letterSpacing: 1 }}>Seguimiento Presupuesto</span>
-        {/* Logout icon at top right */}
-        <div style={{ position: "absolute", right: 0, top: 0, display: "flex", alignItems: "center", height: "100%", paddingRight: 24 }}>
-          <button onClick={handleLogout} style={{ background: "none", border: "none", cursor: "pointer", color: "#000", fontSize: 28 }} title="Salir">
-            <FiLogOut />
+      {/* Gráfica de tendencias */}
+      <div style={{ width: "100%", maxWidth: 1400, margin: "0 auto", background: darkMode ? "#23272F" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #000A" : "0 2px 12px #0001", padding: 36, marginBottom: 40, border: darkMode ? "1.5px solid #232946" : "none", transition: "background 0.3s, color 0.3s, border 0.3s", position: "relative" }}>
+        <div style={{ fontWeight: 700, fontSize: 22, color: darkMode ? "#fff" : "#000", marginBottom: 18 }}>Tendencia anual</div>
+        <svg width={width} height={height + 60} style={{ overflow: "visible" }}>
+          <defs>{/* Definiciones de filtros y gradientes si los usas */}</defs>
+          {/* Eje Y - Cambiado a gris claro */}
+          <line x1={100} y1={0} x2={100} y2={height} stroke={darkMode ? "#444" : "#ddd"} strokeWidth={1} />
+          {/* Eje X */}
+          <line x1={100} y1={height} x2={width - 20} y2={height} stroke={darkMode ? "#444" : "#ddd"} strokeWidth={1} />
+          {/* Líneas guía horizontales */}
+          {yTicks.map((y, i) => (
+            <line key={i} x1={100} y1={y} x2={width - 20} y2={y} stroke={darkMode ? "#333" : "#f0f0f0"} strokeDasharray="2 2" />
+          ))}
+          {/* Etiquetas eje Y - Con más espacio para el signo $ */}
+          {yLabels.map((label, i) => (
+            <text key={i} x={95} y={yPositions[i] + 5} fontSize={12} fill={darkMode ? "#888" : "#666"} textAnchor="end">{label}</text>
+          ))}
+          {/* Grupos de barras y puntos */}
+          {historicoFiltrado.map((h, i) => {
+            const groupWidth = 38;
+            const barWidth = 10;
+            const stepX = (width - 140) / (historicoFiltrado.length - 1);
+            const x = 120 + i * stepX;
+            return (
+              <g key={h.mes}>
+                {/* Presupuesto */}
+                <rect 
+                  x={x - barWidth - 6} 
+                  y={height - (h.presupuestado / maxY) * height} 
+                  width={barWidth} 
+                  height={(h.presupuestado / maxY) * height} 
+                  fill={darkMode ? "#2563eb" : "#1976d2"} 
+                  rx={4}
+                  onMouseEnter={(e) => setTooltip({
+                    x: e.clientX,
+                    y: e.clientY,
+                    content: `${h.mes} - Presupuestado: $${h.presupuestado.toLocaleString()}`
+                  })}
+                  onMouseLeave={() => setTooltip(null)}
+                  style={{ cursor: "pointer" }}
+                />
+                {/* Ejecutado */}
+                <rect 
+                  x={x + 6} 
+                  y={height - (h.ejecutado / maxY) * height} 
+                  width={barWidth} 
+                  height={(h.ejecutado / maxY) * height} 
+                  fill={darkMode ? "#22c55e" : "#43a047"} 
+                  rx={4}
+                  onMouseEnter={(e) => setTooltip({
+                    x: e.clientX,
+                    y: e.clientY,
+                    content: `${h.mes} - Ejecutado: $${h.ejecutado.toLocaleString()}`
+                  })}
+                  onMouseLeave={() => setTooltip(null)}
+                  style={{ cursor: "pointer" }}
+                />
+                {/* Punto de desviación */}
+                <circle 
+                  cx={x} 
+                  cy={height - ((h.ejecutado - h.presupuestado + h.presupuestado) / maxY) * height} 
+                  r={6} 
+                  fill="#ef4444" 
+                  stroke="#fff" 
+                  strokeWidth={2}
+                  onMouseEnter={(e) => setTooltip({
+                    x: e.clientX,
+                    y: e.clientY,
+                    content: `${h.mes} - Desviación: $${(h.ejecutado - h.presupuestado).toLocaleString()}`
+                  })}
+                  onMouseLeave={() => setTooltip(null)}
+                  style={{ cursor: "pointer" }}
+                />
+              </g>
+            );
+          })}
+          {/* Línea de desviación */}
+          <polyline points={historicoFiltrado.map((h, i) => {
+            const stepX = (width - 140) / (historicoFiltrado.length - 1);
+            const x = 120 + i * stepX;
+            const y = height - ((h.ejecutado - h.presupuestado + h.presupuestado) / maxY) * height;
+            return `${x},${y}`;
+          }).join(' ')} fill="none" stroke="#ef4444" strokeWidth={2} />
+          {/* Etiquetas eje X */}
+          {historicoFiltrado.map((h, i) => (
+            <text key={h.mes} x={120 + i * ((width - 140) / (historicoFiltrado.length - 1))} y={height + 24} textAnchor="middle" fontSize={14} fill={darkMode ? "#888" : "#666"}>{h.mes}</text>
+          ))}
+        </svg>
+        
+        {/* Tooltip */}
+        {tooltip && (
+          <div style={{
+            position: "fixed",
+            left: tooltip.x + 10,
+            top: tooltip.y - 10,
+            background: darkMode ? "#1a1a1a" : "#fff",
+            border: `1px solid ${darkMode ? "#444" : "#ddd"}`,
+            borderRadius: 6,
+            padding: "8px 12px",
+            fontSize: 14,
+            color: darkMode ? "#fff" : "#333",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            zIndex: 1000,
+            pointerEvents: "none",
+            whiteSpace: "nowrap"
+          }}>
+            {tooltip.content}
+          </div>
+        )}
+      </div>
+      {/* Desglose por categorías */}
+      <div style={{ width: "100%", maxWidth: 1400, margin: "0 auto", background: darkMode ? "#23272F" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #0008" : "0 2px 12px #0001", padding: 36, marginBottom: 40, border: darkMode ? "1.5px solid #232946" : "none", transition: "background 0.3s, color 0.3s, border 0.3s" }}>
+        <div style={{ fontWeight: 700, fontSize: 22, color: darkMode ? "#E60026" : "#e53935", marginBottom: 18 }}>Desglose por categorías</div>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 18 }}>
+          <thead>
+            <tr style={{ background: darkMode ? "#232946" : "#f8fafc" }}>
+              <th style={{ textAlign: "left", padding: 12, color: darkMode ? "#E6EDF3" : undefined }}>Categoría</th>
+              <th style={{ textAlign: "right", padding: 12, color: darkMode ? "#E6EDF3" : undefined }}>Presupuestado</th>
+              <th style={{ textAlign: "right", padding: 12, color: darkMode ? "#E6EDF3" : undefined }}>Ejecutado</th>
+              <th style={{ textAlign: "right", padding: 12, color: darkMode ? "#E6EDF3" : undefined }}>Desviación</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(selectedCategoria ? data.categorias.filter(cat => cat.nombre === selectedCategoria) : data.categorias).map(cat => {
+              const dev = cat.ejecutado - cat.presupuestado;
+              const isExpanded = expandedCategoria === cat.nombre;
+              return [
+                <tr key={cat.nombre} style={{ borderBottom: darkMode ? "1px solid #232946" : "1px solid #f0f0f0", background: darkMode ? "#232946" : undefined, cursor: "pointer" }} onClick={() => cat.subcategorias ? setExpandedCategoria(isExpanded ? null : cat.nombre) : null}>
+                  <td style={{ padding: 12, color: darkMode ? "#E6EDF3" : undefined, fontWeight: 700, display: "flex", alignItems: "center" }}>
+                    <span style={{ marginRight: 8, fontSize: 18, verticalAlign: "middle", color: darkMode ? "#E6EDF3" : "#333", display: "inline-block", transition: "transform 0.2s" }}>
+                      {cat.subcategorias ? (isExpanded ? "▼" : "▶") : "▶"}
+                    </span>
+                    {cat.nombre}
+                  </td>
+                  <td style={{ padding: 12, textAlign: "right", color: darkMode ? "#E60026" : "#e53935", fontWeight: 700 }}>${cat.presupuestado.toLocaleString()}</td>
+                  <td style={{ padding: 12, textAlign: "right", color: darkMode ? "#43FF8E" : "#43a047", fontWeight: 700 }}>${cat.ejecutado.toLocaleString()}</td>
+                  <td style={{ padding: 12, textAlign: "right", color: dev < 0 ? (darkMode ? "#E60026" : "#e53935") : (darkMode ? "#43FF8E" : "#43a047"), fontWeight: 700 }}>{dev > 0 ? "+" : ""}${dev.toLocaleString()}</td>
+                </tr>,
+                isExpanded && cat.subcategorias && cat.subcategorias.map(sub => {
+                  const subDev = sub.ejecutado - sub.presupuestado;
+                  return (
+                    <tr key={cat.nombre + sub.nombre} style={{ borderBottom: darkMode ? "1px solid #232946" : "1px solid #f0f0f0" }}>
+                      <td style={{ padding: "12px 12px 12px 36px", color: darkMode ? "#B0BEC5" : "#555" }}>↳ {sub.nombre}</td>
+                      <td style={{ padding: 12, textAlign: "right", color: darkMode ? "#E60026" : "#e53935" }}>${sub.presupuestado.toLocaleString()}</td>
+                      <td style={{ padding: 12, textAlign: "right", color: darkMode ? "#43FF8E" : "#43a047" }}>${sub.ejecutado.toLocaleString()}</td>
+                      <td style={{ padding: 12, textAlign: "right", color: subDev < 0 ? (darkMode ? "#E60026" : "#e53935") : (darkMode ? "#43FF8E" : "#43a047") }}>{subDev > 0 ? "+" : ""}${subDev.toLocaleString()}</td>
+                    </tr>
+                  );
+                })
+              ];
+            })}
+          </tbody>
+        </table>
+        <div style={{ marginTop: 20, textAlign: "center" }}>
+          <button onClick={exportToCSV} style={{ padding: "12px 24px", background: darkMode ? "#1976d2" : "#1976d2", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 16 }}>
+            Exportar a CSV
           </button>
         </div>
-        {/* UTC clock at top right */}
-        {/* <div style={{ position: "absolute", right: 0, top: 0, display: "flex", alignItems: "center", height: "100%", paddingRight: 24, color: "#000", fontWeight: 500, fontSize: 18 }}>
-          <span>{utcTime}</span>
-        </div> */}
-      </div>
-      <div style={{
-        background: "rgba(255,255,255,0.98)",
-        borderRadius: 18,
-        boxShadow: "0 8px 32px rgba(0,0,0,0.10)",
-        border: "1.5px solid #e3e8f0",
-        padding: 36,
-        maxWidth: 1100,
-        width: "95%",
-        margin: "0 auto"
-      }}>
-        {/* Filtros visuales */}
-        <div style={{ display: "flex", gap: 24, alignItems: "center", marginBottom: 32 }}>
-            <label style={{ fontWeight: 500, color: "#000" }}>
-            Año:
-            <select value={anio} onChange={e => setAnio(Number(e.target.value))} style={{ marginLeft: 8, borderRadius: 6, padding: 4 }}>
-              {anios.map(a => <option key={a} value={a}>{a}</option>)}
-            </select>
-          </label>
-            <label style={{ fontWeight: 500, color: "#000" }}>
-            Mes:
-            <select value={mes} onChange={e => setMes(e.target.value)} style={{ marginLeft: 8, borderRadius: 6, padding: 4 }}>
-              {mesesFiltro.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </label>
-            <button style={{marginLeft: 12, background: "#000", color: "#fff", border: "none", borderRadius: 6, padding: "8px 18px", fontWeight: 600, boxShadow: "0 2px 8px rgba(0,0,0,0.10)", cursor: "pointer"}} onClick={handleFileClick}>Cargar presupuesto</button>
-          <input
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            style={{ display: "none" }}
-            ref={fileInputRef}
-            onChange={handleFileChange}
-          />
-        </div>
-        {/* Indicadores principales */}
-        <div style={{ display: "flex", gap: 24, marginBottom: 32, justifyContent: "center" }}>
-          {resumen.map((card) => (
-            <div key={card.title} style={{
-              background: "#f8fafc",
-              borderRadius: 14,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-              padding: "24px 32px",
-              minWidth: 220,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-              border: `2px solid ${card.color === 'blue' ? '#000' : card.color === 'red' ? '#e53935' : '#43a047'}`
-            }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>{card.icon}</div>
-              <div style={{ fontSize: 17, color: "#888", marginBottom: 8 }}>{card.title}</div>
-              <div style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>{card.value}</div>
-              <div style={{ fontSize: 16, color: card.change < 0 ? "#e53935" : "#43a047" }}>{card.change}%</div>
-            </div>
-          ))}
-        </div>
-        {/* Gráfica de resultados */}
-        <div style={{ background: "#fff", borderRadius: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", padding: 32, marginBottom: 32 }}>
-          <div style={{ fontWeight: 600, fontSize: 20, color: "#1976d2", marginBottom: 18 }}>EBITDA CLARO MEDIA - Resultados Financieros</div>
-          <svg width={width} height={height} style={{ width: "100%", maxWidth: 600, height: 180 }}>
-            {/* Presupuestado */}
-            <polyline fill="none" stroke="#1976d2" strokeWidth="3" points={getLinePoints(presupuestado, maxY, width, height)} />
-            {/* Ejecutado */}
-            <polyline fill="none" stroke="#43a047" strokeWidth="3" points={getLinePoints(ejecutado, maxY, width, height)} />
-            {/* Previsión */}
-            <polyline fill="none" stroke="#ffb200" strokeWidth="3" strokeDasharray="6,4" points={getLinePoints(prevision, maxY, width, height)} />
-            {/* Ejes y labels */}
-            {meses.map((mes, i) => (
-              <text key={mes} x={(i * width) / (meses.length - 1)} y={height + 15} fontSize="12" textAnchor="middle" fill="#888">{mes}</text>
-            ))}
-          </svg>
-          <div style={{ display: "flex", gap: 18, marginTop: 12 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ width: 14, height: 6, background: "#1976d2", borderRadius: 3, display: "inline-block" }}></span>Presupuestado</span>
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ width: 14, height: 6, background: "#43a047", borderRadius: 3, display: "inline-block" }}></span>Ejecutado</span>
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ width: 14, height: 6, background: "#ffb200", borderRadius: 3, display: "inline-block" }}></span>Previsión</span>
-          </div>
-        </div>
-        {/* Tareas y etapa del trato */}
-        <div style={{ display: "flex", gap: 24, justifyContent: "center" }}>
-          <div style={{ background: "#fff", borderRadius: 14, boxShadow: "0 2px 8px rgba(25, 118, 210, 0.06)", padding: 28, minWidth: 320, flex: 1 }}>
-            <div style={{ fontWeight: 600, fontSize: 18, color: "#1976d2", marginBottom: 12 }}>Tarea</div>
-            {tareas.map((t, idx) => (
-              <div key={idx} style={{ marginBottom: 18, padding: 12, borderRadius: 8, background: "#f8fafc", boxShadow: "0 1px 4px rgba(25, 118, 210, 0.04)" }}>
-                <div style={{ fontSize: 13, color: "#888" }}>{t.hora}</div>
-                <div style={{ fontWeight: 600, fontSize: 16, color: "#1976d2" }}>{t.titulo}</div>
-                <div style={{ fontSize: 14, color: "#444", marginBottom: 4 }}>{t.descripcion}</div>
-                <span style={{ fontSize: 13, color: "#e53935", fontWeight: 500 }}>{t.prioridad}</span>
-              </div>
-            ))}
-            <button style={{marginTop: 8, background: "#1976d2", color: "#fff", border: "none", borderRadius: 6, padding: "8px 18px", fontWeight: 600, boxShadow: "0 2px 8px rgba(25, 118, 210, 0.10)", cursor: "pointer"}}>+ Agregar</button>
-          </div>
-          <div style={{ background: "#fff", borderRadius: 14, boxShadow: "0 2px 8px rgba(25, 118, 210, 0.06)", padding: 28, minWidth: 320, flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <div style={{ fontWeight: 600, fontSize: 18, color: "#1976d2", marginBottom: 12 }}>Etapa del trato</div>
-            <svg width="100" height="100">
-              <circle cx="50" cy="50" r="40" fill="none" stroke="#eee" strokeWidth="12" />
-              <circle cx="50" cy="50" r="40" fill="none" stroke="#1976d2" strokeWidth="12" strokeDasharray="251.2" strokeDashoffset="0" />
-            </svg>
-            <div style={{ fontWeight: 700, fontSize: 22, color: "#43a047", marginTop: 8 }}>100%</div>
-          </div>
-        </div>
       </div>
     </div>
   );
-};
-
-export default DashboardGeneral;
+}

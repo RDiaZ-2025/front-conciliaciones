@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Box, Button, LinearProgress, Typography, Alert, Stepper, Step, StepLabel, Paper, Fade } from "@mui/material";
 import { BlobServiceClient } from "@azure/storage-blob";
 import claroMediaLogo from "../assets/Claro-Media-Logo.jpg";
+import DarkModeToggle from "./DarkModeToggle";
 import * as XLSX from "xlsx";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf";
 import { GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf";
@@ -259,7 +260,7 @@ const steps = [
   "Materiales y Confirmación"
 ];
 
-const UploadForm = () => {
+const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
   const [excelFile, setExcelFile] = useState(null);
   const [pdfFile, setPdfFile] = useState(null);
   const [excelUploaded, setExcelUploaded] = useState(false);
@@ -408,9 +409,9 @@ const UploadForm = () => {
   const renderExcelPreview = () => {
     if (!excelFile) return null;
     return (
-      <Paper elevation={2} sx={{ p: 2, mb: 2, background: '#f8fafc' }}>
-        <Typography variant="subtitle2" fontWeight={600} mb={1}>Previsualización de Excel:</Typography>
-        <ul style={{ margin: 0, paddingLeft: 18 }}>
+      <Paper elevation={2} sx={{ p: 2, mb: 2, background: darkMode ? '#2a2d3a' : '#f8fafc' }}>
+        <Typography variant="subtitle2" fontWeight={600} mb={1} sx={{ color: darkMode ? '#fff' : '#000' }}>Previsualización de Excel:</Typography>
+        <ul style={{ margin: 0, paddingLeft: 18, color: darkMode ? '#fff' : '#000' }}>
           {debugExcelValues.map((v, i) => (
             <li key={i} style={{ fontSize: 15 }}>{v}</li>
           ))}
@@ -423,12 +424,12 @@ const UploadForm = () => {
   const renderPdfPreview = () => {
     if (!pdfFile || !pdfUploaded || !pdfThumbnail) return null;
     return (
-      <Paper elevation={2} sx={{ p: 2, mb: 2, background: '#f8fafc', textAlign: 'center' }}>
-        <Typography variant="subtitle2" fontWeight={600} mb={1}>Previsualización PDF:</Typography>
+      <Paper elevation={2} sx={{ p: 2, mb: 2, background: darkMode ? '#2a2d3a' : '#f8fafc', textAlign: 'center' }}>
+        <Typography variant="subtitle2" fontWeight={600} mb={1} sx={{ color: darkMode ? '#fff' : '#000' }}>Previsualización PDF:</Typography>
         <img src={pdfThumbnail} alt="Miniatura PDF" style={{ maxWidth: 180, borderRadius: 4, boxShadow: '0 2px 8px #0001' }} />
         {/* Confirmación manual de firmas */}
         <Box sx={{ mt: 2, mb: 1 }}>
-          <Typography variant="body1" sx={{ fontWeight: 500, mb: 1 }}>
+          <Typography variant="body1" sx={{ fontWeight: 500, mb: 1, color: darkMode ? '#fff' : '#000' }}>
             ¿Este documento contiene las dos firmas requeridas?
           </Typography>
           <Button
@@ -492,7 +493,7 @@ const UploadForm = () => {
         return (
           <Fade in={activeStep === 0}>
             <Box>
-              <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 600 }}>
+              <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 600, color: darkMode ? '#fff' : '#000' }}>
                 1. Sube el archivo Excel (Valorización)
               </Typography>
               <input
@@ -526,7 +527,7 @@ const UploadForm = () => {
         return (
           <Fade in={activeStep === 1}>
             <Box>
-              <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 600 }}>
+              <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 600, color: darkMode ? '#fff' : '#000' }}>
                 2. Sube el archivo PDF (Orden de Compra)
               </Typography>
               <input
@@ -570,9 +571,9 @@ const UploadForm = () => {
                 <Alert severity="success" sx={{ fontSize: 18, fontWeight: 600, mb: 3 }}>
                   ✅ ¡Archivos enviados correctamente!
                 </Alert>
-                <Paper elevation={1} sx={{ p: 2, mt: 2, background: '#f8fafc' }}>
-                  <Typography variant="subtitle2" fontWeight={600} mb={1}>Resumen del envío:</Typography>
-                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+                <Paper elevation={1} sx={{ p: 2, mt: 2, background: darkMode ? '#2a2d3a' : '#f8fafc' }}>
+                  <Typography variant="subtitle2" fontWeight={600} mb={1} sx={{ color: darkMode ? '#fff' : '#000' }}>Resumen del envío:</Typography>
+                  <ul style={{ margin: 0, paddingLeft: 18, color: darkMode ? '#fff' : '#000' }}>
                     <li>Excel: {excelFile?.name || <span style={{ color: '#aaa' }}>No seleccionado</span>}</li>
                     <li>PDF: {pdfFile?.name || <span style={{ color: '#aaa' }}>No seleccionado</span>}</li>
                     <li>Materiales: {materiales.length > 0 ? materiales.length + ' archivo(s)' : 'Ninguno'}</li>
@@ -582,9 +583,9 @@ const UploadForm = () => {
                   variant="outlined"
                   color="primary"
                   sx={{ mt: 3, fontWeight: 600, fontSize: 16, py: 1, borderRadius: 2, background: '#222', color: '#fff', '&:hover': { background: '#111' } }}
-                  onClick={() => window.location.reload()}
+                  onClick={onUploadComplete}
                 >
-                  Reiniciar
+                  Continuar
                 </Button>
               </Box>
             </Fade>
@@ -593,11 +594,11 @@ const UploadForm = () => {
         return (
           <Fade in={activeStep === 2}>
             <Box>
-              <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 600 }}>
+              <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 600, color: darkMode ? '#fff' : '#000' }}>
                 3. ¿Desea subir materiales?
               </Typography>
               <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                <label>
+                <label style={{ color: darkMode ? '#fff' : '#000' }}>
                   <input
                     type="radio"
                     name="deseaSubirMateriales"
@@ -609,7 +610,7 @@ const UploadForm = () => {
                   />
                   Sí
                 </label>
-                <label>
+                <label style={{ color: darkMode ? '#fff' : '#000' }}>
                   <input
                     type="radio"
                     name="deseaSubirMateriales"
@@ -671,9 +672,9 @@ const UploadForm = () => {
                 </Box>
               )}
               {/* Resumen final */}
-              <Paper elevation={1} sx={{ p: 2, mt: 2, background: '#f8fafc' }}>
-                <Typography variant="subtitle2" fontWeight={600} mb={1}>Resumen:</Typography>
-                <ul style={{ margin: 0, paddingLeft: 18 }}>
+              <Paper elevation={1} sx={{ p: 2, mt: 2, background: darkMode ? '#2a2d3a' : '#f8fafc' }}>
+                <Typography variant="subtitle2" fontWeight={600} mb={1} sx={{ color: darkMode ? '#fff' : '#000' }}>Resumen:</Typography>
+                <ul style={{ margin: 0, paddingLeft: 18, color: darkMode ? '#fff' : '#000' }}>
                   <li>Excel: {excelFile?.name || <span style={{ color: '#aaa' }}>No seleccionado</span>}</li>
                   <li>PDF: {pdfFile?.name || <span style={{ color: '#aaa' }}>No seleccionado</span>}</li>
                   <li>Materiales: {materiales.length > 0 ? materiales.length + ' archivo(s)' : 'Ninguno'}</li>
@@ -708,19 +709,31 @@ const UploadForm = () => {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "flex-start",
-        background: "linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%)",
-        position: "relative",
+        background: darkMode ? "#23272F" : "linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%)",
+        color: darkMode ? "#fff" : "#181C32",
+        position: "fixed",
         inset: 0,
+        transition: "background 0.3s, color 0.3s"
       }}
     >
-      <Box sx={{ width: "100%", display: "flex", alignItems: "center", mt: 2, mb: 2, position: "relative" }}>
+      {/* DarkModeToggle en la esquina superior derecha */}
+      <Box sx={{ position: "absolute", top: 16, right: 16, zIndex: 1000 }}>
+        <DarkModeToggle 
+          darkMode={darkMode} 
+          setDarkMode={setDarkMode} 
+          onLogoClick={onUploadComplete}
+        />
+      </Box>
+      
+      <Box sx={{ width: "100%", display: "flex", alignItems: "center", mt: 2, mb: 4, position: "relative" }}>
         <img
           src={claroMediaLogo}
           alt="Claro Media Data Tech"
           style={{ width: 180, margin: "0 auto", display: "block" }}
         />
       </Box>
-      <Paper elevation={6} sx={{ p: 5, borderRadius: 4, minWidth: 340, maxWidth: 380, width: "100%", boxShadow: "0 8px 32px rgba(25, 118, 210, 0.10)" }}>
+      
+      <Paper elevation={6} sx={{ p: 5, borderRadius: 4, minWidth: 340, maxWidth: 380, width: "100%", boxShadow: "0 8px 32px rgba(25, 118, 210, 0.10)", background: darkMode ? "#232946" : "#fff" }}>
         <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 3 }}>
           {steps.map((label) => (
             <Step key={label}>
@@ -730,6 +743,11 @@ const UploadForm = () => {
                     color: '#222',
                     '&.Mui-active': { color: '#222' },
                     '&.Mui-completed': { color: '#222' }
+                  }
+                }}
+                sx={{
+                  '& .MuiStepLabel-label': {
+                    color: darkMode ? '#fff' : '#000'
                   }
                 }}
               >
