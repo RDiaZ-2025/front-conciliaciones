@@ -709,7 +709,7 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "flex-start",
-        background: darkMode ? "#23272F" : "linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%)",
+        background: darkMode ? "#2D3748" : "linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%)",
         color: darkMode ? "#fff" : "#181C32",
         position: "fixed",
         inset: 0,
@@ -733,7 +733,7 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
         />
       </Box>
       
-      <Paper elevation={6} sx={{ p: 5, borderRadius: 4, minWidth: 340, maxWidth: 380, width: "100%", boxShadow: "0 8px 32px rgba(25, 118, 210, 0.10)", background: darkMode ? "#232946" : "#fff" }}>
+      <Paper elevation={6} sx={{ p: 5, borderRadius: 4, minWidth: 340, maxWidth: 380, width: "100%", boxShadow: "0 8px 32px rgba(25, 118, 210, 0.10)", background: darkMode ? "#4A5568" : "#fff" }}>
         <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 3 }}>
           {steps.map((label) => (
             <Step key={label}>

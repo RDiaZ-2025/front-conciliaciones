@@ -178,7 +178,7 @@ export default function DashboardGeneral({ darkMode, setDarkMode, onBack }) {
     : tipoData.historico;
 
   return (
-    <div style={{ minHeight: "100vh", width: "100vw", background: darkMode ? "#23272F" : "linear-gradient(120deg, #f5f7fa 0%, #e3eafc 100%)", color: darkMode ? "#E6EDF3" : "#181C32", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", fontFamily: "'Inter', 'Roboto', Arial, sans-serif", transition: "background 0.3s, color 0.3s", position: "relative" }}>
+      <div style={{ minHeight: "100vh", width: "100vw", background: darkMode ? "#2D3748" : "linear-gradient(120deg, #f5f7fa 0%, #e3eafc 100%)", color: darkMode ? "#E6EDF3" : "#181C32", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", fontFamily: "'Inter', 'Roboto', Arial, sans-serif", transition: "background 0.3s, color 0.3s", position: "relative" }}>
       {/* DarkModeToggle en la esquina superior derecha */}
       <div style={{ position: "absolute", top: 20, right: 20, zIndex: 1000 }}>
         <DarkModeToggle 
@@ -189,7 +189,7 @@ export default function DashboardGeneral({ darkMode, setDarkMode, onBack }) {
       </div>
       {/* Header */}
       <div style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: "40px 0 24px 0", display: "flex", alignItems: "center", justifyContent: "center", gap: 32 }}>
-        <div style={{ display: "flex", alignItems: "center", background: darkMode ? "#181C32" : "#fff", borderRadius: 8, boxShadow: darkMode ? "0 2px 8px #0008" : "0 2px 8px #1976d220", padding: "4px 12px", gap: 8, border: darkMode ? "1.5px solid #232946" : "none" }}>
+        <div style={{ display: "flex", alignItems: "center", background: darkMode ? "#181C32" : "#fff", borderRadius: 8, boxShadow: darkMode ? "0 2px 8px #0008" : "0 2px 8px #1976d220", padding: "4px 12px", gap: 8, border: darkMode ? "1.5px solid #4A5568" : "none" }}>
           <button onClick={() => setTipoSeguimiento("ingresos")}
             style={{ padding: "8px 18px", borderRadius: 6, border: tipoSeguimiento === "ingresos" ? "2px solid #43a047" : "1px solid #bdbdbd", background: tipoSeguimiento === "ingresos" ? (darkMode ? "#1E2A3A" : "#e8f5e9") : (darkMode ? "#181C32" : "#f0f0f0"), color: tipoSeguimiento === "ingresos" ? "#43a047" : (darkMode ? "#E6EDF3" : "#333"), fontWeight: 700, fontSize: 16, cursor: "pointer", transition: "all 0.2s" }}>Ingresos</button>
           <button onClick={() => setTipoSeguimiento("costos")}
@@ -199,12 +199,12 @@ export default function DashboardGeneral({ darkMode, setDarkMode, onBack }) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
           <label style={{ fontWeight: 600, color: darkMode ? "#E6EDF3" : "#333" }}>Año:
-            <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} style={{ marginLeft: 8, padding: 6, borderRadius: 6, border: darkMode ? "1.5px solid #232946" : "1px solid #bdbdbd", background: darkMode ? "#181C32" : "#f0f0f0", color: darkMode ? "#E6EDF3" : "#181C32" }}>
+            <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} style={{ marginLeft: 8, padding: 6, borderRadius: 6, border: darkMode ? "1.5px solid #4A5568" : "1px solid #bdbdbd", background: darkMode ? "#181C32" : "#f0f0f0", color: darkMode ? "#E6EDF3" : "#181C32" }}>
               {years.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </label>
           <label style={{ fontWeight: 600, color: darkMode ? "#E6EDF3" : "#333" }}>Mes:
-            <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ marginLeft: 8, padding: 6, borderRadius: 6, border: darkMode ? "1.5px solid #232946" : "1px solid #bdbdbd", background: darkMode ? "#181C32" : "#f0f0f0", color: darkMode ? "#E6EDF3" : "#181C32" }}>
+              <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ marginLeft: 8, padding: 6, borderRadius: 6, border: darkMode ? "1.5px solid #4A5568" : "1px solid #bdbdbd", background: darkMode ? "#181C32" : "#f0f0f0", color: darkMode ? "#E6EDF3" : "#181C32" }}>
               <option value="">Todos</option>
               {months.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
@@ -213,22 +213,22 @@ export default function DashboardGeneral({ darkMode, setDarkMode, onBack }) {
       </div>
       {/* Indicadores principales */}
       <div style={{ width: "100%", maxWidth: 1400, margin: "0 auto", display: "flex", gap: 36, justifyContent: "center", alignItems: "stretch", marginBottom: 40 }}>
-        <div style={{ flex: 1, background: darkMode ? "#23272F" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #0008" : "0 2px 12px #0001", padding: 32, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: darkMode ? "1.5px solid #232946" : "none" }}>
+        <div style={{ flex: 1, background: darkMode ? "#4A5568" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #0008" : "0 2px 12px #0001", padding: 32, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: darkMode ? "1.5px solid #4A5568" : "none" }}>
           <div style={{ fontWeight: 700, fontSize: 18, color: "#e53935", marginBottom: 6 }}>Presupuestado</div>
           <div style={{ fontSize: 38, fontWeight: 900, color: "#e53935", letterSpacing: 1 }}>${presupuestado.toLocaleString()}</div>
         </div>
-        <div style={{ flex: 1, background: darkMode ? "#23272F" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #0008" : "0 2px 12px #0001", padding: 32, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: darkMode ? "1.5px solid #232946" : "none" }}>
+        <div style={{ flex: 1, background: darkMode ? "#4A5568" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #0008" : "0 2px 12px #0001", padding: 32, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: darkMode ? "1.5px solid #4A5568" : "none" }}>
           <div style={{ fontWeight: 700, fontSize: 18, color: "#43a047", marginBottom: 6 }}>Ejecutado</div>
           <div style={{ fontSize: 38, fontWeight: 900, color: "#43a047", letterSpacing: 1 }}>${ejecutado.toLocaleString()}</div>
         </div>
-        <div style={{ flex: 1, background: darkMode ? "#23272F" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #0008" : "0 2px 12px #0001", padding: 32, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ flex: 1, background: darkMode ? "#4A5568" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #0008" : "0 2px 12px #0001", padding: 32, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: darkMode ? "1.5px solid #4A5568" : "none" }}>
           <div style={{ fontWeight: 700, fontSize: 18, color: darkMode ? "#fff" : "#000", marginBottom: 6 }}>Desviación</div>
           <div style={{ fontSize: 38, fontWeight: 900, color: desviacionPorc < 0 ? "#e53935" : "#43a047", letterSpacing: 1 }}>{desviacionPorc > 0 ? "+" : ""}{desviacionPorc.toFixed(1)}%</div>
           <div style={{ fontSize: 20, color: "#888", marginTop: 4 }}>{desviacion > 0 ? "+" : ""}${desviacion.toLocaleString()}</div>
         </div>
       </div>
       {/* Gráfica de tendencias */}
-      <div style={{ width: "100%", maxWidth: 1400, margin: "0 auto", background: darkMode ? "#23272F" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #000A" : "0 2px 12px #0001", padding: 36, marginBottom: 40, border: darkMode ? "1.5px solid #232946" : "none", transition: "background 0.3s, color 0.3s, border 0.3s", position: "relative" }}>
+      <div style={{ width: "100%", maxWidth: 1400, margin: "0 auto", background: darkMode ? "#4A5568" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #000A" : "0 2px 12px #0001", padding: 36, marginBottom: 40, border: darkMode ? "1.5px solid #4A5568" : "none", transition: "background 0.3s, color 0.3s, border 0.3s", position: "relative" }}>
         <div style={{ fontWeight: 700, fontSize: 22, color: darkMode ? "#fff" : "#000", marginBottom: 18 }}>Tendencia anual</div>
         <svg width={width} height={height + 60} style={{ overflow: "visible" }}>
           <defs>{/* Definiciones de filtros y gradientes si los usas */}</defs>
@@ -338,11 +338,11 @@ export default function DashboardGeneral({ darkMode, setDarkMode, onBack }) {
         )}
       </div>
       {/* Desglose por categorías */}
-      <div style={{ width: "100%", maxWidth: 1400, margin: "0 auto", background: darkMode ? "#23272F" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #0008" : "0 2px 12px #0001", padding: 36, marginBottom: 40, border: darkMode ? "1.5px solid #232946" : "none", transition: "background 0.3s, color 0.3s, border 0.3s" }}>
+      <div style={{ width: "100%", maxWidth: 1400, margin: "0 auto", background: darkMode ? "#4A5568" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #0008" : "0 2px 12px #0001", padding: 36, marginBottom: 40, border: darkMode ? "1.5px solid #4A5568" : "none", transition: "background 0.3s, color 0.3s, border 0.3s" }}>
         <div style={{ fontWeight: 700, fontSize: 22, color: darkMode ? "#E60026" : "#e53935", marginBottom: 18 }}>Desglose por categorías</div>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 18 }}>
           <thead>
-            <tr style={{ background: darkMode ? "#232946" : "#f8fafc" }}>
+            <tr style={{ background: darkMode ? "#4A5568" : "#f8fafc" }}>
               <th style={{ textAlign: "left", padding: 12, color: darkMode ? "#E6EDF3" : undefined }}>Categoría</th>
               <th style={{ textAlign: "right", padding: 12, color: darkMode ? "#E6EDF3" : undefined }}>Presupuestado</th>
               <th style={{ textAlign: "right", padding: 12, color: darkMode ? "#E6EDF3" : undefined }}>Ejecutado</th>
@@ -354,7 +354,7 @@ export default function DashboardGeneral({ darkMode, setDarkMode, onBack }) {
               const dev = cat.ejecutado - cat.presupuestado;
               const isExpanded = expandedCategoria === cat.nombre;
               return [
-                <tr key={cat.nombre} style={{ borderBottom: darkMode ? "1px solid #232946" : "1px solid #f0f0f0", background: darkMode ? "#232946" : undefined, cursor: "pointer" }} onClick={() => cat.subcategorias ? setExpandedCategoria(isExpanded ? null : cat.nombre) : null}>
+                <tr key={cat.nombre} style={{ borderBottom: darkMode ? "1px solid #4A5568" : "1px solid #f0f0f0", background: darkMode ? "#4A5568" : undefined, cursor: "pointer" }} onClick={() => cat.subcategorias ? setExpandedCategoria(isExpanded ? null : cat.nombre) : null}>
                   <td style={{ padding: 12, color: darkMode ? "#E6EDF3" : undefined, fontWeight: 700, display: "flex", alignItems: "center" }}>
                     <span style={{ marginRight: 8, fontSize: 18, verticalAlign: "middle", color: darkMode ? "#E6EDF3" : "#333", display: "inline-block", transition: "transform 0.2s" }}>
                       {cat.subcategorias ? (isExpanded ? "▼" : "▶") : "▶"}
@@ -368,7 +368,7 @@ export default function DashboardGeneral({ darkMode, setDarkMode, onBack }) {
                 isExpanded && cat.subcategorias && cat.subcategorias.map(sub => {
                   const subDev = sub.ejecutado - sub.presupuestado;
                   return (
-                    <tr key={cat.nombre + sub.nombre} style={{ borderBottom: darkMode ? "1px solid #232946" : "1px solid #f0f0f0" }}>
+                    <tr key={cat.nombre + sub.nombre} style={{ borderBottom: darkMode ? "1px solid #4A5568" : "1px solid #f0f0f0" }}>
                       <td style={{ padding: "12px 12px 12px 36px", color: darkMode ? "#B0BEC5" : "#555" }}>↳ {sub.nombre}</td>
                       <td style={{ padding: 12, textAlign: "right", color: darkMode ? "#E60026" : "#e53935" }}>${sub.presupuestado.toLocaleString()}</td>
                       <td style={{ padding: 12, textAlign: "right", color: darkMode ? "#43FF8E" : "#43a047" }}>${sub.ejecutado.toLocaleString()}</td>

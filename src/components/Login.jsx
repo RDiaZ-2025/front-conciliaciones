@@ -35,10 +35,10 @@ function HeartbeatGlobalStyle() {
         .dark-mode input:-webkit-autofill:hover,
         .dark-mode input:-webkit-autofill:focus,
         .dark-mode input:-webkit-autofill:active {
-          -webkit-box-shadow: 0 0 0 30px #232946 inset !important;
+          -webkit-box-shadow: 0 0 0 30px #4A5568 inset !important;
           -webkit-text-fill-color: #fff !important;
-          background-color: #232946 !important;
-          background: #232946 !important;
+          background-color: #4A5568 !important;
+          background: #4A5568 !important;
         }
       `}
     />
@@ -76,7 +76,7 @@ const Login = ({ onLogin, onBack, darkMode, setDarkMode }) => {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "flex-start",
-        background: darkMode ? "#23272F" : "linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%)",
+        background: darkMode ? "#2D3748" : "linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%)",
         color: darkMode ? "#fff" : "#181C32",
         position: "fixed",
         inset: 0,
@@ -110,7 +110,7 @@ const Login = ({ onLogin, onBack, darkMode, setDarkMode }) => {
           style={{ width: 180, margin: "0 auto", display: "block" }}
         />
       </Box>
-      <Paper elevation={6} sx={{ p: 5, borderRadius: 4, minWidth: 340, maxWidth: 380, width: "100%", boxShadow: "0 8px 32px rgba(0,0,0,0.10)", background: darkMode ? "#232946" : "#fff" }}>
+      <Paper elevation={6} sx={{ p: 5, borderRadius: 4, minWidth: 340, maxWidth: 380, width: "100%", boxShadow: "0 8px 32px rgba(25, 118, 210, 0.10)", background: darkMode ? "#4A5568" : "#fff" }}>
         <Typography variant="h5" fontWeight={700} color={darkMode ? "#fff" : "#000000"} align="center" mb={2}>
           Iniciar sesión
         </Typography>
