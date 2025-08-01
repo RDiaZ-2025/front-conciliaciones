@@ -278,6 +278,20 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
   const [envioExitoso, setEnvioExitoso] = useState(false);
   const [manualPdfConfirmation, setManualPdfConfirmation] = useState(null);
 
+  // Aplicar clase dark-mode al body
+  React.useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+    
+    // Cleanup al desmontar el componente
+    return () => {
+      document.body.classList.remove('dark-mode');
+    };
+  }, [darkMode]);
+
   // Generar miniatura PDF cuando cambia pdfFile
   React.useEffect(() => {
     let cancelled = false;
@@ -379,8 +393,7 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
     setUploading(true);
     setMessage("");
     try {
-      await fetch("https://renediaz2025.app.n8n.cloud/webhook-test/a4784977-134a-4f09-9ea3-04c85c5ba3b7",  // <-- comilla cerrada
-        {
+      await fetch("https://renediaz2025.app.n8n.cloud/webhook-test/a4784977-134a-4f09-9ea3-04c85c5ba3b7", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -432,55 +445,64 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
           <Typography variant="body1" sx={{ fontWeight: 500, mb: 1, color: darkMode ? '#fff' : '#000' }}>
             ¿Este documento contiene las dos firmas requeridas?
           </Typography>
-          <Button
-            variant={manualPdfConfirmation === true ? "contained" : "outlined"}
-            color="success"
-            sx={{
-              fontWeight: 600,
-              borderWidth: 2,
-              borderColor: '#222 !important',
-              boxShadow: manualPdfConfirmation === true ? '0 0 0 2px #222 !important' : undefined,
-              '&.Mui-focusVisible': {
-                boxShadow: '0 0 0 2px #222 !important',
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+            <Button
+              variant={manualPdfConfirmation === true ? "contained" : "outlined"}
+              color="success"
+              sx={{
+                fontWeight: 600,
+                borderWidth: 2,
                 borderColor: '#222 !important',
-                outline: '2px solid #222 !important',
-                outlineOffset: '0px',
-              },
-              '&:focus': {
-                boxShadow: '0 0 0 2px #222 !important',
-                borderColor: '#222 !important',
-                outline: '2px solid #222 !important',
-                outlineOffset: '0px',
-              },
-              '&:active': {
-                boxShadow: '0 0 0 2px #222 !important',
-                borderColor: '#222 !important',
-                outline: '2px solid #222 !important',
-                outlineOffset: '0px',
-              }
-            }}
-            onClick={() => {
-              setManualPdfConfirmation(true);
-              setMessage("✅ PDF subido correctamente.");
-            }}
-            disabled={!pdfUploaded}
-          >
-            ✅ Sí, continuar
-          </Button>
-          <Button
-            variant={manualPdfConfirmation === false ? "contained" : "outlined"}
-            color="error"
-            sx={{ fontWeight: 600, borderWidth: 2, borderColor: '#222 !important', color: manualPdfConfirmation === false ? '#fff' : '#d32f2f', background: manualPdfConfirmation === false ? '#d32f2f' : undefined, boxShadow: manualPdfConfirmation === false ? '0 0 0 2px #222' : undefined }}
-            onClick={() => {
-              setManualPdfConfirmation(false);
-              setPdfFile(null);
-              setPdfUploaded(false);
-              setMessage("");
-            }}
-            disabled={!pdfUploaded}
-          >
-            🔄 No, volver a subir el archivo
-          </Button>
+                boxShadow: manualPdfConfirmation === true ? '0 0 0 2px #222 !important' : undefined,
+                '&.Mui-focusVisible': {
+                  boxShadow: '0 0 0 2px #222 !important',
+                  borderColor: '#222 !important',
+                  outline: '2px solid #222 !important',
+                  outlineOffset: '0px',
+                },
+                '&:focus': {
+                  boxShadow: '0 0 0 2px #222 !important',
+                  borderColor: '#222 !important',
+                  outline: '2px solid #222 !important',
+                  outlineOffset: '0px',
+                },
+                '&:active': {
+                  boxShadow: '0 0 0 2px #222 !important',
+                  borderColor: '#222 !important',
+                  outline: '2px solid #222 !important',
+                  outlineOffset: '0px',
+                }
+              }}
+              onClick={() => {
+                setManualPdfConfirmation(true);
+                setMessage("✅ PDF subido correctamente.");
+              }}
+              disabled={!pdfUploaded}
+            >
+              ✅ Sí, continuar
+            </Button>
+            <Button
+              variant={manualPdfConfirmation === false ? "contained" : "outlined"}
+              color="error"
+              sx={{ 
+                fontWeight: 600, 
+                borderWidth: 2, 
+                borderColor: '#222 !important', 
+                color: manualPdfConfirmation === false ? '#fff' : '#d32f2f', 
+                background: manualPdfConfirmation === false ? '#d32f2f' : undefined, 
+                boxShadow: manualPdfConfirmation === false ? '0 0 0 2px #222' : undefined 
+              }}
+              onClick={() => {
+                setManualPdfConfirmation(false);
+                setPdfFile(null);
+                setPdfUploaded(false);
+                setMessage("");
+              }}
+              disabled={!pdfUploaded}
+            >
+              🔄 No, volver a subir
+            </Button>
+          </Box>
         </Box>
       </Paper>
     );
@@ -496,20 +518,47 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
               <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 600, color: darkMode ? '#fff' : '#000' }}>
                 1. Sube el archivo Excel (Valorización)
               </Typography>
-              <input
-                id="excel-input"
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={handleExcelChange}
-                style={{ display: "block", margin: "16px auto" }}
-                disabled={uploading || excelUploaded}
-              />
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, margin: '16px auto' }}>
+                <input
+                  id="excel-input"
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleExcelChange}
+                  style={{ display: 'none' }}
+                  disabled={uploading || excelUploaded}
+                />
+                <Button
+                  variant={darkMode ? "contained" : "outlined"}
+                  component="label"
+                  htmlFor="excel-input"
+                  sx={{
+                    backgroundColor: darkMode ? '#4A5568' : 'transparent',
+                    color: darkMode ? 'white' : 'black',
+                    border: darkMode ? 'none' : '1px solid black',
+                    '&:hover': {
+                      backgroundColor: darkMode ? '#2D3748' : '#f5f5f5',
+                    },
+                    borderRadius: '6px',
+                    padding: '8px 16px',
+                    fontSize: '14px',
+                    fontWeight: 500
+                  }}
+                  disabled={uploading || excelUploaded}
+                >
+                  Seleccionar archivo
+                </Button>
+                {excelFile && (
+                  <Typography sx={{ color: darkMode ? 'white' : 'inherit' }}>
+                    {excelFile.name}
+                  </Typography>
+                )}
+              </Box>
               {renderExcelPreview()}
               <Button
                 variant="contained"
                 color="primary"
                 fullWidth
-                sx={{ mt: 2, fontWeight: 600, fontSize: 16, py: 1, borderRadius: 2, background: '#222', '&:hover': { background: '#111' } }}
+                sx={{ mt: 2, fontWeight: 600, fontSize: 16, py: 1.5, borderRadius: 2, background: '#222', '&:hover': { background: '#111' } }}
                 onClick={() => {
                   setActiveStep(1);
                   setMessage("");
@@ -530,14 +579,41 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
               <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 600, color: darkMode ? '#fff' : '#000' }}>
                 2. Sube el archivo PDF (Orden de Compra)
               </Typography>
-              <input
-                id="pdf-input"
-                type="file"
-                accept=".pdf"
-                onChange={handlePdfChange}
-                style={{ display: "block", margin: "16px auto" }}
-                disabled={uploading || pdfUploaded}
-              />
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, margin: '16px auto' }}>
+                <input
+                  id="pdf-input"
+                  type="file"
+                  accept=".pdf"
+                  onChange={handlePdfChange}
+                  style={{ display: 'none' }}
+                  disabled={uploading || pdfUploaded}
+                />
+                <Button
+                  variant={darkMode ? "contained" : "outlined"}
+                  component="label"
+                  htmlFor="pdf-input"
+                  sx={{
+                    backgroundColor: darkMode ? '#4A5568' : 'transparent',
+                    color: darkMode ? 'white' : 'black',
+                    border: darkMode ? 'none' : '1px solid black',
+                    '&:hover': {
+                      backgroundColor: darkMode ? '#2D3748' : '#f5f5f5',
+                    },
+                    borderRadius: '6px',
+                    padding: '8px 16px',
+                    fontSize: '14px',
+                    fontWeight: 500
+                  }}
+                  disabled={uploading || pdfUploaded}
+                >
+                  Seleccionar archivo
+                </Button>
+                {pdfFile && (
+                  <Typography sx={{ color: darkMode ? 'white' : 'inherit' }}>
+                    {pdfFile.name}
+                  </Typography>
+                )}
+              </Box>
               {renderPdfPreview()}
               {pdfWarning && (
                 <Alert severity="warning" sx={{ mt: 2, mb: 1 }}>
@@ -548,7 +624,7 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
                 variant="contained"
                 color="primary"
                 fullWidth
-                sx={{ mt: 2, fontWeight: 600, fontSize: 16, py: 1, borderRadius: 2, background: '#222', '&:hover': { background: '#111' } }}
+                sx={{ mt: 2, fontWeight: 600, fontSize: 16, py: 1.5, borderRadius: 2, background: '#222', '&:hover': { background: '#111' } }}
                 onClick={() => {
                   setActiveStep(2);
                   setMessage("");
@@ -597,8 +673,8 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
               <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 600, color: darkMode ? '#fff' : '#000' }}>
                 3. ¿Desea subir materiales?
               </Typography>
-              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                <label style={{ color: darkMode ? '#fff' : '#000' }}>
+              <Box sx={{ display: 'flex', gap: 3, mb: 2 }}>
+                <label style={{ color: darkMode ? '#fff' : '#000', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                   <input
                     type="radio"
                     name="deseaSubirMateriales"
@@ -606,11 +682,11 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
                     checked={deseaSubirMateriales === true}
                     onChange={() => setDeseaSubirMateriales(true)}
                     disabled={uploading}
-                    style={{ accentColor: '#222', width: 20, height: 20 }}
+                    style={{ accentColor: '#222' }}
                   />
                   Sí
                 </label>
-                <label style={{ color: darkMode ? '#fff' : '#000' }}>
+                <label style={{ color: darkMode ? '#fff' : '#000', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                   <input
                     type="radio"
                     name="deseaSubirMateriales"
@@ -618,7 +694,7 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
                     checked={deseaSubirMateriales === false}
                     onChange={() => setDeseaSubirMateriales(false)}
                     disabled={uploading}
-                    style={{ accentColor: '#222', width: 20, height: 20 }}
+                    style={{ accentColor: '#222' }}
                   />
                   No
                 </label>
@@ -630,7 +706,18 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
                 webkitdirectory="true"
                 directory="true"
                 onChange={handleMaterialesChange}
-                style={{ display: "block", margin: "16px auto" }}
+                style={{ 
+                  display: "block", 
+                  margin: "16px auto",
+                  width: "100%",
+                  padding: "12px",
+                  border: `1px solid ${darkMode ? '#555' : '#ccc'}`,
+                  borderRadius: "8px",
+                  backgroundColor: darkMode ? '#333' : '#fff',
+                  color: darkMode ? '#fff' : '#000',
+                  fontSize: "14px",
+                  fontFamily: "inherit"
+                }}
                 disabled={uploading || deseaSubirMateriales !== true}
               />
               {materiales.length > 0 && deseaSubirMateriales === true && (
@@ -685,7 +772,7 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
                   variant="contained"
                   color="primary"
                   fullWidth
-                  sx={{ mt: 2, fontWeight: 600, fontSize: 16, py: 1, borderRadius: 2, background: '#222', '&:hover': { background: '#111' } }}
+                  sx={{ mt: 2, fontWeight: 600, fontSize: 16, py: 2, borderRadius: 2, background: '#222', '&:hover': { background: '#111' } }}
                   onClick={handleNotifyN8N}
                   disabled={uploading}
                 >
@@ -713,27 +800,51 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
         color: darkMode ? "#fff" : "#181C32",
         position: "fixed",
         inset: 0,
-        transition: "background 0.3s, color 0.3s"
+        transition: "background 0.3s, color 0.3s",
+        padding: 3
       }}
     >
-      {/* DarkModeToggle en la esquina superior derecha */}
-      <Box sx={{ position: "absolute", top: 16, right: 16, zIndex: 1000 }}>
-        <DarkModeToggle 
-          darkMode={darkMode} 
-          setDarkMode={setDarkMode} 
-          onLogoClick={onUploadComplete}
-        />
-      </Box>
-      
-      <Box sx={{ width: "100%", display: "flex", alignItems: "center", mt: 2, mb: 4, position: "relative" }}>
+      {/* Header con logo y controles */}
+      <Box sx={{ 
+        width: "100%", 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "space-between",
+        mt: 1, 
+        mb: 3, 
+        px: 2
+      }}>
+        {/* Espacio vacío para centrar el logo */}
+        <Box sx={{ width: 120 }} />
+        
+        {/* Logo centrado */}
         <img
           src={claroMediaLogo}
           alt="Claro Media Data Tech"
-          style={{ width: 180, margin: "0 auto", display: "block" }}
+          style={{ width: 180 }}
         />
+        
+        {/* DarkModeToggle en la esquina superior derecha */}
+        <Box sx={{ display: "flex", justifyContent: "flex-end", width: 120 }}>
+          <DarkModeToggle 
+            darkMode={darkMode} 
+            setDarkMode={setDarkMode} 
+            onLogoClick={onUploadComplete}
+          />
+        </Box>
       </Box>
       
-      <Paper elevation={6} sx={{ p: 5, borderRadius: 4, minWidth: 340, maxWidth: 380, width: "100%", boxShadow: "0 8px 32px rgba(25, 118, 210, 0.10)", background: darkMode ? "#4A5568" : "#fff" }}>
+      <Paper 
+        elevation={6} 
+        sx={{ 
+          p: 5, 
+          borderRadius: 4, 
+          width: "100%",
+          maxWidth: 380,
+          boxShadow: "0 8px 32px rgba(25, 118, 210, 0.10)", 
+          background: darkMode ? "#4A5568" : "#fff" 
+        }}
+      >
         <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 3 }}>
           {steps.map((label) => (
             <Step key={label}>

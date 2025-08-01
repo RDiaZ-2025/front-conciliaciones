@@ -28,6 +28,55 @@ body {
   }
 }
 
+body.dark-mode {
+  background-color: #2D3748 !important;
+}
+
+/* Estilos para inputs de archivo en modo oscuro */
+body.dark-mode input[type="file"] {
+  color: white !important;
+  background: transparent !important;
+}
+
+/* Estilos para el botón "Seleccionar archivo" en WebKit (Chrome, Safari) */
+body.dark-mode input[type="file"]::-webkit-file-upload-button {
+  background-color: #4A5568 !important;
+  color: white !important;
+  border: 1px solid #4A5568 !important;
+  border-radius: 6px !important;
+  padding: 8px 16px !important;
+  margin-right: 12px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+/* Estilos para Firefox */
+body.dark-mode input[type="file"]::-moz-file-upload-button {
+  background-color: #4A5568 !important;
+  color: white !important;
+  border: 1px solid #4A5568 !important;
+  border-radius: 6px !important;
+  padding: 8px 16px !important;
+  margin-right: 12px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+/* Para navegadores modernos */
+body.dark-mode input[type="file"]::file-selector-button {
+  background-color: #4A5568 !important;
+  color: white !important;
+  border: 1px solid #4A5568 !important;
+  border-radius: 6px !important;
+  padding: 8px 16px !important;
+  margin-right: 12px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
 a {
   font-weight: 500;
   color: #646cff;
