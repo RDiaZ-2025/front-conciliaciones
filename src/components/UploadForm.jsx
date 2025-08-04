@@ -804,34 +804,22 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
         padding: 3
       }}
     >
-      {/* Header con logo y controles */}
-      <Box sx={{ 
-        width: "100%", 
-        display: "flex", 
-        alignItems: "center", 
-        justifyContent: "space-between",
-        mt: 1, 
-        mb: 3, 
-        px: 2
-      }}>
-        {/* Espacio vacío para centrar el logo */}
-        <Box sx={{ width: 120 }} />
-        
-        {/* Logo centrado */}
+      {/* DarkModeToggle en la esquina superior derecha */}
+      <Box sx={{ position: "absolute", top: 16, right: 16, zIndex: 1000 }}>
+        <DarkModeToggle 
+          darkMode={darkMode} 
+          setDarkMode={setDarkMode} 
+          onLogoClick={onUploadComplete}
+        />
+      </Box>
+      
+      {/* Header con logo centrado */}
+      <Box sx={{ width: "100%", display: "flex", alignItems: "center", mt: 2, mb: 2, position: "relative" }}>
         <img
           src={claroMediaLogo}
           alt="Claro Media Data Tech"
-          style={{ width: 180 }}
+          style={{ width: 180, margin: "0 auto", display: "block" }}
         />
-        
-        {/* DarkModeToggle en la esquina superior derecha */}
-        <Box sx={{ display: "flex", justifyContent: "flex-end", width: 120 }}>
-          <DarkModeToggle 
-            darkMode={darkMode} 
-            setDarkMode={setDarkMode} 
-            onLogoClick={onUploadComplete}
-          />
-        </Box>
       </Box>
       
       <Paper 
