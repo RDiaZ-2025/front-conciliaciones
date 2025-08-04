@@ -800,12 +800,11 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
         color: darkMode ? "#fff" : "#181C32",
         position: "fixed",
         inset: 0,
-        transition: "background 0.3s, color 0.3s",
-        padding: 3
+        transition: "background 0.3s, color 0.3s"
       }}
     >
       {/* DarkModeToggle en la esquina superior derecha */}
-      <Box sx={{ position: "absolute", top: 16, right: 60, zIndex: 1000 }}>
+      <Box sx={{ position: "absolute", top: 16, right: 40, zIndex: 1000 }}>
         <DarkModeToggle 
           darkMode={darkMode} 
           setDarkMode={setDarkMode} 
@@ -814,7 +813,7 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
       </Box>
       
       {/* Header con logo centrado */}
-      <Box sx={{ width: "100%", display: "flex", alignItems: "center", mt: 2, mb: 2, position: "relative" }}>
+      <Box sx={{ width: "100%", display: "flex", alignItems: "center", mt: 5, mb: 2, position: "relative", px: 3 }}>
         <img
           src={claroMediaLogo}
           alt="Claro Media Data Tech"
@@ -830,7 +829,9 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
           width: "100%",
           maxWidth: 380,
           boxShadow: "0 8px 32px rgba(25, 118, 210, 0.10)", 
-          background: darkMode ? "#4A5568" : "#fff" 
+          background: darkMode ? "#4A5568" : "#fff",
+          mx: 3,
+          mb: 3
         }}
       >
         <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 3 }}>
