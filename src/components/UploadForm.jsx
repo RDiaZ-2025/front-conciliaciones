@@ -805,7 +805,7 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
       }}
     >
       {/* DarkModeToggle en la esquina superior derecha */}
-      <Box sx={{ position: "absolute", top: 16, right: 40, zIndex: 1000 }}>
+      <Box sx={{ position: "absolute", top: 16, right: 60, zIndex: 1000 }}>
         <DarkModeToggle 
           darkMode={darkMode} 
           setDarkMode={setDarkMode} 
