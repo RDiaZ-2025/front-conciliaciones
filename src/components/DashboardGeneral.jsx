@@ -197,18 +197,14 @@ export default function DashboardGeneral({ darkMode, setDarkMode, onBack }) {
           <button onClick={() => setTipoSeguimiento("ebitda")}
             style={{ padding: "8px 18px", borderRadius: 6, border: tipoSeguimiento === "ebitda" ? "2px solid #1976d2" : "1px solid #bdbdbd", background: tipoSeguimiento === "ebitda" ? (darkMode ? "#1E2A3A" : "#e3eafc") : (darkMode ? "#181C32" : "#f0f0f0"), color: tipoSeguimiento === "ebitda" ? "#1976d2" : (darkMode ? "#E6EDF3" : "#333"), fontWeight: 700, fontSize: 16, cursor: "pointer", transition: "all 0.2s" }}>Ebitda</button>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-          <label style={{ fontWeight: 600, color: darkMode ? "#E6EDF3" : "#333" }}>Año:
-            <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} style={{ marginLeft: 8, padding: 6, borderRadius: 6, border: darkMode ? "1.5px solid #4A5568" : "1px solid #bdbdbd", background: darkMode ? "#181C32" : "#f0f0f0", color: darkMode ? "#E6EDF3" : "#181C32" }}>
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </label>
-          <label style={{ fontWeight: 600, color: darkMode ? "#E6EDF3" : "#333" }}>Mes:
-              <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ marginLeft: 8, padding: 6, borderRadius: 6, border: darkMode ? "1.5px solid #4A5568" : "1px solid #bdbdbd", background: darkMode ? "#181C32" : "#f0f0f0", color: darkMode ? "#E6EDF3" : "#181C32" }}>
-              <option value="">Todos</option>
-              {months.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </label>
+        <div style={{ display: "flex", alignItems: "center", background: darkMode ? "#181C32" : "#fff", borderRadius: 8, boxShadow: darkMode ? "0 2px 8px #0008" : "0 2px 8px #1976d220", padding: "4px 12px", gap: 8, border: darkMode ? "1.5px solid #4A5568" : "none" }}>
+          <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} style={{ padding: "8px 18px", borderRadius: 6, border: "1px solid #bdbdbd", background: darkMode ? "#181C32" : "#f0f0f0", color: darkMode ? "#E6EDF3" : "#333", fontWeight: 700, fontSize: 16, cursor: "pointer", transition: "all 0.2s" }}>
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ padding: "8px 18px", borderRadius: 6, border: "1px solid #bdbdbd", background: darkMode ? "#181C32" : "#f0f0f0", color: darkMode ? "#E6EDF3" : "#333", fontWeight: 700, fontSize: 16, cursor: "pointer", transition: "all 0.2s" }}>
+            <option value="">Todos</option>
+            {months.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
         </div>
       </div>
       {/* Indicadores principales */}
@@ -248,8 +244,8 @@ export default function DashboardGeneral({ darkMode, setDarkMode, onBack }) {
           {historicoFiltrado.map((h, i) => {
             const groupWidth = 38;
             const barWidth = 10;
-            const stepX = (width - 140) / (historicoFiltrado.length - 1);
-            const x = 120 + i * stepX;
+            const stepX = historicoFiltrado.length > 1 ? (width - 140) / (historicoFiltrado.length - 1) : 0;
+            const x = historicoFiltrado.length === 1 ? width / 2 : 120 + i * stepX;
             return (
               <g key={h.mes}>
                 {/* Presupuesto */}
@@ -305,15 +301,19 @@ export default function DashboardGeneral({ darkMode, setDarkMode, onBack }) {
           })}
           {/* Línea de desviación */}
           <polyline points={historicoFiltrado.map((h, i) => {
-            const stepX = (width - 140) / (historicoFiltrado.length - 1);
-            const x = 120 + i * stepX;
+            const stepX = historicoFiltrado.length > 1 ? (width - 140) / (historicoFiltrado.length - 1) : 0;
+            const x = historicoFiltrado.length === 1 ? width / 2 : 120 + i * stepX;
             const y = height - ((h.ejecutado - h.presupuestado + h.presupuestado) / maxY) * height;
             return `${x},${y}`;
           }).join(' ')} fill="none" stroke="#ef4444" strokeWidth={2} />
           {/* Etiquetas eje X */}
-          {historicoFiltrado.map((h, i) => (
-            <text key={h.mes} x={120 + i * ((width - 140) / (historicoFiltrado.length - 1))} y={height + 24} textAnchor="middle" fontSize={14} fill={darkMode ? "#888" : "#666"}>{h.mes}</text>
-          ))}
+          {historicoFiltrado.map((h, i) => {
+            const stepX = historicoFiltrado.length > 1 ? (width - 140) / (historicoFiltrado.length - 1) : 0;
+            const x = historicoFiltrado.length === 1 ? width / 2 : 120 + i * stepX;
+            return (
+              <text key={h.mes} x={x} y={height + 24} textAnchor="middle" fontSize={14} fill={darkMode ? "#888" : "#666"}>{h.mes}</text>
+            );
+          })}
         </svg>
         
         {/* Tooltip */}
