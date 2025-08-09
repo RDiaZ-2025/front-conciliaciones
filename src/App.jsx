@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import DashboardGeneral from './components/DashboardGeneral';
 import Login from './components/Login';
 import UploadForm from './components/UploadForm';
+import CierreVentas from './components/CierreVentas';
 import DarkModeToggle from './components/DarkModeToggle';
 
 function App() {
-  const [currentView, setCurrentView] = useState('upload'); // 'upload', 'login', 'dashboard'
+  const [currentView, setCurrentView] = useState('upload'); // 'upload', 'login', 'dashboard', 'cierreVentas'
   const [darkMode, setDarkMode] = useState(false);
 
   const handleUploadComplete = () => {
@@ -24,6 +25,14 @@ function App() {
     setCurrentView('login');
   };
 
+  const handleCierreVentasClick = () => {
+    setCurrentView('cierreVentas');
+  };
+
+  const handleBackFromCierreVentas = () => {
+    setCurrentView('upload');
+  };
+
   const renderCurrentView = () => {
     switch (currentView) {
       case 'upload':
@@ -32,6 +41,7 @@ function App() {
             onUploadComplete={handleUploadComplete}
             darkMode={darkMode}
             setDarkMode={setDarkMode}
+            onCierreVentasClick={handleCierreVentasClick}
           />
         );
       case 'login':
@@ -51,12 +61,21 @@ function App() {
             onBack={handleBackToLogin}
           />
         );
+      case 'cierreVentas':
+        return (
+          <CierreVentas 
+            darkMode={darkMode}
+            setDarkMode={setDarkMode}
+            onBack={handleBackFromCierreVentas}
+          />
+        );
       default:
         return (
           <UploadForm 
             onUploadComplete={handleUploadComplete}
             darkMode={darkMode}
             setDarkMode={setDarkMode}
+            onCierreVentasClick={handleCierreVentasClick}
           />
         );
     }

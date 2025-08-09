@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Box, Button, LinearProgress, Typography, Alert, Stepper, Step, StepLabel, Paper, Fade } from "@mui/material";
 import { BlobServiceClient } from "@azure/storage-blob";
 import claroMediaLogo from "../assets/Claro-Media-Logo.jpg";
@@ -319,6 +319,39 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
     return () => { cancelled = true; };
   }, [pdfFile]);
 
+  // Scroll automático cuando aparece el botón "SIGUIENTE" del PDF
+  useEffect(() => {
+    if (manualPdfConfirmation === true && pdfUploaded) {
+      setTimeout(() => {
+        const siguienteButton = document.getElementById('siguiente-button');
+        if (siguienteButton) {
+          // Calcular la posición para que el botón esté completamente visible
+          const buttonRect = siguienteButton.getBoundingClientRect();
+          const windowHeight = window.innerHeight;
+          
+          // Si el botón no está completamente visible
+          if (buttonRect.bottom > windowHeight || buttonRect.top < 0) {
+            // Scroll para centrar el botón en la pantalla con un poco de margen
+            const targetPosition = window.pageYOffset + buttonRect.top - (windowHeight / 2) + (buttonRect.height / 2);
+            
+            window.scrollTo({
+              top: Math.max(0, targetPosition),
+              behavior: 'smooth'
+            });
+          }
+        }
+      }, 500); // Delay más largo para asegurar que el botón se haya renderizado
+    }
+  }, [manualPdfConfirmation, pdfUploaded]);
+
+  // Scroll al inicio cuando cambie el paso activo
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }, [activeStep]);
+
   // Subir Excel
   const handleExcelChange = async (e) => {
     const file = e.target.files[0];
@@ -620,22 +653,35 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
                   {pdfWarning}
                 </Alert>
               )}
-              <Button
-                variant="contained"
-                color="primary"
-                fullWidth
-                sx={{ mt: 2, fontWeight: 600, fontSize: 16, py: 1.5, borderRadius: 2, background: '#222', '&:hover': { background: '#111' } }}
-                onClick={() => {
-                  setActiveStep(2);
-                  setMessage("");
-                  setPdfWarning("");
-                  const pdfInput = document.getElementById("pdf-input");
-                  if (pdfInput) pdfInput.value = "";
-                }}
-                disabled={!pdfUploaded || manualPdfConfirmation !== true}
-              >
-                Siguiente
-              </Button>
+              {/* Solo mostrar el botón cuando esté realmente listo */}
+              {pdfUploaded && manualPdfConfirmation === true && (
+                <Button
+                  id="siguiente-button"
+                  variant="contained"
+                  color="primary"
+                  fullWidth
+                  sx={{ 
+                    mt: 2, 
+                    fontWeight: 600, 
+                    fontSize: 16, // Mismo tamaño que Excel
+                    py: 1.5, // Mismo padding que Excel
+                    borderRadius: 2, // Mismo radio que Excel
+                    background: '#222', // Mismo fondo que Excel
+                    '&:hover': { 
+                      background: '#111' // Mismo hover que Excel
+                    }
+                  }}
+                  onClick={() => {
+                    setActiveStep(2);
+                    setMessage("");
+                    setPdfWarning("");
+                    const pdfInput = document.getElementById("pdf-input");
+                    if (pdfInput) pdfInput.value = "";
+                  }}
+                >
+                  Siguiente
+                </Button>
+              )}
             </Box>
           </Fade>
         );
@@ -703,8 +749,8 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
                 id="materiales-input"
                 type="file"
                 multiple
-                webkitdirectory="true"
-                directory="true"
+                webkitdirectory
+                directory
                 onChange={handleMaterialesChange}
                 style={{ 
                   display: "block", 
@@ -798,8 +844,8 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
         justifyContent: "flex-start",
         background: darkMode ? "#2D3748" : "linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%)",
         color: darkMode ? "#fff" : "#181C32",
-        position: "fixed",
-        inset: 0,
+        position: "relative", // Cambio de fixed a relative para permitir scroll
+        paddingBottom: "100px", // Espacio extra en la parte inferior
         transition: "background 0.3s, color 0.3s"
       }}
     >
@@ -827,11 +873,12 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
           p: 5, 
           borderRadius: 4, 
           width: "100%",
-          maxWidth: 380,
+          maxWidth: 450, // Aumento el ancho máximo
           boxShadow: "0 8px 32px rgba(25, 118, 210, 0.10)", 
           background: darkMode ? "#4A5568" : "#fff",
           mx: 3,
-          mb: 3
+          mb: 5, // Más margen inferior
+          pb: 6 // Más padding inferior para el botón
         }}
       >
         <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 3 }}>
