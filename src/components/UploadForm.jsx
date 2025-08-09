@@ -738,34 +738,57 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
                     name="deseaSubirMateriales"
                     value="no"
                     checked={deseaSubirMateriales === false}
-                    onChange={() => setDeseaSubirMateriales(false)}
+                    onChange={() => {
+                      setDeseaSubirMateriales(false);
+                      // Limpiar archivos de materiales cuando se selecciona "No"
+                      setMateriales([]);
+                      // Limpiar también el input file
+                      const materialesInput = document.getElementById("materiales-input");
+                      if (materialesInput) materialesInput.value = "";
+                    }}
                     disabled={uploading}
                     style={{ accentColor: '#222' }}
                   />
                   No
                 </label>
               </Box>
-              <input
-                id="materiales-input"
-                type="file"
-                multiple
-                webkitdirectory
-                directory
-                onChange={handleMaterialesChange}
-                style={{ 
-                  display: "block", 
-                  margin: "16px auto",
-                  width: "100%",
-                  padding: "12px",
-                  border: `1px solid ${darkMode ? '#555' : '#ccc'}`,
-                  borderRadius: "8px",
-                  backgroundColor: darkMode ? '#333' : '#fff',
-                  color: darkMode ? '#fff' : '#000',
-                  fontSize: "14px",
-                  fontFamily: "inherit"
-                }}
-                disabled={uploading || deseaSubirMateriales !== true}
-              />
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, margin: '16px auto' }}>
+                <input
+                  id="materiales-input"
+                  type="file"
+                  multiple
+                  webkitdirectory
+                  directory
+                  onChange={handleMaterialesChange}
+                  style={{ display: 'none' }}
+                  disabled={uploading || deseaSubirMateriales !== true}
+                />
+                <Button
+                  variant={darkMode ? "contained" : "outlined"}
+                  component="label"
+                  htmlFor="materiales-input"
+                  sx={{
+                    backgroundColor: darkMode ? '#4A5568' : 'transparent',
+                    color: darkMode ? 'white' : 'black',
+                    border: darkMode ? 'none' : '1px solid black',
+                    '&:hover': {
+                      backgroundColor: darkMode ? '#2D3748' : '#f5f5f5',
+                    },
+                    borderRadius: '6px',
+                    padding: '8px 16px',
+                    fontSize: '14px',
+                    fontWeight: 500
+                  }}
+                  disabled={uploading || deseaSubirMateriales !== true}
+                >
+                  Seleccionar archivos
+                </Button>
+                {materiales.length > 0 && (
+                  <Typography sx={{ color: darkMode ? 'white' : 'inherit' }}>
+                    {materiales.length} archivo(s) seleccionado(s)
+                  </Typography>
+                )}
+              </Box>
               {materiales.length > 0 && deseaSubirMateriales === true && (
                 <Box sx={{ mt: 1, mb: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
                   {materiales.map((file, idx) => (
