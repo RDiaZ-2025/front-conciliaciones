@@ -426,7 +426,7 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
     setUploading(true);
     setMessage("");
     try {
-      await fetch("https://renediaz2025.app.n8n.cloud/webhook-test/a4784977-134a-4f09-9ea3-04c85c5ba3b7", {
+      await fetch("https://renediaz2025.app.n8n.cloud/webhook/a4784977-134a-4f09-9ea3-04c85c5ba3b7", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
