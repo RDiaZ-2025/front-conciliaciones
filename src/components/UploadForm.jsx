@@ -255,12 +255,14 @@ async function validatePdf(file, setMessage, setDebugPdfText) {
 }
 
 const steps = [
-  "Subir Excel",
+  "Tipo de Usuario",
+  "Subir Excel", 
   "Subir PDF",
   "Materiales y Confirmación"
 ];
 
 const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
+  const [tipoUsuario, setTipoUsuario] = useState(null); // 'cliente' o 'agencia'
   const [excelFile, setExcelFile] = useState(null);
   const [pdfFile, setPdfFile] = useState(null);
   const [excelUploaded, setExcelUploaded] = useState(false);
@@ -430,6 +432,7 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          tipoUsuario,
           archivos: [excelFile?.name, pdfFile?.name],
           deseaSubirMateriales,
           materiales: materiales.map(f => f.name),
@@ -548,9 +551,116 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
         return (
           <Fade in={activeStep === 0}>
             <Box>
-              <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 600, color: darkMode ? '#fff' : '#000' }}>
-                1. Sube el archivo Excel (Valorización)
+              <Typography variant="h5" sx={{ mb: 3, fontWeight: 700, textAlign: 'center', color: darkMode ? '#fff' : '#222' }}>
+                Selecciona Cliente o Agencia
               </Typography>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}>
+                {/* Tarjeta Cliente */}
+                <Paper
+                  elevation={tipoUsuario === 'cliente' ? 8 : 2}
+                  sx={{
+                    p: 2,
+                    width: 280,
+                    height: 100,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    border: tipoUsuario === 'cliente' ? '3px solid #222' : '2px solid transparent',
+                    background: tipoUsuario === 'cliente' 
+                      ? (darkMode ? '#4A5568' : '#f8fafc') 
+                      : (darkMode ? '#2D3748' : '#fff'),
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: '0 8px 25px rgba(0,0,0,0.15)'
+                    }
+                  }}
+                  onClick={() => setTipoUsuario('cliente')}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ fontSize: 48 }}>👤</Box>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: darkMode ? '#fff' : '#222' }}>
+                      Cliente
+                    </Typography>
+                  </Box>
+                  {tipoUsuario === 'cliente' && (
+                    <Box sx={{ color: '#4CAF50', fontWeight: 600, fontSize: 18 }}>
+                      ✓
+                    </Box>
+                  )}
+                </Paper>
+
+                {/* Tarjeta Agencia */}
+                <Paper
+                  elevation={tipoUsuario === 'agencia' ? 8 : 2}
+                  sx={{
+                    p: 2,
+                    width: 280,
+                    height: 100,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    border: tipoUsuario === 'agencia' ? '3px solid #222' : '2px solid transparent',
+                    background: tipoUsuario === 'agencia' 
+                      ? (darkMode ? '#4A5568' : '#f8fafc') 
+                      : (darkMode ? '#2D3748' : '#fff'),
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: '0 8px 25px rgba(0,0,0,0.15)'
+                    }
+                  }}
+                  onClick={() => setTipoUsuario('agencia')}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ fontSize: 48 }}>🏢</Box>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: darkMode ? '#fff' : '#222' }}>
+                      Agencia
+                    </Typography>
+                  </Box>
+                  {tipoUsuario === 'agencia' && (
+                    <Box sx={{ color: '#4CAF50', fontWeight: 600, fontSize: 18 }}>
+                      ✓
+                    </Box>
+                  )}
+                </Paper>
+              </Box>
+
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                sx={{ 
+                  mt: 4, 
+                  fontWeight: 600, 
+                  fontSize: 16, 
+                  py: 1.5, 
+                  borderRadius: 2, 
+                  background: '#222', 
+                  '&:hover': { background: '#111' },
+                  '&:disabled': { background: '#ccc' }
+                }}
+                onClick={() => {
+                  setActiveStep(1);
+                  setMessage("");
+                }}
+                disabled={!tipoUsuario}
+              >
+                Siguiente
+              </Button>
+            </Box>
+          </Fade>
+        );
+      case 1:
+         return (
+           <Fade in={activeStep === 1}>
+             <Box>
+               <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 600, color: darkMode ? '#fff' : '#000' }}>
+                 1. Sube el archivo Excel (Valorización)
+               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, margin: '16px auto' }}>
                 <input
                   id="excel-input"
@@ -593,7 +703,7 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
                 fullWidth
                 sx={{ mt: 2, fontWeight: 600, fontSize: 16, py: 1.5, borderRadius: 2, background: '#222', '&:hover': { background: '#111' } }}
                 onClick={() => {
-                  setActiveStep(1);
+                  setActiveStep(2);
                   setMessage("");
                   const excelInput = document.getElementById("excel-input");
                   if (excelInput) excelInput.value = "";
@@ -605,9 +715,9 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
             </Box>
           </Fade>
         );
-      case 1:
+      case 2:
         return (
-          <Fade in={activeStep === 1}>
+          <Fade in={activeStep === 2}>
             <Box>
               <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 600, color: darkMode ? '#fff' : '#000' }}>
                 2. Sube el archivo PDF (Orden de Compra)
@@ -672,7 +782,7 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
                     }
                   }}
                   onClick={() => {
-                    setActiveStep(2);
+                    setActiveStep(3);
                     setMessage("");
                     setPdfWarning("");
                     const pdfInput = document.getElementById("pdf-input");
@@ -685,7 +795,7 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
             </Box>
           </Fade>
         );
-      case 2:
+      case 3:
         if (envioExitoso) {
           return (
             <Fade in={true}>
@@ -696,6 +806,7 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
                 <Paper elevation={1} sx={{ p: 2, mt: 2, background: darkMode ? '#2a2d3a' : '#f8fafc' }}>
                   <Typography variant="subtitle2" fontWeight={600} mb={1} sx={{ color: darkMode ? '#fff' : '#000' }}>Resumen del envío:</Typography>
                   <ul style={{ margin: 0, paddingLeft: 18, color: darkMode ? '#fff' : '#000' }}>
+                    <li>Tipo: {tipoUsuario === 'cliente' ? 'Cliente' : 'Agencia'}</li>
                     <li>Excel: {excelFile?.name || <span style={{ color: '#aaa' }}>No seleccionado</span>}</li>
                     <li>PDF: {pdfFile?.name || <span style={{ color: '#aaa' }}>No seleccionado</span>}</li>
                     <li>Materiales: {materiales.length > 0 ? materiales.length + ' archivo(s)' : 'Ninguno'}</li>
@@ -714,7 +825,7 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
           );
         }
         return (
-          <Fade in={activeStep === 2}>
+          <Fade in={activeStep === 3}>
             <Box>
               <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 600, color: darkMode ? '#fff' : '#000' }}>
                 3. ¿Desea subir materiales?
@@ -831,6 +942,7 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
               <Paper elevation={1} sx={{ p: 2, mt: 2, background: darkMode ? '#2a2d3a' : '#f8fafc' }}>
                 <Typography variant="subtitle2" fontWeight={600} mb={1} sx={{ color: darkMode ? '#fff' : '#000' }}>Resumen:</Typography>
                 <ul style={{ margin: 0, paddingLeft: 18, color: darkMode ? '#fff' : '#000' }}>
+                  <li>Tipo: {tipoUsuario === 'cliente' ? 'Cliente' : 'Agencia'}</li>
                   <li>Excel: {excelFile?.name || <span style={{ color: '#aaa' }}>No seleccionado</span>}</li>
                   <li>PDF: {pdfFile?.name || <span style={{ color: '#aaa' }}>No seleccionado</span>}</li>
                   <li>Materiales: {materiales.length > 0 ? materiales.length + ' archivo(s)' : 'Ninguno'}</li>

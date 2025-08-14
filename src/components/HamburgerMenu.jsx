@@ -10,9 +10,8 @@ import {
   Divider
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
 
-const HamburgerMenu = ({ darkMode, onCierreVentasClick }) => {
+const HamburgerMenu = ({ darkMode }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
 
@@ -22,11 +21,6 @@ const HamburgerMenu = ({ darkMode, onCierreVentasClick }) => {
 
   const handleClose = () => {
     setAnchorEl(null);
-  };
-
-  const handleCierreVentasClick = () => {
-    handleClose();
-    onCierreVentasClick();
   };
 
   return (
@@ -97,53 +91,7 @@ const HamburgerMenu = ({ darkMode, onCierreVentasClick }) => {
           mx: 1
         }} />
         
-        <MenuItem 
-          onClick={handleCierreVentasClick}
-          sx={{
-            py: 1.5,
-            px: 2,
-            '&:hover': {
-              backgroundColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-              transform: 'translateX(4px)',
-            }
-          }}
-        >
-          <ListItemIcon 
-            sx={{ 
-              color: darkMode ? '#81c784' : '#000',
-              minWidth: 40,
-              '& .MuiSvgIcon-root': {
-                fontSize: 22
-              }
-            }}
-          >
-            <PointOfSaleIcon />
-          </ListItemIcon>
-          <ListItemText 
-            primary={
-              <Typography 
-                sx={{ 
-                  fontWeight: 600,
-                  fontSize: '0.95rem',
-                  color: darkMode ? '#fff' : '#1a202c'
-                }}
-              >
-                CIERRE DE VENTAS
-              </Typography>
-            }
-            secondary={
-              <Typography 
-                sx={{ 
-                  fontSize: '0.8rem',
-                  color: darkMode ? '#a0aec0' : '#64748b',
-                  mt: 0.5
-                }}
-              >
-                Gestión de cierres y periodicidad
-              </Typography>
-            }
-          />
-        </MenuItem>
+        {/* El menú está vacío por ahora, se pueden agregar nuevos elementos aquí */}
       </Menu>
     </Box>
   );
