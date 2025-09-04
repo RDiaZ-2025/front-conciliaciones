@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Box, Button, LinearProgress, Typography, Alert, Stepper, Step, StepLabel, Paper, Fade } from "@mui/material";
+import { Box, Button, LinearProgress, Typography, Alert, Stepper, Step, StepLabel, Paper, Fade, IconButton } from "@mui/material";
+import { ArrowBack as ArrowBackIcon, Dashboard as DashboardIcon, AdminPanelSettings as AdminIcon } from "@mui/icons-material";
+import { useAuth } from '../contexts/AuthContext';
+import { PERMISSIONS } from '../constants/auth';
 import { BlobServiceClient } from "@azure/storage-blob";
 import claroMediaLogo from "../assets/Claro-Media-Logo.jpg";
 import DarkModeToggle from "./DarkModeToggle";
@@ -261,7 +264,8 @@ const steps = [
   "Materiales y Confirmación"
 ];
 
-const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
+const UploadForm = ({ onUploadComplete, onBackToLogin, darkMode, setDarkMode, onGoToAdmin, onGoToDashboard }) => {
+  const { hasPermission } = useAuth();
   const [tipoUsuario, setTipoUsuario] = useState(null); // 'cliente' o 'agencia'
   const [excelFile, setExcelFile] = useState(null);
   const [pdfFile, setPdfFile] = useState(null);
@@ -428,7 +432,7 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
     setUploading(true);
     setMessage("");
     try {
-      await fetch("https://renediaz2025.app.n8n.cloud/webhook/a4784977-134a-4f09-9ea3-04c85c5ba3b7", {
+      await fetch("https://renediaz2025.app.n8n.cloud/webhook-test/a4784977-134a-4f09-9ea3-04c85c5ba3b7", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -634,10 +638,10 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
                 color="primary"
                 fullWidth
                 sx={{ 
-                  mt: 4, 
+                  mt: 4,
                   fontWeight: 600, 
                   fontSize: 16, 
-                  py: 1.5, 
+                  py: 1.5,
                   borderRadius: 2, 
                   background: '#222', 
                   '&:hover': { background: '#111' },
@@ -955,7 +959,7 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
                   fullWidth
                   sx={{ mt: 2, fontWeight: 600, fontSize: 16, py: 2, borderRadius: 2, background: '#222', '&:hover': { background: '#111' } }}
                   onClick={handleNotifyN8N}
-                  disabled={uploading}
+                  disabled={uploading || (deseaSubirMateriales === true ? materiales.length === 0 : deseaSubirMateriales === null)}
                 >
                   Enviar archivos
                 </Button>
@@ -984,36 +988,100 @@ const UploadForm = ({ onUploadComplete, darkMode, setDarkMode }) => {
         transition: "background 0.3s, color 0.3s"
       }}
     >
-      {/* DarkModeToggle en la esquina superior derecha */}
-      <Box sx={{ position: "absolute", top: 16, right: 40, zIndex: 1000 }}>
-        <DarkModeToggle 
-          darkMode={darkMode} 
-          setDarkMode={setDarkMode} 
-          onLogoClick={onUploadComplete}
-        />
-      </Box>
-      
-      {/* Header con logo centrado */}
-      <Box sx={{ width: "100%", display: "flex", alignItems: "center", mt: 5, mb: 2, position: "relative", px: 3 }}>
-        <img
-          src={claroMediaLogo}
-          alt="Claro Media Data Tech"
-          style={{ width: 180, margin: "0 auto", display: "block" }}
-        />
+      {/* Header con controles y logo centrado */}
+      <Box sx={{ width: "100%", position: "relative", mt: 5, mb: 2 }}>
+        {/* Flecha de volver - posición absoluta izquierda */}
+        <IconButton
+          onClick={onBackToLogin}
+          sx={{
+            position: "absolute",
+            left: 24,
+            top: "50%",
+            transform: "translateY(-50%)",
+            color: darkMode ? "#fff" : "#222",
+            '&:hover': {
+              backgroundColor: darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"
+            }
+          }}
+        >
+          <ArrowBackIcon />
+        </IconButton>
+        
+        {/* Controles de navegación - posición absoluta derecha */}
+        <Box sx={{ position: "absolute", right: 24, top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", gap: 1 }}>
+          {hasPermission(PERMISSIONS.MANAGEMENT_DASHBOARD) && (
+              <IconButton
+                onClick={onGoToDashboard}
+                sx={{
+                  color: darkMode ? "#fff" : "#181C32",
+                  background: darkMode ? 'rgba(230, 0, 38, 0.05)' : 'rgba(255, 255, 255, 0.9)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: 2,
+                  border: darkMode ? '1px solid rgba(230, 0, 38, 0.2)' : '1px solid rgba(24, 28, 50, 0.1)',
+                  boxShadow: darkMode ? '0 4px 12px rgba(230, 0, 38, 0.15)' : '0 4px 12px rgba(24, 28, 50, 0.1)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    backgroundColor: darkMode ? 'rgba(230, 0, 38, 0.15)' : 'rgba(24, 28, 50, 0.05)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: darkMode ? '0 8px 24px rgba(230, 0, 38, 0.25)' : '0 8px 24px rgba(24, 28, 50, 0.15)'
+                  }
+                }}
+                title="Ir al Dashboard"
+              >
+                <DashboardIcon />
+              </IconButton>
+            )}
+            {hasPermission(PERMISSIONS.ADMIN_PANEL) && (
+             <IconButton
+               onClick={onGoToAdmin}
+               sx={{
+                 color: darkMode ? "#fff" : "#181C32",
+                 background: darkMode ? 'rgba(230, 0, 38, 0.05)' : 'rgba(255, 255, 255, 0.9)',
+                 backdropFilter: 'blur(10px)',
+                 borderRadius: 2,
+                 border: darkMode ? '1px solid rgba(230, 0, 38, 0.2)' : '1px solid rgba(24, 28, 50, 0.1)',
+                 boxShadow: darkMode ? '0 4px 12px rgba(230, 0, 38, 0.15)' : '0 4px 12px rgba(24, 28, 50, 0.1)',
+                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                 '&:hover': {
+                   backgroundColor: darkMode ? 'rgba(230, 0, 38, 0.15)' : 'rgba(24, 28, 50, 0.05)',
+                   transform: 'translateY(-2px)',
+                   boxShadow: darkMode ? '0 8px 24px rgba(230, 0, 38, 0.25)' : '0 8px 24px rgba(24, 28, 50, 0.15)'
+                 }
+               }}
+               title="Ir al Panel de Administración"
+             >
+               <AdminIcon />
+             </IconButton>
+           )}
+          <DarkModeToggle 
+            darkMode={darkMode} 
+            setDarkMode={setDarkMode} 
+            onLogoClick={onBackToLogin}
+          />
+        </Box>
+        
+        {/* Logo centrado absolutamente */}
+        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+          <img
+            src={claroMediaLogo}
+            alt="Claro Media Data Tech"
+            style={{ width: 180 }}
+          />
+        </Box>
       </Box>
       
       <Paper 
         elevation={6} 
         sx={{ 
-          p: 5, 
-          borderRadius: 4, 
+          p: 4, 
+          borderRadius: 3, 
           width: "100%",
-          maxWidth: 450, // Aumento el ancho máximo
+          maxWidth: 500, // Tamaño más compacto para coincidir con la imagen original
           boxShadow: "0 8px 32px rgba(25, 118, 210, 0.10)", 
           background: darkMode ? "#4A5568" : "#fff",
-          mx: 3,
-          mb: 5, // Más margen inferior
-          pb: 6 // Más padding inferior para el botón
+          mx: 'auto', // Centrar horizontalmente
+          mb: 4, 
+          pb: 4 
         }}
       >
         <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 3 }}>

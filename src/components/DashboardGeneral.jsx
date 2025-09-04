@@ -1,4 +1,8 @@
 import React, { useState } from "react";
+import { Box, Button, Typography } from "@mui/material";
+import { AdminPanelSettings as AdminIcon, Upload as UploadIcon } from "@mui/icons-material";
+import { useAuth } from '../contexts/AuthContext';
+import { PERMISSIONS } from '../constants/auth';
 import DarkModeToggle from "./DarkModeToggle";
 
 // 1. Estructura de datos con subcategorías
@@ -109,7 +113,8 @@ const initialData = {
 const years = [2023, 2024, 2025];
 const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
-export default function DashboardGeneral({ darkMode, setDarkMode, onBack }) {
+export default function DashboardGeneral({ darkMode, setDarkMode, onBack, onGoToAdmin, onGoToUpload }) {
+  const { hasPermission, user } = useAuth();
   const [selectedYear, setSelectedYear] = useState(2025);
   const [selectedMonth, setSelectedMonth] = useState("");
   const [tipoSeguimiento, setTipoSeguimiento] = useState("ingresos"); // opciones: ingresos, costos, ebitda
@@ -178,9 +183,68 @@ export default function DashboardGeneral({ darkMode, setDarkMode, onBack }) {
     : tipoData.historico;
 
   return (
-      <div style={{ minHeight: "100vh", width: "100vw", background: darkMode ? "#2D3748" : "linear-gradient(120deg, #f5f7fa 0%, #e3eafc 100%)", color: darkMode ? "#E6EDF3" : "#181C32", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", fontFamily: "'Inter', 'Roboto', Arial, sans-serif", transition: "background 0.3s, color 0.3s", position: "relative" }}>
-      {/* DarkModeToggle en la esquina superior derecha */}
-      <div style={{ position: "absolute", top: 16, right: 40, zIndex: 1000 }}>
+      <div style={{ minHeight: "100vh", width: "100vw", background: darkMode ? "#2D3748" : "linear-gradient(120deg, #f5f7fa 0%, #e3eafc 100%)", color: darkMode ? "#E6EDF3" : "#181C32", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", fontFamily: "'Inter', 'Roboto', Arial, sans-serif", transition: "background 0.3s, color 0.3s", position: "relative", padding: "0 24px", boxSizing: "border-box" }}>
+      {/* Header con navegación y DarkModeToggle */}
+      <div style={{ position: "absolute", top: 16, right: 24, zIndex: 1000, display: "flex", alignItems: "center", gap: "12px" }}>
+        {/* Botones de navegación */}
+         {hasPermission(PERMISSIONS.DOCUMENT_UPLOAD) && (
+           <Button
+             variant="outlined"
+             startIcon={<UploadIcon />}
+             onClick={onGoToUpload}
+             sx={{
+               color: darkMode ? '#fff' : '#181C32',
+               borderColor: darkMode ? '#E60026' : '#181C32',
+               background: darkMode ? 'rgba(230, 0, 38, 0.05)' : 'rgba(255, 255, 255, 0.9)',
+               backdropFilter: 'blur(10px)',
+               borderRadius: 2,
+               px: 2.5,
+               py: 1,
+               fontWeight: 600,
+               textTransform: 'none',
+               boxShadow: darkMode ? '0 4px 12px rgba(230, 0, 38, 0.15)' : '0 4px 12px rgba(24, 28, 50, 0.1)',
+               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+               '&:hover': {
+                 backgroundColor: darkMode ? 'rgba(230, 0, 38, 0.15)' : 'rgba(24, 28, 50, 0.05)',
+                 borderColor: darkMode ? '#E60026' : '#181C32',
+                 transform: 'translateY(-2px)',
+                 boxShadow: darkMode ? '0 8px 24px rgba(230, 0, 38, 0.25)' : '0 8px 24px rgba(24, 28, 50, 0.15)'
+               }
+             }}
+           >
+             Cargar
+           </Button>
+         )}
+         
+         {hasPermission(PERMISSIONS.ADMIN_PANEL) && (
+           <Button
+             variant="outlined"
+             startIcon={<AdminIcon />}
+             onClick={onGoToAdmin}
+             sx={{
+               color: darkMode ? '#fff' : '#181C32',
+               borderColor: darkMode ? '#E60026' : '#181C32',
+               background: darkMode ? 'rgba(230, 0, 38, 0.05)' : 'rgba(255, 255, 255, 0.9)',
+               backdropFilter: 'blur(10px)',
+               borderRadius: 2,
+               px: 2.5,
+               py: 1,
+               fontWeight: 600,
+               textTransform: 'none',
+               boxShadow: darkMode ? '0 4px 12px rgba(230, 0, 38, 0.15)' : '0 4px 12px rgba(24, 28, 50, 0.1)',
+               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+               '&:hover': {
+                 backgroundColor: darkMode ? 'rgba(230, 0, 38, 0.15)' : 'rgba(24, 28, 50, 0.05)',
+                 borderColor: darkMode ? '#E60026' : '#181C32',
+                 transform: 'translateY(-2px)',
+                 boxShadow: darkMode ? '0 8px 24px rgba(230, 0, 38, 0.25)' : '0 8px 24px rgba(24, 28, 50, 0.15)'
+               }
+             }}
+           >
+             Admin
+           </Button>
+         )}
+        
         <DarkModeToggle 
           darkMode={darkMode} 
           setDarkMode={setDarkMode}
@@ -188,7 +252,7 @@ export default function DashboardGeneral({ darkMode, setDarkMode, onBack }) {
         />
       </div>
       {/* Header */}
-      <div style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: "40px 0 24px 0", display: "flex", alignItems: "center", justifyContent: "center", gap: 32 }}>
+      <div style={{ width: '100%', maxWidth: '1400px', margin: 0, padding: "40px 0 24px 0", display: "flex", alignItems: "center", justifyContent: "center", gap: 32 }}>
         <div style={{ display: "flex", alignItems: "center", background: darkMode ? "#181C32" : "#fff", borderRadius: 8, boxShadow: darkMode ? "0 2px 8px #0008" : "0 2px 8px #1976d220", padding: "4px 12px", gap: 8, border: darkMode ? "1.5px solid #4A5568" : "none" }}>
           <button onClick={() => setTipoSeguimiento("ingresos")}
             style={{ padding: "8px 18px", borderRadius: 6, border: tipoSeguimiento === "ingresos" ? "2px solid #43a047" : "1px solid #bdbdbd", background: tipoSeguimiento === "ingresos" ? (darkMode ? "#1E2A3A" : "#e8f5e9") : (darkMode ? "#181C32" : "#f0f0f0"), color: tipoSeguimiento === "ingresos" ? "#43a047" : (darkMode ? "#E6EDF3" : "#333"), fontWeight: 700, fontSize: 16, cursor: "pointer", transition: "all 0.2s" }}>Ingresos</button>
@@ -208,7 +272,7 @@ export default function DashboardGeneral({ darkMode, setDarkMode, onBack }) {
         </div>
       </div>
       {/* Indicadores principales */}
-      <div style={{ width: "100%", maxWidth: 1400, margin: "0 auto", display: "flex", gap: 36, justifyContent: "center", alignItems: "stretch", marginBottom: 40 }}>
+      <div style={{ width: "100%", maxWidth: "1400px", margin: 0, display: "flex", gap: 36, justifyContent: "center", alignItems: "stretch", marginBottom: 40 }}>
         <div style={{ flex: 1, background: darkMode ? "#4A5568" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #0008" : "0 2px 12px #0001", padding: 32, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: darkMode ? "1.5px solid #4A5568" : "none" }}>
           <div style={{ fontWeight: 700, fontSize: 18, color: "#e53935", marginBottom: 6 }}>Presupuestado</div>
           <div style={{ fontSize: 38, fontWeight: 900, color: "#e53935", letterSpacing: 1 }}>${presupuestado.toLocaleString()}</div>
@@ -224,7 +288,7 @@ export default function DashboardGeneral({ darkMode, setDarkMode, onBack }) {
         </div>
       </div>
       {/* Gráfica de tendencias */}
-      <div style={{ width: "100%", maxWidth: 1400, margin: "0 auto", background: darkMode ? "#4A5568" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #000A" : "0 2px 12px #0001", padding: 36, marginBottom: 40, border: darkMode ? "1.5px solid #4A5568" : "none", transition: "background 0.3s, color 0.3s, border 0.3s", position: "relative" }}>
+      <div style={{ width: "100%", maxWidth: "1400px", margin: 0, background: darkMode ? "#4A5568" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #000A" : "0 2px 12px #0001", padding: 36, marginBottom: 40, border: darkMode ? "1.5px solid #4A5568" : "none", transition: "background 0.3s, color 0.3s, border 0.3s", position: "relative" }}>
         <div style={{ fontWeight: 700, fontSize: 22, color: darkMode ? "#fff" : "#000", marginBottom: 18 }}>Tendencia anual</div>
         <svg width={width} height={height + 60} style={{ overflow: "visible" }}>
           <defs>{/* Definiciones de filtros y gradientes si los usas */}</defs>
@@ -338,7 +402,7 @@ export default function DashboardGeneral({ darkMode, setDarkMode, onBack }) {
         )}
       </div>
       {/* Desglose por categorías */}
-      <div style={{ width: "100%", maxWidth: 1400, margin: "0 auto", background: darkMode ? "#4A5568" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #0008" : "0 2px 12px #0001", padding: 36, marginBottom: 40, border: darkMode ? "1.5px solid #4A5568" : "none", transition: "background 0.3s, color 0.3s, border 0.3s" }}>
+      <div style={{ width: "100%", maxWidth: "1400px", margin: 0, background: darkMode ? "#4A5568" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #0008" : "0 2px 12px #0001", padding: 36, marginBottom: 40, border: darkMode ? "1.5px solid #4A5568" : "none", transition: "background 0.3s, color 0.3s, border 0.3s" }}>
         <div style={{ fontWeight: 700, fontSize: 22, color: darkMode ? "#E60026" : "#e53935", marginBottom: 18 }}>Desglose por categorías</div>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 18 }}>
           <thead>
@@ -368,7 +432,7 @@ export default function DashboardGeneral({ darkMode, setDarkMode, onBack }) {
                 isExpanded && cat.subcategorias && cat.subcategorias.map(sub => {
                   const subDev = sub.ejecutado - sub.presupuestado;
                   return (
-                    <tr key={cat.nombre + sub.nombre} style={{ borderBottom: darkMode ? "1px solid #4A5568" : "1px solid #f0f0f0" }}>
+                    <tr key={cat.nombre + "-sub-" + sub.nombre} style={{ borderBottom: darkMode ? "1px solid #4A5568" : "1px solid #f0f0f0" }}>
                       <td style={{ padding: "12px 12px 12px 36px", color: darkMode ? "#B0BEC5" : "#555" }}>↳ {sub.nombre}</td>
                       <td style={{ padding: 12, textAlign: "right", color: darkMode ? "#E60026" : "#e53935" }}>${sub.presupuestado.toLocaleString()}</td>
                       <td style={{ padding: 12, textAlign: "right", color: darkMode ? "#43FF8E" : "#43a047" }}>${sub.ejecutado.toLocaleString()}</td>

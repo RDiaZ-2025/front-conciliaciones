@@ -1,44 +1,46 @@
 import React from "react";
 import claroMediaLogo2 from "../assets/CLARO_MEDIA_2_converted.jpg";
 
-export default function DarkModeToggle({ darkMode, setDarkMode, onLogoClick }) {
+export default function DarkModeToggle({ darkMode, setDarkMode, onLogoClick, hideLogo = false }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-      {/* Botón con logo de Claro Media */}
-      <button
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 40,
-          height: 40,
-          borderRadius: "50%",
-          border: "2px solid",
-          borderColor: darkMode ? "#E60026" : "#ddd",
-          background: "transparent",
-          cursor: "pointer",
-          transition: "all 0.3s",
-          padding: 0,
-          overflow: "hidden"
-        }}
-        onClick={() => {
-          if (onLogoClick) {
-            onLogoClick();
-          }
-        }}
-        aria-label="Claro Media"
-      >
-        <img
-          src={claroMediaLogo2}
-          alt="Claro Media"
+      {/* Botón con logo de Claro Media - solo se muestra si hideLogo es false */}
+      {!hideLogo && (
+        <button
           style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            borderRadius: "50%"
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            border: "2px solid",
+            borderColor: darkMode ? "#E60026" : "#ddd",
+            background: "transparent",
+            cursor: "pointer",
+            transition: "all 0.3s",
+            padding: 0,
+            overflow: "hidden"
           }}
-        />
-      </button>
+          onClick={() => {
+            if (onLogoClick) {
+              onLogoClick();
+            }
+          }}
+          aria-label="Claro Media"
+        >
+          <img
+            src={claroMediaLogo2}
+            alt="Claro Media"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              borderRadius: "50%"
+            }}
+          />
+        </button>
+      )}
 
       {/* Toggle de modo oscuro/claro */}
       <button
