@@ -153,22 +153,29 @@ Esto generará los archivos estáticos en la carpeta `dist` que pueden ser despl
   - Iconos representativos para cada tipo de usuario
   - Validación requerida antes de continuar
   - Integración completa en el flujo de envío de datos
+- **Panel de Administración**: Nuevo componente `AdminPanel.jsx` para gestión de usuarios, roles y permisos.
+- **Ruta protegida**: Nuevo componente `ProtectedRoute.jsx` para proteger rutas según autenticación.
+- **Gestión de autenticación**: Contexto `AuthContext.jsx` y constantes de autenticación en `src/constants/auth.js`.
+- **Servicios API**: Nuevo archivo `apiService.js` en `src/services/` para comunicación con backend.
 
 #### 🎨 **Mejoras de UI/UX**
 - Rediseño del proceso de carga con numeración clara de pasos (0-3)
 - Tarjetas de selección con diseño horizontal y efectos hover
 - Botones "Siguiente" en lugar de "Continuar" para mejor consistencia
 - Resumen completo que incluye el tipo de usuario seleccionado
+- Interfaz responsive y moderna
 
 #### 🧹 **Limpieza de Código**
 - **Eliminación del componente CierreVentas**: Componente no utilizado removido completamente
   - Archivo `CierreVentas.jsx` eliminado
-  - Referencias removidas de `App.jsx` y `HamburgerMenu.jsx`
+  - Referencias removidas de `App.jsx`
   - Imports y funciones relacionadas limpiadas
   - Menú hamburguesa simplificado
+- **Exclusión de archivos de ejemplo y respaldo**: No se incluyen archivos como `.env.example` ni `AdminPanel.jsx.backup` en despliegue ni commits principales.
 
 #### 🔧 **Mejoras Técnicas**
 - Mejor organización de componentes
 - Validaciones mejoradas en el flujo de trabajo
 - Gestión de estado optimizada para el nuevo flujo
 - Código más limpio y mantenible
+- Nuevos directorios `constants/`, `contexts/` y `services/` para mejor modularidad
