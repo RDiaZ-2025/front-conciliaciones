@@ -77,25 +77,56 @@ La aplicación sigue una arquitectura de componentes basada en React, con las si
 
 ## Flujo de Trabajo de la Aplicación
 
-1. **Paso 0 - Selección de Tipo de Usuario**:
-   - El usuario selecciona entre "Cliente" o "Agencia"
-   - Tarjetas visuales con iconos representativos
-   - Botón "Siguiente" habilitado solo después de la selección
+El flujo principal y alternativo de la aplicación se compone de los siguientes pasos y escenarios:
 
-2. **Paso 1 - Carga de Excel**:
-   - Carga y validación de archivo de valorización
-   - Vista previa de datos procesados
-   - Validación de estructura y campos requeridos
+### Flujo Principal
 
-3. **Paso 2 - Carga de PDF**:
-   - Carga y validación de órdenes de compra
-   - Detección automática de firmas digitales
-   - Vista previa del documento
+1. **Selección de Tipo de Usuario**
+   - El usuario elige entre "Cliente" o "Agencia" mediante tarjetas visuales.
+   - Solo se puede avanzar si se realiza una selección válida.
 
-4. **Paso 3 - Materiales Adicionales**:
-   - Opción de cargar archivos adicionales
-   - Resumen completo de todos los archivos
-   - Confirmación final antes del envío
+2. **Carga de Excel de Valorización**
+   - El usuario sube el archivo Excel.
+   - El sistema valida la estructura y los campos requeridos.
+   - Si hay errores, se muestra feedback y el usuario puede corregir y volver a subir.
+   - Vista previa de los datos procesados.
+
+3. **Carga de PDF de Orden de Compra**
+   - El usuario sube el archivo PDF.
+   - Se detectan firmas digitales automáticamente.
+   - Si el PDF no cumple requisitos, se muestra mensaje de error y se permite volver a intentar.
+   - Vista previa del documento.
+
+4. **Carga de Materiales Adicionales (Opcional)**
+   - El usuario puede subir archivos extra (imágenes, documentos).
+   - Todos los archivos se resumen antes del envío final.
+
+5. **Resumen y Confirmación**
+   - Se muestra un resumen completo de la selección y archivos cargados.
+   - El usuario confirma y envía la información.
+
+6. **Autenticación y Dashboard**
+   - Si el usuario no está autenticado, se le solicita login.
+   - Acceso al dashboard para visualizar datos históricos y análisis.
+
+### Flujos Alternos y Casos Especiales
+
+- **Validación Fallida de Archivos**: Si algún archivo no cumple con los requisitos, el usuario recibe mensajes claros y puede corregir el error antes de continuar.
+- **Carga Incompleta**: Si el usuario omite la carga de materiales adicionales, el sistema permite avanzar sin bloquear el flujo principal.
+- **Sesión Expirada o No Autenticada**: Si la sesión expira o el usuario no está autenticado, se redirige automáticamente al login mediante `ProtectedRoute.jsx`.
+- **Acceso a Panel de Administración**: Usuarios con permisos acceden al `AdminPanel.jsx` para gestionar roles y usuarios. Si no tienen permisos, se muestra mensaje de acceso denegado.
+- **Error de Conexión con Backend**: Si ocurre un error al comunicarse con el backend (API), se muestra mensaje de error y se permite reintentar la operación.
+- **Modo Oscuro/Claro**: El usuario puede alternar entre modos visuales en cualquier paso del flujo.
+
+### Acceso y Permisos según Inicio de Sesión y Tipo de Usuario
+
+- Tras el inicio de sesión, el sistema verifica el tipo de usuario y sus permisos.
+- Solo los usuarios autenticados y con permisos adecuados pueden acceder al dashboard y funcionalidades avanzadas.
+- Los usuarios con rol de administrador pueden ingresar al `AdminPanel.jsx` para gestionar usuarios y roles.
+- Si el usuario no tiene permisos suficientes, el sistema muestra un mensaje de acceso denegado y restringe el acceso a ciertas rutas mediante `ProtectedRoute.jsx`.
+- El flujo de navegación y las opciones disponibles se adaptan dinámicamente según el tipo de usuario y sus permisos.
+
+Estos pasos y flujos alternos aseguran una experiencia guiada, robusta y flexible para distintos escenarios de uso.
 
 ## Buenas Prácticas Implementadas
 

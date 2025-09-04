@@ -1,0 +1,781 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  IconButton,
+  Chip,
+  Alert,
+  Snackbar
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  AdminPanelSettings as AdminIcon,
+  Upload as UploadIcon,
+  Dashboard as DashboardIcon,
+  Person as PersonIcon,
+  Security as SecurityIcon
+} from '@mui/icons-material';
+import { useAuth } from '../contexts/AuthContext';
+import DarkModeToggle from './DarkModeToggle';
+
+const AdminPanel = ({ darkMode, setDarkMode, onBack, onGoToUpload, onGoToDashboard }) => {
+  const { getAllUsers, createUser, updateUser, deleteUser, ROLES, user, hasPermission, PERMISSIONS } = useAuth();
+  const [users, setUsers] = useState([]);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: ROLES.UPLOAD_ONLY
+  });
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [openRoleDialog, setOpenRoleDialog] = useState(false);
+  const [selectedUserForRole, setSelectedUserForRole] = useState(null);
+
+  const refreshUsers = () => {
+    setUsers(getAllUsers());
+  };
+
+  // Actualizar la lista de usuarios cuando el componente se monta
+  useEffect(() => {
+    refreshUsers();
+  }, [getAllUsers]);
+
+  const handleOpenDialog = (userToEdit = null) => {
+    if (userToEdit) {
+      setEditingUser(userToEdit);
+      setFormData({
+        name: userToEdit.name,
+        email: userToEdit.email,
+        password: '',
+        role: userToEdit.role
+      });
+    } else {
+      setEditingUser(null);
+      setFormData({
+        name: '',
+        email: '',
+        password: ''
+      });
+    }
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setEditingUser(null);
+    setFormData({ name: '', email: '', password: '' });
+  };
+
+  const handleOpenRoleDialog = (userData) => {
+    setSelectedUserForRole(userData);
+    setOpenRoleDialog(true);
+  };
+
+  const handleCloseRoleDialog = () => {
+    setOpenRoleDialog(false);
+    setSelectedUserForRole(null);
+  };
+
+  const handleRoleChange = async (newRole) => {
+    try {
+      await updateUser(selectedUserForRole.email, { role: newRole });
+      setSnackbar({ open: true, message: 'Rol actualizado exitosamente', severity: 'success' });
+      refreshUsers();
+      handleCloseRoleDialog();
+    } catch (error) {
+      setSnackbar({ open: true, message: error.message, severity: 'error' });
+    }
+  };
+
+  const getRoleDescription = (role) => {
+    switch (role) {
+      case ROLES.UPLOAD_ONLY:
+        return 'Puede cargar archivos únicamente';
+      case ROLES.DASHBOARD_ONLY:
+        return 'Puede ver el dashboard únicamente';
+      case ROLES.FULL_ACCESS:
+        return 'Puede cargar archivos y ver dashboard';
+      case ROLES.ADMIN:
+        return 'Acceso completo y gestión de usuarios';
+      default:
+        return 'Rol no definido';
+    }
+  };
+
+  const getRoleLabel = (role) => {
+    switch (role) {
+      case ROLES.UPLOAD_ONLY:
+        return 'Solo Carga';
+      case ROLES.DASHBOARD_ONLY:
+        return 'Solo Dashboard';
+      case ROLES.FULL_ACCESS:
+        return 'Acceso Completo';
+      case ROLES.ADMIN:
+        return 'Administrador';
+      default:
+        return 'Desconocido';
+    }
+  };
+
+  const getRoleColor = (role) => {
+    switch (role) {
+      case ROLES.UPLOAD_ONLY:
+        return 'info';
+      case ROLES.DASHBOARD_ONLY:
+        return 'warning';
+      case ROLES.FULL_ACCESS:
+        return 'success';
+      case ROLES.ADMIN:
+        return 'error';
+      default:
+        return 'default';
+    }
+  };
+
+  const handleSubmit = () => {
+    try {
+      if (editingUser) {
+        // Actualizar usuario
+        const updates = {
+          name: formData.name,
+          role: formData.role
+        };
+        if (formData.password) {
+          updates.password = formData.password;
+        }
+        updateUser(editingUser.email, updates);
+        setSnackbar({ open: true, message: 'Usuario actualizado exitosamente', severity: 'success' });
+      } else {
+        // Crear nuevo usuario
+        if (!formData.name || !formData.email || !formData.password) {
+          setSnackbar({ open: true, message: 'Todos los campos son obligatorios', severity: 'error' });
+          return;
+        }
+        // Asignar rol por defecto para nuevos usuarios
+        const newUserData = {
+          ...formData,
+          role: ROLES.UPLOAD_ONLY
+        };
+        createUser(newUserData);
+        setSnackbar({ open: true, message: 'Usuario creado exitosamente', severity: 'success' });
+      }
+      refreshUsers();
+      handleCloseDialog();
+    } catch (error) {
+      setSnackbar({ open: true, message: error.message, severity: 'error' });
+    }
+  };
+
+  const handleDelete = (userEmail) => {
+    if (window.confirm('¿Estás seguro de que quieres eliminar este usuario?')) {
+      try {
+        deleteUser(userEmail);
+        refreshUsers();
+        setSnackbar({ open: true, message: 'Usuario eliminado exitosamente', severity: 'success' });
+      } catch (error) {
+        setSnackbar({ open: true, message: error.message, severity: 'error' });
+      }
+    }
+  };
+
+  const getRoleLabel = (role) => {
+    const labels = {
+      [ROLES.ADMIN]: 'Administrador',
+      [ROLES.UPLOAD_ONLY]: 'Solo Carga',
+      [ROLES.DASHBOARD_ONLY]: 'Solo Dashboard',
+      [ROLES.FULL_ACCESS]: 'Acceso Completo'
+    };
+    return labels[role] || role;
+  };
+
+  const getRoleColor = (role) => {
+    const colors = {
+      [ROLES.ADMIN]: 'error',
+      [ROLES.UPLOAD_ONLY]: 'primary',
+      [ROLES.DASHBOARD_ONLY]: 'secondary',
+      [ROLES.FULL_ACCESS]: 'success'
+    };
+    return colors[role] || 'default';
+  };
+
+  return (
+    <Box
+      sx={{
+        minHeight: '100vh',
+        height: '100vh',
+        background: darkMode ? '#2D3748' : 'linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        padding: 0,
+        fontFamily: "'Inter', 'Roboto', Arial, sans-serif",
+        transition: 'background 0.3s, color 0.3s',
+        overflow: 'auto'
+      }}
+    >
+      {/* Header con navegación */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 20,
+          right: 40,
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.5
+        }}
+      >
+        {/* Botones de navegación removidos */}
+        
+        <DarkModeToggle
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+          onLogoClick={onBack}
+        />
+      </Box>
+
+      <Box sx={{ width: '100%', maxWidth: '1200px', margin: '0 auto', pt: 4, px: 4 }}>
+        {/* Título */}
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, px: 0 }}>
+          <AdminIcon
+            sx={{
+              fontSize: 40,
+              color: darkMode ? '#E60026' : '#181C32',
+              mr: 2
+            }}
+          />
+          <Typography
+            variant="h4"
+            fontWeight={700}
+            color={darkMode ? '#fff' : '#000'}
+          >
+            Panel de Administración
+          </Typography>
+        </Box>
+
+        {/* Información del usuario actual */}
+        <Box sx={{ px: 0 }}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 4,
+              mb: 4,
+            background: darkMode ? 'linear-gradient(135deg, #4A5568 0%, #2D3748 100%)' : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+            borderRadius: 3,
+            border: darkMode ? '1px solid rgba(230, 0, 38, 0.2)' : '1px solid rgba(24, 28, 50, 0.1)',
+            boxShadow: darkMode ? '0 8px 32px rgba(0, 0, 0, 0.3)' : '0 8px 32px rgba(24, 28, 50, 0.08)',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+          }}
+        >
+          <Typography variant="h6" color={darkMode ? '#fff' : '#000'} mb={1}>
+            Sesión Actual
+          </Typography>
+          <Typography color={darkMode ? '#CBD5E0' : '#666'}>
+            Conectado como: <strong>{user?.name}</strong> ({user?.email}) - {getRoleLabel(user?.role)}
+          </Typography>
+        </Paper>
+        </Box>
+
+        {/* Tabla de usuarios */}
+        <Box sx={{ px: 0 }}>
+          <Paper
+          elevation={0}
+          sx={{
+            background: darkMode ? 'linear-gradient(135deg, #4A5568 0%, #2D3748 100%)' : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+            borderRadius: 3,
+            border: darkMode ? '1px solid rgba(230, 0, 38, 0.2)' : '1px solid rgba(24, 28, 50, 0.1)',
+            boxShadow: darkMode ? '0 8px 32px rgba(0, 0, 0, 0.3)' : '0 8px 32px rgba(24, 28, 50, 0.08)',
+            overflow: 'hidden',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+          }}
+        >
+          <Box
+            sx={{
+              p: 3,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderBottom: `1px solid ${darkMode ? '#2D3748' : '#e0e0e0'}`
+            }}
+          >
+            <Typography variant="h6" color={darkMode ? '#fff' : '#000'}>
+              Gestión de Usuarios
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenDialog()}
+              sx={{
+                background: darkMode ? '#E60026' : '#181C32',
+                '&:hover': {
+                  background: darkMode ? '#B8001B' : '#232946'
+                }
+              }}
+            >
+              Nuevo Usuario
+            </Button>
+          </Box>
+
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ color: darkMode ? '#CBD5E0' : '#666', fontWeight: 600 }}>
+                    Usuario
+                  </TableCell>
+                  <TableCell sx={{ color: darkMode ? '#CBD5E0' : '#666', fontWeight: 600 }}>
+                    Email
+                  </TableCell>
+                  <TableCell sx={{ color: darkMode ? '#CBD5E0' : '#666', fontWeight: 600 }}>
+                    Rol
+                  </TableCell>
+                  <TableCell sx={{ color: darkMode ? '#CBD5E0' : '#666', fontWeight: 600 }}>
+                    Fecha Creación
+                  </TableCell>
+                  <TableCell sx={{ color: darkMode ? '#CBD5E0' : '#666', fontWeight: 600 }}>
+                    Acciones
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {users.map((userData) => (
+                  <TableRow key={userData.id}>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <PersonIcon sx={{ mr: 1, color: darkMode ? '#CBD5E0' : '#666' }} />
+                        <Typography color={darkMode ? '#fff' : '#000'}>
+                          {userData.name}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Typography color={darkMode ? '#CBD5E0' : '#666'}>
+                        {userData.email}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={getRoleLabel(userData.role)}
+                        color={getRoleColor(userData.role)}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Typography color={darkMode ? '#CBD5E0' : '#666'}>
+                        {userData.createdAt}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <IconButton
+                        onClick={() => handleOpenDialog(userData)}
+                        sx={{ color: darkMode ? '#4299E1' : '#1976d2' }}
+                        title="Editar usuario"
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        onClick={() => handleOpenRoleDialog(userData)}
+                        sx={{ color: darkMode ? '#F6AD55' : '#FF8C00' }}
+                        title="Gestionar roles y permisos"
+                      >
+                        <SecurityIcon />
+                      </IconButton>
+                      {userData.email !== user?.email && (
+                        <IconButton
+                          onClick={() => handleDelete(userData.email)}
+                          sx={{ color: darkMode ? '#E53E3E' : '#d32f2f' }}
+                          title="Eliminar usuario"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+        </Box>
+      </Box>
+
+      {/* Dialog para crear/editar usuario */}
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            background: darkMode ? '#4A5568' : '#fff',
+            borderRadius: 3,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+            overflow: 'hidden',
+            maxWidth: '500px',
+            margin: 'auto'
+          }
+        }}
+      >
+        <Box
+          sx={{
+            background: darkMode 
+              ? 'linear-gradient(135deg, #4A5568 0%, #2D3748 100%)' 
+              : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+            p: 3,
+            textAlign: 'center',
+            position: 'relative',
+            borderBottom: `1px solid ${darkMode ? '#2D3748' : '#e0e0e0'}`
+          }}
+        >
+          <PersonIcon 
+            sx={{ 
+              fontSize: 40, 
+              color: darkMode ? '#E60026' : '#181C32', 
+              mb: 1.5,
+              background: darkMode ? 'rgba(230, 0, 38, 0.1)' : 'rgba(24, 28, 50, 0.1)',
+              borderRadius: '50%',
+              p: 1
+            }} 
+          />
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              color: darkMode ? '#fff' : '#181C32', 
+              fontWeight: 700
+            }}
+          >
+            {editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
+          </Typography>
+          <Typography 
+            variant="subtitle1" 
+            sx={{ 
+              color: darkMode ? '#CBD5E0' : '#666', 
+              mt: 1,
+              fontWeight: 400
+            }}
+          >
+            {editingUser ? 'Modifica la información del usuario' : 'Completa los datos para crear un nuevo usuario'}
+          </Typography>
+        </Box>
+        
+        <DialogContent sx={{ p: 3, background: darkMode ? '#4A5568' : '#f8fafc' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            <TextField
+              fullWidth
+              label="Nombre"
+              placeholder="Ingresa el nombre completo"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 3,
+                  background: darkMode ? '#2D3748' : '#fff',
+                  '& fieldset': {
+                    borderColor: darkMode ? '#4A5568' : '#e0e0e0',
+                    borderWidth: 2
+                  },
+                  '&:hover fieldset': {
+                    borderColor: darkMode ? '#E60026' : '#181C32'
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: darkMode ? '#E60026' : '#181C32',
+                    borderWidth: 2
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  color: darkMode ? '#CBD5E0' : '#666',
+                  fontWeight: 600
+                },
+                '& .MuiOutlinedInput-input': {
+                  color: darkMode ? '#fff' : '#000',
+                  fontSize: '1.1rem',
+                  py: 2
+                }
+              }}
+            />
+            
+            <TextField
+              fullWidth
+              label="Email"
+              type="email"
+              placeholder="usuario@ejemplo.com"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              disabled={!!editingUser}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 3,
+                  background: editingUser ? (darkMode ? '#1A202C' : '#f5f5f5') : (darkMode ? '#2D3748' : '#fff'),
+                  '& fieldset': {
+                    borderColor: darkMode ? '#4A5568' : '#e0e0e0',
+                    borderWidth: 2
+                  },
+                  '&:hover fieldset': {
+                    borderColor: editingUser ? (darkMode ? '#4A5568' : '#e0e0e0') : (darkMode ? '#E60026' : '#181C32')
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: darkMode ? '#E60026' : '#181C32',
+                    borderWidth: 2
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  color: darkMode ? '#CBD5E0' : '#666',
+                  fontWeight: 600
+                },
+                '& .MuiOutlinedInput-input': {
+                  color: darkMode ? '#fff' : '#000',
+                  fontSize: '1.1rem',
+                  py: 2
+                }
+              }}
+            />
+            
+            <TextField
+              fullWidth
+              label={editingUser ? 'Nueva Contraseña (opcional)' : 'Contraseña'}
+              type="password"
+              placeholder={editingUser ? 'Dejar vacío para mantener actual' : 'Mínimo 6 caracteres'}
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 3,
+                  background: darkMode ? '#2D3748' : '#fff',
+                  '& fieldset': {
+                    borderColor: darkMode ? '#4A5568' : '#e0e0e0',
+                    borderWidth: 2
+                  },
+                  '&:hover fieldset': {
+                    borderColor: darkMode ? '#E60026' : '#181C32'
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: darkMode ? '#E60026' : '#181C32',
+                    borderWidth: 2
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  color: darkMode ? '#CBD5E0' : '#666',
+                  fontWeight: 600
+                },
+                '& .MuiOutlinedInput-input': {
+                  color: darkMode ? '#fff' : '#000',
+                  fontSize: '1.1rem',
+                  py: 2
+                }
+              }}
+            />
+            
+
+          </Box>
+        </DialogContent>
+        
+        <DialogActions 
+           sx={{ 
+             p: 3, 
+             background: darkMode ? '#4A5568' : '#fff',
+             borderTop: `1px solid ${darkMode ? '#2D3748' : '#e0e0e0'}`,
+             gap: 2,
+             justifyContent: 'center'
+           }}
+         >
+           <Button 
+             onClick={handleCloseDialog} 
+             variant="outlined"
+             sx={{ 
+               borderRadius: 2,
+               px: 3,
+               py: 1,
+               fontSize: '0.9rem',
+               fontWeight: 600,
+               borderColor: darkMode ? '#4A5568' : '#e0e0e0',
+               color: darkMode ? '#CBD5E0' : '#666',
+               '&:hover': {
+                 borderColor: darkMode ? '#E60026' : '#181C32',
+                 color: darkMode ? '#E60026' : '#181C32'
+               }
+             }}
+           >
+             CANCELAR
+           </Button>
+           <Button
+             onClick={handleSubmit}
+             disabled={!formData.name || !formData.email || (!editingUser ? !formData.password : false) || !formData.role}
+             variant="contained"
+             sx={{
+               borderRadius: 2,
+               px: 3,
+               py: 1,
+               fontSize: '0.9rem',
+               fontWeight: 600,
+               background: darkMode ? '#E60026' : '#181C32',
+               '&:hover': {
+                 background: darkMode ? '#B8001B' : '#232946'
+               },
+               '&:disabled': {
+                 background: darkMode ? 'rgba(230, 0, 38, 0.3)' : 'rgba(24, 28, 50, 0.3)',
+                 color: 'rgba(255, 255, 255, 0.5)'
+               }
+             }}
+           >
+             {editingUser ? 'ACTUALIZAR' : 'CREAR'}
+           </Button>
+         </DialogActions>
+      </Dialog>
+
+      {/* Dialog para gestionar roles y permisos */}
+      <Dialog
+        open={openRoleDialog}
+        onClose={handleCloseRoleDialog}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            background: darkMode ? '#4A5568' : '#fff',
+            borderRadius: 3,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+            overflow: 'hidden',
+            maxWidth: '500px',
+            margin: 'auto'
+          }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            background: darkMode ? '#2D3748' : '#f8fafc',
+            borderBottom: `1px solid ${darkMode ? '#4A5568' : '#e0e0e0'}`,
+            p: 3
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <SecurityIcon sx={{ color: darkMode ? '#F6AD55' : '#FF8C00', fontSize: 28 }} />
+            <Typography variant="h6" fontWeight={700} color={darkMode ? '#fff' : '#000'}>
+              Gestionar Roles y Permisos
+            </Typography>
+          </Box>
+          {selectedUserForRole && (
+            <Typography variant="body2" color={darkMode ? '#CBD5E0' : '#666'} sx={{ mt: 1 }}>
+              Usuario: {selectedUserForRole.name} ({selectedUserForRole.email})
+            </Typography>
+          )}
+        </DialogTitle>
+        
+        <DialogContent sx={{ p: 3, background: darkMode ? '#4A5568' : '#f8fafc' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            <Typography variant="h6" color={darkMode ? '#fff' : '#000'} sx={{ mb: 1 }}>
+              Seleccionar Rol
+            </Typography>
+            
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {Object.entries(ROLES).map(([key, value]) => (
+                <Paper
+                  key={value}
+                  elevation={selectedUserForRole?.role === value ? 4 : 1}
+                  sx={{
+                    p: 2,
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    border: selectedUserForRole?.role === value 
+                      ? `2px solid ${darkMode ? '#E60026' : '#181C32'}` 
+                      : '2px solid transparent',
+                    background: selectedUserForRole?.role === value 
+                      ? (darkMode ? '#2D3748' : '#f0f9ff') 
+                      : (darkMode ? '#1A202C' : '#fff'),
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                    }
+                  }}
+                  onClick={() => handleRoleChange(value)}
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight={600} color={darkMode ? '#fff' : '#000'}>
+                        {getRoleLabel(value)}
+                      </Typography>
+                      <Typography variant="body2" color={darkMode ? '#CBD5E0' : '#666'}>
+                        {getRoleDescription(value)}
+                      </Typography>
+                    </Box>
+                    <Chip
+                      label={getRoleLabel(value)}
+                      color={getRoleColor(value)}
+                      size="small"
+                    />
+                  </Box>
+                </Paper>
+              ))}
+            </Box>
+          </Box>
+        </DialogContent>
+        
+        <DialogActions 
+          sx={{ 
+            p: 3, 
+            background: darkMode ? '#4A5568' : '#fff',
+            borderTop: `1px solid ${darkMode ? '#2D3748' : '#e0e0e0'}`,
+            gap: 2,
+            justifyContent: 'center'
+          }}
+        >
+          <Button
+            onClick={handleCloseRoleDialog}
+            variant="outlined"
+            sx={{
+              borderRadius: 2,
+              px: 3,
+              py: 1,
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              borderColor: darkMode ? '#4A5568' : '#e0e0e0',
+              color: darkMode ? '#CBD5E0' : '#666',
+              '&:hover': {
+                borderColor: darkMode ? '#E60026' : '#181C32',
+                background: 'transparent'
+              }
+            }}
+          >
+            CANCELAR
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar para notificaciones */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Box>
+  );
+};
+
+export default AdminPanel;
