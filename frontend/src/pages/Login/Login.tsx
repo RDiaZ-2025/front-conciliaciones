@@ -1,47 +1,26 @@
 import React from "react";
-import { Box, Button, TextField, Paper, Typography, InputAdornment, IconButton, CircularProgress } from "@mui/material";
-import { Visibility, VisibilityOff } from "@mui/icons-material";
+import { 
+  Box, 
+  Button, 
+  TextField, 
+  Paper, 
+  Typography, 
+  InputAdornment, 
+  IconButton, 
+  CircularProgress,
+  Container,
+  Stack,
+  Alert,
+  FormControl,
+  Avatar
+} from "@mui/material";
+import { Visibility, VisibilityOff, Email, Lock } from "@mui/icons-material";
 import claroMediaLogo from "../../assets/Claro-Media-Logo.jpg";
 import DarkModeToggle from "../../components/DarkModeToggle";
-import { Global } from '@emotion/react';
 import { useLogin } from './useLogin';
 import type { LoginProps } from './types';
 
-function HeartbeatGlobalStyle() {
-  return (
-    <Global
-      styles={`
-        @keyframes heartbeat {
-          0% { transform: scale(1); }
-          14% { transform: scale(1.15); }
-          28% { transform: scale(1); }
-          42% { transform: scale(1.15); }
-          70% { transform: scale(1); }
-        }
-        
-        input:-webkit-autofill,
-        input:-webkit-autofill:hover,
-        input:-webkit-autofill:focus,
-        input:-webkit-autofill:active {
-          -webkit-box-shadow: 0 0 0 30px white inset !important;
-          -webkit-text-fill-color: #181C32 !important;
-          background-color: white !important;
-          background: white !important;
-        }
-        
-        .dark-mode input:-webkit-autofill,
-        .dark-mode input:-webkit-autofill:hover,
-        .dark-mode input:-webkit-autofill:focus,
-        .dark-mode input:-webkit-autofill:active {
-          -webkit-box-shadow: 0 0 0 30px #4A5568 inset !important;
-          -webkit-text-fill-color: #fff !important;
-          background-color: #4A5568 !important;
-          background: #4A5568 !important;
-        }
-      `}
-    />
-  );
-}
+
 
 const Login: React.FC<LoginProps> = ({ onLogin, darkMode, setDarkMode }) => {
   const {
@@ -58,33 +37,29 @@ const Login: React.FC<LoginProps> = ({ onLogin, darkMode, setDarkMode }) => {
 
   return (
     <Box
-      className={darkMode ? "dark-mode" : ""}
       sx={{
         minHeight: "100vh",
-        minWidth: "100vw",
+        bgcolor: 'background.default',
+        color: 'text.primary',
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "flex-start",
-        background: darkMode ? "#2D3748" : "linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%)",
-        color: darkMode ? "#fff" : "#181C32",
-        position: "fixed",
-        inset: 0,
-        transition: "background 0.3s, color 0.3s"
+        transition: theme => theme.transitions.create(['background-color', 'color'], {
+          duration: theme.transitions.duration.standard,
+        })
       }}
     >
-      <HeartbeatGlobalStyle />
-      
-      <Box sx={{ width: "100%", position: "relative", mt: 5, mb: 2, px: 3 }}>
-        <Box sx={{ display: "flex", justifyContent: "center" }}>
-          <img
-            src={claroMediaLogo}
-            alt="Claro Media Logo"
-            style={{ width: 180 }}
-          />
-        </Box>
-        
-        <Box sx={{ position: "absolute", right: 40, top: "50%", transform: "translateY(-50%)", zIndex: 1000 }}>
+      <Container
+        maxWidth="sm"
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "100vh",
+          py: theme => theme.spacing(3)
+        }}
+      >
+        <Box sx={{ position: "absolute", top: theme => theme.spacing(2), right: theme => theme.spacing(2), zIndex: theme => theme.zIndex.modal }}>
           <DarkModeToggle 
             darkMode={darkMode} 
             setDarkMode={setDarkMode} 
@@ -92,121 +67,136 @@ const Login: React.FC<LoginProps> = ({ onLogin, darkMode, setDarkMode }) => {
             hideLogo={true}
           />
         </Box>
-      </Box>
-      
-      <Paper 
-        elevation={6} 
-        sx={{ 
-          p: 5, 
-          borderRadius: 4, 
-          minWidth: 340, 
-          maxWidth: 380, 
-          width: "100%", 
-          boxShadow: "0 8px 32px rgba(25, 118, 210, 0.10)", 
-          background: darkMode ? "#4A5568" : "#fff" 
-        }}
-      >
-        <Typography 
-          variant="h5" 
-          fontWeight={700} 
-          color={darkMode ? "#fff" : "#000000"} 
-          align="center" 
-          mb={2}
-        >
-          Iniciar sesión
-        </Typography>
-        
-        <form onSubmit={handleSubmit}>
-          <TextField
-            label="Correo electrónico"
-            type="email"
-            fullWidth
-            margin="normal"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-            sx={{ 
-              background: darkMode ? "#232946" : "#f8fafc", 
-              borderRadius: 2, 
-              '& .MuiOutlinedInput-root': { 
-                '& fieldset': { borderColor: darkMode ? '#fff' : '#000' }, 
-                '&:hover fieldset': { borderColor: darkMode ? '#fff' : '#222' }, 
-                '&.Mui-focused fieldset': { borderColor: darkMode ? '#fff' : '#000' }, 
-                '& input': { color: darkMode ? '#fff' : '#181C32' } 
-              } 
-            }}
-            InputLabelProps={{ style: { color: darkMode ? '#fff' : '#000' } }}
-          />
-          
-          <TextField
-            label="Contraseña"
-            type={showPassword ? "text" : "password"}
-            fullWidth
-            margin="normal"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-            sx={{ 
-              background: darkMode ? "#232946" : "#f8fafc", 
-              borderRadius: 2, 
-              '& .MuiOutlinedInput-root': { 
-                '& fieldset': { borderColor: darkMode ? '#fff' : '#000' }, 
-                '&:hover fieldset': { borderColor: darkMode ? '#fff' : '#222' }, 
-                '&.Mui-focused fieldset': { borderColor: darkMode ? '#fff' : '#000' }, 
-                '& input': { color: darkMode ? '#fff' : '#181C32' } 
-              } 
-            }}
-            InputLabelProps={{ style: { color: darkMode ? '#fff' : '#000' } }}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton 
-                    onClick={() => setShowPassword(v => !v)} 
-                    edge="end" 
-                    style={{ color: darkMode ? '#fff' : '#000' }}
-                  >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              )
+
+        <Stack spacing={3} alignItems="center" sx={{ width: "100%" }}>
+          <Avatar
+            src={claroMediaLogo}
+            alt="Claro Media Logo"
+            className="heartbeat"
+            sx={{
+              width: theme => theme.spacing(32.5),
+              height: theme => theme.spacing(15),
+              borderRadius: 0
             }}
           />
-          
-          {error && (
-            <Typography color="error" fontSize={15} mt={1}>
-              {error}
-            </Typography>
-          )}
-          
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-            <Button
-              variant="contained"
-              color="primary"
-              fullWidth
-              sx={{ 
-                mt: 3, 
-                fontWeight: 600, 
-                fontSize: 18, 
-                py: 1.5, 
-                borderRadius: 3, 
-                boxShadow: '0 2px 8px rgba(0,0,0,0.10)', 
-                background: darkMode ? '#E60026' : '#181C32', 
-                '&:hover': { background: darkMode ? '#B8001B' : '#232946' } 
+          <Paper 
+            elevation={8} 
+            sx={{ 
+              p: theme => theme.spacing(4), 
+              borderRadius: theme => theme.spacing(2), 
+              width: "100%",
+              maxWidth: theme => theme.spacing(50),
+              bgcolor: 'background.paper'
+            }}
+          >
+            <Typography 
+              variant="h4" 
+              component="h1"
+              sx={{
+                fontWeight: theme => theme.typography.fontWeightBold,
+                color: 'text.primary',
+                textAlign: 'center',
+                mb: theme => theme.spacing(3)
               }}
-              type="submit"
-              disabled={loading}
             >
-              {loading ? (
-                <CircularProgress size={28} color="inherit" />
-              ) : (
-                <span style={{ color: '#fff', fontWeight: 700, fontSize: 16 }}>
-                  Ingresar!
-                </span>
-              )}
-            </Button>
-          </Box>
-        </form>
-      </Paper>
+              Iniciar sesión
+            </Typography>
+
+            <Typography 
+              variant="h6" 
+              component="h2"
+              sx={{
+                fontWeight: theme => theme.typography.fontWeightBold,
+                color: 'text.primary',
+                textAlign: 'center',
+                mb: theme => theme.spacing(3)
+              }}
+            >
+              Bienvenido a Claro Media
+            </Typography>
+            
+            <Box component="form" onSubmit={handleSubmit} noValidate>
+              <Stack spacing={3}>
+                <FormControl fullWidth>
+                  <TextField
+                    label="Correo electrónico"
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                    autoFocus
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Email color="action" />
+                        </InputAdornment>
+                      )
+                    }}
+                  />
+                </FormControl>
+                
+                <FormControl fullWidth>
+                  <TextField
+                    label="Contraseña"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Lock color="action" />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton 
+                            onClick={() => setShowPassword(v => !v)} 
+                            edge="end"
+                            aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      )
+                    }}
+                  />
+                </FormControl>
+                
+                {error && (
+                  <Alert severity="error" sx={{ mt: 1 }}>
+                    {error}
+                  </Alert>
+                )}
+                
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  size="large"
+                  fullWidth
+                  disabled={loading}
+                  sx={{
+                    mt: theme => theme.spacing(2),
+                    py: theme => theme.spacing(1.5)
+                  }}
+                >
+                  {loading ? (
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <CircularProgress size={20} color="inherit" />
+                      <Typography variant="button">Ingresando...</Typography>
+                    </Stack>
+                  ) : (
+                    "Ingresar"
+                  )}
+                </Button>
+              </Stack>
+            </Box>
+          </Paper>
+        </Stack>
+      </Container>
     </Box>
   );
 };

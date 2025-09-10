@@ -48,10 +48,6 @@ export interface AdminPanelProps {
 
 export interface UseAdminPanelReturn {
   users: User[];
-  menuOpen: boolean;
-  setMenuOpen: (open: boolean) => void;
-  selectedMenu: string;
-  setSelectedMenu: (menu: string) => void;
   openDialog: boolean;
   setOpenDialog: (open: boolean) => void;
   editingUser: User | null;

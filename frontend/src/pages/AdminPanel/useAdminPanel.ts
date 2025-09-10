@@ -6,8 +6,6 @@ import type { User, Permission, FormData, AccessHistoryRecord, SnackbarState, Us
 export const useAdminPanel = (): UseAdminPanelReturn => {
   const { getAllUsers, createUser, updateUser, deleteUser, toggleUserStatus, user, hasPermission } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [selectedMenu, setSelectedMenu] = useState('');
   
   const [openDialog, setOpenDialog] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -377,10 +375,6 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
 
   return {
     users,
-    menuOpen,
-    setMenuOpen,
-    selectedMenu,
-    setSelectedMenu,
     openDialog,
     setOpenDialog,
     editingUser,

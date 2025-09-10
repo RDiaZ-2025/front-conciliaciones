@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { ThemeProvider } from '@mui/material/styles';
+import { CssBaseline } from '@mui/material';
 import AuthProvider, { useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardGeneral from './pages/DashboardGeneral';
 import Login from './pages/Login';
 import UploadForm from './pages/UploadForm';
-import AdminPanel from './pages/AdminPanel';
+import Layout from './components/Layout';
 import DarkModeToggle from './components/DarkModeToggle';
 import { PERMISSIONS } from './constants/auth';
+import createAppTheme from './styles/theme';
 
 // Componente interno que maneja la lógica de navegación
 function AppContent() {
   const { user, logout, hasPermission } = useAuth();
   const [currentView, setCurrentView] = useState('login');
+  const [selectedMenu, setSelectedMenu] = useState('usuarios');
   const [darkMode, setDarkMode] = useState(false);
 
   // Efecto para manejar la navegación basada en el usuario logueado
@@ -128,12 +132,13 @@ function AppContent() {
             darkMode={darkMode}
             onUnauthorized={handleUnauthorized}
           >
-            <AdminPanel
+            <Layout
               darkMode={darkMode}
               setDarkMode={setDarkMode}
               onBack={handleBackToLogin}
-              onGoToUpload={() => setCurrentView('upload')}
-              onGoToDashboard={() => setCurrentView('dashboard')}
+              onMenuSelect={setSelectedMenu}
+              selectedMenu={selectedMenu}
+              fullWidth={true}
             />
           </ProtectedRoute>
         );
@@ -149,19 +154,15 @@ function AppContent() {
     }
   };
 
+  const theme = createAppTheme(darkMode);
+
   return (
-    <div style={{ 
-      position: 'relative', 
-      width: '100%', 
-      height: '100vh', 
-      minHeight: '100vh', 
-      background: darkMode ? '#181C32' : '#f8fafc', 
-      transition: 'background 0.3s',
-      margin: 0,
-      padding: 0
-    }}>
-      {renderCurrentView()}
-    </div>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <div>
+        {renderCurrentView()}
+      </div>
+    </ThemeProvider>
   );
 }
 
