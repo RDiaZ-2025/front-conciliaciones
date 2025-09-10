@@ -1,285 +1,278 @@
 # Frontend - VOC Sistema de Conciliaciones
 
-Aplicación frontend desarrollada en React con Material-UI para el sistema de gestión de conciliaciones y documentos.
+Modern React application for the VOC document management and reconciliation system, built with a modular architecture and TypeScript integration.
 
-## Tecnologías Principales
+## Architecture Overview
 
-- **React**: 19.1.0 - Biblioteca principal para la interfaz de usuario
-- **Vite**: 7.0.4 - Herramienta de build y desarrollo
-- **Material-UI**: 7.2.0 - Framework de componentes UI
-- **PDF.js**: 5.3.93 - Visualización y manipulación de PDFs
-- **XLSX**: 0.18.5 - Exportación de datos a Excel
-- **React Icons**: 5.5.0 - Iconografía
+The frontend follows a clean architecture pattern with clear separation of concerns:
 
-## Estructura del Proyecto
+- **Pages**: Full page components with dedicated folder structure
+- **Components**: Reusable UI components
+- **Services**: API communication layer
+- **Contexts**: Global state management
+- **Utils**: Helper functions and utilities
+
+## Technology Stack
+
+- **React**: 19.1.0 - Modern React with hooks and functional components
+- **Vite**: 7.0.4 - Fast build tool and development server
+- **Material-UI**: 7.2.0 - Comprehensive UI component library
+- **TypeScript**: Gradual migration for better type safety
+- **PDF.js**: 5.3.93 - PDF processing and validation
+- **XLSX**: 0.18.5 - Excel file handling and export
+- **Azure Blob Storage**: Document storage integration
+
+## Project Structure
 
 ```
 src/
-├── components/          # Componentes React reutilizables
-│   ├── AdminPanel.jsx   # Panel de administración
-│   ├── DashboardGeneral.jsx # Dashboard principal
-│   ├── LoadDocumentsOCbyUserView.jsx # Vista de documentos
-│   ├── Login.jsx        # Componente de autenticación
-│   ├── UploadForm.jsx   # Formulario de carga
-│   └── ProtectedRoute.jsx # Rutas protegidas
-├── contexts/            # Contextos de React
-│   └── AuthContext.jsx  # Contexto de autenticación
-├── services/            # Servicios de API
-│   └── apiService.js    # Cliente HTTP para backend
-├── utils/               # Utilidades
-│   └── validatePdfSignatures.js # Validación de PDFs
-├── constants/           # Constantes de la aplicación
-│   └── auth.js          # Constantes de autenticación
-├── assets/              # Recursos estáticos
-└── App.jsx              # Componente principal
+├── pages/                   # Page components with modular structure
+│   ├── AdminPanel/          # Admin panel with user management
+│   │   ├── index.ts         # Barrel exports
+│   │   ├── types.ts         # TypeScript interfaces
+│   │   ├── useAdminPanel.ts # Custom hook with business logic
+│   │   └── AdminPanel.tsx   # UI component
+│   ├── DashboardGeneral/    # Financial dashboard
+│   ├── LoadDocumentsOCbyUserView/ # Document listing
+│   ├── Login/               # Authentication
+│   └── UploadForm/          # Document upload
+├── components/              # Reusable UI components
+│   ├── CustomDatePicker.jsx # Date selection component
+│   ├── DarkModeToggle.jsx   # Theme switcher
+│   └── ProtectedRoute.jsx   # Route protection
+├── services/                # API communication layer
+│   ├── baseApiService.js    # Core HTTP client
+│   ├── authService.js       # Authentication API
+│   └── userService.js       # User management API
+├── contexts/                # Global state management
+│   └── AuthContext.jsx      # Authentication context
+├── constants/               # Application constants
+│   └── auth.js              # Permission and role definitions
+├── utils/                   # Helper functions
+│   └── validatePdfSignatures.js # PDF validation utilities
+├── assets/                  # Static resources
+└── App.jsx                  # Main application component
 ```
 
-## Características Principales
+## Key Features
 
-### Sistema de Autenticación
-- Login con email y contraseña
-- Gestión de tokens JWT
-- Contexto global de autenticación
-- Rutas protegidas por permisos
-- Logout automático por expiración
+### Modular Page Architecture
+Each page follows a consistent structure:
+- **Component**: Pure UI rendering with TypeScript
+- **Custom Hook**: Business logic and state management
+- **Types**: TypeScript interfaces and type definitions
+- **Index**: Barrel exports for clean imports
 
-### Gestión de Permisos
-- Sistema granular de permisos
-- Roles diferenciados:
-  - `ADMIN_PANEL`: Acceso completo al panel de administración
-  - `DOCUMENT_UPLOAD`: Permisos para cargar documentos
-  - `MANAGEMENT_DASHBOARD`: Acceso al dashboard gerencial
-  - `USER_MANAGEMENT`: Gestión de usuarios
+### Authentication & Authorization
+- JWT-based authentication
+- Role-based access control (RBAC)
+- Protected routes with permission checking
+- Automatic token refresh and logout
 
-### Dashboard Interactivo
-- Visualización de datos financieros
-- Gráficos de presupuesto vs ejecutado
-- Filtros por año y categoría
-- Drill-down en subcategorías
-- Exportación a Excel
-- Modo oscuro/claro
+### Document Management
+- PDF upload with validation
+- Digital signature verification
+- Document preview and thumbnails
+- Azure Blob Storage integration
+- Upload progress tracking
 
-### Carga de Documentos
-- Subida de archivos PDF
-- Validación de firmas digitales
-- Preview de documentos
-- Seguimiento de estado
-- Historial de cargas
+### Interactive Dashboard
+- Real-time financial data visualization
+- Interactive charts and graphs
+- Multi-level category filtering
+- Export functionality to Excel
+- Responsive design with dark/light themes
 
-### Panel de Administración
-- Gestión de usuarios
-- Asignación de permisos
-- Visualización de actividad
-- Configuración del sistema
+### User Management
+- Complete user CRUD operations
+- Role assignment and permission management
+- User status management
+- Activity monitoring
 
-## Componentes Principales
+## Component Architecture
 
-### App.jsx
-Componente raíz que maneja:
-- Enrutamiento basado en permisos
-- Navegación entre vistas
-- Gestión de estado global
-- Modo oscuro/claro
+### Separation of Concerns
+- **UI Components**: Focus solely on rendering and user interaction
+- **Custom Hooks**: Handle business logic, API calls, and state management
+- **Type Definitions**: Ensure type safety across the application
+- **Service Layer**: Centralized API communication
 
-### AuthContext.jsx
-Contexto que proporciona:
-- Estado de autenticación
-- Funciones de login/logout
-- Verificación de permisos
-- Persistencia de sesión
+### Benefits
+- **Maintainability**: Clear separation makes code easier to maintain
+- **Testability**: Business logic can be tested independently
+- **Reusability**: Hooks can be reused across different components
+- **Type Safety**: TypeScript interfaces prevent runtime errors
+- **Scalability**: Modular structure supports easy feature additions
 
-### DashboardGeneral.jsx
-Dashboard principal con:
-- Gráficos interactivos
-- Filtros dinámicos
-- Exportación de datos
-- Responsive design
+## Service Layer
 
-### AdminPanel.jsx
-Panel administrativo para:
-- Gestión de usuarios
-- Asignación de roles
-- Monitoreo de sistema
-- Configuraciones
+### Base API Service
+- Centralized HTTP client configuration
+- Automatic token management
+- Request/response interceptors
+- Error handling and retry logic
 
-## Servicios y APIs
+### Specialized Services
+- **Auth Service**: Login, logout, token verification
+- **User Service**: User management operations
+- Modular design allows easy addition of new services
 
-### apiService.js
-Cliente HTTP que maneja:
-- Configuración de endpoints
-- Autenticación automática
-- Manejo de errores
-- Interceptores de request/response
+## State Management
 
-#### Endpoints Principales
-- `POST /api/auth/login` - Autenticación
-- `GET /api/users` - Listado de usuarios
-- `POST /api/load-documents` - Carga de documentos
-- `GET /api/load-documents` - Consulta de documentos
+### Context API
+- **AuthContext**: Global authentication state
+- User permissions and role management
+- Session persistence and cleanup
 
-## Configuración de Desarrollo
+### Local State
+- Component-specific state in custom hooks
+- Form state management
+- UI state (loading, errors, etc.)
 
-### Variables de Entorno
-```env
-VITE_API_URL=http://localhost:22741/api
-```
+## Development Features
 
-### Scripts Disponibles
+### Hot Module Replacement
+- Instant updates during development
+- State preservation across changes
+- Fast development iteration
+
+### TypeScript Integration
+- Gradual migration from JavaScript
+- Type safety for critical components
+- Better IDE support and autocomplete
+
+### ESLint Configuration
+- Code quality enforcement
+- Consistent coding standards
+- React-specific linting rules
+
+## Performance Optimizations
+
+### Code Splitting
+- Lazy loading of page components
+- Reduced initial bundle size
+- Better loading performance
+
+### Efficient Rendering
+- Proper use of React hooks
+- Memoization where appropriate
+- Optimized re-render patterns
+
+### Asset Optimization
+- Image optimization and compression
+- Efficient PDF processing
+- Minimal bundle size
+
+## Security Features
+
+### Input Validation
+- Client-side form validation
+- File type and size restrictions
+- XSS prevention measures
+
+### Authentication Security
+- Secure token storage
+- Automatic session cleanup
+- Protected route enforcement
+
+## Responsive Design
+
+### Mobile-First Approach
+- Responsive layouts with Material-UI
+- Touch-friendly interfaces
+- Adaptive navigation
+
+### Theme Support
+- Dark and light mode support
+- Consistent design system
+- Accessibility considerations
+
+## Development Workflow
+
+### Getting Started
 ```bash
-npm run dev      # Servidor de desarrollo
-npm run build    # Build de producción
-npm run preview  # Preview del build
-npm run lint     # Linting con ESLint
-```
-
-### Configuración de Vite
-- Proxy para desarrollo apuntando al backend
-- Plugin de React con Fast Refresh
-- Optimizaciones de build
-
-## Patrones de Diseño Implementados
-
-### Context Pattern
-- AuthContext para estado global de autenticación
-- Evita prop drilling
-- Centraliza lógica de autenticación
-
-### Protected Routes
-- Componente ProtectedRoute para rutas seguras
-- Verificación de permisos antes del renderizado
-- Redirección automática si no autorizado
-
-### Service Layer
-- Separación de lógica de API
-- Reutilización de configuraciones
-- Manejo centralizado de errores
-
-### Component Composition
-- Componentes pequeños y reutilizables
-- Props bien definidas
-- Separación de responsabilidades
-
-## Optimizaciones de Rendimiento
-
-### Lazy Loading
-- Carga diferida de componentes pesados
-- Reducción del bundle inicial
-- Mejor experiencia de usuario
-
-### Memoización
-- React.memo para componentes puros
-- useMemo para cálculos costosos
-- useCallback para funciones estables
-
-### Paginación
-- Tablas con paginación automática
-- Reducción de datos en memoria
-- Mejor rendimiento en listas grandes
-
-## Buenas Prácticas Implementadas
-
-### Código
-- Componentes funcionales con hooks
-- Naming conventions consistentes
-- Separación de lógica y presentación
-- Manejo de errores robusto
-
-### UI/UX
-- Design system con Material-UI
-- Responsive design
-- Accesibilidad básica
-- Feedback visual para acciones
-
-### Seguridad
-- Validación de entrada
-- Sanitización de datos
-- Manejo seguro de tokens
-- Protección contra XSS
-
-## Áreas de Mejora
-
-### Testing
-- Implementar tests unitarios con Jest
-- Tests de integración con React Testing Library
-- Tests end-to-end con Cypress
-- Coverage de código
-
-### Performance
-- Implementar React.Suspense
-- Optimizar re-renders
-- Bundle splitting más granular
-- Service Workers para cache
-
-### Accesibilidad
-- Mejorar soporte para screen readers
-- Navegación por teclado
-- Contraste de colores
-- ARIA labels
-
-### Internacionalización
-- Soporte multi-idioma con react-i18next
-- Formateo de fechas y números
-- Textos externalizados
-
-### Estado Global
-- Migrar a Redux Toolkit o Zustand
-- Mejor gestión de estado complejo
-- DevTools para debugging
-
-## Instalación y Configuración
-
-### Prerrequisitos
-- Node.js 20.x o superior
-- npm o yarn
-- Backend ejecutándose en puerto 22741
-
-### Instalación
-```bash
-# Instalar dependencias
+# Install dependencies (from root)
 npm install
 
-# Configurar variables de entorno
-cp .env.example .env
+# Start development server
+npm run dev:frontend
 
-# Iniciar servidor de desarrollo
-npm run dev
+# Build for production
+npm run build:frontend
 ```
 
-### Build de Producción
-```bash
-# Generar build optimizado
-npm run build
+### Code Organization
+- Follow the established folder structure
+- Use TypeScript for new components
+- Implement custom hooks for business logic
+- Add proper type definitions
 
-# Servir build localmente
-npm run preview
-```
+### Best Practices
+- Keep components focused and small
+- Use custom hooks for complex logic
+- Implement proper error boundaries
+- Follow Material-UI design patterns
+- Write descriptive commit messages
+
+## Testing Strategy
+
+### Unit Testing
+- Test custom hooks independently
+- Component testing with React Testing Library
+- Service layer testing
+
+### Integration Testing
+- End-to-end user workflows
+- API integration testing
+- Cross-browser compatibility
+
+## Future Enhancements
+
+### Technical Improvements
+- Complete TypeScript migration
+- Implement comprehensive testing suite
+- Add Storybook for component documentation
+- Implement service workers for offline support
+
+### Feature Additions
+- Real-time notifications
+- Advanced filtering and search
+- Bulk operations
+- Enhanced reporting capabilities
+
+### Performance
+- Implement virtual scrolling for large lists
+- Add caching strategies
+- Optimize bundle splitting
+- Implement progressive web app features
 
 ## Troubleshooting
 
-### Problemas Comunes
-1. **Error de CORS**: Verificar configuración del backend
-2. **Token expirado**: Limpiar localStorage y volver a loguearse
-3. **Componentes no cargan**: Verificar imports y rutas
-4. **Estilos no aplican**: Verificar orden de imports CSS
+### Common Issues
+- **Build Errors**: Check TypeScript types and imports
+- **Authentication Issues**: Verify token storage and API endpoints
+- **Routing Problems**: Ensure proper route protection setup
+- **Performance Issues**: Check for unnecessary re-renders
 
-### Debug
-- Usar React DevTools
-- Console.log en desarrollo
-- Network tab para APIs
-- Vite DevTools
+### Debug Tools
+- React Developer Tools
+- Network tab for API debugging
+- Console logging in development
+- Vite development tools
 
-## Contribución
+## Contributing
 
-### Estándares de Código
-- Seguir ESLint configuration
-- Usar Prettier para formateo
-- Commits descriptivos
-- Pull requests con review
+### Code Standards
+- Follow existing architectural patterns
+- Use TypeScript for new features
+- Implement proper error handling
+- Add appropriate documentation
 
-### Workflow
-1. Fork del repositorio
-2. Crear branch feature
-3. Desarrollar y testear
-4. Pull request con descripción
-5. Code review
-6. Merge a main
+### Pull Request Process
+1. Create feature branch
+2. Implement changes following patterns
+3. Add/update tests
+4. Update documentation
+5. Submit pull request with description
+
+This frontend application provides a solid foundation for the VOC system with modern React patterns, TypeScript integration, and a scalable architecture that supports future growth and maintenance.

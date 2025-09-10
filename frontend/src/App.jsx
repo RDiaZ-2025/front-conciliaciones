@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import AuthProvider, { useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
-import DashboardGeneral from './components/DashboardGeneral';
-import Login from './components/Login';
-import UploadForm from './components/UploadForm';
-import AdminPanel from './components/AdminPanel';
+import DashboardGeneral from './pages/DashboardGeneral';
+import Login from './pages/Login';
+import UploadForm from './pages/UploadForm';
+import AdminPanel from './pages/AdminPanel';
 import DarkModeToggle from './components/DarkModeToggle';
 import { PERMISSIONS } from './constants/auth';
 

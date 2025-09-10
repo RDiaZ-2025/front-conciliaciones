@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authService, userService } from '../services/apiService';
+import { authService } from '../services/authService';
+import { userService } from '../services/userService';
 import { ROLES, PERMISSIONS, ROLE_PERMISSIONS } from '../constants/auth';
 
 const AuthContext = createContext();
