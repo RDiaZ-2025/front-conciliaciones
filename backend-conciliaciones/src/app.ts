@@ -1,0 +1,78 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
+import dotenv from 'dotenv';
+import loadDocumentsOCbyUserRouter from './routes/loadDocumentsOCbyUser';
+
+// Importar rutas
+import authRoutes from './routes/auth';
+import userRoutes from './routes/users';
+
+// Cargar variables de entorno
+dotenv.config();
+
+const app = express();
+
+// Configuración de CORS
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+// Configuración de Rate Limiting (temporalmente deshabilitado)
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutos
+//   max: 100, // límite de requests por ventana
+//   message: 'Demasiadas solicitudes desde esta IP, intenta de nuevo más tarde.'
+// });
+
+// Middlewares globales
+app.use(helmet()); // Seguridad
+app.use(cors(corsOptions)); // CORS
+app.use(compression()); // Compresión
+app.use(morgan('combined')); // Logging
+// app.use(limiter); // Rate limiting (temporalmente deshabilitado)
+app.use(cookieParser()); // Cookies
+app.use(express.json({ limit: '10mb' })); // JSON parser
+app.use(express.urlencoded({ extended: true, limit: '10mb' })); // URL encoded
+
+// Ruta de salud
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Servidor funcionando correctamente',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Rutas de la API
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/load-documents', loadDocumentsOCbyUserRouter);
+
+// Ruta 404
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Ruta no encontrada'
+  });
+});
+
+// Middleware de manejo de errores
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Error no manejado:', err);
+  
+  res.status(500).json({
+    success: false,
+    message: 'Error interno del servidor',
+    ...(process.env.NODE_ENV === 'development' && { error: err.message })
+  });
+});
+
+export default app;
