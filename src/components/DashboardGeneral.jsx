@@ -183,7 +183,7 @@ export default function DashboardGeneral({ darkMode, setDarkMode, onBack, onGoTo
     : tipoData.historico;
 
   return (
-      <div style={{ minHeight: "100vh", width: "100vw", background: darkMode ? "#2D3748" : "linear-gradient(120deg, #f5f7fa 0%, #e3eafc 100%)", color: darkMode ? "#E6EDF3" : "#181C32", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", fontFamily: "'Inter', 'Roboto', Arial, sans-serif", transition: "background 0.3s, color 0.3s", position: "relative", padding: "0 24px", boxSizing: "border-box" }}>
+      <div style={{ minHeight: "100vh", width: "100vw", background: darkMode ? "#23232b" : "linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%)", color: darkMode ? "#E6EDF3" : "#181C32", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", fontFamily: "'Inter', 'Roboto', Arial, sans-serif", transition: "background 0.3s, color 0.3s", position: "relative", padding: "0 24px", boxSizing: "border-box" }}>
       {/* Header con navegación y DarkModeToggle */}
       <div style={{ position: "absolute", top: 16, right: 24, zIndex: 1000, display: "flex", alignItems: "center", gap: "12px" }}>
         {/* Botones de navegación */}

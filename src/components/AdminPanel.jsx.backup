@@ -99,7 +99,7 @@ const AdminPanel = ({ darkMode, setDarkMode, onBack, onGoToUpload, onGoToDashboa
 
   const handleRoleChange = async (newRole) => {
     try {
-      await updateUser(selectedUserForRole.email, { role: newRole });
+      await updateUser(selectedUserForRole.id, { role: newRole });
       setSnackbar({ open: true, message: 'Rol actualizado exitosamente', severity: 'success' });
       refreshUsers();
       handleCloseRoleDialog();
@@ -164,7 +164,7 @@ const AdminPanel = ({ darkMode, setDarkMode, onBack, onGoToUpload, onGoToDashboa
         if (formData.password) {
           updates.password = formData.password;
         }
-        updateUser(editingUser.email, updates);
+        updateUser(editingUser.id, updates);
         setSnackbar({ open: true, message: 'Usuario actualizado exitosamente', severity: 'success' });
       } else {
         // Crear nuevo usuario

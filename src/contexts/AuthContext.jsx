@@ -12,6 +12,8 @@ export const useAuth = () => {
   return context;
 };
 
+const normalizePermissions = perms => perms.map(p => p.toLowerCase());
+
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -32,7 +34,12 @@ function AuthProvider({ children }) {
       if (token) {
         try {
           const userData = await authService.verifyToken();
-          setUser(userData.data || userData);
+          // Normalizar permisos a minúsculas
+          const normalizedUser = {
+            ...userData.data || userData,
+            permissions: userData.data?.permissions ? normalizePermissions(userData.data.permissions) : (userData.permissions ? normalizePermissions(userData.permissions) : [])
+          };
+          setUser(normalizedUser);
         } catch (error) {
           localStorage.removeItem('auth_token');
           localStorage.removeItem('user');
@@ -101,23 +108,22 @@ function AuthProvider({ children }) {
     if (!user) {
       return false;
     }
-    
     // Mapeo de permisos del backend a permisos del frontend
     const permissionMapping = {
       [PERMISSIONS.ADMIN_PANEL]: ['ADMIN_PANEL', 'VIEW_USERS', 'CREATE_USER', 'EDIT_USER', 'DELETE_USER', 'MANAGE_PERMISSIONS', 'SYSTEM_CONFIG'],
       [PERMISSIONS.DOCUMENT_UPLOAD]: ['DOCUMENT_UPLOAD', 'UPLOAD_FILES'],
-      [PERMISSIONS.MANAGEMENT_DASHBOARD]: ['MANAGEMENT_DASHBOARD', 'VIEW_REPORTS', 'VIEW_ANALYTICS']
+      [PERMISSIONS.MANAGEMENT_DASHBOARD]: ['MANAGEMENT_DASHBOARD', 'VIEW_REPORTS', 'VIEW_ANALYTICS'],
+      [PERMISSIONS.HISTORIAL_CARGA_ARCHIVOS_COMERCIALES]: ['HISTORIAL_CARGA_ARCHIVOS_COMERCIALES', 'HISTORY_LOAD_COMMERCIAL_FILES', 'historial_carga_archivos_comerciales', 'history_load_commercial_files'],
+      [PERMISSIONS.MANAGE_PERMISSIONS]: ['MANAGE_PERMISSIONS', 'manage_permissions']
     };
-    
     if (user.permissions && Array.isArray(user.permissions)) {
-      // Verificar si el usuario tiene alguno de los permisos mapeados
       const mappedPermissions = permissionMapping[permission] || [permission];
-      
       const hasPermissionResult = mappedPermissions.some(mappedPerm => user.permissions.includes(mappedPerm));
+      if (!hasPermissionResult) {
+        return mappedPermissions.some(mappedPerm => user.permissions.some(up => up.toLowerCase() === mappedPerm.toLowerCase()));
+      }
       return hasPermissionResult;
     }
-    
-    // Fallback al sistema de roles
     const userPermissions = ROLE_PERMISSIONS[user.role] || [];
     const roleResult = userPermissions.includes(permission);
     return roleResult;
@@ -171,18 +177,15 @@ function AuthProvider({ children }) {
   };
 
   const updateUser = async (email, updates) => {
-    if (!hasPermission(PERMISSIONS.ADMIN_PANEL)) {
-      throw new Error('No tienes permisos para actualizar usuarios');
+    if (!hasPermission(PERMISSIONS.EDIT_USER)) {
+      throw new Error('No tienes permisos para editar usuarios');
     }
-    
     try {
       const currentUser = users[email?.toLowerCase() || email];
       if (!currentUser) {
         throw new Error('Usuario no encontrado');
       }
-      
       const updatedUser = await userService.updateUser(currentUser.id, updates);
-      
       setUsers(prev => ({
         ...prev,
         [email]: {
@@ -190,7 +193,6 @@ function AuthProvider({ children }) {
           ...updates
         }
       }));
-      
       return updatedUser;
     } catch (error) {
       setUsers(prev => ({
@@ -200,7 +202,6 @@ function AuthProvider({ children }) {
           ...updates
         }
       }));
-      
       return { ...users[email], ...updates };
     }
   };

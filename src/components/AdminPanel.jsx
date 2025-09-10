@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import logoClaroMedia from '../assets/Claro-Media-Logo.jpg';
 import {
   Box,
   Typography,
@@ -55,15 +56,23 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
   Block as BlockIcon,
-  CheckCircle as CheckCircleIcon
+  CheckCircle as CheckCircleIcon,
+  Menu as MenuIcon
 } from '@mui/icons-material';
+import Drawer from '@mui/material/Drawer';
 import { useAuth } from '../contexts/AuthContext';
 import { ROLES, PERMISSIONS, PERMISSION_LABELS, PERMISSION_DESCRIPTIONS, PERMISSION_COLORS } from '../constants/auth';
 import DarkModeToggle from './DarkModeToggle';
+import LoadDocumentsOCbyUserView from './LoadDocumentsOCbyUserView';
+import DashboardGeneral from './DashboardGeneral';
+import UploadForm from './UploadForm';
 
 const AdminPanel = ({ darkMode, setDarkMode, onBack, onGoToUpload, onGoToDashboard }) => {
   const { getAllUsers, createUser, updateUser, deleteUser, toggleUserStatus, user, hasPermission } = useAuth();
   const [users, setUsers] = useState([]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedMenu, setSelectedMenu] = useState('');
+  
   const [openDialog, setOpenDialog] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData] = useState({
@@ -237,7 +246,7 @@ const usersPerPage = 5;
       setSelectedUserForRole(prev => ({ ...prev, role: newRole }));
       
       // Actualizar en el servidor
-      await updateUser(selectedUserForRole.email, { role: newRole });
+      await updateUser(selectedUserForRole.id, { role: newRole });
       setSnackbar({ open: true, message: 'Rol actualizado exitosamente', severity: 'success' });
       
       // Cerrar diálogo inmediatamente
@@ -265,7 +274,7 @@ const usersPerPage = 5;
       );
       
       // Actualizar en el servidor
-      await updateUser(userData.email, { role: newRole });
+      await updateUser(userData.id, { role: newRole });
       setSnackbar({ open: true, message: `Rol actualizado a ${getRoleLabel(newRole)} exitosamente`, severity: 'success' });
       
       // Refrescar desde el servidor para asegurar consistencia
@@ -300,12 +309,13 @@ const usersPerPage = 5;
         // Actualizar usuario
         const updates = {
           name: formData.name,
-          permissions: formData.permissions
+          email: formData.email,
+          permissions: formData.permissions.map(p => typeof p === 'string' ? p.toUpperCase() : (p.Name || p.name || String(p)).toUpperCase())
         };
         if (formData.password) {
           updates.password = formData.password;
         }
-        await updateUser(editingUser.email, updates);
+        await updateUser(editingUser.id, updates);
         setSnackbar({ open: true, message: 'Usuario actualizado exitosamente', severity: 'success' });
       } else {
         // Crear nuevo usuario
@@ -315,7 +325,7 @@ const usersPerPage = 5;
         // Crear usuario con permisos asignados
         const newUserData = {
           ...formData,
-          permissions: formData.permissions // Múltiples permisos asignados
+          permissions: formData.permissions.map(p => typeof p === 'string' ? p.toUpperCase() : (p.Name || p.name || String(p)).toUpperCase()) // Múltiples permisos asignados
         };
         await createUser(newUserData);
         setSnackbar({ open: true, message: 'Usuario creado exitosamente', severity: 'success' });
@@ -406,7 +416,7 @@ const usersPerPage = 5;
       );
       
       // Actualizar en el servidor usando el endpoint de permisos
-      const response = await fetch(`/api/users/${userData.email}/permissions`, {
+      const response = await fetch(`/api/users/${userData.id}/permissions`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -491,6 +501,21 @@ const usersPerPage = 5;
       />
       
       {/* Header con navegación */}
+      <Box sx={{ position: 'absolute', top: 24, left: 32, zIndex: 1000 }}>
+        <IconButton onClick={() => setMenuOpen(true)} size="large" color="inherit">
+          <MenuIcon />
+        </IconButton>
+        <Drawer anchor="left" open={menuOpen} onClose={() => setMenuOpen(false)}>
+  <Box sx={{ width: 260, p: 2 }}>
+    <Typography variant="h6" sx={{ mb: 2 }}>Menú</Typography>
+    <Button fullWidth sx={{ mb: 1 }} onClick={() => { setSelectedMenu('historial'); setMenuOpen(false); }} disabled={!hasPermission(PERMISSIONS.HISTORIAL_CARGA_ARCHIVOS_COMERCIALES)}>Historial Carga Archivos Comerciales</Button>
+<Button fullWidth sx={{ mb: 1 }} onClick={() => { setSelectedMenu('upload'); setMenuOpen(false); }} disabled={!hasPermission(PERMISSIONS.DOCUMENT_UPLOAD)}>Cargar Documentos</Button>
+<Button fullWidth sx={{ mb: 1 }} onClick={() => { setSelectedMenu('dashboard'); setMenuOpen(false); }} disabled={!hasPermission(PERMISSIONS.MANAGEMENT_DASHBOARD)}>Dashboard de Gestión</Button>
+<Button fullWidth sx={{ mb: 1 }} onClick={() => { setSelectedMenu('usuarios'); setMenuOpen(false); }} disabled={!hasPermission(PERMISSIONS.VIEW_USERS)}>Usuarios</Button>
+    <Button fullWidth sx={{ mb: 1 }} onClick={onBack}>Volver</Button>
+  </Box>
+</Drawer>
+      </Box>
       <Box
         sx={{
           position: 'absolute',
@@ -509,6 +534,18 @@ const usersPerPage = 5;
         />
       </Box>
 
+      {/* Render selected menu view */}
+      {selectedMenu === 'historial' && <LoadDocumentsOCbyUserView darkMode={darkMode} />}
+{selectedMenu === 'upload' && (
+  <>
+    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 6, mb: 2 }}>
+      <img src={logoClaroMedia} alt="Claro Media Data Tech" style={{ width: 180 }} />
+    </Box>
+    <UploadForm hideHeader={true} />
+  </>
+)}
+{selectedMenu === 'dashboard' && <DashboardGeneral />}
+{selectedMenu === 'usuarios' && (
       <Box sx={{ 
         width: '100%', 
         maxWidth: '1400px', 
@@ -645,6 +682,9 @@ const usersPerPage = 5;
           </Box>
         </Paper>
 
+      {/* Eliminados los botones de documentos y la vista de documentos subidos por usuario */}
+      <Box sx={{ display: 'flex', gap: 2, mb: 3 }}></Box>
+
       {/* Tabla de usuarios */}
       <Box sx={{ px: 0 }}>
           <Paper
@@ -727,7 +767,7 @@ const usersPerPage = 5;
   variant="contained"
   startIcon={<AddIcon />}
   onClick={() => handleOpenDialog()}
-  disabled={!hasPermission(PERMISSIONS.CREATE_USER)}
+  disabled={false}
   sx={{
     background: 'linear-gradient(135deg, #E60026 0%, #B8001B 100%)',
     color: '#fff',
@@ -969,71 +1009,71 @@ const usersPerPage = 5;
                       </TableCell>
                       <TableCell sx={{ py: 3, textAlign: 'center' }}>
                         <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                          <IconButton
-                            onClick={() => handleOpenDialog(userData)}
-                            disabled={!hasPermission(PERMISSIONS.EDIT_USER)}
-                            sx={{
-                              background: darkMode 
-                                ? 'linear-gradient(135deg, rgba(66, 153, 225, 0.15) 0%, rgba(49, 130, 206, 0.15) 100%)'
-                                : 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
-                              color: darkMode ? '#fff' : '#000',
-                              border: darkMode 
-                                ? '1px solid rgba(66, 153, 225, 0.3)'
-                                : '1px solid rgba(0, 0, 0, 0.2)',
-                              borderRadius: 2,
-                              p: 1,
-                              '&:hover': {
-                                background: darkMode 
-                                  ? 'linear-gradient(135deg, rgba(66, 153, 225, 0.25) 0%, rgba(49, 130, 206, 0.25) 100%)'
-                                  : 'linear-gradient(135deg, rgba(0, 0, 0, 0.15) 0%, rgba(34, 34, 34, 0.15) 100%)',
-                                transform: 'translateY(-1px)'
-                              }
-                            }}
-                            title="Editar usuario y gestionar permisos"
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
+                          {hasPermission(PERMISSIONS.EDIT_USER) && (
+  <IconButton
+    onClick={() => handleOpenDialog(userData)}
+    sx={{
+      background: darkMode 
+        ? 'linear-gradient(135deg, rgba(66, 153, 225, 0.15) 0%, rgba(49, 130, 206, 0.15) 100%)'
+        : 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+      color: darkMode ? '#fff' : '#000',
+      border: darkMode 
+        ? '1px solid rgba(66, 153, 225, 0.3)'
+        : '1px solid rgba(0, 0, 0, 0.2)',
+      borderRadius: 2,
+      p: 1,
+      '&:hover': {
+        background: darkMode 
+          ? 'linear-gradient(135deg, rgba(66, 153, 225, 0.25) 0%, rgba(49, 130, 206, 0.25) 100%)'
+          : 'linear-gradient(135deg, rgba(0, 0, 0, 0.15) 0%, rgba(34, 34, 34, 0.15) 100%)',
+        transform: 'translateY(-1px)'
+      }
+    }}
+    title="Editar usuario y gestionar permisos"
+  >
+    <EditIcon fontSize="small" />
+  </IconButton>
+)}
 
-                          {userData.email !== user?.email && (
-                            <IconButton
-                              onClick={() => handleToggleStatus(userData.email, userData.status)}
-                              disabled={!hasPermission(PERMISSIONS.EDIT_USER)}
-                              sx={{ 
-                                background: userData.status === 1 
-                                  ? (darkMode 
-                                    ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.15) 100%)'
-                                    : 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(22, 163, 74, 0.1) 100%)')
-                                  : (darkMode 
-                                    ? 'linear-gradient(135deg, rgba(229, 62, 62, 0.15) 0%, rgba(197, 48, 48, 0.15) 100%)'
-                                    : 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%)'),
-                                color: userData.status === 1 
-                                  ? (darkMode ? '#22c55e' : '#22c55e')
-                                  : (darkMode ? '#ef4444' : '#ef4444'),
-                                border: userData.status === 1 
-                                  ? (darkMode 
-                                    ? '1px solid rgba(34, 197, 94, 0.3)'
-                                    : '1px solid rgba(34, 197, 94, 0.2)')
-                                  : (darkMode 
-                                    ? '1px solid rgba(239, 68, 68, 0.3)'
-                                    : '1px solid rgba(239, 68, 68, 0.2)'),
-                                borderRadius: 2,
-                                p: 1,
-                                '&:hover': {
-                                  background: userData.status === 1 
-                                    ? (darkMode 
-                                      ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(22, 163, 74, 0.25) 100%)'
-                                      : 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.15) 100%)')
-                                    : (darkMode 
-                                      ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.25) 100%)'
-                                      : 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.15) 100%)'),
-                                  transform: 'translateY(-1px)'
-                                }
-                              }}
-                              title={userData.status === 1 ? "Deshabilitar usuario" : "Habilitar usuario"}
-                            >
-                              {userData.status === 1 ? <CheckCircleIcon fontSize="small" /> : <BlockIcon fontSize="small" />}
-                            </IconButton>
-                          )}
+                          {userData.email !== user?.email && hasPermission(PERMISSIONS.EDIT_USER) && (
+  <IconButton
+    onClick={() => handleToggleStatus(userData.email, userData.status)}
+    sx={{ 
+      background: userData.status === 1 
+        ? (darkMode 
+          ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.15) 100%)'
+          : 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(22, 163, 74, 0.1) 100%)')
+        : (darkMode 
+          ? 'linear-gradient(135deg, rgba(229, 62, 62, 0.15) 0%, rgba(197, 48, 48, 0.15) 100%)'
+          : 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%)'),
+      color: userData.status === 1 
+        ? (darkMode ? '#22c55e' : '#22c55e')
+        : (darkMode ? '#ef4444' : '#ef4444'),
+      border: userData.status === 1 
+        ? (darkMode 
+          ? '1px solid rgba(34, 197, 94, 0.3)'
+          : '1px solid rgba(34, 197, 94, 0.2)')
+        : (darkMode 
+          ? '1px solid rgba(239, 68, 68, 0.3)'
+          : '1px solid rgba(239, 68, 68, 0.2)'),
+      borderRadius: 2,
+      p: 1,
+      '&:hover': {
+        background: userData.status === 1 
+          ? (darkMode 
+            ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(22, 163, 74, 0.25) 100%)'
+            : 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.15) 100%)')
+          : (darkMode 
+            ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.25) 100%)'
+            : 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.15) 100%)'),
+        transform: 'translateY(-1px)'
+      }
+    }}
+    title={userData.status === 1 ? "Deshabilitar usuario" : "Habilitar usuario"}
+  >
+    {userData.status === 1 ? <CheckCircleIcon fontSize="small" /> : <BlockIcon fontSize="small" />}
+  </IconButton>
+)}
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -1230,6 +1270,7 @@ const usersPerPage = 5;
           </Paper>
         </Box>
       </Box>
+      )}
 
       {/* Dialog para crear/editar usuario */}
       <Dialog

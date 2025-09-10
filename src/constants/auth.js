@@ -7,41 +7,44 @@ export const ROLES = {
 };
 
 export const PERMISSIONS = {
-  VIEW_USERS: 'VIEW_USERS',
-  CREATE_USER: 'CREATE_USER',
-  EDIT_USER: 'EDIT_USER',
-  DELETE_USER: 'DELETE_USER',
-  MANAGE_PERMISSIONS: 'MANAGE_PERMISSIONS',
-  SYSTEM_CONFIG: 'SYSTEM_CONFIG',
-  ADMIN_PANEL: 'ADMIN_PANEL',
-  DOCUMENT_UPLOAD: 'DOCUMENT_UPLOAD',
-  MANAGEMENT_DASHBOARD: 'MANAGEMENT_DASHBOARD'
+  VIEW_USERS: 'view_users',
+  CREATE_USER: 'create_user',
+  EDIT_USER: 'edit_user',
+  DELETE_USER: 'delete_user',
+  MANAGE_PERMISSIONS: 'manage_permissions',
+  SYSTEM_CONFIG: 'system_config',
+  ADMIN_PANEL: 'admin_panel',
+  DOCUMENT_UPLOAD: 'document_upload',
+  MANAGEMENT_DASHBOARD: 'management_dashboard',
+  HISTORY_LOAD_COMMERCIAL_FILES: 'historial_carga_archivos_comerciales'
 };
 
 // Etiquetas descriptivas para permisos
 export const PERMISSION_LABELS = {
-  [PERMISSIONS.VIEW_USERS]: 'Ver lista de usuarios',
-  [PERMISSIONS.CREATE_USER]: 'Crear nuevos usuarios',
-  [PERMISSIONS.EDIT_USER]: 'Editar usuarios existentes',
-  [PERMISSIONS.DELETE_USER]: 'Habilitar/Deshabilitar usuarios',
-  [PERMISSIONS.MANAGE_PERMISSIONS]: 'Gestionar permisos de usuarios',
+  [PERMISSIONS.VIEW_USERS]: 'Ver usuarios',
+  [PERMISSIONS.CREATE_USER]: 'Crear usuario',
+  [PERMISSIONS.EDIT_USER]: 'Editar usuario',
+  [PERMISSIONS.DELETE_USER]: 'Eliminar usuario',
+  [PERMISSIONS.MANAGE_PERMISSIONS]: 'Gestionar permisos',
   [PERMISSIONS.SYSTEM_CONFIG]: 'Configuración del sistema',
-  [PERMISSIONS.ADMIN_PANEL]: 'Panel Administrativo',
+  [PERMISSIONS.ADMIN_PANEL]: 'Panel de administración',
   [PERMISSIONS.DOCUMENT_UPLOAD]: 'Carga de documentos',
-  [PERMISSIONS.MANAGEMENT_DASHBOARD]: 'Dashboard Gerencial'
+  [PERMISSIONS.MANAGEMENT_DASHBOARD]: 'Dashboard gerencial',
+  [PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES]: 'Historial Carga Archivos Comerciales'
 };
 
 // Descripciones de permisos
 export const PERMISSION_DESCRIPTIONS = {
   [PERMISSIONS.VIEW_USERS]: 'Permite ver la lista de usuarios',
-  [PERMISSIONS.CREATE_USER]: 'Permite crear nuevos usuarios en el sistema',
+  [PERMISSIONS.CREATE_USER]: 'Permite crear nuevos usuarios',
   [PERMISSIONS.EDIT_USER]: 'Permite editar usuarios existentes',
-  [PERMISSIONS.DELETE_USER]: 'Permite habilitar o deshabilitar usuarios',
+  [PERMISSIONS.DELETE_USER]: 'Permite eliminar usuarios',
   [PERMISSIONS.MANAGE_PERMISSIONS]: 'Permite gestionar los permisos de los usuarios',
   [PERMISSIONS.SYSTEM_CONFIG]: 'Permite acceder y modificar la configuración del sistema',
   [PERMISSIONS.ADMIN_PANEL]: 'Permite acceder al panel de administración y gestionar usuarios',
   [PERMISSIONS.DOCUMENT_UPLOAD]: 'Permite cargar y gestionar documentos en el sistema',
-  [PERMISSIONS.MANAGEMENT_DASHBOARD]: 'Permite acceder al dashboard gerencial con reportes y estadísticas'
+  [PERMISSIONS.MANAGEMENT_DASHBOARD]: 'Permite acceder al dashboard gerencial con reportes y estadísticas',
+  [PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES]: 'Permite ver el historial de carga de archivos comerciales por usuario'
 };
 
 // Colores para permisos
@@ -54,7 +57,8 @@ export const PERMISSION_COLORS = {
   [PERMISSIONS.SYSTEM_CONFIG]: 'default',
   [PERMISSIONS.ADMIN_PANEL]: 'default',
   [PERMISSIONS.DOCUMENT_UPLOAD]: 'default',
-  [PERMISSIONS.MANAGEMENT_DASHBOARD]: 'default'
+  [PERMISSIONS.MANAGEMENT_DASHBOARD]: 'default',
+  [PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES]: 'default'
 };
 
 

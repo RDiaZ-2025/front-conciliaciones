@@ -264,8 +264,8 @@ const steps = [
   "Materiales y Confirmación"
 ];
 
-const UploadForm = ({ onUploadComplete, onBackToLogin, darkMode, setDarkMode, onGoToAdmin, onGoToDashboard }) => {
-  const { hasPermission } = useAuth();
+const UploadForm = ({ onUploadComplete, onBackToLogin, darkMode, setDarkMode, onGoToAdmin, onGoToDashboard, hideHeader }) => {
+  const { hasPermission, user } = useAuth();
   const [tipoUsuario, setTipoUsuario] = useState(null); // 'cliente' o 'agencia'
   const [excelFile, setExcelFile] = useState(null);
   const [pdfFile, setPdfFile] = useState(null);
@@ -283,7 +283,8 @@ const UploadForm = ({ onUploadComplete, onBackToLogin, darkMode, setDarkMode, on
   const [pdfThumbnail, setPdfThumbnail] = useState(null);
   const [envioExitoso, setEnvioExitoso] = useState(false);
   const [manualPdfConfirmation, setManualPdfConfirmation] = useState(null);
-
+  const [uploadCompleted, setUploadCompleted] = useState(false);
+  
   // Aplicar clase dark-mode al body
   React.useEffect(() => {
     if (darkMode) {
@@ -421,18 +422,22 @@ const UploadForm = ({ onUploadComplete, onBackToLogin, darkMode, setDarkMode, on
     setUploading(false);
   };
 
-  // Subir materiales (igual que antes)
+  // Manejar selección de materiales
   const handleMaterialesChange = (e) => {
-    const selectedFiles = Array.from(e.target.files);
-    setMateriales(selectedFiles);
+    const files = Array.from(e.target.files);
+    setMateriales(files);
   };
 
-  // Notificar a n8n
+  // Subir materiales (igual que antes)
   const handleNotifyN8N = async () => {
     setUploading(true);
     setMessage("");
+    let n8nOk = false;
+    let dbOk = false;
+    let uuid = crypto.randomUUID();
     try {
-      await fetch("https://renediaz2025.app.n8n.cloud/webhook-test/a4784977-134a-4f09-9ea3-04c85c5ba3b7", {
+      // Notificar a n8n (flujo externo)
+      const n8nResponse = await fetch("https://renediaz2025.app.n8n.cloud/webhook-test/a4784977-134a-4f09-9ea3-04c85c5ba3b7", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -440,20 +445,57 @@ const UploadForm = ({ onUploadComplete, onBackToLogin, darkMode, setDarkMode, on
           archivos: [excelFile?.name, pdfFile?.name],
           deseaSubirMateriales,
           materiales: materiales.map(f => f.name),
-          id: crypto.randomUUID(),
+          id: uuid,
           data: debugExcelValues.reduce((acc, curr) => {
-            // curr is like "Agencia: XYZ"
-            const [key, ...rest] = curr.split(':');
-            acc[key.trim()] = rest.join(':').trim();
+            const [key, ...rest] = curr.split(":");
+            acc[key.trim()] = rest.join(":").trim();
             return acc;
           }, {}),
         })
       });
-      setMessage("");
+      if (!n8nResponse.ok) {
+        setMessage("❌ Error: No se pudo notificar a n8n. Verifica la conexión o el flujo externo.");
+        setUploading(false);
+        return;
+      }
+      n8nOk = true;
+      setMessage("✅ Notificación a n8n exitosa. Registrando en base de datos...");
+      // Registrar en base de datos (backend)
+      const userId = user?.id || 1;
+      const folderId = uuid;
+      const fecha = new Date().toISOString();
+      const status = "uploaded";
+      console.log("[UploadForm] userId:", userId, "folderId:", folderId, "uuid:", uuid);
+      const response = await fetch("/api/load-documents", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({
+          iduser: userId,
+          idfolder: folderId,
+          fecha,
+          status,
+          filename: excelFile?.name || pdfFile?.name || ""
+        })
+      });
+      if (!response.ok) {
+        setMessage("✅ Notificación a n8n exitosa. ❌ Error al registrar en base de datos.");
+        setUploading(false);
+        return;
+      }
+      dbOk = true;
+      setMessage("✅ Notificación a n8n exitosa. ✅ Registro en base de datos exitoso.");
       setEnvioExitoso(true);
-      // No limpiar el estado aquí
     } catch (err) {
-      setMessage("❌ Error al notificar a n8n.");
+      if (!n8nOk) {
+        setMessage("❌ Error al notificar a n8n: " + err.message);
+      } else if (!dbOk) {
+        setMessage("✅ Notificación a n8n exitosa. ❌ Error al registrar en base de datos: " + err.message);
+      } else {
+        setMessage("❌ Error inesperado: " + err.message);
+      }
     }
     setUploading(false);
   };
@@ -800,6 +842,48 @@ const UploadForm = ({ onUploadComplete, onBackToLogin, darkMode, setDarkMode, on
           </Fade>
         );
       case 3:
+        if (envioExitoso && !uploadCompleted) {
+          return (
+            <Fade in={true}>
+              <Box sx={{ textAlign: 'center', mt: 4 }}>
+                <Alert severity="success" sx={{ fontSize: 18, fontWeight: 600, mb: 3 }}>
+                  ✅ ¡Archivos enviados correctamente!
+                </Alert>
+                <Paper elevation={1} sx={{ p: 2, mt: 2, background: darkMode ? '#2a2d3a' : '#f8fafc' }}>
+                  <Typography variant="subtitle2" fontWeight={600} mb={1} sx={{ color: darkMode ? '#fff' : '#000' }}>Resumen del envío:</Typography>
+                  <ul style={{ margin: 0, paddingLeft: 18, color: darkMode ? '#fff' : '#000' }}>
+                    <li>Tipo: {tipoUsuario === 'cliente' ? 'Cliente' : 'Agencia'}</li>
+                    <li>Excel: {excelFile?.name || <span style={{ color: '#aaa' }}>No seleccionado</span>}</li>
+                    <li>PDF: {pdfFile?.name || <span style={{ color: '#aaa' }}>No seleccionado</span>}</li>
+                    <li>Materiales: {materiales.length > 0 ? materiales.length + ' archivo(s)' : 'Ninguno'}</li>
+                  </ul>
+                </Paper>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  sx={{ mt: 3, fontWeight: 600, fontSize: 16, py: 1, borderRadius: 2, background: '#222', color: '#fff', '&:hover': { background: '#111' } }}
+                  onClick={() => { setUploadCompleted(true); onUploadComplete(); }}
+                >
+                  Continuar
+                </Button>
+              </Box>
+            </Fade>
+          );
+        }
+        if (uploadCompleted) {
+          return (
+            <Fade in={true}>
+              <Box sx={{ textAlign: 'center', mt: 4 }}>
+                <Alert severity="success" sx={{ fontSize: 18, fontWeight: 600, mb: 3 }}>
+                  ✅ Proceso finalizado.
+                </Alert>
+                <Typography variant="subtitle1" sx={{ mt: 2 }}>
+                  Gracias por enviar los documentos.
+                </Typography>
+              </Box>
+            </Fade>
+          );
+        }
         if (envioExitoso) {
           return (
             <Fade in={true}>
@@ -872,8 +956,8 @@ const UploadForm = ({ onUploadComplete, onBackToLogin, darkMode, setDarkMode, on
                   id="materiales-input"
                   type="file"
                   multiple
-                  webkitdirectory
-                  directory
+                  webkitdirectory="true"
+                  directory="true"
                   onChange={handleMaterialesChange}
                   style={{ display: 'none' }}
                   disabled={uploading || deseaSubirMateriales !== true}
@@ -975,115 +1059,113 @@ const UploadForm = ({ onUploadComplete, onBackToLogin, darkMode, setDarkMode, on
   return (
     <Box
       sx={{
-        minHeight: "100vh",
-        minWidth: "100vw",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "flex-start",
-        background: darkMode ? "#2D3748" : "linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%)",
-        color: darkMode ? "#fff" : "#181C32",
-        position: "relative", // Cambio de fixed a relative para permitir scroll
-        paddingBottom: "100px", // Espacio extra en la parte inferior
-        transition: "background 0.3s, color 0.3s"
+        minHeight: '100vh',
+        width: '100vw',
+        background: darkMode ? '#23232b' : 'linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%)',
+        color: darkMode ? '#fff' : '#181C32',
+        fontFamily: 'Inter, Segoe UI, Roboto, sans-serif',
+        transition: 'background 0.3s',
+        position: 'relative',
+        overflow: 'auto'
       }}
     >
       {/* Header con controles y logo centrado */}
-      <Box sx={{ width: "100%", position: "relative", mt: 5, mb: 2 }}>
-        {/* Flecha de volver - posición absoluta izquierda */}
-        <IconButton
-          onClick={onBackToLogin}
-          sx={{
-            position: "absolute",
-            left: 24,
-            top: "50%",
-            transform: "translateY(-50%)",
-            color: darkMode ? "#fff" : "#222",
-            '&:hover': {
-              backgroundColor: darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"
-            }
-          }}
-        >
-          <ArrowBackIcon />
-        </IconButton>
-        
-        {/* Controles de navegación - posición absoluta derecha */}
-        <Box sx={{ position: "absolute", right: 24, top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", gap: 1 }}>
-          {hasPermission(PERMISSIONS.MANAGEMENT_DASHBOARD) && (
-              <IconButton
-                onClick={onGoToDashboard}
-                sx={{
-                  color: darkMode ? "#fff" : "#181C32",
-                  background: darkMode ? 'rgba(230, 0, 38, 0.05)' : 'rgba(255, 255, 255, 0.9)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: 2,
-                  border: darkMode ? '1px solid rgba(230, 0, 38, 0.2)' : '1px solid rgba(24, 28, 50, 0.1)',
-                  boxShadow: darkMode ? '0 4px 12px rgba(230, 0, 38, 0.15)' : '0 4px 12px rgba(24, 28, 50, 0.1)',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    backgroundColor: darkMode ? 'rgba(230, 0, 38, 0.15)' : 'rgba(24, 28, 50, 0.05)',
-                    transform: 'translateY(-2px)',
-                    boxShadow: darkMode ? '0 8px 24px rgba(230, 0, 38, 0.25)' : '0 8px 24px rgba(24, 28, 50, 0.15)'
-                  }
-                }}
-                title="Ir al Dashboard"
-              >
-                <DashboardIcon />
-              </IconButton>
-            )}
-            {hasPermission(PERMISSIONS.ADMIN_PANEL) && (
-             <IconButton
-               onClick={onGoToAdmin}
-               sx={{
-                 color: darkMode ? "#fff" : "#181C32",
-                 background: darkMode ? 'rgba(230, 0, 38, 0.05)' : 'rgba(255, 255, 255, 0.9)',
-                 backdropFilter: 'blur(10px)',
-                 borderRadius: 2,
-                 border: darkMode ? '1px solid rgba(230, 0, 38, 0.2)' : '1px solid rgba(24, 28, 50, 0.1)',
-                 boxShadow: darkMode ? '0 4px 12px rgba(230, 0, 38, 0.15)' : '0 4px 12px rgba(24, 28, 50, 0.1)',
-                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                 '&:hover': {
-                   backgroundColor: darkMode ? 'rgba(230, 0, 38, 0.15)' : 'rgba(24, 28, 50, 0.05)',
-                   transform: 'translateY(-2px)',
-                   boxShadow: darkMode ? '0 8px 24px rgba(230, 0, 38, 0.25)' : '0 8px 24px rgba(24, 28, 50, 0.15)'
-                 }
-               }}
-               title="Ir al Panel de Administración"
-             >
-               <AdminIcon />
-             </IconButton>
-           )}
-          <DarkModeToggle 
-            darkMode={darkMode} 
-            setDarkMode={setDarkMode} 
-            onLogoClick={onBackToLogin}
-          />
+      {!hideHeader && (
+        <Box sx={{ width: "100%", position: "relative", mt: 5, mb: 2, background: "transparent", boxShadow: "none", border: "none" }}>
+          {/* Flecha de volver - posición absoluta izquierda */}
+          <IconButton
+            onClick={onBackToLogin}
+            sx={{
+              position: "absolute",
+              left: 24,
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: darkMode ? "#fff" : "#222",
+              '&:hover': {
+                backgroundColor: darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"
+              }
+            }}
+          >
+            <ArrowBackIcon />
+          </IconButton>
+          {/* Controles de navegación - posición absoluta derecha */}
+          <Box sx={{ position: "absolute", right: 24, top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", gap: 1 }}>
+            {hasPermission(PERMISSIONS.MANAGEMENT_DASHBOARD) && (
+                <IconButton
+                  onClick={onGoToDashboard}
+                  sx={{
+                    color: darkMode ? "#fff" : "#181C32",
+                    background: darkMode ? 'rgba(230, 0, 38, 0.05)' : 'rgba(255, 255, 255, 0.9)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: 2,
+                    border: darkMode ? '1px solid rgba(230, 0, 38, 0.2)' : '1px solid rgba(24, 28, 50, 0.1)',
+                    boxShadow: 'none',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:hover': {
+                      backgroundColor: darkMode ? 'rgba(230, 0, 38, 0.15)' : 'rgba(24, 28, 50, 0.05)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: 'none'
+                    }
+                  }}
+                  title="Ir al Dashboard"
+                >
+                  <DashboardIcon />
+                </IconButton>
+              )}
+              {hasPermission(PERMISSIONS.ADMIN_PANEL) && (
+               <IconButton
+                 onClick={onGoToAdmin}
+                 sx={{
+                   color: darkMode ? "#fff" : "#181C32",
+                   background: darkMode ? 'rgba(230, 0, 38, 0.05)' : 'rgba(255, 255, 255, 0.9)',
+                   backdropFilter: 'blur(10px)',
+                   borderRadius: 2,
+                   border: darkMode ? '1px solid rgba(230, 0, 38, 0.2)' : '1px solid rgba(24, 28, 50, 0.1)',
+                   boxShadow: 'none',
+                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                   '&:hover': {
+                     backgroundColor: darkMode ? 'rgba(230, 0, 38, 0.15)' : 'rgba(24, 28, 50, 0.05)',
+                     transform: 'translateY(-2px)',
+                     boxShadow: 'none'
+                   }
+                 }}
+                 title="Ir al Panel de Administración"
+               >
+                 <AdminIcon />
+               </IconButton>
+             )}
+            <DarkModeToggle 
+              darkMode={darkMode} 
+              setDarkMode={setDarkMode} 
+              onLogoClick={onBackToLogin}
+            />
+          </Box>
+          {/* Logo centrado absolutamente */}
+          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+            <img
+              src={claroMediaLogo}
+              alt="Claro Media Data Tech"
+              style={{ width: 180 }}
+            />
+          </Box>
         </Box>
-        
-        {/* Logo centrado absolutamente */}
-        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-          <img
-            src={claroMediaLogo}
-            alt="Claro Media Data Tech"
-            style={{ width: 180 }}
-          />
-        </Box>
-      </Box>
+      )}
       
       <Paper 
-        elevation={6} 
+        elevation={0} 
         sx={{ 
           p: 4, 
           borderRadius: 3, 
           width: "100%",
-          maxWidth: 500, // Tamaño más compacto para coincidir con la imagen original
-          boxShadow: "0 8px 32px rgba(25, 118, 210, 0.10)", 
+          maxWidth: 500,
+          boxShadow: "none",
           background: darkMode ? "#4A5568" : "#fff",
-          mx: 'auto', // Centrar horizontalmente
+          mx: 'auto',
           mb: 4, 
           pb: 4 
         }}
       >
+        {/* Título eliminado según solicitud del usuario */}
         <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 3 }}>
           {steps.map((label) => (
             <Step key={label}>

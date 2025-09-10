@@ -1,7 +1,7 @@
 // Servicio para conectar con la base de datos real
 // Configura aquí la URL de tu API backend
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:22741/api';
 console.log('🔧 API_BASE_URL configurada:', API_BASE_URL);
 
 // Función helper para manejar respuestas de la API
