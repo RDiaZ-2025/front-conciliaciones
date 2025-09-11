@@ -8,24 +8,24 @@ const router = Router();
 router.use(authenticateToken);
 
 // Obtener todos los usuarios - requiere permiso de lectura de usuarios
-router.get('/', requirePermission('VIEW_USERS'), UserController.getUsers);
+router.get('/', requirePermission('admin_panel'), UserController.getUsers);
 
 // Obtener usuario por ID - requiere permiso de lectura de usuarios
-router.get('/:id', requirePermission('VIEW_USERS'), UserController.getUserById);
+router.get('/:id', requirePermission('admin_panel'), UserController.getUserById);
 
 // Crear nuevo usuario - requiere permiso de creación de usuarios
-router.post('/', requirePermission('CREATE_USER'), UserController.createUser);
+router.post('/', requirePermission('admin_panel'), UserController.createUser);
 
 // Actualizar usuario - requiere permiso de edición de usuarios
-router.put('/:id', requirePermission('EDIT_USER'), UserController.updateUser);
+router.put('/:id', requirePermission('admin_panel'), UserController.updateUser);
 
 // Habilitar/deshabilitar usuario - requiere permiso de edición de usuarios
-router.put('/:id/toggle-status', requirePermission('EDIT_USER'), UserController.toggleUserStatus);
+router.put('/:id/toggle-status', requirePermission('admin_panel'), UserController.toggleUserStatus);
 
 // Actualizar permisos de usuario - requiere permiso de gestión de permisos
-router.put('/:id/permissions', requirePermission('MANAGE_PERMISSIONS'), UserController.updateUserPermissions);
+router.put('/:id/permissions', requirePermission('admin_panel'), UserController.updateUserPermissions);
 
 // Obtener todos los permisos disponibles - requiere cualquier permiso de gestión
-router.get('/permissions/all', requireAnyPermission(['VIEW_USERS', 'MANAGE_PERMISSIONS']), UserController.getAllPermissions);
+router.get('/permissions/all', requirePermission('admin_panel'), UserController.getAllPermissions);
 
 export default router;

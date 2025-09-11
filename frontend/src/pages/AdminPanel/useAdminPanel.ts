@@ -4,7 +4,7 @@ import { ROLES, PERMISSIONS, PERMISSION_LABELS, PERMISSION_DESCRIPTIONS, PERMISS
 import type { User, Permission, FormData, AccessHistoryRecord, SnackbarState, UseAdminPanelReturn } from './types';
 
 export const useAdminPanel = (): UseAdminPanelReturn => {
-  const { getAllUsers, createUser, updateUser, deleteUser, toggleUserStatus, user, hasPermission } = useAuth();
+  const { getAllUsers, createUser, updateUser, toggleUserStatus, user, hasPermission } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   
   const [openDialog, setOpenDialog] = useState(false);

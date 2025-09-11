@@ -17,7 +17,19 @@ import {
   Alert,
   Snackbar,
   Pagination,
-  Stack
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Checkbox,
+  FormControlLabel,
+  FormGroup,
+  Divider
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -403,6 +415,147 @@ const AdminPanel = ({ darkMode }) => {
           </Box>
         )}
       </Paper>
+
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: theme => theme.spacing(2),
+            border: theme => `1px solid ${theme.palette.divider}`
+          }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            bgcolor: 'action.hover',
+            borderBottom: theme => `1px solid ${theme.palette.divider}`,
+            p: theme => theme.spacing(3)
+          }}
+        >
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: theme => theme.typography.fontWeightBold,
+              color: 'text.primary'
+            }}
+          >
+            {editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ p: theme => theme.spacing(3) }}>
+          <Stack spacing={3} sx={{ mt: 1 }}>
+            <TextField
+              label="Nombre"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              fullWidth
+              required
+              variant="outlined"
+            />
+            <TextField
+              label="Email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              fullWidth
+              required
+              variant="outlined"
+              disabled={!!editingUser}
+            />
+            <TextField
+              label={editingUser ? 'Nueva Contraseña (opcional)' : 'Contraseña'}
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              fullWidth
+              required={!editingUser}
+              variant="outlined"
+            />
+            <Divider />
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: theme => theme.typography.fontWeightSemiBold,
+                color: 'text.primary'
+              }}
+            >
+              Permisos
+            </Typography>
+            <FormGroup>
+              {availablePermissions.map((permission) => {
+                const permissionName = typeof permission === 'string' ? permission : permission.Name || permission.name;
+                return (
+                  <FormControlLabel
+                    key={permissionName}
+                    control={
+                      <Checkbox
+                        checked={formData.permissions.includes(permissionName)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFormData({
+                              ...formData,
+                              permissions: [...formData.permissions, permissionName]
+                            });
+                          } else {
+                            setFormData({
+                              ...formData,
+                              permissions: formData.permissions.filter(p => p !== permissionName)
+                            });
+                          }
+                        }}
+                        color="primary"
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                          {getPermissionLabel(permissionName)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {getPermissionDescription(permissionName)}
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                );
+              })}
+            </FormGroup>
+          </Stack>
+        </DialogContent>
+        <DialogActions
+          sx={{
+            p: theme => theme.spacing(3),
+            borderTop: theme => `1px solid ${theme.palette.divider}`,
+            bgcolor: 'action.hover'
+          }}
+        >
+          <Button
+            onClick={handleCloseDialog}
+            variant="outlined"
+            sx={{
+              fontWeight: theme => theme.typography.fontWeightSemiBold,
+              px: theme => theme.spacing(3),
+              borderRadius: theme => theme.spacing(1)
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            variant="contained"
+            sx={{
+              fontWeight: theme => theme.typography.fontWeightSemiBold,
+              px: theme => theme.spacing(3),
+              borderRadius: theme => theme.spacing(1)
+            }}
+          >
+            {editingUser ? 'Actualizar' : 'Crear'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={snackbar.open}

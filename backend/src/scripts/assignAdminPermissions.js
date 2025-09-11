@@ -47,12 +47,10 @@ async function assignAdminPermissions(email, permissions) {
 
 // Permisos administrativos requeridos
 const adminPermissions = [
-  'VIEW_USERS',
-  'CREATE_USER',
-  'EDIT_USER',
-  'DELETE_USER',
-  'MANAGE_PERMISSIONS',
-  'ADMIN_PANEL'
+  'admin_panel',
+  'document_upload',
+  'management_dashboard',
+  'historial_carga_archivos_comerciales'
 ];
 
 // Ejecutar script

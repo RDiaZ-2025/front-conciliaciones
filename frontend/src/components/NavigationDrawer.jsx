@@ -38,7 +38,7 @@ const NavigationDrawer = ({
       id: 'historial',
       label: 'Historial Carga Archivos',
       icon: <HistoryIcon />,
-      permission: PERMISSIONS.HISTORIAL_CARGA_ARCHIVOS_COMERCIALES
+      permission: PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES
     },
     {
       id: 'upload',
@@ -56,7 +56,7 @@ const NavigationDrawer = ({
       id: 'usuarios',
       label: 'Usuarios',
       icon: <PeopleIcon />,
-      permission: PERMISSIONS.VIEW_USERS
+      permission: PERMISSIONS.ADMIN_PANEL
     }
   ];
 

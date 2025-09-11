@@ -8,6 +8,6 @@ const router = express.Router();
 router.post('/', authenticateToken, requirePermission('document_upload'), LoadDocumentsOCbyUserController.registerUpload);
 
 // Consultar documentos subidos por usuario
-router.get('/', authenticateToken, requireAnyPermission(['management_dashboard', 'HISTORY_LOAD_COMMERCIAL_FILES']), LoadDocumentsOCbyUserController.getUploads);
+router.get('/', authenticateToken, requireAnyPermission(['management_dashboard', 'historial_carga_archivos_comerciales']), LoadDocumentsOCbyUserController.getUploads);
 
 export default router;

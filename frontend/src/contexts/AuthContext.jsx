@@ -111,11 +111,10 @@ function AuthProvider({ children }) {
     }
     // Mapeo de permisos del backend a permisos del frontend
     const permissionMapping = {
-      [PERMISSIONS.ADMIN_PANEL]: ['ADMIN_PANEL', 'VIEW_USERS', 'CREATE_USER', 'EDIT_USER', 'DELETE_USER', 'MANAGE_PERMISSIONS', 'SYSTEM_CONFIG'],
-      [PERMISSIONS.DOCUMENT_UPLOAD]: ['DOCUMENT_UPLOAD', 'UPLOAD_FILES'],
-      [PERMISSIONS.MANAGEMENT_DASHBOARD]: ['MANAGEMENT_DASHBOARD', 'VIEW_REPORTS', 'VIEW_ANALYTICS'],
-      [PERMISSIONS.HISTORIAL_CARGA_ARCHIVOS_COMERCIALES]: ['HISTORIAL_CARGA_ARCHIVOS_COMERCIALES', 'HISTORY_LOAD_COMMERCIAL_FILES', 'historial_carga_archivos_comerciales', 'history_load_commercial_files'],
-      [PERMISSIONS.MANAGE_PERMISSIONS]: ['MANAGE_PERMISSIONS', 'manage_permissions']
+      [PERMISSIONS.ADMIN_PANEL]: ['admin_panel', 'ADMIN_PANEL'],
+      [PERMISSIONS.DOCUMENT_UPLOAD]: ['document_upload', 'DOCUMENT_UPLOAD'],
+      [PERMISSIONS.MANAGEMENT_DASHBOARD]: ['management_dashboard', 'MANAGEMENT_DASHBOARD'],
+      [PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES]: ['historial_carga_archivos_comerciales', 'HISTORIAL_CARGA_ARCHIVOS_COMERCIALES', 'history_load_commercial_files', 'HISTORY_LOAD_COMMERCIAL_FILES']
     };
     if (user.permissions && Array.isArray(user.permissions)) {
       const mappedPermissions = permissionMapping[permission] || [permission];
@@ -178,7 +177,7 @@ function AuthProvider({ children }) {
   };
 
   const updateUser = async (email, updates) => {
-    if (!hasPermission(PERMISSIONS.EDIT_USER)) {
+    if (!hasPermission(PERMISSIONS.ADMIN_PANEL)) {
       throw new Error('No tienes permisos para editar usuarios');
     }
     try {

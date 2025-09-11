@@ -76,18 +76,13 @@ BEGIN
 END
 
 -- Insertar permisos fijos del sistema
-IF NOT EXISTS (SELECT * FROM PERMISSIONS WHERE Name = 'VIEW_USERS')
+IF NOT EXISTS (SELECT * FROM PERMISSIONS WHERE Name = 'ADMIN_PANEL')
 BEGIN
     INSERT INTO PERMISSIONS (Name, Description) VALUES 
-    ('VIEW_USERS', 'Ver lista de usuarios'),
-    ('CREATE_USER', 'Crear nuevos usuarios'),
-    ('EDIT_USER', 'Editar usuarios existentes'),
-    ('DELETE_USER', 'Eliminar usuarios'),
-    ('MANAGE_PERMISSIONS', 'Gestionar permisos de usuarios'),
-    ('SYSTEM_CONFIG', 'Configuración del sistema'),
     ('ADMIN_PANEL', 'Acceso al panel de administración'),
     ('DOCUMENT_UPLOAD', 'Subir documentos'),
-    ('MANAGEMENT_DASHBOARD', 'Acceso al dashboard de gestión');
+    ('MANAGEMENT_DASHBOARD', 'Acceso al dashboard de gestión'),
+    ('HISTORY_LOAD_COMMERCIAL_FILES', 'Ver historial de carga de archivos comerciales');
     PRINT 'Permisos fijos insertados exitosamente';
 END
 ELSE
@@ -134,22 +129,6 @@ BEGIN
     PRINT 'Índice IX_USERS_LastAccess creado';
 END
 
--- Crear tabla FOLDERS
-IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='FOLDERS' AND xtype='U')
-BEGIN
-    CREATE TABLE FOLDERS (
-        Id int IDENTITY(1,1) PRIMARY KEY,
-        Name varchar(255) NOT NULL,
-        Description varchar(500) NULL,
-        CreatedAt datetime NOT NULL DEFAULT GETDATE()
-    );
-    PRINT 'Tabla FOLDERS creada exitosamente';
-END
-ELSE
-BEGIN
-    PRINT 'Tabla FOLDERS ya existe';
-END
-
 -- Crear tabla LoadDocumentsOCbyUser
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='LoadDocumentsOCbyUser' AND xtype='U')
 BEGIN
@@ -161,7 +140,6 @@ BEGIN
         Status varchar(50) NULL,
         FileName varchar(255) NOT NULL,
         FOREIGN KEY (IdUser) REFERENCES USERS(Id)
-        
     );
     PRINT 'Tabla LoadDocumentsOCbyUser creada exitosamente';
 END
@@ -173,4 +151,4 @@ END
 PRINT 'Configuración de base de datos completada exitosamente';
 PRINT 'Usuario administrador: admin@claromedia.com';
 PRINT 'Contraseña: admin123';
-PRINT 'Recuerde cambiar la contraseña después del primer login';}}}
+PRINT 'Recuerde cambiar la contraseña después del primer login';

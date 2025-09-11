@@ -17,6 +17,6 @@ router.get('/me', authenticateToken, AuthController.me);
 router.post('/logout', AuthController.logout);
 
 // Ruta para inicializar usuarios (solo para desarrollo) - requiere permisos de administrador
-router.post('/initialize-users', authenticateToken, requirePermission('SYSTEM_CONFIG'), AuthController.initializeUsers);
+router.post('/initialize-users', authenticateToken, requirePermission('admin_panel'), AuthController.initializeUsers);
 
 export default router;
