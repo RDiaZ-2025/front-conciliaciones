@@ -118,7 +118,7 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
   useEffect(() => {
     refreshUsers();
     loadAvailablePermissions();
-  }, [getAllUsers]);
+  }, []);
 
   const handleOpenDialog = (userToEdit: User | null = null) => {
     if (userToEdit) {
@@ -221,6 +221,11 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
   const handleSubmit = async () => {
     try {
       if (editingUser) {
+        if (!editingUser.email) {
+          setSnackbar({ open: true, message: 'Error: El usuario no tiene email válido', severity: 'error' });
+          return;
+        }
+        console.log('Updating user:', editingUser.email, 'with data:', formData);
         const updates: any = {
           name: formData.name,
           email: formData.email,
@@ -229,7 +234,9 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
         if (formData.password) {
           updates.password = formData.password;
         }
-        await updateUser(editingUser.id, updates);
+        console.log('Calling updateUser with email:', editingUser.email, 'and updates:', updates);
+        await updateUser(editingUser.email, updates);
+        console.log('Update successful for user:', editingUser.email);
         setSnackbar({ open: true, message: 'Usuario actualizado exitosamente', severity: 'success' });
       } else {
         if (!formData.name || !formData.email || !formData.password) {

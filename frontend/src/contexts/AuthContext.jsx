@@ -181,7 +181,7 @@ function AuthProvider({ children }) {
       throw new Error('No tienes permisos para editar usuarios');
     }
     try {
-      const currentUser = users[email?.toLowerCase() || email];
+      const currentUser = users[email] || users[email?.toLowerCase()] || users[email?.toUpperCase()];
       if (!currentUser) {
         throw new Error('Usuario no encontrado');
       }
