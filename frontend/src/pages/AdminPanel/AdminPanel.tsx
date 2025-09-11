@@ -31,7 +31,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useAdminPanel } from './useAdminPanel';
 
-const AdminPanel = ({ darkMode, setDarkMode, onBack }) => {
+const AdminPanel = ({ darkMode }) => {
   const { user } = useAuth();
   const {
     users,

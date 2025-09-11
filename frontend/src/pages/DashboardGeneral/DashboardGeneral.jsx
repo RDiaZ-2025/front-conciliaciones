@@ -1,6 +1,34 @@
 import React from "react";
-import { Box, Button, Typography } from "@mui/material";
-import { AdminPanelSettings as AdminIcon, Upload as UploadIcon } from "@mui/icons-material";
+import { 
+  Box, 
+  Button, 
+  Typography, 
+  Container,
+  Paper,
+  Card,
+  CardContent,
+  Stack,
+  ToggleButton,
+  ToggleButtonGroup,
+  FormControl,
+  Select,
+  MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Tooltip,
+  Chip
+} from "@mui/material";
+import { 
+  AdminPanelSettings as AdminIcon, 
+  Upload as UploadIcon,
+  ExpandMore as ExpandMoreIcon,
+  ChevronRight as ChevronRightIcon,
+  FileDownload as FileDownloadIcon
+} from "@mui/icons-material";
 import { useAuth } from '../../contexts/AuthContext';
 import { PERMISSIONS } from '../../constants/auth';
 import DarkModeToggle from "../../components/DarkModeToggle";
@@ -39,111 +67,377 @@ export default function DashboardGeneral({ darkMode, setDarkMode, onBack, onGoTo
   };
 
   return (
-      <div style={{ minHeight: "100vh", width: "100vw", background: darkMode ? "#23232b" : "linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%)", color: darkMode ? "#E6EDF3" : "#181C32", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", fontFamily: "'Inter', 'Roboto', Arial, sans-serif", transition: "background 0.3s, color 0.3s", position: "relative", padding: "0 24px", boxSizing: "border-box" }}>
-      <div style={{ position: "absolute", top: 16, right: 24, zIndex: 1000, display: "flex", alignItems: "center", gap: "12px" }}>
-         {hasPermission(PERMISSIONS.DOCUMENT_UPLOAD) && (
-           <Button
-             variant="outlined"
-             startIcon={<UploadIcon />}
-             onClick={onGoToUpload}
-             sx={{
-               color: darkMode ? '#fff' : '#181C32',
-               borderColor: darkMode ? '#E60026' : '#181C32',
-               background: darkMode ? 'rgba(230, 0, 38, 0.05)' : 'rgba(255, 255, 255, 0.9)',
-               backdropFilter: 'blur(10px)',
-               borderRadius: 2,
-               px: 2.5,
-               py: 1,
-               fontWeight: 600,
-               textTransform: 'none',
-               boxShadow: darkMode ? '0 4px 12px rgba(230, 0, 38, 0.15)' : '0 4px 12px rgba(24, 28, 50, 0.1)',
-               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-               '&:hover': {
-                 backgroundColor: darkMode ? 'rgba(230, 0, 38, 0.15)' : 'rgba(24, 28, 50, 0.05)',
-                 borderColor: darkMode ? '#E60026' : '#181C32',
-                 transform: 'translateY(-2px)',
-                 boxShadow: darkMode ? '0 8px 24px rgba(230, 0, 38, 0.25)' : '0 8px 24px rgba(24, 28, 50, 0.15)'
-               }
-             }}
-           >
-             Cargar
-           </Button>
-         )}
-         
-         {hasPermission(PERMISSIONS.ADMIN_PANEL) && (
-           <Button
-             variant="outlined"
-             startIcon={<AdminIcon />}
-             onClick={onGoToAdmin}
-             sx={{
-               color: darkMode ? '#fff' : '#181C32',
-               borderColor: darkMode ? '#E60026' : '#181C32',
-               background: darkMode ? 'rgba(230, 0, 38, 0.05)' : 'rgba(255, 255, 255, 0.9)',
-               backdropFilter: 'blur(10px)',
-               borderRadius: 2,
-               px: 2.5,
-               py: 1,
-               fontWeight: 600,
-               textTransform: 'none',
-               boxShadow: darkMode ? '0 4px 12px rgba(230, 0, 38, 0.15)' : '0 4px 12px rgba(24, 28, 50, 0.1)',
-               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-               '&:hover': {
-                 backgroundColor: darkMode ? 'rgba(230, 0, 38, 0.15)' : 'rgba(24, 28, 50, 0.05)',
-                 borderColor: darkMode ? '#E60026' : '#181C32',
-                 transform: 'translateY(-2px)',
-                 boxShadow: darkMode ? '0 8px 24px rgba(230, 0, 38, 0.25)' : '0 8px 24px rgba(24, 28, 50, 0.15)'
-               }
-             }}
-           >
-             Admin
-           </Button>
-         )}
-        
-        <DarkModeToggle 
-          darkMode={darkMode} 
-          setDarkMode={setDarkMode}
-          onLogoClick={onBack}
-        />
-      </div>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        width: '100vw',
+        bgcolor: 'background.default',
+        color: 'text.primary',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        transition: theme => theme.transitions.create(['background-color', 'color'], {
+          duration: theme.transitions.duration.standard,
+        }),
+        position: 'relative',
+        p: theme => theme.spacing(0, 3),
+        boxSizing: 'border-box'
+      }}
+    >      
+      <Container maxWidth="xl" sx={{ py: theme => theme.spacing(2) }}>
+        <Stack direction="row" spacing={4} justifyContent="center" alignItems="center">
+          <Paper 
+            elevation={2}
+            sx={{ 
+              p: theme => theme.spacing(0.5, 1.5),
+              bgcolor: 'background.paper',
+              borderRadius: theme => theme.spacing(1),
+              border: theme => `1px solid ${theme.palette.divider}`
+            }}
+          >
+            <ToggleButtonGroup
+              value={state.tipoSeguimiento}
+              exclusive
+              onChange={(event, newValue) => {
+                if (newValue !== null) {
+                  setTipoSeguimiento(newValue);
+                }
+              }}
+              sx={{ gap: 1 }}
+            >
+              <ToggleButton 
+                value="ingresos"
+                sx={{
+                  px: theme => theme.spacing(2.25),
+                  py: theme => theme.spacing(1),
+                  borderRadius: theme => theme.spacing(0.75),
+                  fontWeight: theme => theme.typography.fontWeightBold,
+                  fontSize: 16,
+                  textTransform: 'none',
+                  border: 'none',
+                  '&.Mui-selected': {
+                    bgcolor: 'success.light',
+                    color: 'success.dark',
+                    '&:hover': {
+                      bgcolor: 'success.light'
+                    }
+                  }
+                }}
+              >
+                Ingresos
+              </ToggleButton>
+              <ToggleButton 
+                value="costos"
+                sx={{
+                  px: theme => theme.spacing(2.25),
+                  py: theme => theme.spacing(1),
+                  borderRadius: theme => theme.spacing(0.75),
+                  fontWeight: theme => theme.typography.fontWeightBold,
+                  fontSize: 16,
+                  textTransform: 'none',
+                  border: 'none',
+                  '&.Mui-selected': {
+                    bgcolor: 'error.light',
+                    color: 'error.dark',
+                    '&:hover': {
+                      bgcolor: 'error.light'
+                    }
+                  }
+                }}
+              >
+                Costos
+              </ToggleButton>
+              <ToggleButton 
+                value="ebitda"
+                sx={{
+                  px: theme => theme.spacing(2.25),
+                  py: theme => theme.spacing(1),
+                  borderRadius: theme => theme.spacing(0.75),
+                  fontWeight: theme => theme.typography.fontWeightBold,
+                  fontSize: 16,
+                  textTransform: 'none',
+                  border: 'none',
+                  '&.Mui-selected': {
+                    bgcolor: 'primary.light',
+                    color: 'primary.dark',
+                    '&:hover': {
+                      bgcolor: 'primary.light'
+                    }
+                  }
+                }}
+              >
+                Ebitda
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Paper>
+          
+          <Paper 
+            elevation={2}
+            sx={{ 
+              p: theme => theme.spacing(0.5, 1.5),
+              bgcolor: 'background.paper',
+              borderRadius: theme => theme.spacing(1),
+              border: theme => `1px solid ${theme.palette.divider}`
+            }}
+          >
+            <Stack direction="row" spacing={1}>
+              <FormControl size="small">
+                <Select
+                  value={state.selectedYear}
+                  onChange={e => setSelectedYear(Number(e.target.value))}
+                  sx={{
+                    minWidth: 80,
+                    fontWeight: theme => theme.typography.fontWeightBold,
+                    fontSize: 16,
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      border: 'none'
+                    }
+                  }}
+                >
+                  {years.map(y => (
+                    <MenuItem key={y} value={y}>{y}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl size="small">
+                <Select
+                  value={state.selectedMonth}
+                  onChange={e => setSelectedMonth(e.target.value)}
+                  sx={{
+                    minWidth: 80,
+                    fontWeight: theme => theme.typography.fontWeightBold,
+                    fontSize: 16,
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      border: 'none'
+                    }
+                  }}
+                >
+                  <MenuItem value="">Todos</MenuItem>
+                  {months.map(m => (
+                    <MenuItem key={m} value={m}>{m}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Stack>
+          </Paper>
+          
+          {hasPermission(PERMISSIONS.DOCUMENT_UPLOAD) && (
+            <Button
+              variant="outlined"
+              startIcon={<UploadIcon />}
+              onClick={onGoToUpload}
+              sx={{
+                color: 'text.primary',
+                borderColor: 'primary.main',
+                bgcolor: 'action.hover',
+                borderRadius: theme => theme.spacing(1),
+                px: theme => theme.spacing(2.5),
+                py: theme => theme.spacing(1),
+                fontWeight: theme => theme.typography.fontWeightSemiBold,
+                textTransform: 'none',
+                boxShadow: theme => theme.shadows[2],
+                transition: theme => theme.transitions.create(['background-color', 'transform', 'box-shadow'], {
+                  duration: theme.transitions.duration.short,
+                }),
+                '&:hover': {
+                  bgcolor: 'action.selected',
+                  transform: 'translateY(-2px)',
+                  boxShadow: theme => theme.shadows[4]
+                }
+              }}
+            >
+              Cargar
+            </Button>
+          )}
+          
+          {hasPermission(PERMISSIONS.ADMIN_PANEL) && (
+            <Button
+              variant="outlined"
+              startIcon={<AdminIcon />}
+              onClick={onGoToAdmin}
+              sx={{
+                color: 'text.primary',
+                borderColor: 'primary.main',
+                bgcolor: 'action.hover',
+                borderRadius: theme => theme.spacing(1),
+                px: theme => theme.spacing(2.5),
+                py: theme => theme.spacing(1),
+                fontWeight: theme => theme.typography.fontWeightSemiBold,
+                textTransform: 'none',
+                boxShadow: theme => theme.shadows[2],
+                transition: theme => theme.transitions.create(['background-color', 'transform', 'box-shadow'], {
+                  duration: theme.transitions.duration.short,
+                }),
+                '&:hover': {
+                  bgcolor: 'action.selected',
+                  transform: 'translateY(-2px)',
+                  boxShadow: theme => theme.shadows[4]
+                }
+              }}
+            >
+              Admin
+            </Button>
+          )}
+        </Stack>
+      </Container>
       
-      <div style={{ width: '100%', maxWidth: '1400px', margin: 0, padding: "40px 0 24px 0", display: "flex", alignItems: "center", justifyContent: "center", gap: 32 }}>
-        <div style={{ display: "flex", alignItems: "center", background: darkMode ? "#181C32" : "#fff", borderRadius: 8, boxShadow: darkMode ? "0 2px 8px #0008" : "0 2px 8px #1976d220", padding: "4px 12px", gap: 8, border: darkMode ? "1.5px solid #4A5568" : "none" }}>
-          <button onClick={() => setTipoSeguimiento("ingresos")}
-            style={{ padding: "8px 18px", borderRadius: 6, border: state.tipoSeguimiento === "ingresos" ? "2px solid #43a047" : "1px solid #bdbdbd", background: state.tipoSeguimiento === "ingresos" ? (darkMode ? "#1E2A3A" : "#e8f5e9") : (darkMode ? "#181C32" : "#f0f0f0"), color: state.tipoSeguimiento === "ingresos" ? "#43a047" : (darkMode ? "#E6EDF3" : "#333"), fontWeight: 700, fontSize: 16, cursor: "pointer", transition: "all 0.2s" }}>Ingresos</button>
-          <button onClick={() => setTipoSeguimiento("costos")}
-            style={{ padding: "8px 18px", borderRadius: 6, border: state.tipoSeguimiento === "costos" ? "2px solid #e53935" : "1px solid #bdbdbd", background: state.tipoSeguimiento === "costos" ? (darkMode ? "#1E2A3A" : "#ffebee") : (darkMode ? "#181C32" : "#f0f0f0"), color: state.tipoSeguimiento === "costos" ? "#e53935" : (darkMode ? "#E6EDF3" : "#333"), fontWeight: 700, fontSize: 16, cursor: "pointer", transition: "all 0.2s" }}>Costos</button>
-          <button onClick={() => setTipoSeguimiento("ebitda")}
-            style={{ padding: "8px 18px", borderRadius: 6, border: state.tipoSeguimiento === "ebitda" ? "2px solid #1976d2" : "1px solid #bdbdbd", background: state.tipoSeguimiento === "ebitda" ? (darkMode ? "#1E2A3A" : "#e3eafc") : (darkMode ? "#181C32" : "#f0f0f0"), color: state.tipoSeguimiento === "ebitda" ? "#1976d2" : (darkMode ? "#E6EDF3" : "#333"), fontWeight: 700, fontSize: 16, cursor: "pointer", transition: "all 0.2s" }}>Ebitda</button>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", background: darkMode ? "#181C32" : "#fff", borderRadius: 8, boxShadow: darkMode ? "0 2px 8px #0008" : "0 2px 8px #1976d220", padding: "4px 12px", gap: 8, border: darkMode ? "1.5px solid #4A5568" : "none" }}>
-          <select value={state.selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} style={{ padding: "8px 18px", borderRadius: 6, border: "1px solid #bdbdbd", background: darkMode ? "#181C32" : "#f0f0f0", color: darkMode ? "#E6EDF3" : "#333", fontWeight: 700, fontSize: 16, cursor: "pointer", transition: "all 0.2s" }}>
-            {years.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-          <select value={state.selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ padding: "8px 18px", borderRadius: 6, border: "1px solid #bdbdbd", background: darkMode ? "#181C32" : "#f0f0f0", color: darkMode ? "#E6EDF3" : "#333", fontWeight: 700, fontSize: 16, cursor: "pointer", transition: "all 0.2s" }}>
-            <option value="">Todos</option>
-            {months.map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
-        </div>
-      </div>
+      <Container maxWidth="xl" sx={{ mb: 5 }}>
+        <Stack direction="row" spacing={3} justifyContent="center" alignItems="stretch">
+          <Card 
+            elevation={3}
+            sx={{ 
+              flex: 1, 
+              borderRadius: theme => theme.spacing(2.25),
+              border: theme => `1px solid ${theme.palette.divider}`
+            }}
+          >
+            <CardContent 
+              sx={{ 
+                p: theme => theme.spacing(4),
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center'
+              }}
+            >
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: theme => theme.typography.fontWeightBold,
+                  color: 'error.main',
+                  mb: theme => theme.spacing(0.75)
+                }}
+              >
+                Presupuestado
+              </Typography>
+              <Typography 
+                variant="h3" 
+                sx={{ 
+                  fontWeight: theme => theme.typography.fontWeightBlack,
+                  color: 'error.main',
+                  letterSpacing: 1
+                }}
+              >
+                ${data.presupuestado.toLocaleString()}
+              </Typography>
+            </CardContent>
+          </Card>
+          
+          <Card 
+            elevation={3}
+            sx={{ 
+              flex: 1, 
+              borderRadius: theme => theme.spacing(2.25),
+              border: theme => `1px solid ${theme.palette.divider}`
+            }}
+          >
+            <CardContent 
+              sx={{ 
+                p: theme => theme.spacing(4),
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center'
+              }}
+            >
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: theme => theme.typography.fontWeightBold,
+                  color: 'success.main',
+                  mb: theme => theme.spacing(0.75)
+                }}
+              >
+                Ejecutado
+              </Typography>
+              <Typography 
+                variant="h3" 
+                sx={{ 
+                  fontWeight: theme => theme.typography.fontWeightBlack,
+                  color: 'success.main',
+                  letterSpacing: 1
+                }}
+              >
+                ${data.ejecutado.toLocaleString()}
+              </Typography>
+            </CardContent>
+          </Card>
+          
+          <Card 
+            elevation={3}
+            sx={{ 
+              flex: 1, 
+              borderRadius: theme => theme.spacing(2.25),
+              border: theme => `1px solid ${theme.palette.divider}`
+            }}
+          >
+            <CardContent 
+              sx={{ 
+                p: theme => theme.spacing(4),
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center'
+              }}
+            >
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: theme => theme.typography.fontWeightBold,
+                  color: 'text.primary',
+                  mb: theme => theme.spacing(0.75)
+                }}
+              >
+                Desviación
+              </Typography>
+              <Typography 
+                variant="h3" 
+                sx={{ 
+                  fontWeight: theme => theme.typography.fontWeightBlack,
+                  color: desviacionPorc < 0 ? 'error.main' : 'success.main',
+                  letterSpacing: 1
+                }}
+              >
+                {desviacionPorc > 0 ? "+" : ""}{desviacionPorc.toFixed(1)}%
+              </Typography>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  color: 'text.secondary',
+                  mt: theme => theme.spacing(0.5)
+                }}
+              >
+                {desviacion > 0 ? "+" : ""}${desviacion.toLocaleString()}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Stack>
+      </Container>
       
-      <div style={{ width: "100%", maxWidth: "1400px", margin: 0, display: "flex", gap: 36, justifyContent: "center", alignItems: "stretch", marginBottom: 40 }}>
-        <div style={{ flex: 1, background: darkMode ? "#4A5568" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #0008" : "0 2px 12px #0001", padding: 32, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: darkMode ? "1.5px solid #4A5568" : "none" }}>
-          <div style={{ fontWeight: 700, fontSize: 18, color: "#e53935", marginBottom: 6 }}>Presupuestado</div>
-          <div style={{ fontSize: 38, fontWeight: 900, color: "#e53935", letterSpacing: 1 }}>${data.presupuestado.toLocaleString()}</div>
-        </div>
-        <div style={{ flex: 1, background: darkMode ? "#4A5568" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #0008" : "0 2px 12px #0001", padding: 32, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: darkMode ? "1.5px solid #4A5568" : "none" }}>
-          <div style={{ fontWeight: 700, fontSize: 18, color: "#43a047", marginBottom: 6 }}>Ejecutado</div>
-          <div style={{ fontSize: 38, fontWeight: 900, color: "#43a047", letterSpacing: 1 }}>${data.ejecutado.toLocaleString()}</div>
-        </div>
-        <div style={{ flex: 1, background: darkMode ? "#4A5568" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #0008" : "0 2px 12px #0001", padding: 32, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: darkMode ? "1.5px solid #4A5568" : "none" }}>
-          <div style={{ fontWeight: 700, fontSize: 18, color: darkMode ? "#fff" : "#000", marginBottom: 6 }}>Desviación</div>
-          <div style={{ fontSize: 38, fontWeight: 900, color: desviacionPorc < 0 ? "#e53935" : "#43a047", letterSpacing: 1 }}>{desviacionPorc > 0 ? "+" : ""}{desviacionPorc.toFixed(1)}%</div>
-          <div style={{ fontSize: 20, color: "#888", marginTop: 4 }}>{desviacion > 0 ? "+" : ""}${desviacion.toLocaleString()}</div>
-        </div>
-      </div>
-      
-      <div style={{ width: "100%", maxWidth: "1400px", margin: 0, background: darkMode ? "#4A5568" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #000A" : "0 2px 12px #0001", padding: 36, marginBottom: 40, border: darkMode ? "1.5px solid #4A5568" : "none", transition: "background 0.3s, color 0.3s, border 0.3s", position: "relative" }}>
-        <div style={{ fontWeight: 700, fontSize: 22, color: darkMode ? "#fff" : "#000", marginBottom: 18 }}>Tendencia anual</div>
+      <Container maxWidth="xl" sx={{ mb: 5 }}>
+        <Paper 
+          elevation={3}
+          sx={{ 
+            borderRadius: theme => theme.spacing(2.25),
+            border: theme => `1px solid ${theme.palette.divider}`,
+            p: theme => theme.spacing(4.5),
+            position: 'relative'
+          }}
+        >
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              fontWeight: theme => theme.typography.fontWeightBold,
+              color: 'text.primary',
+              mb: theme => theme.spacing(2.25)
+            }}
+          >
+            Tendencia anual
+          </Typography>
         <svg width={width} height={height + 60} style={{ overflow: "visible" }}>
           <defs></defs>
           <line x1={100} y1={0} x2={100} y2={height} stroke={darkMode ? "#444" : "#ddd"} strokeWidth={1} />
@@ -224,75 +518,238 @@ export default function DashboardGeneral({ darkMode, setDarkMode, onBack, onGoTo
           })}
         </svg>
         
-        {state.tooltip && (
-          <div style={{
-            position: "fixed",
-            left: state.tooltip.x + 10,
-            top: state.tooltip.y - 10,
-            background: darkMode ? "#1a1a1a" : "#fff",
-            border: `1px solid ${darkMode ? "#444" : "#ddd"}`,
-            borderRadius: 6,
-            padding: "8px 12px",
-            fontSize: 14,
-            color: darkMode ? "#fff" : "#333",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            zIndex: 1000,
-            pointerEvents: "none",
-            whiteSpace: "nowrap"
-          }}>
-            {state.tooltip.content}
-          </div>
-        )}
-      </div>
+          {state.tooltip && (
+            <Paper
+              elevation={4}
+              sx={{
+                position: 'fixed',
+                left: state.tooltip.x + 10,
+                top: state.tooltip.y - 10,
+                bgcolor: 'background.paper',
+                border: theme => `1px solid ${theme.palette.divider}`,
+                borderRadius: theme => theme.spacing(0.75),
+                p: theme => theme.spacing(1, 1.5),
+                fontSize: 14,
+                color: 'text.primary',
+                boxShadow: theme => theme.shadows[8],
+                zIndex: 1000,
+                pointerEvents: 'none',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {state.tooltip.content}
+            </Paper>
+          )}
+        </Paper>
+      </Container>
       
-      <div style={{ width: "100%", maxWidth: "1400px", margin: 0, background: darkMode ? "#4A5568" : "#fff", borderRadius: 18, boxShadow: darkMode ? "0 2px 12px #0008" : "0 2px 12px #0001", padding: 36, marginBottom: 40, border: darkMode ? "1.5px solid #4A5568" : "none", transition: "background 0.3s, color 0.3s, border 0.3s" }}>
-        <div style={{ fontWeight: 700, fontSize: 22, color: darkMode ? "#E60026" : "#e53935", marginBottom: 18 }}>Desglose por categorías</div>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 18 }}>
-          <thead>
-            <tr style={{ background: darkMode ? "#4A5568" : "#f8fafc" }}>
-              <th style={{ textAlign: "left", padding: 12, color: darkMode ? "#E6EDF3" : undefined }}>Categoría</th>
-              <th style={{ textAlign: "right", padding: 12, color: darkMode ? "#E6EDF3" : undefined }}>Presupuestado</th>
-              <th style={{ textAlign: "right", padding: 12, color: darkMode ? "#E6EDF3" : undefined }}>Ejecutado</th>
-              <th style={{ textAlign: "right", padding: 12, color: darkMode ? "#E6EDF3" : undefined }}>Desviación</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(state.selectedCategoria ? data.categorias.filter(cat => cat.nombre === state.selectedCategoria) : data.categorias).map(cat => {
-              const dev = cat.ejecutado - cat.presupuestado;
-              const isExpanded = state.expandedCategoria === cat.nombre;
-              return [
-                <tr key={cat.nombre} style={{ borderBottom: darkMode ? "1px solid #4A5568" : "1px solid #f0f0f0", background: darkMode ? "#4A5568" : undefined, cursor: "pointer" }} onClick={() => cat.subcategorias ? setExpandedCategoria(isExpanded ? null : cat.nombre) : null}>
-                  <td style={{ padding: 12, color: darkMode ? "#E6EDF3" : undefined, fontWeight: 700, display: "flex", alignItems: "center" }}>
-                    <span style={{ marginRight: 8, fontSize: 18, verticalAlign: "middle", color: darkMode ? "#E6EDF3" : "#333", display: "inline-block", transition: "transform 0.2s" }}>
-                      {cat.subcategorias ? (isExpanded ? "▼" : "▶") : "▶"}
-                    </span>
-                    {cat.nombre}
-                  </td>
-                  <td style={{ padding: 12, textAlign: "right", color: darkMode ? "#E60026" : "#e53935", fontWeight: 700 }}>${cat.presupuestado.toLocaleString()}</td>
-                  <td style={{ padding: 12, textAlign: "right", color: darkMode ? "#43FF8E" : "#43a047", fontWeight: 700 }}>${cat.ejecutado.toLocaleString()}</td>
-                  <td style={{ padding: 12, textAlign: "right", color: dev < 0 ? (darkMode ? "#E60026" : "#e53935") : (darkMode ? "#43FF8E" : "#43a047"), fontWeight: 700 }}>{dev > 0 ? "+" : ""}${dev.toLocaleString()}</td>
-                </tr>,
-                isExpanded && cat.subcategorias && cat.subcategorias.map(sub => {
-                  const subDev = sub.ejecutado - sub.presupuestado;
-                  return (
-                    <tr key={cat.nombre + "-sub-" + sub.nombre} style={{ borderBottom: darkMode ? "1px solid #4A5568" : "1px solid #f0f0f0" }}>
-                      <td style={{ padding: "12px 12px 12px 36px", color: darkMode ? "#B0BEC5" : "#555" }}>↳ {sub.nombre}</td>
-                      <td style={{ padding: 12, textAlign: "right", color: darkMode ? "#E60026" : "#e53935" }}>${sub.presupuestado.toLocaleString()}</td>
-                      <td style={{ padding: 12, textAlign: "right", color: darkMode ? "#43FF8E" : "#43a047" }}>${sub.ejecutado.toLocaleString()}</td>
-                      <td style={{ padding: 12, textAlign: "right", color: subDev < 0 ? (darkMode ? "#E60026" : "#e53935") : (darkMode ? "#43FF8E" : "#43a047") }}>{subDev > 0 ? "+" : ""}${subDev.toLocaleString()}</td>
-                    </tr>
-                  );
-                })
-              ];
-            })}
-          </tbody>
-        </table>
-        <div style={{ marginTop: 20, textAlign: "center" }}>
-          <button onClick={exportToCSV} style={{ padding: "12px 24px", background: darkMode ? "#1976d2" : "#1976d2", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 16 }}>
-            Exportar a CSV
-          </button>
-        </div>
-      </div>
-    </div>
+      <Container maxWidth="xl" sx={{ mb: 5 }}>
+        <Paper 
+          elevation={3}
+          sx={{ 
+            borderRadius: theme => theme.spacing(2.25),
+            border: theme => `1px solid ${theme.palette.divider}`,
+            p: theme => theme.spacing(4.5)
+          }}
+        >
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              fontWeight: theme => theme.typography.fontWeightBold,
+              color: 'error.main',
+              mb: theme => theme.spacing(2.25)
+            }}
+          >
+            Desglose por categorías
+          </Typography>
+          <TableContainer>
+            <Table sx={{ fontSize: 18 }}>
+              <TableHead>
+                <TableRow sx={{ bgcolor: 'action.hover' }}>
+                  <TableCell 
+                    sx={{ 
+                      textAlign: 'left', 
+                      p: theme => theme.spacing(1.5),
+                      color: 'text.primary',
+                      fontWeight: theme => theme.typography.fontWeightBold
+                    }}
+                  >
+                    Categoría
+                  </TableCell>
+                  <TableCell 
+                    sx={{ 
+                      textAlign: 'right', 
+                      p: theme => theme.spacing(1.5),
+                      color: 'text.primary',
+                      fontWeight: theme => theme.typography.fontWeightBold
+                    }}
+                  >
+                    Presupuestado
+                  </TableCell>
+                  <TableCell 
+                    sx={{ 
+                      textAlign: 'right', 
+                      p: theme => theme.spacing(1.5),
+                      color: 'text.primary',
+                      fontWeight: theme => theme.typography.fontWeightBold
+                    }}
+                  >
+                    Ejecutado
+                  </TableCell>
+                  <TableCell 
+                    sx={{ 
+                      textAlign: 'right', 
+                      p: theme => theme.spacing(1.5),
+                      color: 'text.primary',
+                      fontWeight: theme => theme.typography.fontWeightBold
+                    }}
+                  >
+                    Desviación
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {(state.selectedCategoria ? data.categorias.filter(cat => cat.nombre === state.selectedCategoria) : data.categorias).map(cat => {
+                  const dev = cat.ejecutado - cat.presupuestado;
+                  const isExpanded = state.expandedCategoria === cat.nombre;
+                  return [
+                    <TableRow 
+                      key={cat.nombre} 
+                      sx={{ 
+                        borderBottom: theme => `1px solid ${theme.palette.divider}`,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          bgcolor: 'action.hover'
+                        }
+                      }} 
+                      onClick={() => cat.subcategorias ? setExpandedCategoria(isExpanded ? null : cat.nombre) : null}
+                    >
+                      <TableCell 
+                        sx={{ 
+                          p: theme => theme.spacing(1.5),
+                          color: 'text.primary',
+                          fontWeight: theme => theme.typography.fontWeightBold,
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <Box 
+                          component="span" 
+                          sx={{ 
+                            mr: 1,
+                            fontSize: 18,
+                            color: 'text.secondary',
+                            display: 'inline-block',
+                            transition: theme => theme.transitions.create('transform', {
+                              duration: theme.transitions.duration.short,
+                            })
+                          }}
+                        >
+                          {cat.subcategorias ? (isExpanded ? <ExpandMoreIcon fontSize="small" /> : <ChevronRightIcon fontSize="small" />) : <ChevronRightIcon fontSize="small" />}
+                        </Box>
+                        {cat.nombre}
+                      </TableCell>
+                      <TableCell 
+                        sx={{ 
+                          p: theme => theme.spacing(1.5),
+                          textAlign: 'right',
+                          color: 'error.main',
+                          fontWeight: theme => theme.typography.fontWeightBold
+                        }}
+                      >
+                        ${cat.presupuestado.toLocaleString()}
+                      </TableCell>
+                      <TableCell 
+                        sx={{ 
+                          p: theme => theme.spacing(1.5),
+                          textAlign: 'right',
+                          color: 'success.main',
+                          fontWeight: theme => theme.typography.fontWeightBold
+                        }}
+                      >
+                        ${cat.ejecutado.toLocaleString()}
+                      </TableCell>
+                      <TableCell 
+                        sx={{ 
+                          p: theme => theme.spacing(1.5),
+                          textAlign: 'right',
+                          color: dev < 0 ? 'error.main' : 'success.main',
+                          fontWeight: theme => theme.typography.fontWeightBold
+                        }}
+                      >
+                        {dev > 0 ? "+" : ""}${dev.toLocaleString()}
+                      </TableCell>
+                    </TableRow>,
+                    isExpanded && cat.subcategorias && cat.subcategorias.map(sub => {
+                      const subDev = sub.ejecutado - sub.presupuestado;
+                      return (
+                        <TableRow 
+                          key={cat.nombre + "-sub-" + sub.nombre} 
+                          sx={{ borderBottom: theme => `1px solid ${theme.palette.divider}` }}
+                        >
+                          <TableCell 
+                            sx={{ 
+                              p: theme => theme.spacing(1.5, 1.5, 1.5, 4.5),
+                              color: 'text.secondary'
+                            }}
+                          >
+                            ↳ {sub.nombre}
+                          </TableCell>
+                          <TableCell 
+                            sx={{ 
+                              p: theme => theme.spacing(1.5),
+                              textAlign: 'right',
+                              color: 'error.main'
+                            }}
+                          >
+                            ${sub.presupuestado.toLocaleString()}
+                          </TableCell>
+                          <TableCell 
+                            sx={{ 
+                              p: theme => theme.spacing(1.5),
+                              textAlign: 'right',
+                              color: 'success.main'
+                            }}
+                          >
+                            ${sub.ejecutado.toLocaleString()}
+                          </TableCell>
+                          <TableCell 
+                            sx={{ 
+                              p: theme => theme.spacing(1.5),
+                              textAlign: 'right',
+                              color: subDev < 0 ? 'error.main' : 'success.main'
+                            }}
+                          >
+                            {subDev > 0 ? "+" : ""}${subDev.toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ];
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          
+          <Box sx={{ mt: theme => theme.spacing(2.5), textAlign: 'center' }}>
+            <Button 
+              variant="contained"
+              startIcon={<FileDownloadIcon />}
+              onClick={exportToCSV}
+              sx={{
+                px: theme => theme.spacing(3),
+                py: theme => theme.spacing(1.5),
+                fontWeight: theme => theme.typography.fontWeightSemiBold,
+                fontSize: 16,
+                borderRadius: theme => theme.spacing(1),
+                textTransform: 'none'
+              }}
+            >
+              Exportar a CSV
+            </Button>
+          </Box>
+        </Paper>
+      </Container>
+    </Box>
   );
 }

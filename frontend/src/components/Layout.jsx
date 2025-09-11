@@ -1,16 +1,10 @@
 import React from 'react';
 import {
   Box,
-  Container,
-  Avatar
+  Container
 } from '@mui/material';
 import NavigationMenu from './NavigationMenu';
 import DarkModeToggle from './DarkModeToggle';
-import LoadDocumentsOCbyUserView from '../pages/LoadDocumentsOCbyUserView';
-import DashboardGeneral from '../pages/DashboardGeneral';
-import UploadForm from '../pages/UploadForm';
-import AdminPanel from '../pages/AdminPanel';
-import logoClaroMedia from '../assets/Claro-Media-Logo.jpg';
 
 const Layout = ({ 
   children, 
@@ -18,44 +12,11 @@ const Layout = ({
   setDarkMode, 
   onBack,
   onMenuSelect,
-  selectedMenu,
   showNavigation = true,
   showDarkModeToggle = true,
   containerMaxWidth = 'xl',
   fullWidth = false
 }) => {
-  const renderContent = () => {
-    if (children) {
-      return children;
-    }
-    
-    switch (selectedMenu) {
-      case 'historial':
-        return <LoadDocumentsOCbyUserView darkMode={darkMode} />;
-      case 'upload':
-        return (
-          <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: theme => theme.spacing(3) }}>
-              <Avatar
-                src={logoClaroMedia}
-                alt="Claro Media Data Tech"
-                sx={{
-                  width: theme => theme.spacing(22.5),
-                  height: theme => theme.spacing(22.5),
-                  borderRadius: 0
-                }}
-              />
-            </Box>
-            <UploadForm hideHeader={true} />
-          </Box>
-        );
-      case 'dashboard':
-        return <DashboardGeneral />;
-      case 'usuarios':
-      default:
-        return <AdminPanel />;
-    }
-  };
   return (
     <Box
       sx={{
@@ -98,7 +59,7 @@ const Layout = ({
 
       {fullWidth ? (
         <Box sx={{ width: '100%' }}>
-          {renderContent()}
+          {children}
         </Box>
       ) : (
         <Container 
@@ -109,7 +70,7 @@ const Layout = ({
             zIndex: 1
           }}
         >
-          {renderContent()}
+          {children}
         </Container>
       )}
     </Box>
