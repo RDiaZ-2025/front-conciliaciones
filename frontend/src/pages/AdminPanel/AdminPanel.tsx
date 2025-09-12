@@ -95,9 +95,11 @@ const AdminPanel = ({ darkMode }) => {
         <Stack direction="row" alignItems="center" justifyContent="center" spacing={3} sx={{ mb: 3 }}>
           <Box
             sx={{
-              p: theme => theme.spacing(2),
+              p: theme => theme.spacing(1.3),
               borderRadius: '50%',
               bgcolor: 'primary.main',
+              height: 48,
+              width: 48,
               boxShadow: theme => theme.shadows[4]
             }}
           >
@@ -251,7 +253,7 @@ const AdminPanel = ({ darkMode }) => {
                   <TableCell 
                     key={header} 
                     sx={{ 
-                      bgcolor: 'grey.100',
+                      bgcolor: 'action.hover',
                       color: 'text.primary',
                       fontWeight: theme => theme.typography.fontWeightBold,
                       py: theme => theme.spacing(2),

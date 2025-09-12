@@ -99,7 +99,7 @@ const LoadDocumentsOCbyUserView: React.FC<LoadDocumentsOCbyUserViewProps> = ({ d
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ 
-                    bgcolor: 'grey.100',
+                    bgcolor: 'action.hover',
                     color: 'text.primary',
                     fontWeight: theme => theme.typography.fontWeightBold,
                     py: theme => theme.spacing(2)
@@ -107,7 +107,7 @@ const LoadDocumentsOCbyUserView: React.FC<LoadDocumentsOCbyUserViewProps> = ({ d
                     Usuario
                   </TableCell>
                   <TableCell sx={{ 
-                    bgcolor: 'grey.100',
+                    bgcolor: 'action.hover',
                     color: 'text.primary',
                     fontWeight: theme => theme.typography.fontWeightBold,
                     py: theme => theme.spacing(2)
@@ -115,7 +115,7 @@ const LoadDocumentsOCbyUserView: React.FC<LoadDocumentsOCbyUserViewProps> = ({ d
                     Nombre de Archivo
                   </TableCell>
                   <TableCell sx={{ 
-                    bgcolor: 'grey.100',
+                    bgcolor: 'action.hover',
                     color: 'text.primary',
                     fontWeight: theme => theme.typography.fontWeightBold,
                     py: theme => theme.spacing(2)
@@ -123,7 +123,7 @@ const LoadDocumentsOCbyUserView: React.FC<LoadDocumentsOCbyUserViewProps> = ({ d
                     Fecha de Subida
                   </TableCell>
                   <TableCell sx={{ 
-                    bgcolor: 'grey.100',
+                    bgcolor: 'action.hover',
                     color: 'text.primary',
                     fontWeight: theme => theme.typography.fontWeightBold,
                     py: theme => theme.spacing(2),
@@ -132,7 +132,7 @@ const LoadDocumentsOCbyUserView: React.FC<LoadDocumentsOCbyUserViewProps> = ({ d
                     Estado
                   </TableCell>
                   <TableCell sx={{ 
-                    bgcolor: 'grey.100',
+                    bgcolor: 'action.hover',
                     color: 'text.primary',
                     fontWeight: theme => theme.typography.fontWeightBold,
                     py: theme => theme.spacing(2),

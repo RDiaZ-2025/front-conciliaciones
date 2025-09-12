@@ -14,7 +14,7 @@ const createAppTheme = (darkMode) => createTheme({
       dark: darkMode ? '#EB111F' : '#EB111F',
     },
     background: {
-      default: darkMode ? '#151921' : 'linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%)',
+      default: darkMode ? '#151921' : '#FEF3F4',
       paper: darkMode ? '#151921' : '#ffffff',
     },
     text: {

@@ -24,7 +24,8 @@ import {
   List,
   ListItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  Avatar
 } from "@mui/material";
 import { 
   ArrowBack as ArrowBackIcon, 
@@ -752,6 +753,18 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
         overflow: 'auto'
       }}
     >
+      <Stack sx={{ justifyContent: 'center', alignItems: 'center'}}>
+        <Avatar
+            src={claroMediaLogo}
+            alt="Claro Media Logo"
+            className="heartbeat"
+            sx={{
+              width: theme => theme.spacing(32.5),
+              height: theme => theme.spacing(12),
+              borderRadius: 0
+            }}
+          />
+      </Stack>
       {!props.hideHeader && (
         <Container maxWidth="xl" sx={{ position: "relative", mt: 5, mb: 2 }}>
           <IconButton

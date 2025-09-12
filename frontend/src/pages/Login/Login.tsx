@@ -93,20 +93,19 @@ const Login: React.FC<LoginProps> = ({ onLogin, darkMode, setDarkMode }) => {
               variant="h4" 
               component="h1"
               sx={{
-                fontWeight: theme => theme.typography.fontWeightBold,
+                fontWeight: theme => theme.typography.fontWeightRegular,
                 color: 'text.primary',
                 textAlign: 'center',
-                mb: theme => theme.spacing(3)
+                mb: theme => theme.spacing(2)
               }}
             >
               Iniciar sesión
             </Typography>
 
-            <Typography 
-              variant="h6" 
-              component="h2"
+            <Typography  
+              component="h3"
               sx={{
-                fontWeight: theme => theme.typography.fontWeightBold,
+                fontWeight: theme => theme.typography.fontWeightLight,
                 color: 'text.primary',
                 textAlign: 'center',
                 mb: theme => theme.spacing(3)
