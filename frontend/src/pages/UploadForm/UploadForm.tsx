@@ -131,16 +131,22 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
         >
           Previsualización PDF:
         </Typography>
-        <Box
-          component="img"
-          src={state.pdfThumbnail}
-          alt="Miniatura PDF"
-          sx={{
-            maxWidth: theme => theme.spacing(22.5),
-            borderRadius: theme => theme.spacing(0.5),
-            boxShadow: theme => theme.shadows[2]
-          }}
-        />
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+          <Box
+            component="iframe"
+            src={state.pdfThumbnail}
+            sx={{
+              width: '100%',
+              height: '300px',
+              border: 'none',
+              borderRadius: theme => theme.spacing(0.5),
+              boxShadow: theme => theme.shadows[2]
+            }}
+          />
+          <Typography variant="body2" color="text.secondary">
+            {state.pdfFile.name} ({Math.round(state.pdfFile.size / 1024)} KB)
+          </Typography>
+        </Box>
       </Paper>
     );
   };
@@ -387,7 +393,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                 )}
               </Stack>
               {renderPdfPreview()}
-              {state.pdfUploaded && state.pdfThumbnail && (
+              {state.pdfUploaded && (
                 <Box sx={{ mt: theme => theme.spacing(2), mb: theme => theme.spacing(1), textAlign: 'center' }}>
                   <Typography 
                     variant="body1" 
@@ -746,14 +752,15 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
         width: '100vw',
         bgcolor: 'background.default',
         color: 'text.primary',
+        top: theme => theme.spacing(8),
         transition: theme => theme.transitions.create(['background-color'], {
           duration: theme.transitions.duration.standard,
         }),
         position: 'relative',
         overflow: 'auto'
       }}
-    >
-      <Stack sx={{ justifyContent: 'center', alignItems: 'center'}}>
+    >        
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 4 }}>
         <Avatar
             src={claroMediaLogo}
             alt="Claro Media Logo"
@@ -764,94 +771,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
               borderRadius: 0
             }}
           />
-      </Stack>
-      {!props.hideHeader && (
-        <Container maxWidth="xl" sx={{ position: "relative", mt: 5, mb: 2 }}>
-          <IconButton
-            onClick={props.onBackToLogin}
-            sx={{
-              position: "absolute",
-              left: theme => theme.spacing(3),
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: 'text.primary',
-              '&:hover': {
-                bgcolor: 'action.hover'
-              }
-            }}
-          >
-            <ArrowBackIcon />
-          </IconButton>
-          
-          <Stack 
-            direction="row" 
-            spacing={1} 
-            sx={{ 
-              position: "absolute", 
-              right: theme => theme.spacing(3), 
-              top: "50%", 
-              transform: "translateY(-50%)"
-            }}
-          >
-            {hasPermission(PERMISSIONS.MANAGEMENT_DASHBOARD) && (
-              <IconButton
-                onClick={props.onGoToDashboard}
-                sx={{
-                  color: 'text.primary',
-                  bgcolor: 'action.hover',
-                  border: theme => `1px solid ${theme.palette.divider}`,
-                  borderRadius: theme => theme.spacing(1),
-                  transition: theme => theme.transitions.create(['background-color', 'transform'], {
-                    duration: theme.transitions.duration.short,
-                  }),
-                  '&:hover': {
-                    bgcolor: 'action.selected',
-                    transform: 'translateY(-2px)'
-                  }
-                }}
-                title="Ir al Dashboard"
-              >
-                <DashboardIcon />
-              </IconButton>
-            )}
-            {hasPermission(PERMISSIONS.ADMIN_PANEL) && (
-              <IconButton
-                onClick={props.onGoToAdmin}
-                sx={{
-                  color: 'text.primary',
-                  bgcolor: 'action.hover',
-                  border: theme => `1px solid ${theme.palette.divider}`,
-                  borderRadius: theme => theme.spacing(1),
-                  transition: theme => theme.transitions.create(['background-color', 'transform'], {
-                    duration: theme.transitions.duration.short,
-                  }),
-                  '&:hover': {
-                    bgcolor: 'action.selected',
-                    transform: 'translateY(-2px)'
-                  }
-                }}
-                title="Ir al Panel de Administración"
-              >
-                <AdminIcon />
-              </IconButton>
-            )}
-            <DarkModeToggle 
-              darkMode={props.darkMode} 
-              setDarkMode={props.setDarkMode} 
-              onLogoClick={props.onBackToLogin}
-            />
-          </Stack>
-          
-          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-            <Box
-              component="img"
-              src={claroMediaLogo}
-              alt="Claro Media Data Tech"
-              sx={{ width: theme => theme.spacing(22.5) }}
-            />
-          </Box>
-        </Container>
-      )}
+      </Box>
       
       <Container maxWidth="sm" sx={{ mb: 4 }}>
         <Paper 

@@ -84,32 +84,8 @@ function AppContent() {
     }
   };
 
-  const renderAdminContent = () => {
-    switch (selectedMenu) {
-      case 'historial':
-        return <LoadDocumentsOCbyUserView darkMode={darkMode} />;
-      case 'upload':
-        return <UploadForm hideHeader={true} />
-      case 'dashboard':
-        return <DashboardGeneral />;
-      case 'usuarios':
-      default:
-        return <AdminPanel darkMode={darkMode} />;
-    }
-  };
-
-  const renderCurrentView = () => {
+  const renderAuthenticatedContent = () => {
     switch (currentView) {
-      case 'login':
-        return (
-          <Box sx={{ py: theme => theme.spacing(2) }}>
-            <Login 
-              onLogin={handleLogin} 
-              darkMode={darkMode}
-              setDarkMode={setDarkMode}
-            />
-          </Box>
-        );
       case 'upload':
         return (
           <ProtectedRoute 
@@ -117,16 +93,14 @@ function AppContent() {
             darkMode={darkMode}
             onUnauthorized={handleUnauthorized}
           >
-            <Box sx={{ py: theme => theme.spacing(2) }}>
-              <UploadForm
-                onUploadComplete={handleUploadComplete}
-                onBackToLogin={handleBackToLogin}
-                onGoToAdmin={handleGoToAdmin}
-                onGoToDashboard={() => setCurrentView('dashboard')}
-                darkMode={darkMode}
-                setDarkMode={setDarkMode}
-              />
-            </Box>
+            <UploadForm
+              onUploadComplete={handleUploadComplete}
+              onBackToLogin={handleBackToLogin}
+              onGoToAdmin={handleGoToAdmin}
+              onGoToDashboard={() => setCurrentView('dashboard')}
+              darkMode={darkMode}
+              setDarkMode={setDarkMode}
+            />
           </ProtectedRoute>
         );
       case 'dashboard':
@@ -136,15 +110,13 @@ function AppContent() {
             darkMode={darkMode}
             onUnauthorized={handleUnauthorized}
           >
-            <Box sx={{ py: theme => theme.spacing(2) }}>
-              <DashboardGeneral 
-                darkMode={darkMode}
-                setDarkMode={setDarkMode}
-                onBack={handleBackToLogin}
-                onGoToAdmin={handleGoToAdmin}
-                onGoToUpload={handleBackToUpload}
-              />
-            </Box>
+            <DashboardGeneral 
+              darkMode={darkMode}
+              setDarkMode={setDarkMode}
+              onBack={handleBackToLogin}
+              onGoToAdmin={handleGoToAdmin}
+              onGoToUpload={handleBackToUpload}
+            />
           </ProtectedRoute>
         );
       case 'admin':
@@ -154,30 +126,61 @@ function AppContent() {
             darkMode={darkMode}
             onUnauthorized={handleUnauthorized}
           >
-            <Layout
+            <AdminPanel
+              selectedMenu={selectedMenu}
+              onMenuSelect={setSelectedMenu}
               darkMode={darkMode}
               setDarkMode={setDarkMode}
               onBack={handleBackToLogin}
-              onMenuSelect={setSelectedMenu}
-              fullWidth={true}>
-              <Box sx={{ py: theme => theme.spacing(12) }}>
-                  {renderAdminContent()}
-              </Box>
-            </Layout>
+            />
           </ProtectedRoute>
         );
-
       default:
         return (
-          <Box sx={{ py: theme => theme.spacing(2) }}>
-            <Login 
-              onLogin={handleLogin}
+          <ProtectedRoute 
+            requiredPermission={PERMISSIONS.DOCUMENT_UPLOAD}
+            darkMode={darkMode}
+            onUnauthorized={handleUnauthorized}
+          >
+            <UploadForm
+              onUploadComplete={handleUploadComplete}
+              onBackToLogin={handleBackToLogin}
+              onGoToAdmin={handleGoToAdmin}
+              onGoToDashboard={() => setCurrentView('dashboard')}
               darkMode={darkMode}
               setDarkMode={setDarkMode}
             />
-          </Box>
+          </ProtectedRoute>
         );
     }
+  };
+
+  const renderCurrentView = () => {
+    if (currentView === 'login') {
+      return (
+        <Box sx={{ py: theme => theme.spacing(2) }}>
+          <Login 
+            onLogin={handleLogin} 
+            darkMode={darkMode}
+            setDarkMode={setDarkMode}
+          />
+        </Box>
+      );
+    }
+
+    return (
+      <Layout
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+        onBack={handleBackToLogin}
+        onMenuSelect={setSelectedMenu}
+        fullWidth={true}
+      >
+        <Box sx={{ py: theme => theme.spacing(2) }}>
+          {renderAuthenticatedContent()}
+        </Box>
+      </Layout>
+    );
   };
 
   const theme = createAppTheme(darkMode);

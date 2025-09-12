@@ -6,7 +6,7 @@ import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 import { GlobalWorkerOptions } from 'pdfjs-dist/legacy/build/pdf';
 import type { UploadFormProps, UploadFormState, UseUploadFormReturn, RequiredCell, ValidationResult, AzureConfig, PDFValidationConfig, ExcelValidationConfig } from './types';
 
-GlobalWorkerOptions.workerSrc = "/pdfjs/pdf.worker.min.js";
+GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.min.js';
 
 const AZURE_CONFIG: AzureConfig = {
   sasToken: "sv=2024-11-04&ss=bfqt&srt=sco&sp=rwdlacupiytfx&se=2026-07-18T00:00:00Z&st=2025-07-17T12:00:00Z&spr=https&sig=5bOczB2JntgCnxgUF621l2zNepka4FohFR8hzCUuMt0%3D",
@@ -203,36 +203,14 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
       };
     }
 
-    try {
-      const pdfData = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-      const page = await pdf.getPage(1);
-      const textContent = await page.getTextContent();
-      const text = textContent.items.map((item: any) => item.str).join(" ");
-
-      if (!text || text.trim().length === 0) {
-        return {
-          isValid: false,
-          message: "❌ El archivo PDF (Orden de Compra) no contiene información legible. Por favor, asegúrate de que el documento no sea solo una imagen escaneada y que incluya los campos requeridos."
-        };
-      }
-
-      const missing = PDF_CONFIG.requiredLabels.filter(label => !text.includes(label));
-      
-      if (missing.length > 0) {
-        return {
-          isValid: false,
-          message: `❌ El archivo PDF (Orden de Compra) que intentas subir no cumple con el formato requerido.\n\nFaltan los siguientes campos obligatorios en la primera página: ${missing.join(", ")}.\n\nPor favor, revisa que el documento contenga todos los campos obligatorios y vuelve a intentarlo.`
-        };
-      }
-
-      return { isValid: true };
-    } catch (err) {
+    if (file.size < 1000) {
       return {
         isValid: false,
-        message: "❌ No se pudo validar el archivo PDF (Orden de Compra). El sistema no pudo procesar el documento. Por favor, verifica que el archivo sea un PDF digital y vuelve a intentarlo. Si el problema persiste, contacta a soporte."
+        message: "❌ El archivo PDF (Orden de Compra) parece estar dañado o incompleto. Por favor, selecciona un archivo PDF válido."
       };
     }
+
+    return { isValid: true };
   };
 
   const uploadToAzure = async (file: File, path: string): Promise<boolean> => {
@@ -251,16 +229,8 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
 
   const generatePdfThumbnail = async (file: File): Promise<string | null> => {
     try {
-      const pdfData = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-      const page = await pdf.getPage(1);
-      const viewport = page.getViewport({ scale: 0.5 });
-      const canvas = document.createElement('canvas');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      const ctx = canvas.getContext('2d')!;
-      await page.render({ canvasContext: ctx, viewport }).promise;
-      return canvas.toDataURL();
+      const fileUrl = URL.createObjectURL(file);
+      return fileUrl;
     } catch {
       return null;
     }
@@ -333,10 +303,14 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
     const uploaded = await uploadToAzure(file, "EntradaDatosParaProcesar");
     
     if (uploaded) {
-      updateState({ pdfUploaded: true });
+      updateState({ 
+        pdfUploaded: true,
+        uploading: false 
+      });
     } else {
       updateState({ 
         pdfUploaded: false,
+        uploading: false,
         message: "❌ Error al subir el PDF a Azure." 
       });
     }

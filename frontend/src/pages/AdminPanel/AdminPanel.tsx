@@ -42,8 +42,11 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAdminPanel } from './useAdminPanel';
+import LoadDocumentsOCbyUserView from '../LoadDocumentsOCbyUserView';
+import UploadForm from '../UploadForm';
+import DashboardGeneral from '../DashboardGeneral';
 
-const AdminPanel = ({ darkMode }) => {
+const AdminPanel = ({ darkMode, selectedMenu = 'usuarios' }) => {
   const { user } = useAuth();
   const {
     users,
@@ -80,18 +83,33 @@ const AdminPanel = ({ darkMode }) => {
     loadAccessHistory
   } = useAdminPanel();
 
-  const filteredUsers = users.filter(u =>
-    !searchUser ||
-    u.name?.toLowerCase().includes(searchUser.toLowerCase()) ||
-    u.email?.toLowerCase().includes(searchUser.toLowerCase())
-  );
-  
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
-  const paginatedUsers = filteredUsers.slice((currentPage - 1) * usersPerPage, currentPage * usersPerPage);
+  const renderContent = () => {
+    switch (selectedMenu) {
+      case 'historial':
+        return <LoadDocumentsOCbyUserView darkMode={darkMode} />;
+      case 'upload':
+        return <UploadForm hideHeader={true} darkMode={darkMode} />;
+      case 'dashboard':
+        return <DashboardGeneral darkMode={darkMode} />;
+      case 'usuarios':
+      default:
+        return renderUserManagement();
+    }
+  };
 
-  return (
-    <Box sx={{ width: '100%', maxWidth: '1400px', margin: '0 auto' }}>
-      <Box sx={{ mb: theme => theme.spacing(6), textAlign: 'center' }}>
+  const renderUserManagement = () => {
+    const filteredUsers = users.filter(u =>
+      !searchUser ||
+      u.name?.toLowerCase().includes(searchUser.toLowerCase()) ||
+      u.email?.toLowerCase().includes(searchUser.toLowerCase())
+    );
+    
+    const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+    const paginatedUsers = filteredUsers.slice((currentPage - 1) * usersPerPage, currentPage * usersPerPage);
+
+    return (
+      <Box sx={{ width: '100%', maxWidth: '1400px', margin: '0 auto' }}>
+        <Box sx={{ mb: theme => theme.spacing(6), textAlign: 'center' }}>
         <Stack direction="row" alignItems="center" justifyContent="center" spacing={3} sx={{ mb: 3 }}>
           <Box
             sx={{
@@ -107,7 +125,7 @@ const AdminPanel = ({ darkMode }) => {
           </Box>
           <Box>
             <Typography
-              variant="h3"
+              variant="h4"
               sx={{
                 fontWeight: theme => theme.typography.fontWeightBold,
                 color: 'text.primary',
@@ -120,7 +138,7 @@ const AdminPanel = ({ darkMode }) => {
               variant="subtitle1"
               sx={{
                 color: 'text.secondary',
-                fontWeight: theme => theme.typography.fontWeightMedium,
+                fontWeight: theme => theme.typography.fontWeightRegular,
                 mt: 0.5
               }}
             >
@@ -573,7 +591,10 @@ const AdminPanel = ({ darkMode }) => {
         </Alert>
       </Snackbar>
     </Box>
-  );
+    );
+  };
+
+  return renderContent();
 };
 
 export default AdminPanel;
