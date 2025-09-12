@@ -78,7 +78,7 @@ export const useLoadDocumentsOCbyUserView = (): UseLoadDocumentsReturn => {
       );
       const containerClient = blobService.getContainerClient(AZURE_CONFIG.containerName);
       
-      const folderPath = `SalidaDatosProcesados/${idFolder}`;
+      const folderPath = `/SalidaDatosProcesados/${idFolder}`;
       let blobs: string[] = [];
       
       for await (const blob of containerClient.listBlobsFlat({ prefix: folderPath })) {
