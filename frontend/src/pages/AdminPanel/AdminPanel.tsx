@@ -88,9 +88,9 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios' }) => {
       case 'historial':
         return <LoadDocumentsOCbyUserView darkMode={darkMode} />;
       case 'upload':
-        return <UploadForm hideHeader={true} darkMode={darkMode} />;
+        return <UploadForm hideHeader={true} darkMode={darkMode} onUploadComplete={() => {}} onBackToLogin={() => {}} setDarkMode={() => {}} onGoToAdmin={() => {}} onGoToDashboard={() => {}} />;
       case 'dashboard':
-        return <DashboardGeneral darkMode={darkMode} />;
+        return <DashboardGeneral darkMode={darkMode} setDarkMode={() => {}} onBack={() => {}} onGoToAdmin={() => {}} onGoToUpload={() => {}} />;
       case 'usuarios':
       default:
         return renderUserManagement();
@@ -174,7 +174,7 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios' }) => {
               variant="h6" 
               sx={{
                 color: 'text.primary',
-                fontWeight: theme => theme.typography.fontWeightSemiBold,
+                fontWeight: theme => theme.typography.fontWeightBold,
                 mb: 0.5
               }}
             >
@@ -251,7 +251,7 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios' }) => {
               startIcon={<AddIcon />}
               onClick={() => handleOpenDialog()}
               sx={{
-                fontWeight: theme => theme.typography.fontWeightSemiBold,
+                fontWeight: theme => theme.typography.fontWeightBold,
                 px: theme => theme.spacing(3),
                 py: theme => theme.spacing(1.5),
                 borderRadius: theme => theme.spacing(1.5),
@@ -316,7 +316,7 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios' }) => {
                       <Typography 
                         sx={{
                           color: 'text.primary',
-                          fontWeight: theme => theme.typography.fontWeightSemiBold
+                          fontWeight: theme => theme.typography.fontWeightBold
                         }}
                       >
                         {userData.name}
@@ -336,30 +336,40 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios' }) => {
                   <TableCell sx={{ py: theme => theme.spacing(2) }}>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, maxWidth: 300 }}>
                       {userData.permissions && Array.isArray(userData.permissions) && userData.permissions.length > 0 ? (
-                        Array.from(new Set(userData.permissions.map(p => typeof p === 'string' ? p : p.Name || p.name))).map((permissionName, permIdx) => (
-                          <Chip
-                            key={`perm-${permissionName}-${permIdx}`}
-                            label={getPermissionLabel(permissionName)}
-                            color={getPermissionColor(permissionName)}
-                            size="small"
-                            variant="outlined"
-                            sx={{ 
-                              fontWeight: theme => theme.typography.fontWeightMedium,
-                              borderRadius: theme => theme.spacing(1)
-                            }}
-                          />
-                        ))
+                        Array.from(new Set(userData.permissions.map((p: any) => typeof p === 'string' ? p : p.Name || p.name))).map((permissionName, permIdx) => {
+                           const chipColor = getPermissionColor(permissionName);
+                           const validColors = ['default', 'primary', 'secondary', 'error', 'info', 'success', 'warning'];
+                           return (
+                             <Chip
+                               key={`perm-${permissionName}-${permIdx}`}
+                               label={getPermissionLabel(permissionName)}
+                               color={validColors.includes(chipColor) ? chipColor as any : 'default'}
+                               size="small"
+                               variant="outlined"
+                               sx={{ 
+                                 fontWeight: theme => theme.typography.fontWeightMedium,
+                                 borderRadius: theme => theme.spacing(1)
+                               }}
+                             />
+                           );
+                         })
                       ) : userData.role ? (
-                        <Chip
-                          label={getRoleLabel(userData.role)}
-                          color={getRoleColor(userData.role)}
-                          size="small"
-                          variant="outlined"
-                          sx={{ 
-                            fontWeight: theme => theme.typography.fontWeightMedium,
-                            borderRadius: theme => theme.spacing(1)
-                          }}
-                        />
+                        (() => {
+                          const chipColor = getRoleColor(userData.role);
+                          const validColors = ['default', 'primary', 'secondary', 'error', 'info', 'success', 'warning'];
+                          return (
+                            <Chip
+                              label={getRoleLabel(userData.role)}
+                              color={validColors.includes(chipColor) ? chipColor as any : 'default'}
+                              size="small"
+                              variant="outlined"
+                              sx={{ 
+                                fontWeight: theme => theme.typography.fontWeightMedium,
+                                borderRadius: theme => theme.spacing(1)
+                              }}
+                            />
+                          );
+                        })()
                       ) : (
                         <Chip
                           label="Sin permisos"
@@ -392,7 +402,7 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios' }) => {
                         <IconButton
                           size="small"
                           onClick={() => handleOpenDialog(userData)}
-                          sx={{ color: 'primary.main' }}
+                          sx={{ color: userData.status === 1 ? 'success.main' : 'error.main' }}
                         >
                           <EditIcon fontSize="small" />
                         </IconButton>
@@ -470,7 +480,7 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios' }) => {
             <TextField
               label="Nombre"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value || '' })}
               fullWidth
               required
               variant="outlined"
@@ -479,7 +489,7 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios' }) => {
               label="Email"
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value || '' })}
               fullWidth
               required
               variant="outlined"
@@ -489,7 +499,7 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios' }) => {
               label={editingUser ? 'Nueva Contraseña (opcional)' : 'Contraseña'}
               type="password"
               value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value || '' })}
               fullWidth
               required={!editingUser}
               variant="outlined"
@@ -498,15 +508,15 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios' }) => {
             <Typography
               variant="h6"
               sx={{
-                fontWeight: theme => theme.typography.fontWeightSemiBold,
+                fontWeight: theme => theme.typography.fontWeightBold,
                 color: 'text.primary'
               }}
             >
               Permisos
             </Typography>
             <FormGroup>
-              {availablePermissions.map((permission) => {
-                const permissionName = typeof permission === 'string' ? permission : permission.Name || permission.name;
+              {availablePermissions.map((permission: any) => {
+                const permissionName = typeof permission === 'string' ? permission : permission.Name || permission.name || '';
                 return (
                   <FormControlLabel
                     key={permissionName}
@@ -517,7 +527,7 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios' }) => {
                           if (e.target.checked) {
                             setFormData({
                               ...formData,
-                              permissions: [...formData.permissions, permissionName]
+                              permissions: [...formData.permissions, permissionName || '']
                             });
                           } else {
                             setFormData({
@@ -556,7 +566,7 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios' }) => {
             onClick={handleCloseDialog}
             variant="outlined"
             sx={{
-              fontWeight: theme => theme.typography.fontWeightSemiBold,
+              fontWeight: theme => theme.typography.fontWeightBold,
               px: theme => theme.spacing(3),
               borderRadius: theme => theme.spacing(1)
             }}
@@ -567,7 +577,7 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios' }) => {
             onClick={handleSubmit}
             variant="contained"
             sx={{
-              fontWeight: theme => theme.typography.fontWeightSemiBold,
+              fontWeight: theme => theme.typography.fontWeightBold,
               px: theme => theme.spacing(3),
               borderRadius: theme => theme.spacing(1)
             }}

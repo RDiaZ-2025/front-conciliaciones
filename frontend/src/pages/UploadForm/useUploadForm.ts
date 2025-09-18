@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { BlobServiceClient } from '@azure/storage-blob';
 import * as XLSX from 'xlsx';
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
-import { GlobalWorkerOptions } from 'pdfjs-dist/legacy/build/pdf';
+import * as pdfjsLib from 'pdfjs-dist';
+import { GlobalWorkerOptions } from 'pdfjs-dist';
 import type { UploadFormProps, UploadFormState, UseUploadFormReturn, RequiredCell, ValidationResult, AzureConfig, PDFValidationConfig, ExcelValidationConfig } from './types';
 
 GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.min.js';
@@ -323,13 +323,74 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
     setMateriales(files);
   };
 
+  const uploadMaterialesToAzure = async (): Promise<boolean> => {
+    if (state.materiales.length === 0) return true;
+    
+    try {
+      const uploadPromises = state.materiales.map(file => 
+        uploadToAzure(file, "EntradaDatosParaProcesar")
+      );
+      
+      const results = await Promise.all(uploadPromises);
+      return results.every(result => result === true);
+    } catch (err) {
+      console.error('Error uploading materials:', err);
+      return false;
+    }
+  };
+
   const handleNotifyN8N = async () => {
     updateState({ uploading: true, message: "" });
     let n8nOk = false;
     let dbOk = false;
+    let materialsOk = false;
+    let mainFilesOk = false;
     let uuid = crypto.randomUUID();
     
     try {
+      // First upload main files (Excel and PDF) to ensure they are in storage
+      setMessage("📤 Subiendo archivos principales al storage...");
+      const mainFilePromises: Promise<boolean>[] = [];
+      
+      if (state.excelFile) {
+        mainFilePromises.push(uploadToAzure(state.excelFile, "EntradaDatosParaProcesar"));
+      }
+      
+      if (state.pdfFile) {
+        mainFilePromises.push(uploadToAzure(state.pdfFile, "EntradaDatosParaProcesar"));
+      }
+      
+      if (mainFilePromises.length > 0) {
+        const mainFileResults = await Promise.all(mainFilePromises);
+        mainFilesOk = mainFileResults.every(result => result === true);
+        
+        if (!mainFilesOk) {
+          setMessage("❌ Error al subir los archivos principales al storage. Verifica los archivos e intenta nuevamente.");
+          updateState({ uploading: false });
+          return;
+        }
+        
+        setMessage("✅ Archivos principales subidos correctamente.");
+      } else {
+        mainFilesOk = true; // No main files to upload
+      }
+      
+      // Then upload materials if user selected to upload them
+      if (state.deseaSubirMateriales === true && state.materiales.length > 0) {
+        setMessage("📤 Subiendo materiales al storage...");
+        materialsOk = await uploadMaterialesToAzure();
+        
+        if (!materialsOk) {
+          setMessage("❌ Error al subir los materiales al storage. Verifica los archivos e intenta nuevamente.");
+          updateState({ uploading: false });
+          return;
+        }
+        
+        setMessage("✅ Todos los archivos subidos correctamente. Enviando notificación...");
+      } else {
+        materialsOk = true; // No materials to upload
+        setMessage("✅ Archivos principales subidos correctamente. Enviando notificación...");
+      }
       const n8nResponse = await fetch("https://renediaz2025.app.n8n.cloud/webhook-test/a4784977-134a-4f09-9ea3-04c85c5ba3b7", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -383,13 +444,21 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
       }
       
       dbOk = true;
-      setMessage("✅ Notificación a n8n exitosa. ✅ Registro en base de datos exitoso.");
+      const materialsMessage = state.deseaSubirMateriales === true && state.materiales.length > 0 
+        ? "✅ Materiales subidos. " 
+        : "";
+      const mainFilesMessage = (state.excelFile || state.pdfFile) ? "✅ Archivos principales subidos. " : "";
+      setMessage(`${mainFilesMessage}${materialsMessage}✅ Notificación a n8n exitosa. ✅ Registro en base de datos exitoso.`);
       updateState({ envioExitoso: true });
     } catch (err: any) {
-      if (!n8nOk) {
-        setMessage("❌ Error al notificar a n8n: " + err.message);
+      if (!mainFilesOk) {
+        setMessage("❌ Error al subir archivos principales: " + err.message);
+      } else if (!materialsOk) {
+        setMessage("✅ Archivos principales subidos. ❌ Error al subir materiales: " + err.message);
+      } else if (!n8nOk) {
+        setMessage("✅ Archivos subidos correctamente. ❌ Error al notificar a n8n: " + err.message);
       } else if (!dbOk) {
-        setMessage("✅ Notificación a n8n exitosa. ❌ Error al registrar en base de datos: " + err.message);
+        setMessage("✅ Archivos y notificación a n8n exitosos. ❌ Error al registrar en base de datos: " + err.message);
       } else {
         setMessage("❌ Error inesperado: " + err.message);
       }

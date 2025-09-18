@@ -58,8 +58,13 @@ export const useLoadDocumentsOCbyUserView = (): UseLoadDocumentsReturn => {
       
       const result = await response.json();
       const docs = result.data || result.documents || result.result || result;
+      const sortedDocs = Array.isArray(docs) ? docs.sort((a, b) => {
+        const dateA = new Date(a.Fecha || 0).getTime();
+        const dateB = new Date(b.Fecha || 0).getTime();
+        return dateB - dateA; // Newest first (descending order)
+      }) : [];
       updateState({ 
-        documents: Array.isArray(docs) ? docs : [],
+        documents: sortedDocs,
         error: null
       });
     } catch (err: any) {
@@ -72,21 +77,80 @@ export const useLoadDocumentsOCbyUserView = (): UseLoadDocumentsReturn => {
   const handleDownload = async (idFolder: string): Promise<void> => {
     if (!idFolder) return;
     
+    console.log('Starting download for ID:', idFolder);
+    console.log('Azure Config:', {
+      storageAccountName: AZURE_CONFIG.storageAccountName,
+      containerName: AZURE_CONFIG.containerName,
+      sasTokenLength: AZURE_CONFIG.sasToken.length
+    });
+    
     try {
       const blobService = new BlobServiceClient(
         `https://${AZURE_CONFIG.storageAccountName}.blob.core.windows.net/?${AZURE_CONFIG.sasToken}`
       );
       const containerClient = blobService.getContainerClient(AZURE_CONFIG.containerName);
       
-      const folderPath = `/SalidaDatosProcesados/${idFolder}`;
+      console.log('Successfully connected to Azure Blob Storage');
+      
+      // Convert ID to lowercase to match Azure storage
+      const lowerIdFolder = idFolder.toLowerCase();
+      
+      // Try different possible folder path variations
+       const possiblePaths = [
+         `${lowerIdFolder}`, // Try just the ID first (most likely based on Azure structure)
+         `${lowerIdFolder}/`,
+         `salidadatosprocesados/${lowerIdFolder}`,
+         `SalidaDatosProcesados/${lowerIdFolder}`,
+         `salidadatosprocesados/${lowerIdFolder}/`,
+         `SalidaDatosProcesados/${lowerIdFolder}/`,
+         // Also try original case as fallback
+         `${idFolder}`,
+         `${idFolder}/`
+       ];
+      
       let blobs: string[] = [];
       
-      for await (const blob of containerClient.listBlobsFlat({ prefix: folderPath })) {
-        blobs.push(blob.name);
-      }
+      for (const folderPath of possiblePaths) {
+         console.log('Searching for blobs with prefix:', folderPath);
+         
+         try {
+           let foundInThisPath = 0;
+           for await (const blob of containerClient.listBlobsFlat({ prefix: folderPath })) {
+             console.log('Found blob:', blob.name);
+             if (!blobs.includes(blob.name)) {
+               blobs.push(blob.name);
+               foundInThisPath++;
+             }
+           }
+           
+           console.log(`Found ${foundInThisPath} new blobs with prefix: ${folderPath}`);
+           
+           if (blobs.length > 0) {
+             console.log(`Total blobs found so far: ${blobs.length}`);
+             break; // Stop searching once we find files
+           }
+         } catch (pathError) {
+           console.error(`Error searching with prefix ${folderPath}:`, pathError);
+         }
+       }
+      
+      console.log('Total unique blobs found:', blobs.length);
       
       if (blobs.length === 0) {
-        alert("No se encontraron archivos en la carpeta de Azure.");
+        // List first 20 blobs in container to help debug
+        console.log('No blobs found with any prefix. Listing first 20 blobs in container for debugging:');
+        try {
+          let debugCount = 0;
+          for await (const blob of containerClient.listBlobsFlat()) {
+            console.log(`Container blob ${debugCount + 1}:`, blob.name);
+            debugCount++;
+            if (debugCount >= 20) break;
+          }
+          console.log(`Total blobs checked: ${debugCount}`);
+        } catch (debugError) {
+          console.error('Error listing container blobs for debugging:', debugError);
+        }
+        alert(`No se encontraron archivos para el ID: ${idFolder}. Revisa la consola para más detalles.`);
         return;
       }
       
@@ -107,7 +171,25 @@ export const useLoadDocumentsOCbyUserView = (): UseLoadDocumentsReturn => {
         }
       }
     } catch (err: any) {
-      alert("Error al descargar archivos de Azure: " + err.message);
+      console.error('Error downloading files:', err);
+      console.error('Error details:', {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        stack: err instanceof Error ? err.stack : undefined,
+        type: typeof err,
+        idFolder: idFolder
+      });
+      
+      if (err instanceof Error) {
+        if (err.message.includes('403') || err.message.includes('Forbidden')) {
+          alert('Error de permisos al acceder a Azure. Verifica el token SAS.');
+        } else if (err.message.includes('404') || err.message.includes('NotFound')) {
+          alert('Contenedor no encontrado en Azure. Verifica la configuración.');
+        } else {
+          alert(`Error al descargar los archivos: ${err.message}. Revisa la consola para más detalles.`);
+        }
+      } else {
+        alert('Error desconocido al descargar los archivos. Revisa la consola para más detalles.');
+      }
     }
   };
 

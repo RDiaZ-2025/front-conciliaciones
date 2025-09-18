@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:22741/api';
+let API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:22741/api';
 console.log('🔧 API_BASE_URL configurada:', API_BASE_URL);
 
 const handleResponse = async (response) => {

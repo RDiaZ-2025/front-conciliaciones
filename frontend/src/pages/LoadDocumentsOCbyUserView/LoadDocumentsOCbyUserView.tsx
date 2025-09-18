@@ -40,6 +40,7 @@ const LoadDocumentsOCbyUserView: React.FC<LoadDocumentsOCbyUserViewProps> = ({ d
         bgcolor: 'background.default',
         color: 'text.primary',
         py: theme => theme.spacing(3),
+        mt: theme => theme.spacing(8),
         transition: theme => theme.transitions.create(['background-color'], {
           duration: theme.transitions.duration.standard,
         })
@@ -95,7 +96,7 @@ const LoadDocumentsOCbyUserView: React.FC<LoadDocumentsOCbyUserViewProps> = ({ d
           </Box>
           
           <TableContainer sx={{ maxHeight: theme => theme.spacing(75), borderRadius: theme => theme.spacing(1) }}>
-            <Table stickyHeader>
+            <Table>
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ 
@@ -233,7 +234,9 @@ const LoadDocumentsOCbyUserView: React.FC<LoadDocumentsOCbyUserViewProps> = ({ d
                           onClick={() => handleDownload(doc.IdFolder || '')}
                           disabled={!doc.IdFolder}
                           sx={{
-                            borderRadius: theme => theme.spacing(1)
+                            borderRadius: theme => theme.spacing(1),
+                            position: 'relative',
+                            zIndex: 1
                           }}
                         >
                           Descargar
