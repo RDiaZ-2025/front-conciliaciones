@@ -117,6 +117,10 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
     updateState({ materiales });
   };
 
+  const setPdfUploaded = (pdfUploaded: boolean) => {
+    updateState({ pdfUploaded });
+  };
+
   const resetForm = () => {
     setState({
       tipoUsuario: null,
@@ -567,6 +571,7 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
     setUploadCompleted,
     setDeseaSubirMateriales,
     setMateriales,
+    setPdfUploaded,
     resetForm
   };
 };

@@ -64,7 +64,8 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
     setManualPdfConfirmation,
     setUploadCompleted,
     setDeseaSubirMateriales,
-    setMateriales
+    setMateriales,
+    setPdfUploaded
   } = useUploadForm(props);
 
   const renderExcelPreview = () => {
@@ -429,7 +430,8 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                         borderRadius: theme => theme.spacing(1)
                       }}
                       onClick={() => {
-                        setManualPdfConfirmation(false);
+                        setManualPdfConfirmation(null);
+                        setPdfUploaded(false);
                         const pdfInput = document.getElementById("pdf-input") as HTMLInputElement;
                         if (pdfInput) pdfInput.value = "";
                         setMessage("");
