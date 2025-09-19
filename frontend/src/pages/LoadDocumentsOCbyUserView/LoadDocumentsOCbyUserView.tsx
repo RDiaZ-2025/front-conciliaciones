@@ -39,110 +39,164 @@ const LoadDocumentsOCbyUserView: React.FC<LoadDocumentsOCbyUserViewProps> = ({ d
       sx={{
         bgcolor: 'background.default',
         color: 'text.primary',
-        py: theme => theme.spacing(3),
+        height: '100vh',
         mt: theme => theme.spacing(8),
+        display: 'flex',
+        flexDirection: 'column',
         transition: theme => theme.transitions.create(['background-color'], {
           duration: theme.transitions.duration.standard,
         })
       }}
     >
-      <Container maxWidth="xl">
+      <Container maxWidth="xl" sx={{ flex: 1, display: 'flex', flexDirection: 'column', py: theme => theme.spacing(3) }}>
         <Paper 
           elevation={8} 
           sx={{ 
-            p: theme => theme.spacing(4), 
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
             borderRadius: theme => theme.spacing(2), 
             bgcolor: 'background.paper',
             boxShadow: theme => theme.shadows[8],
+            overflow: 'hidden',
             transition: theme => theme.transitions.create(['box-shadow'], {
               duration: theme.transitions.duration.standard,
             })
           }}
         >
-          <Typography
-            variant="h4"
-            component="h1"
+          {/* Fixed Header Section */}
+          <Box
             sx={{
-              color: 'text.primary',
-              fontWeight: theme => theme.typography.fontWeightBold,
-              textAlign: 'center',
-              mb: theme => theme.spacing(4)
+              position: 'sticky',
+              top: 0,
+              zIndex: 10,
+              bgcolor: 'background.paper',
+              borderBottom: theme => `1px solid ${theme.palette.divider}`,
+              p: theme => theme.spacing(4),
+              pb: theme => theme.spacing(3)
             }}
           >
-            Documentos Subidos por Usuario
-          </Typography>
-          
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: theme => theme.spacing(3) }}>
-            <TextField
-              variant="outlined"
-              size="medium"
-              placeholder="Buscar usuario, archivo o estado"
-              value={state.search}
-              onChange={e => setSearch(e.target.value)}
-              sx={{ 
-                width: theme => theme.spacing(40),
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: theme => theme.spacing(1)
-                }
+            <Typography
+              variant="h4"
+              component="h1"
+              sx={{
+                color: 'text.primary',
+                fontWeight: theme => theme.typography.fontWeightBold,
+                textAlign: 'center',
+                mb: theme => theme.spacing(4)
               }}
-              InputProps={{ 
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon color="action" />
-                  </InputAdornment>
-                )
-              }}
-            />
+            >
+              Documentos Subidos por Usuario
+            </Typography>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <TextField
+                variant="outlined"
+                size="medium"
+                placeholder="Buscar usuario, archivo o estado"
+                value={state.search}
+                onChange={e => setSearch(e.target.value)}
+                sx={{ 
+                  width: theme => theme.spacing(40),
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: theme => theme.spacing(1)
+                  }
+                }}
+                InputProps={{ 
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon color="action" />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            </Box>
           </Box>
           
-          <TableContainer sx={{ maxHeight: theme => theme.spacing(75), borderRadius: theme => theme.spacing(1) }}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ 
-                    bgcolor: 'action.hover',
-                    color: 'text.primary',
-                    fontWeight: theme => theme.typography.fontWeightBold,
-                    py: theme => theme.spacing(2)
-                  }}>
-                    Usuario
-                  </TableCell>
-                  <TableCell sx={{ 
-                    bgcolor: 'action.hover',
-                    color: 'text.primary',
-                    fontWeight: theme => theme.typography.fontWeightBold,
-                    py: theme => theme.spacing(2)
-                  }}>
-                    Nombre de Archivo
-                  </TableCell>
-                  <TableCell sx={{ 
-                    bgcolor: 'action.hover',
-                    color: 'text.primary',
-                    fontWeight: theme => theme.typography.fontWeightBold,
-                    py: theme => theme.spacing(2)
-                  }}>
-                    Fecha de Subida
-                  </TableCell>
-                  <TableCell sx={{ 
-                    bgcolor: 'action.hover',
-                    color: 'text.primary',
-                    fontWeight: theme => theme.typography.fontWeightBold,
-                    py: theme => theme.spacing(2),
-                    textAlign: 'center'
-                  }}>
-                    Estado
-                  </TableCell>
-                  <TableCell sx={{ 
-                    bgcolor: 'action.hover',
-                    color: 'text.primary',
-                    fontWeight: theme => theme.typography.fontWeightBold,
-                    py: theme => theme.spacing(2),
-                    textAlign: 'center'
-                  }}>
-                    Acciones
-                  </TableCell>
-                </TableRow>
-              </TableHead>
+          {/* Scrollable Table Section */}
+          <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <TableContainer 
+              sx={{ 
+                flex: 1,
+                overflow: 'auto',
+                borderRadius: theme => theme.spacing(1),
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: theme => theme.palette.grey[100],
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: theme => theme.palette.grey[400],
+                  borderRadius: '4px',
+                },
+                '&::-webkit-scrollbar-thumb:hover': {
+                  background: theme => theme.palette.grey[600],
+                }
+              }}
+            >
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ 
+                      bgcolor: 'action.hover',
+                      color: 'text.primary',
+                      fontWeight: theme => theme.typography.fontWeightBold,
+                      py: theme => theme.spacing(2),
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 5
+                    }}>
+                      Usuario
+                    </TableCell>
+                    <TableCell sx={{ 
+                      bgcolor: 'action.hover',
+                      color: 'text.primary',
+                      fontWeight: theme => theme.typography.fontWeightBold,
+                      py: theme => theme.spacing(2),
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 5
+                    }}>
+                      Nombre de Archivo
+                    </TableCell>
+                    <TableCell sx={{ 
+                      bgcolor: 'action.hover',
+                      color: 'text.primary',
+                      fontWeight: theme => theme.typography.fontWeightBold,
+                      py: theme => theme.spacing(2),
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 5
+                    }}>
+                      Fecha de Subida
+                    </TableCell>
+                    <TableCell sx={{ 
+                      bgcolor: 'action.hover',
+                      color: 'text.primary',
+                      fontWeight: theme => theme.typography.fontWeightBold,
+                      py: theme => theme.spacing(2),
+                      textAlign: 'center',
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 5
+                    }}>
+                      Estado
+                    </TableCell>
+                    <TableCell sx={{ 
+                      bgcolor: 'action.hover',
+                      color: 'text.primary',
+                      fontWeight: theme => theme.typography.fontWeightBold,
+                      py: theme => theme.spacing(2),
+                      textAlign: 'center',
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 5
+                    }}>
+                      Acciones
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
               <TableBody>
                 {state.error ? (
                   <TableRow>
@@ -263,6 +317,7 @@ const LoadDocumentsOCbyUserView: React.FC<LoadDocumentsOCbyUserViewProps> = ({ d
               borderTop: theme => `1px solid ${theme.palette.divider}`
             }}
           />
+          </Box>
         </Paper>
       </Container>
     </Box>

@@ -54,6 +54,7 @@ export interface UseUploadFormReturn {
   setUploadCompleted: (completed: boolean) => void;
   setDeseaSubirMateriales: (desea: boolean | null) => void;
   setMateriales: (materiales: File[]) => void;
+  resetForm: () => void;
 }
 
 export interface AzureConfig {

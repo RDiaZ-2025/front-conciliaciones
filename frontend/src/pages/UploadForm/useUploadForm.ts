@@ -117,6 +117,28 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
     updateState({ materiales });
   };
 
+  const resetForm = () => {
+    setState({
+      tipoUsuario: null,
+      excelFile: null,
+      pdfFile: null,
+      excelUploaded: false,
+      pdfUploaded: false,
+      materiales: [],
+      deseaSubirMateriales: null,
+      message: "",
+      pdfWarning: "",
+      uploading: false,
+      debugExcelValues: [],
+      debugPdfText: "",
+      activeStep: 0,
+      pdfThumbnail: null,
+      envioExitoso: false,
+      manualPdfConfirmation: null,
+      uploadCompleted: false
+    });
+  };
+
   const validateExcel = async (file: File): Promise<ValidationResult> => {
     if (file.size === 0) {
       return {
@@ -447,9 +469,14 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
       const materialsMessage = state.deseaSubirMateriales === true && state.materiales.length > 0 
         ? "✅ Materiales subidos. " 
         : "";
-      const mainFilesMessage = (state.excelFile || state.pdfFile) ? "✅ Archivos principales subidos. " : "";
+      const mainFilesMessage = (state.excelFile || state.pdfFile) ? "✅ Archivos principales subidos." : "";
       setMessage(`${mainFilesMessage}${materialsMessage}✅ Notificación a n8n exitosa. ✅ Registro en base de datos exitoso.`);
       updateState({ envioExitoso: true });
+      
+      // Reset form after successful submission with a delay to show success message
+      setTimeout(() => {
+        resetForm();
+      }, 3000);
     } catch (err: any) {
       if (!mainFilesOk) {
         setMessage("❌ Error al subir archivos principales: " + err.message);
@@ -539,6 +566,7 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
     setManualPdfConfirmation,
     setUploadCompleted,
     setDeseaSubirMateriales,
-    setMateriales
+    setMateriales,
+    resetForm
   };
 };

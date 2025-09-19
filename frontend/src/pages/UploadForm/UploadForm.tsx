@@ -38,7 +38,7 @@ import {
 } from "@mui/icons-material";
 import { useAuth } from '../../contexts/AuthContext';
 import { PERMISSIONS } from '../../constants/auth';
-import claroMediaLogo from "../../assets/Claro-Media-Logo.jpg";
+// import claroMediaLogo from "../../assets/Claro-Media-Logo.jpg";
 import DarkModeToggle from "../../components/DarkModeToggle";
 import { useUploadForm } from './useUploadForm';
 import type { UploadFormProps } from './types';
@@ -83,7 +83,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
         <Typography 
           variant="subtitle2" 
           sx={{
-            fontWeight: theme => theme.typography.fontWeightSemiBold,
+            fontWeight: theme => theme.typography.fontWeightBold,
             mb: theme => theme.spacing(1),
             color: 'text.primary'
           }}
@@ -124,7 +124,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
         <Typography 
           variant="subtitle2" 
           sx={{
-            fontWeight: theme => theme.typography.fontWeightSemiBold,
+            fontWeight: theme => theme.typography.fontWeightBold,
             mb: theme => theme.spacing(1),
             color: 'text.primary'
           }}
@@ -202,7 +202,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                       <Typography 
                         variant="h6" 
                         sx={{ 
-                          fontWeight: theme => theme.typography.fontWeightSemiBold, 
+                          fontWeight: theme => theme.typography.fontWeightBold, 
                           color: 'text.primary'
                         }}
                       >
@@ -247,7 +247,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                       <Typography 
                         variant="h6" 
                         sx={{ 
-                          fontWeight: theme => theme.typography.fontWeightSemiBold, 
+                          fontWeight: theme => theme.typography.fontWeightBold, 
                           color: 'text.primary'
                         }}
                       >
@@ -268,7 +268,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                 size="large"
                 sx={{ 
                   mt: theme => theme.spacing(4),
-                  fontWeight: theme => theme.typography.fontWeightSemiBold,
+                  fontWeight: theme => theme.typography.fontWeightBold,
                   py: theme => theme.spacing(1.5),
                   borderRadius: theme => theme.spacing(1)
                 }}
@@ -292,7 +292,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                 sx={{ 
                   mt: theme => theme.spacing(2), 
                   mb: theme => theme.spacing(1), 
-                  fontWeight: theme => theme.typography.fontWeightSemiBold, 
+                  fontWeight: theme => theme.typography.fontWeightBold, 
                   color: 'text.primary'
                 }}
               >
@@ -333,7 +333,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                 size="large"
                 sx={{ 
                   mt: theme => theme.spacing(2), 
-                  fontWeight: theme => theme.typography.fontWeightSemiBold,
+                  fontWeight: theme => theme.typography.fontWeightBold,
                   py: theme => theme.spacing(1.5),
                   borderRadius: theme => theme.spacing(1)
                 }}
@@ -359,7 +359,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                 sx={{ 
                   mt: theme => theme.spacing(2), 
                   mb: theme => theme.spacing(1), 
-                  fontWeight: theme => theme.typography.fontWeightSemiBold, 
+                  fontWeight: theme => theme.typography.fontWeightBold, 
                   color: 'text.primary'
                 }}
               >
@@ -410,7 +410,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                       variant={state.manualPdfConfirmation === true ? "contained" : "outlined"}
                       color="success"
                       sx={{
-                        fontWeight: theme => theme.typography.fontWeightSemiBold,
+                        fontWeight: theme => theme.typography.fontWeightBold,
                         borderRadius: theme => theme.spacing(1)
                       }}
                       onClick={() => {
@@ -425,7 +425,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                       variant={state.manualPdfConfirmation === false ? "contained" : "outlined"}
                       color="error"
                       sx={{ 
-                        fontWeight: theme => theme.typography.fontWeightSemiBold,
+                        fontWeight: theme => theme.typography.fontWeightBold,
                         borderRadius: theme => theme.spacing(1)
                       }}
                       onClick={() => {
@@ -455,7 +455,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                   size="large"
                   sx={{ 
                     mt: theme => theme.spacing(2),
-                    fontWeight: theme => theme.typography.fontWeightSemiBold,
+                    fontWeight: theme => theme.typography.fontWeightBold,
                     py: theme => theme.spacing(1.5),
                     borderRadius: theme => theme.spacing(1)
                   }}
@@ -481,7 +481,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                   severity="success" 
                   sx={{ 
                     fontSize: 18, 
-                    fontWeight: theme => theme.typography.fontWeightSemiBold, 
+                    fontWeight: theme => theme.typography.fontWeightBold, 
                     mb: theme => theme.spacing(3)
                   }}
                 >
@@ -499,7 +499,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                   <Typography 
                     variant="subtitle2" 
                     sx={{
-                      fontWeight: theme => theme.typography.fontWeightSemiBold,
+                      fontWeight: theme => theme.typography.fontWeightBold,
                       mb: theme => theme.spacing(1),
                       color: 'text.primary'
                     }}
@@ -539,20 +539,6 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                     </ListItem>
                   </List>
                 </Paper>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  size="large"
-                  sx={{ 
-                    mt: theme => theme.spacing(3), 
-                    fontWeight: theme => theme.typography.fontWeightSemiBold,
-                    py: theme => theme.spacing(1),
-                    borderRadius: theme => theme.spacing(1)
-                  }}
-                  onClick={() => { setUploadCompleted(true); props.onUploadComplete(); }}
-                >
-                  Continuar
-                </Button>
               </Box>
             </Fade>
           );
@@ -566,7 +552,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                 sx={{ 
                   mt: theme => theme.spacing(2), 
                   mb: theme => theme.spacing(1), 
-                  fontWeight: theme => theme.typography.fontWeightSemiBold, 
+                  fontWeight: theme => theme.typography.fontWeightBold, 
                   color: 'text.primary'
                 }}
               >
@@ -681,7 +667,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                 <Typography 
                   variant="subtitle2" 
                   sx={{
-                    fontWeight: theme => theme.typography.fontWeightSemiBold,
+                    fontWeight: theme => theme.typography.fontWeightBold,
                     mb: theme => theme.spacing(1),
                     color: 'text.primary'
                   }}
@@ -728,7 +714,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                 size="large"
                 sx={{ 
                   mt: theme => theme.spacing(2), 
-                  fontWeight: theme => theme.typography.fontWeightSemiBold,
+                  fontWeight: theme => theme.typography.fontWeightBold,
                   py: theme => theme.spacing(2),
                   borderRadius: theme => theme.spacing(1)
                 }}
@@ -762,7 +748,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
     >        
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 4 }}>
         <Avatar
-            src={claroMediaLogo}
+            src="/Claro-Media-Logo.jpg"
             alt="Claro Media Logo"
             className="heartbeat"
             sx={{
