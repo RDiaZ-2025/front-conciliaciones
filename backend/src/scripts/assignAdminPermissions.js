@@ -50,7 +50,8 @@ const adminPermissions = [
   'admin_panel',
   'document_upload',
   'management_dashboard',
-  'historial_carga_archivos_comerciales'
+  'historial_carga_archivos_comerciales',
+  'production_management'
 ];
 
 // Ejecutar script

@@ -114,7 +114,8 @@ function AuthProvider({ children }) {
       [PERMISSIONS.ADMIN_PANEL]: ['admin_panel', 'ADMIN_PANEL'],
       [PERMISSIONS.DOCUMENT_UPLOAD]: ['document_upload', 'DOCUMENT_UPLOAD'],
       [PERMISSIONS.MANAGEMENT_DASHBOARD]: ['management_dashboard', 'MANAGEMENT_DASHBOARD'],
-      [PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES]: ['historial_carga_archivos_comerciales', 'HISTORIAL_CARGA_ARCHIVOS_COMERCIALES', 'history_load_commercial_files', 'HISTORY_LOAD_COMMERCIAL_FILES']
+      [PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES]: ['historial_carga_archivos_comerciales', 'HISTORIAL_CARGA_ARCHIVOS_COMERCIALES', 'history_load_commercial_files', 'HISTORY_LOAD_COMMERCIAL_FILES'],
+      [PERMISSIONS.PRODUCTION_MANAGEMENT]: ['production_management', 'PRODUCTION_MANAGEMENT', 'PRODUCTION']
     };
     if (user.permissions && Array.isArray(user.permissions)) {
       const mappedPermissions = permissionMapping[permission] || [permission];

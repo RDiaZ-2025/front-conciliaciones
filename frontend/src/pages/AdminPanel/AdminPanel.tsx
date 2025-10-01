@@ -45,9 +45,16 @@ import { useAdminPanel } from './useAdminPanel';
 import LoadDocumentsOCbyUserView from '../LoadDocumentsOCbyUserView';
 import UploadForm from '../UploadForm';
 import DashboardGeneral from '../DashboardGeneral';
+import Layout from '../../components/Layout';
 
-const AdminPanel = ({ darkMode, selectedMenu = 'usuarios' }) => {
+const AdminPanel = ({ darkMode, selectedMenu = 'usuarios', onMenuSelect, setDarkMode, onBack }) => {
   const { user } = useAuth();
+  
+  // Add debugging for selectedMenu prop changes
+  React.useEffect(() => {
+    console.log('AdminPanel - selectedMenu prop changed to:', selectedMenu);
+  }, [selectedMenu]);
+
   const {
     users,
     openDialog,
@@ -84,15 +91,20 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios' }) => {
   } = useAdminPanel();
 
   const renderContent = () => {
+    console.log('AdminPanel - renderContent called with selectedMenu:', selectedMenu);
     switch (selectedMenu) {
       case 'historial':
+        console.log('AdminPanel - Rendering historial view');
         return <LoadDocumentsOCbyUserView darkMode={darkMode} />;
       case 'upload':
+        console.log('AdminPanel - Rendering upload view');
         return <UploadForm hideHeader={true} darkMode={darkMode} onUploadComplete={() => {}} onBackToLogin={() => {}} setDarkMode={() => {}} onGoToAdmin={() => {}} onGoToDashboard={() => {}} />;
       case 'dashboard':
+        console.log('AdminPanel - Rendering dashboard view');
         return <DashboardGeneral darkMode={darkMode} setDarkMode={() => {}} onBack={() => {}} onGoToAdmin={() => {}} onGoToUpload={() => {}} />;
       case 'usuarios':
       default:
+        console.log('AdminPanel - Rendering user management view');
         return renderUserManagement();
     }
   };
@@ -398,33 +410,30 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios' }) => {
                   </TableCell>
                   <TableCell align="center" sx={{ py: theme => theme.spacing(2) }}>
                     <Stack direction="row" spacing={1} justifyContent="center">
-                      <Tooltip title="Editar usuario">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleOpenDialog(userData)}
-                          sx={{ color: userData.status === 1 ? 'success.main' : 'error.main' }}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={userData.status === 1 ? 'Desactivar' : 'Activar'}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleToggleStatus(userData.email, userData.status)}
-                          sx={{ color: userData.status === 1 ? 'error.main' : 'success.main' }}
-                        >
-                          {userData.status === 1 ? <BlockIcon fontSize="small" /> : <CheckCircleIcon fontSize="small" />}
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Ver historial">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleToggleAccessHistory()}
-                          sx={{ color: 'info.main' }}
-                        >
-                          <HistoryIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleOpenDialog(userData)}
+                        sx={{ color: userData.status === 1 ? 'success.main' : 'error.main' }}
+                        title="Editar usuario"
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleToggleStatus(userData.email, userData.status)}
+                        sx={{ color: userData.status === 1 ? 'error.main' : 'success.main' }}
+                        title={userData.status === 1 ? 'Desactivar' : 'Activar'}
+                      >
+                        {userData.status === 1 ? <BlockIcon fontSize="small" /> : <CheckCircleIcon fontSize="small" />}
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleToggleAccessHistory()}
+                        sx={{ color: 'info.main' }}
+                        title="Ver historial"
+                      >
+                        <HistoryIcon fontSize="small" />
+                      </IconButton>
                     </Stack>
                   </TableCell>
                 </TableRow>
@@ -604,7 +613,20 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios' }) => {
     );
   };
 
-  return renderContent();
+  return (
+    <Layout
+      darkMode={darkMode}
+      setDarkMode={setDarkMode}
+      onMenuSelect={onMenuSelect}
+      onBack={onBack}
+      showNavigation={true}
+      showDarkModeToggle={true}
+      containerMaxWidth="xl"
+      fullWidth={false}
+    >
+      {renderContent()}
+    </Layout>
+  );
 };
 
 export default AdminPanel;

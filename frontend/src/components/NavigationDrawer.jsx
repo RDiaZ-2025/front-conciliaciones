@@ -9,7 +9,8 @@ import {
   ListItemText,
   Typography,
   Divider,
-  IconButton
+  IconButton,
+  CircularProgress
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -18,20 +19,34 @@ import {
   Dashboard as DashboardIcon,
   People as PeopleIcon,
   ArrowBack as ArrowBackIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Assignment as AssignmentIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { PERMISSIONS } from '../constants/auth';
+import { useMenuItems } from '../hooks/useMenuItems';
 
 const NavigationDrawer = ({ 
   open, 
   onClose, 
   onMenuSelect, 
   onBack, 
-  darkMode,
-  menuItems = []
+  darkMode
 }) => {
   const { hasPermission } = useAuth();
+  const { menuItems: dbMenuItems, loading, error } = useMenuItems();
+
+  // Permission mapping for menu items
+  const getPermissionForMenuItem = (itemId) => {
+    const permissionMap = {
+      'historial': PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES,
+      'upload': PERMISSIONS.DOCUMENT_UPLOAD,
+      'dashboard': PERMISSIONS.MANAGEMENT_DASHBOARD,
+      'production': PERMISSIONS.PRODUCTION_MANAGEMENT,
+      'usuarios': PERMISSIONS.ADMIN_PANEL
+    };
+    return permissionMap[itemId];
+  };
 
   const defaultMenuItems = [
     {
@@ -53,6 +68,12 @@ const NavigationDrawer = ({
       permission: PERMISSIONS.MANAGEMENT_DASHBOARD
     },
     {
+      id: 'production',
+      label: 'Producción',
+      icon: <AssignmentIcon />,
+      permission: PERMISSIONS.PRODUCTION_MANAGEMENT
+    },
+    {
       id: 'usuarios',
       label: 'Usuarios',
       icon: <PeopleIcon />,
@@ -60,11 +81,37 @@ const NavigationDrawer = ({
     }
   ];
 
-  const items = menuItems.length > 0 ? menuItems : defaultMenuItems;
+  // Use database menu items if available, otherwise fall back to default
+  const items = dbMenuItems && dbMenuItems.length > 0 ? dbMenuItems.map(item => {
+    // Map icon names to actual icon components
+    const iconMap = {
+      'HistoryIcon': HistoryIcon,
+      'UploadIcon': UploadIcon,
+      'DashboardIcon': DashboardIcon,
+      'PeopleIcon': PeopleIcon,
+      'AssignmentIcon': AssignmentIcon
+    };
+    
+    const IconComponent = iconMap[item.icon] || AssignmentIcon;
+    
+    return {
+      ...item,
+      icon: <IconComponent />,
+      permission: getPermissionForMenuItem(item.id) // Add permission mapping
+    };
+  }) : defaultMenuItems;
 
-  const handleMenuItemClick = (itemId) => {
+  // Debug logging
+  console.log('NavigationDrawer - Database items:', dbMenuItems);
+  console.log('NavigationDrawer - Final items:', items);
+  console.log('NavigationDrawer - Loading:', loading);
+  console.log('NavigationDrawer - Error:', error);
+
+  const handleMenuItemClick = (item) => {
+    console.log('NavigationDrawer - Menu item clicked:', item);
     if (onMenuSelect) {
-      onMenuSelect(itemId);
+      // Pass the item's label as the menu ID for proper mapping in App.jsx
+      onMenuSelect(item.label);
     }
     onClose();
   };
@@ -112,88 +159,107 @@ const NavigationDrawer = ({
           
           <Divider sx={{ mb: 2, bgcolor: darkMode ? 'grey.700' : 'divider' }} />
           
-          <List sx={{ p: 0 }}>
-            {items.map((item) => {
-              const isDisabled = item.permission && !hasPermission(item.permission);
-              
-              return (
-                <ListItem key={item.id} disablePadding sx={{ mb: 1 }}>
-                  <ListItemButton
-                    onClick={() => handleMenuItemClick(item.id)}
-                    disabled={isDisabled}
-                    sx={{
-                      borderRadius: 2,
-                      '&:hover': {
-                        bgcolor: darkMode ? 'grey.800' : 'action.hover'
-                      },
-                      '&.Mui-disabled': {
-                        opacity: 0.5
-                      }
-                    }}
-                  >
-                    <ListItemIcon 
-                      sx={{ 
-                        color: isDisabled 
-                          ? (darkMode ? 'grey.600' : 'action.disabled')
-                          : (darkMode ? 'common.white' : 'primary.main'),
-                        minWidth: 40
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : error ? (
+            <Box sx={{ p: 2 }}>
+              <Typography variant="body2" color="error">
+                Error cargando menús: {error}
+              </Typography>
+            </Box>
+          ) : (
+            <List sx={{ p: 0 }}>
+              {items.map((item) => {
+                const isDisabled = item.permission && !hasPermission(item.permission);
+                
+                // Debug logging for each item
+                console.log(`Menu item ${item.id} (${item.label}):`, {
+                  permission: item.permission,
+                  hasPermission: item.permission ? hasPermission(item.permission) : 'no permission required',
+                  isDisabled
+                });
+                
+                return (
+                  <ListItem key={item.id} disablePadding sx={{ mb: 1 }}>
+                    <ListItemButton
+                      onClick={() => handleMenuItemClick(item)}
+                      disabled={isDisabled}
+                      sx={{
+                        borderRadius: 2,
+                        '&:hover': {
+                          bgcolor: darkMode ? 'grey.800' : 'action.hover'
+                        },
+                        '&.Mui-disabled': {
+                          opacity: 0.5
+                        }
                       }}
                     >
-                      {item.icon}
-                    </ListItemIcon>
-                    <ListItemText 
-                      primary={item.label}
-                      sx={{
-                        '& .MuiListItemText-primary': {
-                          fontSize: '0.95rem',
-                          fontWeight: 500,
+                      <ListItemIcon 
+                        sx={{ 
                           color: isDisabled 
                             ? (darkMode ? 'grey.600' : 'action.disabled')
-                            : (darkMode ? 'common.white' : 'text.primary')
-                        }
-                      }}
-                    />
-                  </ListItemButton>
-                </ListItem>
-              );
-            })}
-            
-            {onBack && (
-              <>
-                <Divider sx={{ my: 2, bgcolor: darkMode ? 'grey.700' : 'divider' }} />
-                <ListItem disablePadding>
-                  <ListItemButton
-                    onClick={handleBackClick}
-                    sx={{
-                      borderRadius: 2,
-                      '&:hover': {
-                        bgcolor: darkMode ? 'grey.800' : 'action.hover'
-                      }
-                    }}
-                  >
-                    <ListItemIcon 
-                      sx={{ 
-                        color: darkMode ? 'common.white' : 'primary.main',
-                        minWidth: 40
-                      }}
-                    >
-                      <ArrowBackIcon />
-                    </ListItemIcon>
-                    <ListItemText 
-                      primary="Volver"
-                      sx={{
-                        '& .MuiListItemText-primary': {
-                          fontSize: '0.95rem',
-                          fontWeight: 500,
-                          color: darkMode ? 'common.white' : 'text.primary'
-                        }
-                      }}
-                    />
-                  </ListItemButton>
-                </ListItem>
-              </>
-            )}
-          </List>
+                            : (darkMode ? 'common.white' : 'primary.main'),
+                          minWidth: 40
+                        }}
+                      >
+                        {item.icon}
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary={item.label}
+                        sx={{
+                          '& .MuiListItemText-primary': {
+                            fontSize: '0.95rem',
+                            fontWeight: 500,
+                            color: isDisabled 
+                              ? (darkMode ? 'grey.600' : 'action.disabled')
+                              : (darkMode ? 'common.white' : 'text.primary')
+                          }
+                        }}
+                      />
+                    </ListItemButton>
+                  </ListItem>
+                );
+               })}
+             
+             {onBack && (
+               <>
+                 <Divider sx={{ my: 2, bgcolor: darkMode ? 'grey.700' : 'divider' }} />
+                 <ListItem disablePadding>
+                   <ListItemButton
+                     onClick={handleBackClick}
+                     sx={{
+                       borderRadius: 2,
+                       '&:hover': {
+                         bgcolor: darkMode ? 'grey.800' : 'action.hover'
+                       }
+                     }}
+                   >
+                     <ListItemIcon 
+                       sx={{ 
+                         color: darkMode ? 'common.white' : 'primary.main',
+                         minWidth: 40
+                       }}
+                     >
+                       <ArrowBackIcon />
+                     </ListItemIcon>
+                     <ListItemText 
+                       primary="Volver"
+                       sx={{
+                         '& .MuiListItemText-primary': {
+                           fontSize: '0.95rem',
+                           fontWeight: 500,
+                           color: darkMode ? 'common.white' : 'text.primary'
+                         }
+                       }}
+                     />
+                   </ListItemButton>
+                 </ListItem>
+               </>
+             )}
+           </List>
+           )}
         </Box>
       </Drawer>
     </>

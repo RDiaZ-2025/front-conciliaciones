@@ -268,7 +268,8 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
       excelFile: null, 
       excelUploaded: false, 
       debugExcelValues: [], 
-      message: "" 
+      message: "",
+      pdfWarning: "" 
     });
     
     if (!file) return;
@@ -331,7 +332,8 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
     if (uploaded) {
       updateState({ 
         pdfUploaded: true,
-        uploading: false 
+        uploading: false,
+        pdfWarning: ""
       });
     } else {
       updateState({ 
@@ -340,8 +342,6 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
         message: "❌ Error al subir el PDF a Azure." 
       });
     }
-    
-    updateState({ uploading: false });
   };
 
   const handleMaterialesChange = (e: React.ChangeEvent<HTMLInputElement>) => {

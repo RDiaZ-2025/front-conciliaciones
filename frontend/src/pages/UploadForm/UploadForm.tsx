@@ -308,18 +308,19 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                   style={{ display: 'none' }}
                   disabled={state.uploading || state.excelUploaded}
                 />
-                <Button
-                  variant="outlined"
-                  component="label"
-                  htmlFor="excel-input"
-                  sx={{
-                    borderRadius: theme => theme.spacing(0.75),
-                    fontWeight: theme => theme.typography.fontWeightMedium
-                  }}
-                  disabled={state.uploading || state.excelUploaded}
-                >
-                  Seleccionar archivo
-                </Button>
+                <label htmlFor="excel-input">
+                  <Button
+                    variant="outlined"
+                    component="span"
+                    sx={{
+                      borderRadius: theme => theme.spacing(0.75),
+                      fontWeight: theme => theme.typography.fontWeightMedium
+                    }}
+                    disabled={state.uploading || state.excelUploaded}
+                  >
+                    Seleccionar archivo
+                  </Button>
+                </label>
                 {state.excelFile && (
                   <Typography variant="body2" color="text.secondary">
                     {state.excelFile.name}
@@ -375,18 +376,19 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                   style={{ display: 'none' }}
                   disabled={state.uploading || state.pdfUploaded}
                 />
-                <Button
-                  variant="outlined"
-                  component="label"
-                  htmlFor="pdf-input"
-                  sx={{
-                    borderRadius: theme => theme.spacing(0.75),
-                    fontWeight: theme => theme.typography.fontWeightMedium
-                  }}
-                  disabled={state.uploading || state.pdfUploaded}
-                >
-                  Seleccionar archivo
-                </Button>
+                <label htmlFor="pdf-input">
+                  <Button
+                    variant="outlined"
+                    component="span"
+                    sx={{
+                      borderRadius: theme => theme.spacing(0.75),
+                      fontWeight: theme => theme.typography.fontWeightMedium
+                    }}
+                    disabled={state.uploading || state.pdfUploaded}
+                  >
+                    Seleccionar archivo
+                  </Button>
+                </label>
                 {state.pdfFile && (
                   <Typography variant="body2" color="text.secondary">
                     {state.pdfFile.name}
@@ -590,25 +592,26 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
               </FormControl>
               <Stack direction="row" alignItems="center" justifyContent="center" spacing={2} sx={{ my: 2 }}>
                 <input
-                  id="materiales-input"
+                  id="materials-input"
                   type="file"
                   multiple
                   onChange={handleMaterialesChange}
                   style={{ display: 'none' }}
                   disabled={state.uploading || state.deseaSubirMateriales !== true}
                 />
-                <Button
-                  variant="outlined"
-                  component="label"
-                  htmlFor="materiales-input"
-                  sx={{
-                    borderRadius: theme => theme.spacing(0.75),
-                    fontWeight: theme => theme.typography.fontWeightMedium
-                  }}
-                  disabled={state.uploading || state.deseaSubirMateriales !== true}
-                >
-                  Seleccionar archivos
-                </Button>
+                <label htmlFor="materials-input">
+                  <Button
+                    variant="outlined"
+                    component="span"
+                    sx={{
+                      borderRadius: theme => theme.spacing(0.75),
+                      fontWeight: theme => theme.typography.fontWeightMedium
+                    }}
+                    disabled={state.uploading || state.deseaSubirMateriales !== true}
+                  >
+                    Seleccionar archivos
+                  </Button>
+                </label>
                 {state.materiales.length > 0 && (
                   <Chip 
                     label={`${state.materiales.length} archivo(s) seleccionado(s)`}

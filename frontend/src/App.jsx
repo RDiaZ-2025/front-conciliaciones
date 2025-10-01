@@ -8,6 +8,7 @@ import DashboardGeneral from './pages/DashboardGeneral';
 import Login from './pages/Login';
 import UploadForm from './pages/UploadForm';
 import AdminPanel from './pages/AdminPanel';
+import Production from './pages/Production/Production';
 import LoadDocumentsOCbyUserView from './pages/LoadDocumentsOCbyUserView';
 import DarkModeToggle from './components/DarkModeToggle';
 import logoClaroMedia from './assets/Claro-Media-Logo.jpg';
@@ -27,6 +28,8 @@ function AppContent() {
       // Determinar la vista inicial basada en los permisos del usuario
       if (hasPermission(PERMISSIONS.ADMIN_PANEL)) {
         setCurrentView('admin'); // Admin va directo al panel de administración
+      } else if (hasPermission(PERMISSIONS.PRODUCTION_MANAGEMENT)) {
+        setCurrentView('production'); // Usuario con permisos de producción
       } else if (hasPermission(PERMISSIONS.DOCUMENT_UPLOAD)) {
         setCurrentView('upload'); // Usuario con permisos de carga
       } else if (hasPermission(PERMISSIONS.MANAGEMENT_DASHBOARD)) {
@@ -84,8 +87,82 @@ function AppContent() {
     }
   };
 
+  const handleMenuSelect = (menuId) => {
+    console.log('Menu selected:', menuId);
+    
+    // Map menu labels to view IDs
+    const menuLabelToViewMap = {
+      'Historial Carga Archivos': 'historial',
+      'Cargar Documentos': 'upload', 
+      'Dashboard de Gestión': 'dashboard',
+      'Producción': 'production',
+      'Usuarios': 'admin'
+    };
+    
+    // Get the view ID from the menu label
+    const viewId = menuLabelToViewMap[menuId] || menuId;
+    
+    console.log('Mapped view ID:', viewId);
+    
+    // Check if user has permission for the selected menu
+    const hasRequiredPermission = checkMenuPermission(viewId);
+    
+    if (!hasRequiredPermission) {
+      console.warn(`User does not have permission for menu: ${menuId}`);
+      return;
+    }
+    
+    console.log('Setting current view to:', viewId);
+    setCurrentView(viewId);
+  };
+
+  const checkMenuPermission = (menuId) => {
+    const permissionMap = {
+      'historial': PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES,
+      'upload': PERMISSIONS.DOCUMENT_UPLOAD,
+      'dashboard': PERMISSIONS.MANAGEMENT_DASHBOARD,
+      'production': PERMISSIONS.PRODUCTION_MANAGEMENT,
+      'admin': PERMISSIONS.ADMIN_PANEL,
+      'usuarios': PERMISSIONS.ADMIN_PANEL
+    };
+    
+    const requiredPermission = permissionMap[menuId];
+    return requiredPermission ? hasPermission(requiredPermission) : true;
+  };
+
+  // Add useEffect to track state changes
+  useEffect(() => {
+    console.log('App.jsx - State changed:', { currentView, selectedMenu });
+  }, [currentView, selectedMenu]);
+
   const renderAuthenticatedContent = () => {
     switch (currentView) {
+      case 'historial':
+        return (
+          <ProtectedRoute 
+            requiredPermission={PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES}
+            darkMode={darkMode}
+            onUnauthorized={handleUnauthorized}
+          >
+            <LoadDocumentsOCbyUserView 
+              darkMode={darkMode}
+              setDarkMode={setDarkMode}
+              onBack={handleBackToLogin}
+            />
+          </ProtectedRoute>
+        );
+      case 'production':
+        return (
+          <ProtectedRoute 
+            requiredPermission={PERMISSIONS.PRODUCTION_MANAGEMENT}
+            darkMode={darkMode}
+            onUnauthorized={handleUnauthorized}
+          >
+            <Production 
+              darkMode={darkMode}
+            />
+          </ProtectedRoute>
+        );
       case 'upload':
         return (
           <ProtectedRoute 
@@ -97,6 +174,7 @@ function AppContent() {
               onUploadComplete={handleUploadComplete}
               onBackToLogin={handleBackToLogin}
               onGoToAdmin={handleGoToAdmin}
+              onGoToProduction={() => setCurrentView('production')}
               onGoToDashboard={() => setCurrentView('dashboard')}
               darkMode={darkMode}
               setDarkMode={setDarkMode}
@@ -120,6 +198,7 @@ function AppContent() {
           </ProtectedRoute>
         );
       case 'admin':
+      case 'usuarios':
         return (
           <ProtectedRoute 
             requiredPermission={PERMISSIONS.ADMIN_PANEL}
@@ -128,7 +207,7 @@ function AppContent() {
           >
             <AdminPanel
               selectedMenu={selectedMenu}
-              onMenuSelect={setSelectedMenu}
+              onMenuSelect={handleMenuSelect}
               darkMode={darkMode}
               setDarkMode={setDarkMode}
               onBack={handleBackToLogin}
@@ -136,6 +215,7 @@ function AppContent() {
           </ProtectedRoute>
         );
       default:
+        console.warn(`Unknown view: ${currentView}`);
         return (
           <ProtectedRoute 
             requiredPermission={PERMISSIONS.DOCUMENT_UPLOAD}
@@ -168,12 +248,32 @@ function AppContent() {
       );
     }
 
+    // AdminPanel has its own Layout wrapper, so render it directly
+    if (currentView === 'admin') {
+      return renderAuthenticatedContent();
+    }
+
+    // Production page also has its own layout handling
+    if (currentView === 'production') {
+      return (
+        <Layout
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+          onBack={handleBackToLogin}
+          onMenuSelect={handleMenuSelect}
+          fullWidth={true}
+        >
+          {renderAuthenticatedContent()}
+        </Layout>
+      );
+    }
+
     return (
       <Layout
         darkMode={darkMode}
         setDarkMode={setDarkMode}
         onBack={handleBackToLogin}
-        onMenuSelect={setSelectedMenu}
+        onMenuSelect={handleMenuSelect}
         fullWidth={true}
       >
         <Box sx={{ py: theme => theme.spacing(2) }}>

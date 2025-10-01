@@ -11,6 +11,8 @@ import loadDocumentsOCbyUserRouter from './routes/loadDocumentsOCbyUser';
 // Importar rutas
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
+import productionRoutes from './routes/productionRoutes';
+import menuRoutes from './routes/menuRoutes';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -19,7 +21,10 @@ const app = express();
 
 // Configuración de CORS
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'http://localhost:5174' // Puerto alternativo cuando 5173 está ocupado
+  ],
   credentials: true,
   optionsSuccessStatus: 200
 };
@@ -55,6 +60,8 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/load-documents', loadDocumentsOCbyUserRouter);
+app.use('/api/production', productionRoutes);
+app.use('/api/menus', menuRoutes);
 
 // Ruta 404
 app.use('*', (req, res) => {
