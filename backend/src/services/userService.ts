@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
-import { getPool, sql } from '../config/database';
-import { User } from '../types';
+import { User, Permission, PermissionByUser } from '../models';
+import { AppDataSource } from '../config/typeorm.config';
 
 export interface CreateUserRequest {
   name: string;
@@ -34,21 +34,23 @@ export class UserService {
   // Crear nuevo usuario
   static async createUser(userData: CreateUserRequest): Promise<CreateUserResponse> {
     try {
-      const pool = getPool();
-      
-      if (!pool) {
+      if (!AppDataSource.isInitialized) {
         return {
           success: false,
           message: 'Base de datos no disponible'
         };
       }
 
-      // Verificar si el email ya existe
-      const existingUser = await pool.request()
-        .input('email', sql.VarChar, userData.email)
-        .query('SELECT Id FROM USERS WHERE Email = @email');
+      const userRepository = AppDataSource.getRepository(User);
+      const permissionRepository = AppDataSource.getRepository(Permission);
+      const permissionByUserRepository = AppDataSource.getRepository(PermissionByUser);
 
-      if (existingUser.recordset.length > 0) {
+      // Verificar si el email ya existe
+      const existingUser = await userRepository.findOne({
+        where: { email: userData.email }
+      });
+
+      if (existingUser) {
         return {
           success: false,
           message: 'El email ya está registrado'
@@ -59,48 +61,42 @@ export class UserService {
       const passwordHash = await bcrypt.hash(userData.password, this.SALT_ROUNDS);
 
       // Crear el usuario
-      const userResult = await pool.request()
-        .input('name', sql.VarChar, userData.name)
-        .input('email', sql.VarChar, userData.email)
-        .input('passwordHash', sql.VarChar, passwordHash)
-        .input('status', sql.Int, 1)
-        .query(`
-          INSERT INTO USERS (Name, Email, PasswordHash, Status)
-          OUTPUT INSERTED.Id, INSERTED.Name, INSERTED.Email, INSERTED.Status
-          VALUES (@name, @email, @passwordHash, @status)
-        `);
+      const newUser = userRepository.create({
+        name: userData.name,
+        email: userData.email,
+        passwordHash: passwordHash,
+        status: 1
+      });
 
-      const newUser = userResult.recordset[0];
+      const savedUser = await userRepository.save(newUser);
 
       // Asignar permisos si se proporcionaron
       const assignedPermissions: string[] = [];
       if (userData.permissions && userData.permissions.length > 0) {
         for (const permissionName of userData.permissions) {
           try {
-            // Buscar el ID del permiso (convertir a mayúsculas)
-            const permissionResult = await pool.request()
-              .input('permissionName', sql.VarChar, permissionName.toUpperCase())
-              .query('SELECT Id FROM PERMISSIONS WHERE UPPER(Name) = @permissionName');
+            // Buscar el permiso (sin convertir a mayúsculas, usar el nombre tal como está)
+            const permission = await permissionRepository.findOne({
+              where: { name: permissionName }
+            });
 
             console.log('[PERMISSION DEBUG]', {
               permissionName,
-              permissionNameUpper: permissionName.toUpperCase(),
-              permissionResult: permissionResult.recordset
+              foundPermission: permission
             });
 
-            if (permissionResult.recordset.length > 0) {
-              const permissionId = permissionResult.recordset[0].Id;
+            if (permission) {
               // Asignar el permiso al usuario
-              await pool.request()
-                .input('userId', sql.Int, newUser.Id)
-                .input('permissionId', sql.Int, permissionId)
-                .query(`
-                  INSERT INTO PERMISSIONS_BY_USER (UserId, PermissionId, AssignedAt)
-                  VALUES (@userId, @permissionId, GETDATE())
-                `);
+              const permissionByUser = permissionByUserRepository.create({
+                userId: savedUser.id,
+                permissionId: permission.id,
+                assignedAt: new Date()
+              });
+              
+              await permissionByUserRepository.save(permissionByUser);
               assignedPermissions.push(permissionName);
             } else {
-              console.warn(`[PERMISSION WARNING] No se encontró el permiso '${permissionName}' (mayúsculas: '${permissionName.toUpperCase()}') en la tabla PERMISSIONS.`);
+              console.warn(`[PERMISSION WARNING] No se encontró el permiso '${permissionName}' en la tabla PERMISSIONS.`);
             }
           } catch (permError) {
             console.error(`[PERMISSION ERROR] No se pudo asignar el permiso '${permissionName}':`, permError);
@@ -109,18 +105,18 @@ export class UserService {
       }
 
       console.log('✅ User created in database:', {
-        id: newUser.Id,
-        name: newUser.Name,
-        email: newUser.Email,
+        id: savedUser.id,
+        name: savedUser.name,
+        email: savedUser.email,
         permissions: assignedPermissions
       });
 
       return {
         success: true,
         user: {
-          id: newUser.Id,
-          name: newUser.Name,
-          email: newUser.Email,
+          id: savedUser.id,
+          name: savedUser.name,
+          email: savedUser.email,
           permissions: assignedPermissions
         },
         message: 'Usuario creado exitosamente'
@@ -137,49 +133,39 @@ export class UserService {
   // Obtener todos los usuarios
   static async getAllUsers(): Promise<any[]> {
     try {
-      const pool = getPool();
-      
-      if (!pool) {
+      if (!AppDataSource.isInitialized) {
         throw new Error('Base de datos no disponible');
       }
 
-      const result = await pool.request().query(`
-        SELECT 
-          u.Id,
-          u.Name,
-          u.Email,
-          u.LastAccess,
-          u.Status
-        FROM USERS u
-        ORDER BY u.Name
-      `);
+      const userRepository = AppDataSource.getRepository(User);
+      const permissionByUserRepository = AppDataSource.getRepository(PermissionByUser);
 
-      // Obtener permisos por separado para cada usuario
+      // Obtener todos los usuarios ordenados por nombre
+      const users = await userRepository.find({
+        order: { name: 'ASC' }
+      });
+
+      // Obtener permisos para cada usuario
       const usersWithPermissions = [];
-      for (const user of result.recordset) {
-        const permissionsResult = await pool.request()
-          .input('userId', sql.Int, user.Id)
-          .query(`
-            SELECT p.Name
-            FROM PERMISSIONS p
-            INNER JOIN PERMISSIONS_BY_USER pbu ON p.Id = pbu.PermissionId
-            WHERE pbu.UserId = @userId
-          `);
+      for (const user of users) {
+        const userPermissions = await permissionByUserRepository.find({
+          where: { userId: user.id },
+          relations: ['permission']
+        });
+        
+        const permissions = userPermissions.map(up => up.permission.name);
         
         usersWithPermissions.push({
-          ...user,
-          Permissions: permissionsResult.recordset.map(p => p.Name).join(',')
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          lastAccess: user.lastAccess,
+          status: user.status,
+          permissions: permissions
         });
       }
 
-      return usersWithPermissions.map((user: any) => ({
-        id: user.Id,
-        name: user.Name,
-        email: user.Email,
-        lastAccess: user.LastAccess,
-        status: user.Status,
-        permissions: user.Permissions ? user.Permissions.split(',').filter((p: string) => p) : []
-      }));
+      return usersWithPermissions;
     } catch (error) {
       console.error('❌ Error getting users:', error);
       throw error;
@@ -189,41 +175,37 @@ export class UserService {
   // Obtener usuario por ID
   static async getUserById(userId: number): Promise<any | null> {
     try {
-      const pool = getPool();
-      
-      if (!pool) {
+      if (!AppDataSource.isInitialized) {
         return null;
       }
 
-      const result = await pool.request()
-        .input('userId', sql.Int, userId)
-        .query(`
-          SELECT 
-            u.Id,
-            u.Name,
-            u.Email,
-            u.LastAccess,
-            u.Status,
-            STRING_AGG(p.Name, ',') as Permissions
-          FROM USERS u
-          LEFT JOIN PERMISSIONS_BY_USER pbu ON u.Id = pbu.UserId
-          LEFT JOIN PERMISSIONS p ON pbu.PermissionId = p.Id
-          WHERE u.Id = @userId AND u.Status = 1
-          GROUP BY u.Id, u.Name, u.Email, u.LastAccess, u.Status
-        `);
+      const userRepository = AppDataSource.getRepository(User);
+      const permissionByUserRepository = AppDataSource.getRepository(PermissionByUser);
 
-      if (result.recordset.length === 0) {
+      // Buscar el usuario por ID y status activo
+      const user = await userRepository.findOne({
+        where: { id: userId, status: 1 }
+      });
+
+      if (!user) {
         return null;
       }
 
-      const user = result.recordset[0];
+      // Obtener permisos del usuario
+      const userPermissions = await permissionByUserRepository.find({
+        where: { userId: user.id },
+        relations: ['permission']
+      });
+
+      const permissions = userPermissions.map(up => up.permission.name);
+
       return {
-        id: user.Id,
-        name: user.Name,
-        email: user.Email,
-        lastAccess: user.LastAccess,
-        status: user.Status,
-        permissions: user.Permissions ? user.Permissions.split(',') : []
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        lastAccess: user.lastAccess,
+        status: user.status,
+        permissions: permissions
       };
     } catch (error) {
       console.error('❌ Error getting user by ID:', error);
@@ -234,73 +216,70 @@ export class UserService {
   // Actualizar usuario
   static async updateUser(userId: number, updateData: UpdateUserRequest): Promise<{ success: boolean; message?: string }> {
     try {
-      const pool = getPool();
-      
-      if (!pool) {
+      if (!AppDataSource.isInitialized) {
         return {
           success: false,
           message: 'Base de datos no disponible'
         };
       }
 
-      // Construir la consulta de actualización dinámicamente
-      const updateFields: string[] = [];
-      const request = pool.request().input('userId', sql.Int, userId);
+      const userRepository = AppDataSource.getRepository(User);
+      const permissionRepository = AppDataSource.getRepository(Permission);
+      const permissionByUserRepository = AppDataSource.getRepository(PermissionByUser);
 
+      // Buscar el usuario
+      const user = await userRepository.findOne({
+        where: { id: userId }
+      });
+
+      if (!user) {
+        return {
+          success: false,
+          message: 'Usuario no encontrado'
+        };
+      }
+
+      // Actualizar campos del usuario
       if (updateData.name) {
-        updateFields.push('Name = @name');
-        request.input('name', sql.VarChar, updateData.name);
+        user.name = updateData.name;
       }
 
       if (updateData.email) {
-        updateFields.push('Email = @email');
-        request.input('email', sql.VarChar, updateData.email);
+        user.email = updateData.email;
       }
 
       if (updateData.password) {
         const passwordHash = await bcrypt.hash(updateData.password, this.SALT_ROUNDS);
-        updateFields.push('PasswordHash = @passwordHash');
-        request.input('passwordHash', sql.VarChar, passwordHash);
+        user.passwordHash = passwordHash;
       }
 
       if (updateData.status !== undefined) {
-        updateFields.push('Status = @status');
-        request.input('status', sql.Int, updateData.status);
+        user.status = updateData.status;
       }
 
-      if (updateFields.length > 0) {
-        const query = `
-          UPDATE USERS 
-          SET ${updateFields.join(', ')}
-          WHERE Id = @userId
-        `;
-
-        await request.query(query);
-      }
+      // Guardar cambios del usuario
+      await userRepository.save(user);
 
       // Actualizar permisos si se proporcionaron
       if (updateData.permissions) {
         // Eliminar permisos existentes
-        await pool.request()
-          .input('userId', sql.Int, userId)
-          .query('DELETE FROM PERMISSIONS_BY_USER WHERE UserId = @userId');
+        await permissionByUserRepository.delete({ userId: userId });
 
         // Asignar nuevos permisos
         for (const permissionName of updateData.permissions) {
           try {
-            const permissionResult = await pool.request()
-              .input('permissionName', sql.VarChar, permissionName.toUpperCase())
-              .query('SELECT Id FROM PERMISSIONS WHERE UPPER(Name) = @permissionName');
+            const permission = await permissionRepository.findOne({
+              where: { name: permissionName }
+            });
 
-            if (permissionResult.recordset.length > 0) {
-              const permissionId = permissionResult.recordset[0].Id;
-              await pool.request()
-                .input('userId', sql.Int, userId)
-                .input('permissionId', sql.Int, permissionId)
-                .query(`
-                  INSERT INTO PERMISSIONS_BY_USER (UserId, PermissionId)
-                  VALUES (@userId, @permissionId)
-                `);
+            if (permission) {
+              const permissionByUser = permissionByUserRepository.create({
+                userId: userId,
+                permissionId: permission.id,
+                assignedAt: new Date()
+              });
+              
+              await permissionByUserRepository.save(permissionByUser);
             }
           } catch (permError) {
             console.warn(`Warning: Could not assign permission ${permissionName}:`, permError);
@@ -324,34 +303,32 @@ export class UserService {
   // Cambiar estado de usuario (habilitar/deshabilitar)
   static async toggleUserStatus(userId: number): Promise<{ success: boolean; message?: string; newStatus?: number }> {
     try {
-      const pool = getPool();
-      
-      if (!pool) {
+      if (!AppDataSource.isInitialized) {
         return {
           success: false,
           message: 'Base de datos no disponible'
         };
       }
 
-      // Obtener estado actual
-      const result = await pool.request()
-        .input('userId', sql.Int, userId)
-        .query('SELECT Status FROM USERS WHERE Id = @userId');
+      const userRepository = AppDataSource.getRepository(User);
 
-      if (result.recordset.length === 0) {
+      // Buscar el usuario
+      const user = await userRepository.findOne({
+        where: { id: userId }
+      });
+
+      if (!user) {
         return {
           success: false,
           message: 'Usuario no encontrado'
         };
       }
 
-      const currentStatus = result.recordset[0].Status;
-      const newStatus = currentStatus === 1 ? 0 : 1;
+      // Cambiar el estado
+      const newStatus = user.status === 1 ? 0 : 1;
+      user.status = newStatus;
 
-      await pool.request()
-        .input('userId', sql.Int, userId)
-        .input('status', sql.Int, newStatus)
-        .query('UPDATE USERS SET Status = @status WHERE Id = @userId');
+      await userRepository.save(user);
 
       return {
         success: true,
