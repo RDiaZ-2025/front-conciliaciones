@@ -11,7 +11,7 @@ import AdminPanel from './pages/AdminPanel';
 import Production from './pages/Production/Production';
 import LoadDocumentsOCbyUserView from './pages/LoadDocumentsOCbyUserView';
 import DarkModeToggle from './components/DarkModeToggle';
-import logoClaroMedia from './assets/Claro-Media-Logo.jpg';
+import logoClaroMedia from '/Claro-Media-Logo.jpg';
 import { PERMISSIONS } from './constants/auth';
 import createAppTheme from './styles/theme';
 

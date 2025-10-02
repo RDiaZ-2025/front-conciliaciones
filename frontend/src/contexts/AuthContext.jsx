@@ -109,6 +109,7 @@ function AuthProvider({ children }) {
     if (!user) {
       return false;
     }
+    
     // Mapeo de permisos del backend a permisos del frontend
     const permissionMapping = {
       [PERMISSIONS.ADMIN_PANEL]: ['admin_panel', 'ADMIN_PANEL'],

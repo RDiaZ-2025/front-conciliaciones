@@ -550,10 +550,10 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios', onMenuSelect, setDark
                     }
                     label={
                       <Box>
-                        <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                        <Typography variant="body1" sx={{ fontWeight: 'medium', display: 'block' }}>
                           {getPermissionLabel(permissionName)}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" color="text.secondary" sx={{ display: 'block' }}>
                           {getPermissionDescription(permissionName)}
                         </Typography>
                       </Box>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -33,11 +33,16 @@ import {
   CalendarToday as CalendarIcon,
   Person as PersonIcon,
   Group as GroupIcon,
-  Notes as NotesIcon
+  Notes as NotesIcon,
+  Download as DownloadIcon,
+  Attachment as AttachmentIcon,
+  Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import { useProduction } from './useProduction';
-import { ProductionRequest, ProductionProps } from './types';
+import { ProductionRequest, ProductionProps, UploadedFile } from './types';
 import { useAuth } from '../../contexts/AuthContext';
+import FileUpload from '../../components/FileUpload';
+import FilePreview from '../../components/FilePreview';
 
 const workflowStages = [
   { id: 'request', label: 'Solicitud' },
@@ -54,6 +59,10 @@ const workflowStages = [
 const Production: React.FC<ProductionProps> = ({ darkMode }) => {
   const theme = useTheme();
   const { user } = useAuth();
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  
   const {
     productionRequests,
     loading,
@@ -73,6 +82,112 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
     handleCloseSnackbar,
     fetchProductionRequests
   } = useProduction();
+
+  const handleFileUpload = (files: File[]) => {
+    setUploadedFiles(files);
+  };
+
+  const handleFileDownload = (file: UploadedFile) => {
+    if (file.url) {
+      const link = document.createElement('a');
+      link.href = file.url;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const handleFilePreview = async (file: UploadedFile) => {
+    try {
+      // Convert UploadedFile to File object for preview
+      if (file.url) {
+        const response = await fetch(file.url);
+        
+        // Check if the response is ok
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const blob = await response.blob();
+        
+        // Use the original file size if available, otherwise use blob size
+        const fileSize = file.size || blob.size || 0;
+        
+        // Ensure we have a valid file size
+        if (fileSize === 0) {
+          console.warn('File size is 0, this might cause display issues');
+        }
+        
+        const fileObject = new File([blob], file.name, { 
+          type: file.type || blob.type,
+          lastModified: new Date(file.uploadDate).getTime()
+        });
+        
+        // Override the size property to ensure it's correct
+        Object.defineProperty(fileObject, 'size', {
+          value: fileSize,
+          writable: false,
+          enumerable: true,
+          configurable: false
+        });
+        
+        setPreviewFile(fileObject);
+        setIsPreviewOpen(true);
+      } else {
+        // If no URL, show error message
+        console.warn('File URL not available for preview');
+        setSnackbar({
+          open: true,
+          message: 'No se puede previsualizar el archivo: URL no disponible',
+          severity: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error loading file for preview:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error al cargar el archivo para previsualización',
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleClosePreview = () => {
+    setIsPreviewOpen(false);
+    setPreviewFile(null);
+  };
+
+  const handlePreviewDownload = (file: File) => {
+    try {
+      // Validate that file is a proper File object
+      if (!file || !(file instanceof File) || !file.name) {
+        console.error('Invalid file object for download:', file);
+        setSnackbar({
+          open: true,
+          message: 'Error: Archivo inválido para descarga',
+          severity: 'error'
+        });
+        return;
+      }
+
+      const url = URL.createObjectURL(file);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error creating object URL for download:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error al descargar el archivo',
+        severity: 'error'
+      });
+    }
+  };
 
   const renderRequestCard = (request: ProductionRequest) => (
     <Card 
@@ -157,7 +272,8 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
               color="text.secondary"
               sx={{ 
                 fontSize: '0.875rem',
-                lineHeight: 1.4
+                lineHeight: 1.4,
+                display: 'block'
               }}
             >
               <Box component="span" sx={{ fontWeight: 'medium', color: 'text.primary' }}>
@@ -181,7 +297,7 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
               sx={{ 
                 fontSize: '0.875rem',
                 lineHeight: 1.4,
-                wordBreak: 'break-word' // Prevent overflow
+                display: 'block'
               }}
             >
               <Box component="span" sx={{ fontWeight: 'medium', color: 'text.primary' }}>
@@ -210,7 +326,7 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
               sx={{ 
                 fontSize: '0.875rem',
                 lineHeight: 1.4,
-                wordBreak: 'break-word'
+                display: 'block'
               }}
             >
               <Box component="span" sx={{ fontWeight: 'medium', color: 'text.primary' }}>
@@ -233,7 +349,8 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
               color="text.secondary"
               sx={{ 
                 fontSize: '0.875rem',
-                lineHeight: 1.4
+                lineHeight: 1.4,
+                display: 'block'
               }}
             >
               <Box component="span" sx={{ fontWeight: 'medium', color: 'text.primary' }}>
@@ -264,7 +381,7 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
                 sx={{ 
                   fontSize: '0.875rem',
                   lineHeight: 1.4,
-                  wordBreak: 'break-word'
+                  display: 'block'
                 }}
               >
                 <Box component="span" sx={{ fontWeight: 'medium', color: 'text.primary' }}>
@@ -272,6 +389,114 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
                 </Box>{' '}
                 {request.observations}
               </Typography>
+            </Box>
+          )}
+          
+          {/* Files section */}
+          {request.files && request.files.length > 0 && (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'flex-start', 
+              gap: 1.5,
+              mt: 1
+            }}>
+              <AttachmentIcon 
+                fontSize="small" 
+                sx={{ 
+                  color: 'text.secondary',
+                  flexShrink: 0,
+                  mt: 0.2
+                }} 
+              />
+              <Box sx={{ flex: 1 }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontWeight: 'medium', 
+                    color: 'text.primary',
+                    fontSize: '0.875rem',
+                    mb: 1
+                  }}
+                >
+                  Archivos adjuntos ({request.files.length}):
+                </Typography>
+                <Stack spacing={0.5}>
+                  {request.files.slice(0, 3).map((file) => (
+                    <Box 
+                      key={file.id}
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1,
+                        p: 0.5,
+                        borderRadius: 1,
+                        bgcolor: 'action.hover',
+                        '&:hover': {
+                          bgcolor: 'action.selected'
+                        }
+                      }}
+                    >
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          flex: 1,
+                          fontSize: '0.75rem',
+                          color: 'text.secondary',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {file.name}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFilePreview(file);
+                        }}
+                        sx={{ 
+                          p: 0.25,
+                          '&:hover': {
+                            bgcolor: 'info.main',
+                            color: 'info.contrastText'
+                          }
+                        }}
+                      >
+                        <VisibilityIcon fontSize="inherit" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFileDownload(file);
+                        }}
+                        sx={{ 
+                          p: 0.25,
+                          '&:hover': {
+                            bgcolor: 'primary.main',
+                            color: 'primary.contrastText'
+                          }
+                        }}
+                      >
+                        <DownloadIcon fontSize="inherit" />
+                      </IconButton>
+                    </Box>
+                  ))}
+                  {request.files.length > 3 && (
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: 'text.secondary',
+                        fontStyle: 'italic',
+                        fontSize: '0.75rem'
+                      }}
+                    >
+                      +{request.files.length - 3} archivos más
+                    </Typography>
+                  )}
+                </Stack>
+              </Box>
             </Box>
           )}
         </Stack>
@@ -672,6 +897,21 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
               />
             </Box>
             
+            <Box sx={{ gridColumn: { xs: '1', md: '1 / -1' } }}>
+              <Typography variant="h6" sx={{ mb: 2, mt: 2 }}>
+                Archivos adjuntos
+              </Typography>
+              <FileUpload
+                files={uploadedFiles}
+                onFilesChange={handleFileUpload}
+                acceptedTypes={['.pdf', '.xlsx', '.xls', '.mp3', '.mp4', '.jpg', '.jpeg', '.png', '.gif', '.doc', '.docx']}
+                maxFiles={10}
+                maxFileSize={50} // 50MB
+                label="Arrastra archivos aquí o haz clic para seleccionar"
+                helperText="Formatos soportados: PDF, Excel, Audio, Video, Imágenes, Documentos (máx. 50MB por archivo)"
+              />
+            </Box>
+            
             {formData.id && (
               <Box sx={{ gridColumn: { xs: '1', md: '1 / -1' } }}>
                 <FormControl fullWidth margin="normal">
@@ -723,6 +963,16 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* File Preview Modal */}
+      {previewFile && (
+        <FilePreview
+          file={previewFile}
+          open={isPreviewOpen}
+          onClose={handleClosePreview}
+          onDownload={() => handlePreviewDownload(previewFile)}
+        />
+      )}
     </Box>
   );
 };

@@ -1,4 +1,13 @@
 // Tipos para la página de Producción
+export interface UploadedFile {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url?: string;
+  uploadDate: string;
+}
+
 export interface ProductionRequest {
   id: string;
   name: string;
@@ -9,6 +18,7 @@ export interface ProductionRequest {
   deliveryDate?: string;
   observations?: string;
   stage: string;
+  files?: UploadedFile[];
 }
 
 export interface ProductionProps {

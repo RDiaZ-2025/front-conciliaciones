@@ -15,7 +15,7 @@ import {
   Avatar
 } from "@mui/material";
 import { Visibility, VisibilityOff, Email, Lock } from "@mui/icons-material";
-import claroMediaLogo from "../../assets/Claro-Media-Logo.jpg";
+import claroMediaLogo from "/Claro-Media-Logo.jpg";
 import DarkModeToggle from "../../components/DarkModeToggle";
 import { useLogin } from './useLogin';
 import type { LoginProps } from './types';
@@ -152,7 +152,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, darkMode, setDarkMode }) => {
                       endAdornment: (
                         <InputAdornment position="end">
                           <IconButton 
-                            onClick={() => setShowPassword(v => !v)} 
+                            onClick={() => setShowPassword(!showPassword)} 
                             edge="end"
                             aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                           >
@@ -179,14 +179,17 @@ const Login: React.FC<LoginProps> = ({ onLogin, darkMode, setDarkMode }) => {
                   disabled={loading}
                   sx={{
                     mt: theme => theme.spacing(2),
-                    py: theme => theme.spacing(1.5)
+                    py: theme => theme.spacing(1.5),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
                   {loading ? (
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <CircularProgress size={20} color="inherit" />
-                      <Typography variant="button">Ingresando...</Typography>
-                    </Stack>
+                    <>
+                      <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
+                      <Typography variant="button" component="span">Ingresando...</Typography>
+                    </>
                   ) : (
                     "Ingresar"
                   )}

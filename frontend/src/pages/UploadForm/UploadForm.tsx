@@ -308,19 +308,17 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                   style={{ display: 'none' }}
                   disabled={state.uploading || state.excelUploaded}
                 />
-                <label htmlFor="excel-input">
-                  <Button
-                    variant="outlined"
-                    component="span"
-                    sx={{
-                      borderRadius: theme => theme.spacing(0.75),
-                      fontWeight: theme => theme.typography.fontWeightMedium
-                    }}
-                    disabled={state.uploading || state.excelUploaded}
-                  >
-                    Seleccionar archivo
-                  </Button>
-                </label>
+                <Button
+                  variant="outlined"
+                  onClick={() => document.getElementById('excel-input')?.click()}
+                  sx={{
+                    borderRadius: theme => theme.spacing(0.75),
+                    fontWeight: theme => theme.typography.fontWeightMedium
+                  }}
+                  disabled={state.uploading || state.excelUploaded}
+                >
+                  Seleccionar archivo
+                </Button>
                 {state.excelFile && (
                   <Typography variant="body2" color="text.secondary">
                     {state.excelFile.name}
@@ -376,19 +374,17 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                   style={{ display: 'none' }}
                   disabled={state.uploading || state.pdfUploaded}
                 />
-                <label htmlFor="pdf-input">
-                  <Button
-                    variant="outlined"
-                    component="span"
-                    sx={{
-                      borderRadius: theme => theme.spacing(0.75),
-                      fontWeight: theme => theme.typography.fontWeightMedium
-                    }}
-                    disabled={state.uploading || state.pdfUploaded}
-                  >
-                    Seleccionar archivo
-                  </Button>
-                </label>
+                <Button
+                  variant="outlined"
+                  onClick={() => document.getElementById('pdf-input')?.click()}
+                  sx={{
+                    borderRadius: theme => theme.spacing(0.75),
+                    fontWeight: theme => theme.typography.fontWeightMedium
+                  }}
+                  disabled={state.uploading || state.pdfUploaded}
+                >
+                  Seleccionar archivo
+                </Button>
                 {state.pdfFile && (
                   <Typography variant="body2" color="text.secondary">
                     {state.pdfFile.name}
@@ -599,19 +595,17 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                   style={{ display: 'none' }}
                   disabled={state.uploading || state.deseaSubirMateriales !== true}
                 />
-                <label htmlFor="materials-input">
-                  <Button
-                    variant="outlined"
-                    component="span"
-                    sx={{
-                      borderRadius: theme => theme.spacing(0.75),
-                      fontWeight: theme => theme.typography.fontWeightMedium
-                    }}
-                    disabled={state.uploading || state.deseaSubirMateriales !== true}
-                  >
-                    Seleccionar archivos
-                  </Button>
-                </label>
+                <Button
+                  variant="outlined"
+                  onClick={() => document.getElementById('materials-input')?.click()}
+                  sx={{
+                    borderRadius: theme => theme.spacing(0.75),
+                    fontWeight: theme => theme.typography.fontWeightMedium
+                  }}
+                  disabled={state.uploading || state.deseaSubirMateriales !== true}
+                >
+                  Seleccionar archivos
+                </Button>
                 {state.materiales.length > 0 && (
                   <Chip 
                     label={`${state.materiales.length} archivo(s) seleccionado(s)`}

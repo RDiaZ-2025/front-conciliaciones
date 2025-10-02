@@ -10,17 +10,23 @@ import {
   Typography,
   Divider,
   IconButton,
-  CircularProgress
+  CircularProgress,
+  Card,
+  CardContent,
+  CardActionArea,
+  Stack,
+  Chip
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   History as HistoryIcon,
-  Upload as UploadIcon,
-  Dashboard as DashboardIcon,
-  People as PeopleIcon,
+  CloudUpload as CloudUploadIcon,
+  Analytics as AnalyticsIcon,
+  SupervisorAccount as SupervisorAccountIcon,
   ArrowBack as ArrowBackIcon,
   Close as CloseIcon,
-  Assignment as AssignmentIcon
+  Factory as FactoryIcon,
+  Lock as LockIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { PERMISSIONS } from '../constants/auth';
@@ -58,25 +64,25 @@ const NavigationDrawer = ({
     {
       id: 'upload',
       label: 'Cargar Documentos',
-      icon: <UploadIcon />,
+      icon: <CloudUploadIcon />,
       permission: PERMISSIONS.DOCUMENT_UPLOAD
     },
     {
       id: 'dashboard',
       label: 'Dashboard de Gestión',
-      icon: <DashboardIcon />,
+      icon: <AnalyticsIcon />,
       permission: PERMISSIONS.MANAGEMENT_DASHBOARD
     },
     {
       id: 'production',
       label: 'Producción',
-      icon: <AssignmentIcon />,
+      icon: <FactoryIcon />,
       permission: PERMISSIONS.PRODUCTION_MANAGEMENT
     },
     {
       id: 'usuarios',
       label: 'Usuarios',
-      icon: <PeopleIcon />,
+      icon: <SupervisorAccountIcon />,
       permission: PERMISSIONS.ADMIN_PANEL
     }
   ];
@@ -86,13 +92,13 @@ const NavigationDrawer = ({
     // Map icon names to actual icon components
     const iconMap = {
       'HistoryIcon': HistoryIcon,
-      'UploadIcon': UploadIcon,
-      'DashboardIcon': DashboardIcon,
-      'PeopleIcon': PeopleIcon,
-      'AssignmentIcon': AssignmentIcon
+      'CloudUploadIcon': CloudUploadIcon,
+      'AnalyticsIcon': AnalyticsIcon,
+      'SupervisorAccountIcon': SupervisorAccountIcon,
+      'FactoryIcon': FactoryIcon
     };
     
-    const IconComponent = iconMap[item.icon] || AssignmentIcon;
+    const IconComponent = iconMap[item.icon] || FactoryIcon;
     
     return {
       ...item,
@@ -100,6 +106,8 @@ const NavigationDrawer = ({
       permission: getPermissionForMenuItem(item.id) // Add permission mapping
     };
   }) : defaultMenuItems;
+
+
 
   // Debug logging
   console.log('NavigationDrawer - Database items:', dbMenuItems);
@@ -131,19 +139,22 @@ const NavigationDrawer = ({
         onClose={onClose}
         sx={{
           '& .MuiDrawer-paper': {
-            width: 280,
-            bgcolor: darkMode ? 'grey.900' : 'background.paper',
-            color: darkMode ? 'common.white' : 'text.primary'
+            width: { xs: '100vw', sm: 320, md: 360 },
+            maxWidth: { xs: '100vw', sm: '90vw', md: 400 },
+            bgcolor: 'background.paper',
+            color: 'text.primary',
+            borderRight: theme => `1px solid ${theme.palette.divider}`
           }
         }}
       >
-        <Box sx={{ p: 2 }}>
+
+        <Box sx={{ p: { xs: 1, sm: 2 } }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
             <Typography 
               variant="h6" 
               sx={{ 
                 fontWeight: 'bold',
-                color: darkMode ? 'common.white' : 'text.primary'
+                color: 'text.primary'
               }}
             >
               Menú de Navegación
@@ -151,13 +162,13 @@ const NavigationDrawer = ({
             <IconButton 
               onClick={onClose}
               size="small"
-              sx={{ color: darkMode ? 'common.white' : 'text.primary' }}
+              sx={{ color: 'text.primary' }}
             >
               <CloseIcon />
             </IconButton>
           </Box>
           
-          <Divider sx={{ mb: 2, bgcolor: darkMode ? 'grey.700' : 'divider' }} />
+          <Divider sx={{ mb: 2 }} />
           
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
@@ -165,100 +176,155 @@ const NavigationDrawer = ({
             </Box>
           ) : error ? (
             <Box sx={{ p: 2 }}>
-              <Typography variant="body2" color="error">
+              <Typography variant="body2" color="error" component="div">
                 Error cargando menús: {error}
               </Typography>
             </Box>
           ) : (
-            <List sx={{ p: 0 }}>
-              {items.map((item) => {
-                const isDisabled = item.permission && !hasPermission(item.permission);
-                
-                // Debug logging for each item
-                console.log(`Menu item ${item.id} (${item.label}):`, {
-                  permission: item.permission,
-                  hasPermission: item.permission ? hasPermission(item.permission) : 'no permission required',
-                  isDisabled
-                });
-                
-                return (
-                  <ListItem key={item.id} disablePadding sx={{ mb: 1 }}>
-                    <ListItemButton
-                      onClick={() => handleMenuItemClick(item)}
-                      disabled={isDisabled}
+            <Stack spacing={2} sx={{ p: 0 }}>
+              {items
+                .map((item) => {
+                  // Check if user has permission for this item
+                  const hasRequiredPermission = !item.permission || hasPermission(item.permission);
+                  
+                  // Debug logging for filtering
+                  console.log(`Menu item ${item.id} (${item.label}):`, {
+                    permission: item.permission,
+                    hasPermission: item.permission ? hasPermission(item.permission) : 'no permission required',
+                    willShow: true,
+                    isRestricted: !hasRequiredPermission,
+                    hasRequiredPermission
+                  });
+                  
+                  return (
+                    <Card 
+                      key={item.id}
+                      elevation={hasRequiredPermission ? 2 : 1}
                       sx={{
-                        borderRadius: 2,
-                        '&:hover': {
-                          bgcolor: darkMode ? 'grey.800' : 'action.hover'
-                        },
-                        '&.Mui-disabled': {
-                          opacity: 0.5
-                        }
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        opacity: hasRequiredPermission ? 1 : 0.3,
+                        filter: hasRequiredPermission ? 'none' : 'grayscale(1)',
+                        backgroundColor: hasRequiredPermission ? 'background.paper' : 'grey.100',
+                        '&:hover': hasRequiredPermission ? {
+                          elevation: 4,
+                          transform: 'translateY(-2px)',
+                          boxShadow: theme => theme.shadows[8]
+                        } : {}
                       }}
                     >
-                      <ListItemIcon 
-                        sx={{ 
-                          color: isDisabled 
-                            ? (darkMode ? 'grey.600' : 'action.disabled')
-                            : (darkMode ? 'common.white' : 'primary.main'),
-                          minWidth: 40
-                        }}
-                      >
-                        {item.icon}
-                      </ListItemIcon>
-                      <ListItemText 
-                        primary={item.label}
+                      <CardActionArea
+                        onClick={hasRequiredPermission ? () => handleMenuItemClick(item) : undefined}
+                        disabled={!hasRequiredPermission}
                         sx={{
-                          '& .MuiListItemText-primary': {
-                            fontSize: '0.95rem',
-                            fontWeight: 500,
-                            color: isDisabled 
-                              ? (darkMode ? 'grey.600' : 'action.disabled')
-                              : (darkMode ? 'common.white' : 'text.primary')
+                          p: { xs: 1.5, sm: 2 },
+                          borderRadius: 1,
+                          cursor: hasRequiredPermission ? 'pointer' : 'not-allowed',
+                          '&:hover': hasRequiredPermission ? {
+                            bgcolor: 'action.hover'
+                          } : {},
+                          '&.Mui-disabled': {
+                            opacity: 1, // We handle opacity at Card level
+                            backgroundColor: 'transparent'
                           }
                         }}
-                      />
-                    </ListItemButton>
-                  </ListItem>
-                );
-               })}
+                      >
+                        <Stack direction="row" spacing={{ xs: 1.5, sm: 2 }} alignItems="center">
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              p: { xs: 1, sm: 1.5 },
+                              minWidth: { xs: 40, sm: 48 },
+                              minHeight: { xs: 40, sm: 48 },
+                              borderRadius: 2,
+                              bgcolor: hasRequiredPermission ? 'primary.main' : 'grey.400',
+                              color: hasRequiredPermission ? 'primary.contrastText' : 'grey.600',
+                              transition: 'all 0.2s ease-in-out'
+                            }}
+                          >
+                            {hasRequiredPermission ? item.icon : <LockIcon />}
+                          </Box>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography
+                              variant="body1"
+                              sx={{
+                                fontWeight: 'medium',
+                                color: hasRequiredPermission ? 'text.primary' : 'text.disabled',
+                                fontSize: { xs: '0.9rem', sm: '1rem' },
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              {item.label}
+                            </Typography>
+                            {!hasRequiredPermission && (
+                              <Chip
+                                icon={<LockIcon />}
+                                label="Sin permisos"
+                                size="small"
+                                variant="outlined"
+                                sx={{
+                                  mt: 0.5,
+                                  height: 20,
+                                  fontSize: '0.7rem',
+                                  color: 'error.main',
+                                  borderColor: 'error.main',
+                                  backgroundColor: 'error.light',
+                                  '& .MuiChip-icon': {
+                                    fontSize: '0.8rem',
+                                    color: 'error.main'
+                                  }
+                                }}
+                              />
+                            )}
+                          </Box>
+                        </Stack>
+                      </CardActionArea>
+                    </Card>
+                  );
+                })}
              
              {onBack && (
                <>
-                 <Divider sx={{ my: 2, bgcolor: darkMode ? 'grey.700' : 'divider' }} />
-                 <ListItem disablePadding>
-                   <ListItemButton
-                     onClick={handleBackClick}
-                     sx={{
-                       borderRadius: 2,
-                       '&:hover': {
-                         bgcolor: darkMode ? 'grey.800' : 'action.hover'
-                       }
-                     }}
-                   >
-                     <ListItemIcon 
-                       sx={{ 
-                         color: darkMode ? 'common.white' : 'primary.main',
-                         minWidth: 40
-                       }}
-                     >
-                       <ArrowBackIcon />
-                     </ListItemIcon>
-                     <ListItemText 
-                       primary="Volver"
-                       sx={{
-                         '& .MuiListItemText-primary': {
-                           fontSize: '0.95rem',
+                 <Divider sx={{ my: 2 }} />
+                 <Card elevation={1}>
+                   <CardActionArea
+                      onClick={handleBackClick}
+                      sx={{ p: { xs: 1.5, sm: 2 } }}
+                    >
+                     <Stack direction="row" alignItems="center" spacing={{ xs: 1.5, sm: 2 }}>
+                       <Box
+                         sx={{
+                           p: 1,
+                           borderRadius: '50%',
+                           bgcolor: 'primary.main',
+                           color: 'common.white',
+                           display: 'flex',
+                           alignItems: 'center',
+                           justifyContent: 'center',
+                           minWidth: 40,
+                           minHeight: 40
+                         }}
+                       >
+                         <ArrowBackIcon />
+                       </Box>
+                       <Typography
+                         variant="subtitle1"
+                         sx={{
                            fontWeight: 500,
-                           color: darkMode ? 'common.white' : 'text.primary'
-                         }
-                       }}
-                     />
-                   </ListItemButton>
-                 </ListItem>
+                           color: 'text.primary'
+                         }}
+                       >
+                         Volver
+                       </Typography>
+                     </Stack>
+                   </CardActionArea>
+                 </Card>
                </>
              )}
-           </List>
+           </Stack>
            )}
         </Box>
       </Drawer>
