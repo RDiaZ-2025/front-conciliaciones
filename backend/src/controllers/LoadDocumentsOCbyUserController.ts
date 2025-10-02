@@ -1,27 +1,34 @@
 import { Request, Response } from 'express';
-import { getPool, sql } from '../config/database';
+import { LoadDocumentsOCbyUser, User } from '../models';
+import { AppDataSource } from '../config/typeorm.config';
 
 export class LoadDocumentsOCbyUserController {
   static async registerUpload(req: Request, res: Response): Promise<void> {
     try {
-      const pool = getPool();
-      if (!pool) {
+      if (!AppDataSource.isInitialized) {
         res.status(503).json({ success: false, message: 'Base de datos no disponible' });
         return;
       }
+      
       const { iduser, idfolder, fecha, status, filename } = req.body;
       if (!iduser || !idfolder || !fecha || !filename) {
         res.status(400).json({ success: false, message: 'iduser, idfolder, fecha y filename son requeridos' });
         return;
       }
-      const result = await pool.request()
-        .input('IdUser', sql.Int, iduser)
-        .input('IdFolder', sql.UniqueIdentifier, idfolder)
-        .input('Fecha', sql.DateTime, fecha)
-        .input('Status', sql.VarChar, status ?? null)
-        .input('FileName', sql.VarChar, filename)
-        .query('INSERT INTO LoadDocumentsOCbyUser (IdUser, IdFolder, Fecha, Status, FileName) OUTPUT INSERTED.Id VALUES (@IdUser, @IdFolder, @Fecha, @Status, @FileName)');
-      res.status(201).json({ success: true, id: result.recordset[0].Id });
+      
+      const loadDocumentsRepository = AppDataSource.getRepository(LoadDocumentsOCbyUser);
+      
+      const newDocument = loadDocumentsRepository.create({
+        idUser: iduser,
+        idFolder: idfolder,
+        fecha: new Date(fecha),
+        status: status ?? null,
+        fileName: filename
+      });
+      
+      const savedDocument = await loadDocumentsRepository.save(newDocument);
+      
+      res.status(201).json({ success: true, id: savedDocument.id });
     } catch (error) {
       console.error('Error registrando documento:', error);
       res.status(500).json({ success: false, message: 'Error interno del servidor' });
@@ -30,24 +37,46 @@ export class LoadDocumentsOCbyUserController {
 
   static async getUploads(req: Request, res: Response): Promise<void> {
     try {
-      const pool = getPool();
-      if (!pool) {
+      if (!AppDataSource.isInitialized) {
         res.status(503).json({ success: false, message: 'Base de datos no disponible' });
         return;
       }
+      
       const { iduser } = req.query;
-      let query = `SELECT ldc.Id, ldc.IdUser, ldc.IdFolder, u.Email as UserEmail, ldc.Fecha, ldc.Status, ldc.FileName
-                   FROM LoadDocumentsOCbyUser ldc
-                   LEFT JOIN USERS u ON ldc.IdUser = u.Id`;
+      const loadDocumentsRepository = AppDataSource.getRepository(LoadDocumentsOCbyUser);
+      
+      let whereCondition = {};
       if (iduser) {
-        query += ' WHERE ldc.IdUser = @IdUser';
+        whereCondition = { idUser: parseInt(iduser as string) };
       }
-      const request = pool.request();
-      if (iduser) {
-        request.input('IdUser', sql.Int, iduser);
-      }
-      const result = await request.query(query);
-      res.status(200).json({ success: true, data: result.recordset });
+      
+      const documents = await loadDocumentsRepository.find({
+        where: whereCondition,
+        relations: ['user'],
+        select: {
+          id: true,
+          idUser: true,
+          idFolder: true,
+          fecha: true,
+          status: true,
+          fileName: true,
+          user: {
+            email: true
+          }
+        }
+      });
+      
+      const formattedData = documents.map(doc => ({
+        Id: doc.id,
+        IdUser: doc.idUser,
+        IdFolder: doc.idFolder,
+        UserEmail: doc.user?.email || null,
+        Fecha: doc.fecha,
+        Status: doc.status,
+        FileName: doc.fileName
+      }));
+      
+      res.status(200).json({ success: true, data: formattedData });
     } catch (error) {
       if (error instanceof Error) {
         console.error('Error consultando documentos:', error.message, error.stack);

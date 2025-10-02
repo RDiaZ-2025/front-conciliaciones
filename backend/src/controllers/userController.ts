@@ -1,15 +1,13 @@
 import { Request, Response } from 'express';
-import { getPool, sql } from '../config/database';
-import { User } from '../types';
+import { User, Permission, PermissionByUser } from '../models';
+import { AppDataSource } from '../config/typeorm.config';
 import bcrypt from 'bcrypt';
 import { UserService } from '../services/userService';
 
 export class UserController {
   static async getUsers(req: Request, res: Response): Promise<void> {
     try {
-      const pool = getPool();
-      
-      if (!pool) {
+      if (!AppDataSource.isInitialized) {
         res.status(503).json({
           success: false,
           message: 'Base de datos no disponible'
@@ -39,9 +37,8 @@ export class UserController {
   static async getUserById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const pool = getPool();
       
-      if (!pool) {
+      if (!AppDataSource.isInitialized) {
         res.status(503).json({
           success: false,
           message: 'Base de datos no disponible'
@@ -49,24 +46,16 @@ export class UserController {
         return;
       }
       
-      const result = await pool.request()
-        .input('userId', sql.Int, parseInt(id))
-        .query(`
-          SELECT 
-            u.Id,
-            u.Name,
-            u.Email,
-            u.LastAccess,
-            u.Status,
-            STRING_AGG(p.Name, ',') as Permissions
-          FROM USERS u
-          LEFT JOIN PERMISSIONS_BY_USER pbu ON u.Id = pbu.UserId
-          LEFT JOIN PERMISSIONS p ON pbu.PermissionId = p.Id
-          WHERE u.Id = @userId AND u.Status = 1
-          GROUP BY u.Id, u.Name, u.Email, u.LastAccess, u.Status
-        `);
+      const userRepository = AppDataSource.getRepository(User);
+      
+      const user = await userRepository
+        .createQueryBuilder('user')
+        .leftJoinAndSelect('user.permissionsByUser', 'permissionsByUser')
+        .leftJoinAndSelect('permissionsByUser.permission', 'permission')
+        .where('user.id = :userId AND user.status = :status', { userId: parseInt(id), status: 1 })
+        .getOne();
 
-      if (result.recordset.length === 0) {
+      if (!user) {
         res.status(404).json({
           success: false,
           message: 'Usuario no encontrado'
@@ -74,16 +63,17 @@ export class UserController {
         return;
       }
 
-      const user = result.recordset[0];
+      const permissions = user.permissions?.map((pbu: any) => pbu.permission?.name).filter(Boolean) || [];
+
       res.status(200).json({
         success: true,
         data: {
-          id: user.Id,
-          name: user.Name,
-          email: user.Email,
-          lastAccess: user.LastAccess,
-          status: user.Status,
-          permissions: user.Permissions ? user.Permissions.split(',') : []
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          lastAccess: user.lastAccess,
+          status: user.status,
+          permissions
         }
       });
     } catch (error) {
@@ -99,9 +89,8 @@ export class UserController {
     try {
       const { id } = req.params;
       const { permissions } = req.body;
-      const pool = getPool();
 
-      if (!pool) {
+      if (!AppDataSource.isInitialized) {
         res.status(503).json({
           success: false,
           message: 'Base de datos no disponible'
@@ -109,44 +98,46 @@ export class UserController {
         return;
       }
 
-      // Iniciar transacción
-      const transaction = new sql.Transaction(pool);
-      await transaction.begin();
+      const queryRunner = AppDataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
 
       try {
+        const permissionByUserRepository = queryRunner.manager.getRepository(PermissionByUser);
+        const permissionRepository = queryRunner.manager.getRepository(Permission);
+
         // Eliminar permisos existentes
-        await transaction.request()
-          .input('userId', sql.Int, parseInt(id))
-          .query('DELETE FROM PERMISSIONS_BY_USER WHERE UserId = @userId');
+        await permissionByUserRepository.delete({ userId: parseInt(id) });
 
         // Agregar nuevos permisos
         if (permissions && permissions.length > 0) {
           for (const permissionName of permissions) {
-            // Obtener ID del permiso
-            const permResult = await transaction.request()
-  .input('permissionName', sql.VarChar, permissionName.toUpperCase())
-  .query('SELECT Id FROM PERMISSIONS WHERE UPPER(Name) = @permissionName');
+            // Obtener el permiso por nombre
+            const permission = await permissionRepository.findOne({
+              where: { name: permissionName.toUpperCase() }
+            });
 
-            if (permResult.recordset.length > 0) {
-              const permissionId = permResult.recordset[0].Id;
+            if (permission) {
+              const permissionByUser = new PermissionByUser();
+              permissionByUser.userId = parseInt(id);
+              permissionByUser.permissionId = permission.id;
               
-              await transaction.request()
-                .input('userId', sql.Int, parseInt(id))
-                .input('permissionId', sql.Int, permissionId)
-                .query('INSERT INTO PERMISSIONS_BY_USER (UserId, PermissionId) VALUES (@userId, @permissionId)');
+              await permissionByUserRepository.save(permissionByUser);
             }
           }
         }
 
-        await transaction.commit();
+        await queryRunner.commitTransaction();
 
         res.status(200).json({
           success: true,
           message: 'Permisos actualizados correctamente'
         });
       } catch (error) {
-        await transaction.rollback();
+        await queryRunner.rollbackTransaction();
         throw error;
+      } finally {
+        await queryRunner.release();
       }
     } catch (error) {
       console.error('Error actualizando permisos:', error);
@@ -241,9 +232,8 @@ export class UserController {
   static async toggleUserStatus(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const pool = getPool();
 
-      if (!pool) {
+      if (!AppDataSource.isInitialized) {
         res.status(503).json({
           success: false,
           message: 'Base de datos no disponible'
@@ -251,26 +241,29 @@ export class UserController {
         return;
       }
 
+      const userRepository = AppDataSource.getRepository(User);
+
       // Verificar que el usuario existe
-      const existingUser = await pool.request()
-        .input('userId', sql.Int, parseInt(id))
-        .query('SELECT Id, Status FROM USERS WHERE Id = @userId');
+      const user = await userRepository.findOne({
+      where: { id: parseInt(id) },
+      select: ['id', 'status']
+    });
 
-      if (existingUser.recordset.length === 0) {
-        res.status(404).json({
-          success: false,
-          message: 'Usuario no encontrado'
-        });
-        return;
-      }
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+      return;
+    }
 
-      const currentStatus = existingUser.recordset[0].Status;
-      const newStatus = currentStatus === 1 ? 0 : 1;
+    const currentStatus = user.status;
+    const newStatus = currentStatus === 1 ? 0 : 1;
 
-      await pool.request()
-        .input('userId', sql.Int, parseInt(id))
-        .input('status', sql.Int, newStatus)
-        .query('UPDATE USERS SET Status = @status WHERE Id = @userId');
+    await userRepository.update(
+      { id: parseInt(id) },
+      { status: newStatus }
+    );
 
       res.status(200).json({
         success: true,
@@ -288,9 +281,7 @@ export class UserController {
 
   static async getAllPermissions(req: Request, res: Response): Promise<void> {
     try {
-      const pool = getPool();
-
-      if (!pool) {
+      if (!AppDataSource.isInitialized) {
         res.status(503).json({
           success: false,
           message: 'Base de datos no disponible'
@@ -298,18 +289,18 @@ export class UserController {
         return;
       }
 
-      const result = await pool.request().query(`
-        SELECT Id, Name, Description
-        FROM PERMISSIONS
-        ORDER BY Name
-      `);
+      const permissionRepository = AppDataSource.getRepository(Permission);
+
+      const permissions = await permissionRepository.find({
+        order: { name: 'ASC' }
+      });
 
       res.status(200).json({
         success: true,
-        data: result.recordset.map(permission => ({
-          id: permission.Id,
-          name: permission.Name,
-          description: permission.Description
+        data: permissions.map(permission => ({
+          id: permission.id,
+          name: permission.name,
+          description: permission.description
         }))
       });
     } catch (error) {

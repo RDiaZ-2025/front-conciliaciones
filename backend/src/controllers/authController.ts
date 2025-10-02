@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import { AuthService } from '../services/authService';
 import { LoginRequest } from '../types';
 import bcrypt from 'bcrypt';
-import { getPool, sql } from '../config/database';
+import { User, Permission, PermissionByUser } from '../models';
+import { AppDataSource } from '../config/typeorm.config';
 
 export class AuthController {
   static async login(req: Request, res: Response): Promise<void> {
@@ -74,11 +75,11 @@ export class AuthController {
       res.status(200).json({
         success: true,
         data: {
-          id: user.Id,
-          name: user.Name,
-          email: user.Email,
+          id: user.id,
+          name: user.name,
+          email: user.email,
           permissions: permissions,
-          lastAccess: user.LastAccess
+          lastAccess: user.lastAccess
         }
       });
       return;
@@ -93,8 +94,7 @@ export class AuthController {
 
   static async initializeUsers(req: Request, res: Response): Promise<void> {
     try {
-      const pool = getPool();
-      if (!pool) {
+      if (!AppDataSource.isInitialized) {
         res.status(500).json({
           success: false,
           message: 'Base de datos no disponible'
@@ -109,10 +109,15 @@ export class AuthController {
       const uploadHash = await bcrypt.hash('upload123', 12);
       const dashboardHash = await bcrypt.hash('dashboard123', 12);
 
-      const transaction = new sql.Transaction(pool);
-      await transaction.begin();
+      const queryRunner = AppDataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
 
       try {
+        const userRepository = queryRunner.manager.getRepository(User);
+        const permissionRepository = queryRunner.manager.getRepository(Permission);
+        const permissionByUserRepository = queryRunner.manager.getRepository(PermissionByUser);
+
         // Crear usuarios adicionales
         const users = [
           { name: 'Administrador Test', email: 'admin@test.com', hash: passwordHash, permissions: ['document_upload', 'management_dashboard', 'admin_panel'] },
@@ -123,48 +128,46 @@ export class AuthController {
           { name: 'Usuario Dashboard Legacy', email: 'dashboard@claromedia.com', hash: dashboardHash, permissions: ['management_dashboard'] }
         ];
 
-        for (const user of users) {
+        for (const userData of users) {
           // Verificar si el usuario ya existe
-          const checkRequest = new sql.Request(transaction);
-          const existingUser = await checkRequest
-            .input('email', sql.VarChar, user.email)
-            .query('SELECT Id FROM USERS WHERE Email = @email');
+          const existingUser = await userRepository.findOne({
+            where: { email: userData.email }
+          });
 
-          if (existingUser.recordset.length === 0) {
-            // Insertar usuario
-            const insertRequest = new sql.Request(transaction);
-            const result = await insertRequest
-              .input('name', sql.VarChar, user.name)
-              .input('email', sql.VarChar, user.email)
-              .input('passwordHash', sql.VarChar, user.hash)
-              .query('INSERT INTO USERS (Name, Email, PasswordHash, Status) OUTPUT INSERTED.Id VALUES (@name, @email, @passwordHash, 1)');
+          if (!existingUser) {
+            // Crear usuario
+            const newUser = userRepository.create({
+              name: userData.name,
+              email: userData.email,
+              passwordHash: userData.hash,
+              status: 1
+            });
 
-            const userId = result.recordset[0].Id;
+            const savedUser = await userRepository.save(newUser);
 
             // Asignar permisos
-            for (const permissionName of user.permissions) {
-              const permRequest = new sql.Request(transaction);
-              const permission = await permRequest
-                .input('permissionName', sql.VarChar, permissionName)
-                .query('SELECT Id FROM PERMISSIONS WHERE Name = @permissionName');
+            for (const permissionName of userData.permissions) {
+              const permission = await permissionRepository.findOne({
+                where: { name: permissionName }
+              });
 
-              if (permission.recordset.length > 0) {
-                const permissionId = permission.recordset[0].Id;
-                const assignRequest = new sql.Request(transaction);
-                await assignRequest
-                  .input('userId', sql.Int, userId)
-                  .input('permissionId', sql.Int, permissionId)
-                  .query('INSERT INTO PERMISSIONS_BY_USER (UserId, PermissionId) VALUES (@userId, @permissionId)');
+              if (permission) {
+                const permissionByUser = permissionByUserRepository.create({
+                  userId: savedUser.id,
+                  permissionId: permission.id
+                });
+
+                await permissionByUserRepository.save(permissionByUser);
               }
             }
 
-            console.log(`✅ Usuario ${user.email} creado exitosamente`);
+            console.log(`✅ Usuario ${userData.email} creado exitosamente`);
           } else {
-            console.log(`ℹ️ Usuario ${user.email} ya existe`);
+            console.log(`ℹ️ Usuario ${userData.email} ya existe`);
           }
         }
 
-        await transaction.commit();
+        await queryRunner.commitTransaction();
 
         res.status(200).json({
           success: true,
@@ -179,8 +182,10 @@ export class AuthController {
           ]
         });
       } catch (error) {
-        await transaction.rollback();
+        await queryRunner.rollbackTransaction();
         throw error;
+      } finally {
+        await queryRunner.release();
       }
     } catch (error) {
       console.error('Error inicializando usuarios:', error);

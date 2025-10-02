@@ -4,17 +4,17 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import app from './app';
-import { connectDB, closeDB } from './config/database';
+import { AppDataSource } from './config/typeorm.config';
 
 const PORT = process.env.PORT || 8246;
 
 // Función para iniciar el servidor
 const startServer = async (): Promise<void> => {
   try {
-    // Conectar a la base de datos
-    console.log('🔄 Conectando a la base de datos...');
-    await connectDB();
-    console.log('✅ Base de datos conectada exitosamente');
+    // Conectar a la base de datos con TypeORM
+    console.log('🔄 Inicializando TypeORM...');
+    await AppDataSource.initialize();
+    console.log('✅ TypeORM inicializado exitosamente');
 
     // Iniciar el servidor
     const server = app.listen(PORT, () => {
@@ -34,11 +34,11 @@ const startServer = async (): Promise<void> => {
         console.log('🔌 Servidor HTTP cerrado');
         
         try {
-          await closeDB();
-          console.log('✅ Conexión a base de datos cerrada');
+          await AppDataSource.destroy();
+          console.log('✅ TypeORM desconectado');
           process.exit(0);
         } catch (error) {
-          console.error('❌ Error cerrando la base de datos:', error);
+          console.error('❌ Error cerrando TypeORM:', error);
           process.exit(1);
         }
       });

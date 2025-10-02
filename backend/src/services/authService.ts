@@ -1,7 +1,8 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { getPool, sql } from '../config/database';
-import { User, LoginRequest, LoginResponse, JWTPayload } from '../types';
+import { User, Permission, PermissionByUser } from '../models';
+import { AppDataSource } from '../config/typeorm.config';
+import { LoginRequest, LoginResponse, JWTPayload } from '../types';
 
 // Servicio de autenticación usando base de datos
 
@@ -28,9 +29,7 @@ export class AuthService {
         hasPassword: !!credentials.password
       });
       
-      const pool = getPool();
-      
-      if (!pool) {
+      if (!AppDataSource.isInitialized) {
         console.error('❌ Base de datos no disponible');
         return {
           success: false,
@@ -38,8 +37,8 @@ export class AuthService {
         };
       }
       
-      console.log('🔄 Using database for authentication');
-      const result = await this.loginWithDatabase(credentials, pool);
+      console.log('🔄 Using TypeORM for authentication');
+      const result = await this.loginWithTypeORM(credentials);
       console.log('🔐 Login result:', { success: result.success, email: credentials.email });
       return result;
       
@@ -52,27 +51,24 @@ export class AuthService {
     }
   }
 
-  private static async loginWithDatabase(credentials: LoginRequest, pool: any): Promise<LoginResponse> {
-    // Buscar usuario por email (sin filtrar por Status)
-    const userResult = await pool.request()
-      .input('email', sql.VarChar, credentials.email)
-      .query(`
-        SELECT Id, Name, Email, PasswordHash, Status 
-        FROM USERS 
-        WHERE Email = @email
-      `);
+  private static async loginWithTypeORM(credentials: LoginRequest): Promise<LoginResponse> {
+    const userRepository = AppDataSource.getRepository(User);
+    const permissionByUserRepository = AppDataSource.getRepository(PermissionByUser);
 
-    if (userResult.recordset.length === 0) {
+    // Buscar usuario por email
+    const user = await userRepository.findOne({
+      where: { email: credentials.email }
+    });
+
+    if (!user) {
       return {
         success: false,
         message: 'Credenciales inválidas'
       };
     }
 
-    const user = userResult.recordset[0] as User;
-
     // Si el usuario está deshabilitado
-    if (user.Status === 0) {
+    if (user.status === 0) {
       return {
         success: false,
         message: 'Usuario deshabilitado'
@@ -80,7 +76,7 @@ export class AuthService {
     }
 
     // Verificar contraseña
-    const isValidPassword = await bcrypt.compare(credentials.password, user.PasswordHash);
+    const isValidPassword = await bcrypt.compare(credentials.password, user.passwordHash);
     if (!isValidPassword) {
       return {
         success: false,
@@ -89,35 +85,28 @@ export class AuthService {
     }
 
     // Obtener permisos del usuario
-    const permissionsResult = await pool.request()
-      .input('userId', sql.Int, user.Id)
-      .query(`
-        SELECT p.Name 
-        FROM PERMISSIONS p
-        INNER JOIN PERMISSIONS_BY_USER pbu ON p.Id = pbu.PermissionId
-        WHERE pbu.UserId = @userId
-      `);
+    const userPermissions = await permissionByUserRepository.find({
+      where: { userId: user.id },
+      relations: ['permission']
+    });
 
-    const permissions = permissionsResult.recordset.map((p: any) => p.Name);
+    const permissions = userPermissions.map(up => up.permission.name);
 
     // Actualizar último acceso
-    await pool.request()
-      .input('userId', sql.Int, user.Id)
-      .input('lastAccess', sql.DateTime, new Date())
-      .query('UPDATE USERS SET LastAccess = @lastAccess WHERE Id = @userId');
+    await userRepository.update(user.id, { lastAccess: new Date() });
 
     // Generar token JWT
     const token = this.generateToken({
-      userId: user.Id,
-      email: user.Email
+      userId: user.id,
+      email: user.email
     });
 
     return {
       success: true,
       user: {
-        id: user.Id,
-        name: user.Name,
-        email: user.Email,
+        id: user.id,
+        name: user.name,
+        email: user.email,
         permissions
       },
       token
@@ -128,22 +117,18 @@ export class AuthService {
 
   static async getUserById(userId: number): Promise<User | null> {
     try {
-      const pool = getPool();
-      
-      if (!pool) {
-        console.error('Pool de conexión no disponible');
+      if (!AppDataSource.isInitialized) {
+        console.error('Base de datos no disponible');
         return null;
       }
       
-      const result = await pool.request()
-        .input('userId', sql.Int, userId)
-        .query(`
-          SELECT Id, Name, Email, LastAccess, Status
-          FROM USERS 
-          WHERE Id = @userId AND Status = 1
-        `);
+      const userRepository = AppDataSource.getRepository(User);
+      
+      const user = await userRepository.findOne({
+        where: { id: userId, status: 1 }
+      });
 
-      return result.recordset.length > 0 ? result.recordset[0] as User : null;
+      return user;
     } catch (error) {
       console.error('Error obteniendo usuario:', error);
       return null;
@@ -152,23 +137,19 @@ export class AuthService {
 
   static async getUserPermissions(userId: number): Promise<string[]> {
     try {
-      const pool = getPool();
-      
-      if (!pool) {
-        console.error('Pool de conexión no disponible para obtener permisos');
+      if (!AppDataSource.isInitialized) {
+        console.error('Base de datos no disponible para obtener permisos');
         return [];
       }
       
-      const permissionsResult = await pool.request()
-        .input('userId', sql.Int, userId)
-        .query(`
-          SELECT p.Name 
-          FROM PERMISSIONS p
-          INNER JOIN PERMISSIONS_BY_USER pbu ON p.Id = pbu.PermissionId
-          WHERE pbu.UserId = @userId
-        `);
+      const permissionByUserRepository = AppDataSource.getRepository(PermissionByUser);
+      
+      const userPermissions = await permissionByUserRepository.find({
+        where: { userId: userId },
+        relations: ['permission']
+      });
 
-      return permissionsResult.recordset.map((p: any) => p.Name);
+      return userPermissions.map(up => up.permission.name);
     } catch (error) {
       console.error('Error obteniendo permisos:', error);
       return [];
@@ -177,17 +158,14 @@ export class AuthService {
 
   static async updateUserLastLogin(userId: number): Promise<void> {
     try {
-      const pool = getPool();
-      
-      if (!pool) {
-        console.error('Pool de conexión no disponible para actualizar último login');
+      if (!AppDataSource.isInitialized) {
+        console.error('Base de datos no disponible para actualizar último login');
         return;
       }
       
-      await pool.request()
-        .input('userId', sql.Int, userId)
-        .input('lastAccess', sql.DateTime, new Date())
-        .query('UPDATE USERS SET LastAccess = @lastAccess WHERE Id = @userId');
+      const userRepository = AppDataSource.getRepository(User);
+      
+      await userRepository.update(userId, { lastAccess: new Date() });
     } catch (error) {
       console.error('Error actualizando último acceso:', error);
     }

@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
-import { getPool, sql } from '../config/database';
+import { MenuItem } from '../models';
+import { AppDataSource } from '../config/typeorm.config';
 
-export interface MenuItem {
+export interface MenuItemResponse {
   id: number;
   label: string;
   icon?: string;
@@ -9,13 +10,13 @@ export interface MenuItem {
   parentId?: number;
   displayOrder: number;
   isActive: boolean;
-  children?: MenuItem[];
+  children?: MenuItemResponse[];
 }
 
 // Helper function to build hierarchical menu structure
-const buildMenuHierarchy = (menuItems: MenuItem[]): MenuItem[] => {
-  const menuMap = new Map<number, MenuItem>();
-  const rootMenus: MenuItem[] = [];
+const buildMenuHierarchy = (menuItems: MenuItemResponse[]): MenuItemResponse[] => {
+  const menuMap = new Map<number, MenuItemResponse>();
+  const rootMenus: MenuItemResponse[] = [];
 
   // First pass: create map of all menu items
   menuItems.forEach(item => {
@@ -40,7 +41,7 @@ const buildMenuHierarchy = (menuItems: MenuItem[]): MenuItem[] => {
   });
 
   // Sort root menus and their children by displayOrder
-  const sortByDisplayOrder = (items: MenuItem[]) => {
+  const sortByDisplayOrder = (items: MenuItemResponse[]) => {
     items.sort((a, b) => a.displayOrder - b.displayOrder);
     items.forEach(item => {
       if (item.children && item.children.length > 0) {
@@ -55,7 +56,7 @@ const buildMenuHierarchy = (menuItems: MenuItem[]): MenuItem[] => {
 
 // Helper function to filter menus by permissions (recursive)
 // Note: Since permissions are removed from the database, this function now returns all menus
-const filterMenusByPermissions = (menus: MenuItem[], userPermissions: string[]): MenuItem[] => {
+const filterMenusByPermissions = (menus: MenuItemResponse[], userPermissions: string[]): MenuItemResponse[] => {
   return menus.filter(menu => {
     // Since permissionRequired is removed, all menus are accessible
     // If menu has children, filter them recursively
@@ -69,9 +70,7 @@ const filterMenusByPermissions = (menus: MenuItem[], userPermissions: string[]):
 
 export const getAllMenuItems = async (req: Request, res: Response): Promise<void> => {
   try {
-    const pool = getPool();
-    
-    if (!pool) {
+    if (!AppDataSource.isInitialized) {
       res.status(503).json({
         success: false,
         message: 'Base de datos no disponible'
@@ -79,22 +78,24 @@ export const getAllMenuItems = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    const request = pool.request();
-    const result = await request.query(`
-      SELECT 
-        id,
-        label,
-        icon,
-        route,
-        parentId,
-        displayOrder,
-        isActive
-      FROM MENU_ITEMS 
-      WHERE isActive = 1
-      ORDER BY displayOrder ASC
-    `);
+    const menuItemRepository = AppDataSource.getRepository(MenuItem);
+    
+    const menuItems = await menuItemRepository.find({
+      where: { isActive: true },
+      order: { displayOrder: 'ASC' }
+    });
 
-    const hierarchicalMenus = buildMenuHierarchy(result.recordset);
+    const menuItemsResponse: MenuItemResponse[] = menuItems.map(item => ({
+      id: item.id,
+      label: item.label,
+      icon: item.icon || undefined,
+      route: item.route || undefined,
+      parentId: item.parentId || undefined,
+      displayOrder: item.displayOrder,
+      isActive: item.isActive
+    }));
+
+    const hierarchicalMenus = buildMenuHierarchy(menuItemsResponse);
     
     res.json({
       success: true,
@@ -122,9 +123,7 @@ export const getMenuItemsByPermissions = async (req: Request, res: Response): Pr
       return;
     }
 
-    const pool = getPool();
-    
-    if (!pool) {
+    if (!AppDataSource.isInitialized) {
       res.status(503).json({
         success: false,
         message: 'Base de datos no disponible'
@@ -132,23 +131,25 @@ export const getMenuItemsByPermissions = async (req: Request, res: Response): Pr
       return;
     }
 
-    const request = pool.request();
-    const result = await request.query(`
-      SELECT 
-        id,
-        label,
-        icon,
-        route,
-        parentId,
-        displayOrder,
-        isActive
-      FROM MENU_ITEMS 
-      WHERE isActive = 1
-      ORDER BY displayOrder ASC
-    `);
+    const menuItemRepository = AppDataSource.getRepository(MenuItem);
+    
+    const menuItems = await menuItemRepository.find({
+      where: { isActive: true },
+      order: { displayOrder: 'ASC' }
+    });
+
+    const menuItemsResponse: MenuItemResponse[] = menuItems.map(item => ({
+      id: item.id,
+      label: item.label,
+      icon: item.icon || undefined,
+      route: item.route || undefined,
+      parentId: item.parentId || undefined,
+      displayOrder: item.displayOrder,
+      isActive: item.isActive
+    }));
 
     // Build hierarchy first
-    const hierarchicalMenus = buildMenuHierarchy(result.recordset);
+    const hierarchicalMenus = buildMenuHierarchy(menuItemsResponse);
     
     // Then filter by permissions
     const filteredMenus = filterMenusByPermissions(hierarchicalMenus, permissions);
@@ -187,9 +188,7 @@ export const createMenuItem = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const pool = getPool();
-    
-    if (!pool) {
+    if (!AppDataSource.isInitialized) {
       res.status(503).json({
         success: false,
         message: 'Base de datos no disponible'
@@ -197,24 +196,30 @@ export const createMenuItem = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const request = pool.request();
+    const menuItemRepository = AppDataSource.getRepository(MenuItem);
     
-    // Insert new menu item
-    const result = await request
-      .input('label', sql.NVarChar, label)
-      .input('icon', sql.NVarChar, icon)
-      .input('route', sql.NVarChar, route)
-      .input('parentId', sql.Int, parentId)
-      .input('displayOrder', sql.Int, displayOrder)
-      .query(`
-        INSERT INTO MENU_ITEMS (label, icon, route, parentId, displayOrder)
-        OUTPUT INSERTED.*
-        VALUES (@label, @icon, @route, @parentId, @displayOrder)
-      `);
+    // Create new menu item
+    const newMenuItem = new MenuItem();
+    newMenuItem.label = label;
+    newMenuItem.icon = icon;
+    newMenuItem.route = route;
+    newMenuItem.parentId = parentId;
+    newMenuItem.displayOrder = displayOrder;
+    newMenuItem.isActive = true;
+
+    const savedMenuItem = await menuItemRepository.save(newMenuItem);
 
     res.status(201).json({
       success: true,
-      data: result.recordset[0],
+      data: {
+        id: savedMenuItem.id,
+        label: savedMenuItem.label,
+        icon: savedMenuItem.icon,
+        route: savedMenuItem.route,
+        parentId: savedMenuItem.parentId,
+        displayOrder: savedMenuItem.displayOrder,
+        isActive: savedMenuItem.isActive
+      },
       message: 'Menu item created successfully'
     });
   } catch (error) {
@@ -239,9 +244,7 @@ export const updateMenuItem = async (req: Request, res: Response): Promise<void>
       isActive 
     } = req.body;
 
-    const pool = getPool();
-    
-    if (!pool) {
+    if (!AppDataSource.isInitialized) {
       res.status(503).json({
         success: false,
         message: 'Base de datos no disponible'
@@ -249,14 +252,14 @@ export const updateMenuItem = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const request = pool.request();
+    const menuItemRepository = AppDataSource.getRepository(MenuItem);
     
     // Check if menu item exists
-    const existingItem = await request
-      .input('id', sql.Int, parseInt(id))
-      .query('SELECT id FROM MENU_ITEMS WHERE id = @id');
+    const existingItem = await menuItemRepository.findOne({
+      where: { id: parseInt(id) }
+    });
 
-    if (existingItem.recordset.length === 0) {
+    if (!existingItem) {
       res.status(404).json({
         success: false,
         message: 'Menu item not found'
@@ -264,34 +267,35 @@ export const updateMenuItem = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Create a new request for the update operation
-    const updateRequest = pool.request();
-    
     // Update menu item
-    const result = await updateRequest
-      .input('id', sql.Int, parseInt(id))
-      .input('label', sql.NVarChar, label)
-      .input('icon', sql.NVarChar, icon)
-      .input('route', sql.NVarChar, route)
-      .input('parentId', sql.Int, parentId)
-      .input('displayOrder', sql.Int, displayOrder)
-      .input('isActive', sql.Bit, isActive)
-      .query(`
-        UPDATE MENU_ITEMS 
-        SET 
-          label = @label,
-          icon = @icon,
-          route = @route,
-          parentId = @parentId,
-          displayOrder = @displayOrder,
-          isActive = @isActive
-        OUTPUT INSERTED.*
-        WHERE id = @id
-      `);
+    await menuItemRepository.update(
+      { id: parseInt(id) },
+      {
+        label: label,
+        icon: icon,
+        route: route,
+        parentId: parentId,
+        displayOrder: displayOrder,
+        isActive: isActive
+      }
+    );
+
+    // Get updated item
+    const updatedItem = await menuItemRepository.findOne({
+      where: { id: parseInt(id) }
+    });
 
     res.json({
       success: true,
-      data: result.recordset[0],
+      data: {
+        id: updatedItem!.id,
+        label: updatedItem!.label,
+        icon: updatedItem!.icon,
+        route: updatedItem!.route,
+        parentId: updatedItem!.parentId,
+        displayOrder: updatedItem!.displayOrder,
+        isActive: updatedItem!.isActive
+      },
       message: 'Menu item updated successfully'
     });
   } catch (error) {
@@ -308,9 +312,7 @@ export const deleteMenuItem = async (req: Request, res: Response): Promise<void>
   try {
     const { id } = req.params;
 
-    const pool = getPool();
-    
-    if (!pool) {
+    if (!AppDataSource.isInitialized) {
       res.status(503).json({
         success: false,
         message: 'Base de datos no disponible'
@@ -318,14 +320,14 @@ export const deleteMenuItem = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const request = pool.request();
+    const menuItemRepository = AppDataSource.getRepository(MenuItem);
     
     // Check if menu item has children
-    const childrenCheck = await request
-      .input('parentId', sql.Int, parseInt(id))
-      .query('SELECT COUNT(*) as childCount FROM MENU_ITEMS WHERE parentId = @parentId AND isActive = 1');
+    const childCount = await menuItemRepository.count({
+      where: { parentId: parseInt(id), isActive: true }
+    });
 
-    if (childrenCheck.recordset[0].childCount > 0) {
+    if (childCount > 0) {
       res.status(400).json({
         success: false,
         message: 'Cannot delete menu item that has active children. Please delete or reassign children first.'
@@ -333,20 +335,13 @@ export const deleteMenuItem = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Create a new request for the delete operation
-    const deleteRequest = pool.request();
-
     // Soft delete (set isActive to false)
-    const result = await deleteRequest
-      .input('id', sql.Int, parseInt(id))
-      .query(`
-        UPDATE MENU_ITEMS 
-        SET isActive = 0
-        OUTPUT DELETED.*
-        WHERE id = @id
-      `);
+    const updateResult = await menuItemRepository.update(
+      { id: parseInt(id) },
+      { isActive: false }
+    );
 
-    if (result.recordset.length === 0) {
+    if (updateResult.affected === 0) {
       res.status(404).json({
         success: false,
         message: 'Menu item not found'

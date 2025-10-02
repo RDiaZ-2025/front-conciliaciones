@@ -66,11 +66,11 @@ export const requirePermission = (permission: string) => {
       // Obtener permisos del usuario desde la base de datos
       const userPermissions = await AuthService.getUserPermissions(req.user.userId);
       
-      // Comparar en mayúsculas para coincidir con la base de datos
-      if (!userPermissions.includes(permission.toUpperCase())) {
+      // Comparar directamente con los permisos de la base de datos
+      if (!userPermissions.includes(permission)) {
         res.status(403).json({
           success: false,
-          message: `Permiso requerido: ${permission.toUpperCase()}`
+          message: `Permiso requerido: ${permission}`
         });
         return;
       }
@@ -101,7 +101,7 @@ export const requireAnyPermission = (permissions: string[]) => {
       // Obtener permisos del usuario desde la base de datos
       const userPermissions = await AuthService.getUserPermissions(req.user.userId);
       
-      const hasPermission = permissions.some(permission => userPermissions.includes(permission.toUpperCase()));
+      const hasPermission = permissions.some(permission => userPermissions.includes(permission));
       
       if (!hasPermission) {
         res.status(403).json({

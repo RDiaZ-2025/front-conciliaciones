@@ -1,20 +1,23 @@
 import { Request, Response } from 'express';
-import { getPool, sql } from '../config/database';
+import { ProductionRequest } from '../models';
+import { AppDataSource } from '../config/typeorm.config';
 
 // Get all production requests
 export const getAllProductionRequests = async (req: Request, res: Response): Promise<Response | void> => {
   try {
-    const pool = getPool();
-    
-    if (!pool) {
+    if (!AppDataSource.isInitialized) {
       return res.status(503).json({
         success: false,
         message: 'Base de datos no disponible'
       });
     }
     
-    const result = await pool.request().query('SELECT * FROM production_requests ORDER BY requestDate DESC');
-    return res.status(200).json(result.recordset);
+    const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
+    const productionRequests = await productionRequestRepository.find({
+      order: { requestDate: 'DESC' }
+    });
+    
+    return res.status(200).json(productionRequests);
   } catch (error) {
     console.error('Error fetching production requests:', error);
     return res.status(500).json({ message: 'Error fetching production requests', error });
@@ -25,24 +28,24 @@ export const getAllProductionRequests = async (req: Request, res: Response): Pro
 export const getProductionRequestById = async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const { id } = req.params;
-    const pool = getPool();
     
-    if (!pool) {
+    if (!AppDataSource.isInitialized) {
       return res.status(503).json({
         success: false,
         message: 'Base de datos no disponible'
       });
     }
     
-    const result = await pool.request()
-      .input('id', sql.Int, parseInt(id))
-      .query('SELECT * FROM production_requests WHERE id = @id');
+    const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
+    const productionRequest = await productionRequestRepository.findOne({
+      where: { id: parseInt(id) }
+    });
     
-    if (result.recordset.length === 0) {
+    if (!productionRequest) {
       return res.status(404).json({ message: 'Production request not found' });
     }
     
-    return res.status(200).json(result.recordset[0]);
+    return res.status(200).json(productionRequest);
   } catch (error) {
     console.error('Error fetching production request:', error);
     return res.status(500).json({ message: 'Error fetching production request', error });
@@ -66,49 +69,29 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       return res.status(400).json({ message: 'Missing required fields' });
     }
     
-    const pool = getPool();
-    
-    if (!pool) {
+    if (!AppDataSource.isInitialized) {
       return res.status(503).json({
         success: false,
         message: 'Base de datos no disponible'
       });
     }
     
-    const requestDate = new Date().toISOString();
-    const stage = 'request'; // Initial stage
+    const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
     
-    const result = await pool.request()
-      .input('name', sql.NVarChar, name)
-      .input('requestDate', sql.DateTime, requestDate)
-      .input('department', sql.NVarChar, department)
-      .input('contactPerson', sql.NVarChar, contactPerson)
-      .input('assignedTeam', sql.NVarChar, assignedTeam)
-      .input('deliveryDate', sql.DateTime, deliveryDate)
-      .input('observations', sql.NVarChar, observations)
-      .input('stage', sql.NVarChar, stage)
-      .query(`
-        INSERT INTO production_requests 
-        (name, requestDate, department, contactPerson, assignedTeam, deliveryDate, observations, stage) 
-        OUTPUT INSERTED.id
-        VALUES (@name, @requestDate, @department, @contactPerson, @assignedTeam, @deliveryDate, @observations, @stage)
-      `);
-    
-    const newId = result.recordset[0].id;
-    
-    const newRequest = {
-      id: newId,
+    const newProductionRequest = productionRequestRepository.create({
       name,
-      requestDate,
+      requestDate: new Date(),
       department,
       contactPerson,
       assignedTeam,
-      deliveryDate,
+      deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
       observations,
-      stage
-    };
+      stage: 'request' // Initial stage
+    });
     
-    return res.status(201).json(newRequest);
+    const savedRequest = await productionRequestRepository.save(newProductionRequest);
+    
+    return res.status(201).json(savedRequest);
   } catch (error) {
     console.error('Error creating production request:', error);
     return res.status(500).json({ message: 'Error creating production request', error });
@@ -134,54 +117,34 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
       return res.status(400).json({ message: 'Missing required fields' });
     }
     
-    const pool = getPool();
-    
-    if (!pool) {
+    if (!AppDataSource.isInitialized) {
       return res.status(503).json({
         success: false,
         message: 'Base de datos no disponible'
       });
     }
     
-    // Check if request exists
-    const checkResult = await pool.request()
-      .input('id', sql.Int, parseInt(id))
-      .query('SELECT * FROM production_requests WHERE id = @id');
+    const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
     
-    if (checkResult.recordset.length === 0) {
+    // Check if request exists
+    const existingRequest = await productionRequestRepository.findOne({
+      where: { id: parseInt(id) }
+    });
+    
+    if (!existingRequest) {
       return res.status(404).json({ message: 'Production request not found' });
     }
     
-    const existingRequest = checkResult.recordset[0];
+    // Update the request
+    existingRequest.name = name;
+    existingRequest.department = department;
+    existingRequest.contactPerson = contactPerson;
+    existingRequest.assignedTeam = assignedTeam;
+    existingRequest.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
+    existingRequest.observations = observations;
+    existingRequest.stage = stage;
     
-    await pool.request()
-      .input('id', sql.Int, parseInt(id))
-      .input('name', sql.NVarChar, name)
-      .input('department', sql.NVarChar, department)
-      .input('contactPerson', sql.NVarChar, contactPerson)
-      .input('assignedTeam', sql.NVarChar, assignedTeam)
-      .input('deliveryDate', sql.DateTime, deliveryDate)
-      .input('observations', sql.NVarChar, observations)
-      .input('stage', sql.NVarChar, stage)
-      .query(`
-        UPDATE production_requests 
-        SET name = @name, department = @department, contactPerson = @contactPerson, 
-            assignedTeam = @assignedTeam, deliveryDate = @deliveryDate, 
-            observations = @observations, stage = @stage
-        WHERE id = @id
-      `);
-    
-    const updatedRequest = {
-      id,
-      name,
-      requestDate: existingRequest.requestDate,
-      department,
-      contactPerson,
-      assignedTeam,
-      deliveryDate,
-      observations,
-      stage
-    };
+    const updatedRequest = await productionRequestRepository.save(existingRequest);
     
     return res.status(200).json(updatedRequest);
   } catch (error) {
@@ -213,35 +176,27 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
       return res.status(400).json({ message: 'Invalid stage' });
     }
     
-    const pool = getPool();
-    
-    if (!pool) {
+    if (!AppDataSource.isInitialized) {
       return res.status(503).json({
         success: false,
         message: 'Base de datos no disponible'
       });
     }
     
-    // Check if request exists
-    const checkResult = await pool.request()
-      .input('id', sql.Int, parseInt(id))
-      .query('SELECT * FROM production_requests WHERE id = @id');
+    const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
     
-    if (checkResult.recordset.length === 0) {
+    // Check if request exists
+    const existingRequest = await productionRequestRepository.findOne({
+      where: { id: parseInt(id) }
+    });
+    
+    if (!existingRequest) {
       return res.status(404).json({ message: 'Production request not found' });
     }
     
-    const existingRequest = checkResult.recordset[0];
-    
-    await pool.request()
-      .input('id', sql.Int, parseInt(id))
-      .input('stage', sql.NVarChar, stage)
-      .query('UPDATE production_requests SET stage = @stage WHERE id = @id');
-    
-    const updatedRequest = {
-      ...existingRequest,
-      stage
-    };
+    // Update the stage
+    existingRequest.stage = stage;
+    const updatedRequest = await productionRequestRepository.save(existingRequest);
     
     return res.status(200).json(updatedRequest);
   } catch (error) {
@@ -255,27 +210,25 @@ export const deleteProductionRequest = async (req: Request, res: Response): Prom
   try {
     const { id } = req.params;
     
-    const pool = getPool();
-    
-    if (!pool) {
+    if (!AppDataSource.isInitialized) {
       return res.status(503).json({
         success: false,
         message: 'Base de datos no disponible'
       });
     }
     
-    // Check if request exists
-    const checkResult = await pool.request()
-      .input('id', sql.Int, parseInt(id))
-      .query('SELECT * FROM production_requests WHERE id = @id');
+    const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
     
-    if (checkResult.recordset.length === 0) {
+    // Check if request exists
+    const existingRequest = await productionRequestRepository.findOne({
+      where: { id: parseInt(id) }
+    });
+    
+    if (!existingRequest) {
       return res.status(404).json({ message: 'Production request not found' });
     }
     
-    await pool.request()
-      .input('id', sql.Int, parseInt(id))
-      .query('DELETE FROM production_requests WHERE id = @id');
+    await productionRequestRepository.remove(existingRequest);
     
     return res.status(200).json({ message: 'Production request deleted successfully' });
   } catch (error) {
