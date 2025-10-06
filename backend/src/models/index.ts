@@ -20,6 +20,9 @@ export { MenuItem } from './MenuItem';
 // Production Management Models
 export { ProductionRequest } from './ProductionRequest';
 
+// Audit and Logging Models
+export { UserActionLog } from './UserActionLog';
+
 /**
  * Array of all entity classes for TypeORM configuration
  * Use this array when configuring TypeORM connection
@@ -30,6 +33,7 @@ import { PermissionByUser } from './PermissionByUser';
 import { LoadDocumentsOCbyUser } from './LoadDocumentsOCbyUser';
 import { MenuItem } from './MenuItem';
 import { ProductionRequest } from './ProductionRequest';
+import { UserActionLog } from './UserActionLog';
 
 export const entities = [
   User,
@@ -37,7 +41,8 @@ export const entities = [
   PermissionByUser,
   LoadDocumentsOCbyUser,
   MenuItem,
-  ProductionRequest
+  ProductionRequest,
+  UserActionLog
 ];
 
 /**
@@ -72,6 +77,13 @@ export const ModelCategories = {
    */
   Production: {
     ProductionRequest
+  },
+  
+  /**
+   * Audit and logging models
+   */
+  Audit: {
+    UserActionLog
   }
 };
 

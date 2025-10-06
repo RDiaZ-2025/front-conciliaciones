@@ -14,6 +14,9 @@ import userRoutes from './routes/users';
 import productionRoutes from './routes/productionRoutes';
 import menuRoutes from './routes/menuRoutes';
 
+// Importar middleware de logging
+import { actionLogger, skipLogging } from './middleware/actionLogger';
+
 // Cargar variables de entorno
 dotenv.config();
 
@@ -46,8 +49,11 @@ app.use(cookieParser()); // Cookies
 app.use(express.json({ limit: '10mb' })); // JSON parser
 app.use(express.urlencoded({ extended: true, limit: '10mb' })); // URL encoded
 
-// Ruta de salud
-app.get('/health', (req, res) => {
+// Middleware de logging de acciones de usuario
+app.use(actionLogger);
+
+// Ruta de salud (sin logging para evitar spam en los logs)
+app.get('/health', skipLogging, (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Servidor funcionando correctamente',
