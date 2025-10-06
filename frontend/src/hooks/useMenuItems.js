@@ -103,10 +103,7 @@ export const useMenuItems = () => {
       setError(null);
 
       // Since permissions are no longer stored in menu items, fetch all menu items
-      console.log('🔍 Fetching hierarchical menu items from database');
-      
       const hierarchicalMenuItems = await menuService.getAllMenuItems();
-      console.log('📋 Hierarchical database menu items received:', hierarchicalMenuItems);
       
       if (hierarchicalMenuItems && hierarchicalMenuItems.length > 0) {
         // Transform hierarchical structure to flat structure for NavigationDrawer
@@ -115,18 +112,14 @@ export const useMenuItems = () => {
         // Sort by displayOrder (should already be sorted from backend, but ensure it)
         transformedItems.sort((a, b) => a.displayOrder - b.displayOrder);
         
-        console.log('✨ Transformed flat menu items:', transformedItems);
         setMenuItems(transformedItems);
       } else {
-        console.log('⚠️ No menu items from database, using defaults');
         setMenuItems(defaultMenuItems);
       }
     } catch (err) {
-      console.error('❌ Error fetching menu items:', err);
       setError(err.message);
       
       // Fallback to default menu items on error
-      console.log('🔄 Falling back to default menu items');
       setMenuItems(defaultMenuItems);
     } finally {
       setLoading(false);

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, ChangeEvent } from 'react';
 import axios from 'axios';
-import { ProductionRequest, FormData, SnackbarState, UseProductionReturn } from './types';
+import { ProductionRequest, FormData, SnackbarState, UseProductionReturn, UploadedFile } from './types';
+import { azureStorageService, AzureStorageService, UploadResult } from '../../services/azureStorageService';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
@@ -33,6 +34,9 @@ export const useProduction = (): UseProductionReturn => {
     message: '',
     severity: 'success'
   });
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
 
   // Fetch production requests
   const fetchProductionRequests = useCallback(async () => {
@@ -59,13 +63,28 @@ export const useProduction = (): UseProductionReturn => {
   }, [fetchProductionRequests]);
 
   // Handle dialog open
-  const handleOpenDialog = (request: ProductionRequest | null = null) => {
+  const handleOpenDialog = async (request: ProductionRequest | null = null) => {
     if (request) {
       setFormData(request);
+      // Fetch existing files from Azure Storage
+      if (request.id) {
+        try {
+          const existingFiles = await fetchExistingFiles(request.id);
+          // Convert existing files to File objects for the FileUpload component
+          const fileObjects: File[] = [];
+          // For now, we'll just clear the uploaded files and show the existing ones in the request data
+          setUploadedFiles(fileObjects);
+          // Update the form data with the actual files from storage
+          setFormData(prev => ({ ...prev, files: existingFiles }));
+        } catch (error) {
+          console.error('Error loading existing files:', error);
+        }
+      }
     } else {
       setFormData({
         ...initialFormData,
       });
+      setUploadedFiles([]);
     }
     setOpenDialog(true);
   };
@@ -94,40 +113,177 @@ export const useProduction = (): UseProductionReturn => {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
+  // Handle file upload
+  const handleFileUpload = (files: File[]) => {
+    setUploadedFiles(files);
+  };
+
+  // Fetch existing files from Azure Storage
+  const fetchExistingFiles = async (requestId: string): Promise<UploadedFile[]> => {
+    try {
+      const folderPath = AzureStorageService.generateProductionFolderPath(requestId);
+      const filesDetails = await azureStorageService.getFilesDetails(folderPath);
+      return filesDetails;
+    } catch (error) {
+      console.error('Error fetching existing files:', error);
+      return [];
+    }
+  };
+
+  // Upload files to Azure Storage
+  const uploadFilesToAzure = async (requestId: string, files: File[]): Promise<UploadedFile[]> => {
+    if (files.length === 0) return [];
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const folderPath = AzureStorageService.generateProductionFolderPath(requestId);
+      const uploadResults: UploadResult[] = await azureStorageService.uploadFiles(files, {
+        folderPath,
+        metadata: {
+          requestId,
+          uploadedBy: 'current-user', // Replace with actual user info
+          uploadType: 'production'
+        }
+      });
+
+      const uploadedFiles: UploadedFile[] = uploadResults.map((result, index) => ({
+        id: `${requestId}-${Date.now()}-${index}`,
+        name: result.fileName,
+        size: files[index].size,
+        type: files[index].type,
+        url: result.url,
+        uploadDate: new Date().toISOString()
+      }));
+
+      // Check for failed uploads
+      const failedUploads = uploadResults.filter(result => !result.success);
+      if (failedUploads.length > 0) {
+        setSnackbar({
+          open: true,
+          message: `${failedUploads.length} archivo(s) no se pudieron subir`,
+          severity: 'warning'
+        });
+      } else {
+        setSnackbar({
+          open: true,
+          message: 'Archivos subidos correctamente',
+          severity: 'success'
+        });
+      }
+
+      setUploadProgress(100);
+      return uploadedFiles;
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error al subir los archivos',
+        severity: 'error'
+      });
+      return [];
+    } finally {
+      setIsUploading(false);
+      setTimeout(() => setUploadProgress(0), 2000);
+    }
+  };
+
+  // Download files from Azure Storage
+  const downloadFilesFromAzure = async (requestId: string) => {
+    try {
+      const folderPath = AzureStorageService.generateProductionFolderPath(requestId);
+      await azureStorageService.downloadFiles({ folderPath });
+      
+      setSnackbar({
+        open: true,
+        message: 'Archivos descargados correctamente',
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('Error downloading files:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error al descargar los archivos',
+        severity: 'error'
+      });
+    }
+  };
+
+  // Download single file from Azure Storage
+  const downloadSingleFile = async (fileId: string, fileName: string) => {
+    try {
+      await azureStorageService.downloadSingleFile(fileId, fileName);
+      setSnackbar({
+        open: true,
+        message: `Archivo ${fileName} descargado exitosamente`,
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      setSnackbar({
+        open: true,
+        message: `Error al descargar el archivo ${fileName}`,
+        severity: 'error'
+      });
+    }
+  };
+
   // Handle form submit
   const handleSubmit = async () => {
     try {
+      let requestId = formData.id;
+      let uploadedFilesList: UploadedFile[] = [];
+
       if (formData.id) {
         // Update existing request
         await axios.put(`${API_BASE_URL}/production/${formData.id}`, formData, {
           headers: getAuthHeaders()
         });
+        
+        // Upload files if any
+        if (uploadedFiles.length > 0) {
+          uploadedFilesList = await uploadFilesToAzure(String(formData.id), uploadedFiles);
+        }
+        
+        // Update local state with files
+        const updatedRequest = { 
+          ...formData as ProductionRequest, 
+          files: [...(formData.files || []), ...uploadedFilesList]
+        };
+        
+        setProductionRequests(prev => 
+          prev.map(req => req.id === formData.id ? updatedRequest : req)
+        );
+        
         setSnackbar({
           open: true,
           message: 'Solicitud actualizada correctamente',
           severity: 'success'
         });
-        
-        // Update local state
-        setProductionRequests(prev => 
-          prev.map(req => req.id === formData.id ? { ...formData as ProductionRequest } : req)
-        );
       } else {
         // Create new request
-        const newRequest: ProductionRequest = {
-          ...formData as Omit<ProductionRequest, 'id' | 'requestDate'>,
-          id: Date.now().toString(), // Temporary ID for mock data
-          requestDate: new Date().toISOString(),
-          stage: 'request'
+        const { files, id, requestDate, stage, ...requestData } = formData;
+        const requestPayload = {
+          ...requestData
         };
         
-        // In a production environment, the server would return the created request with a proper ID
-        await axios.post(`${API_BASE_URL}/production`, newRequest, {
+        // Create the request on the server and get the actual ID
+        const response = await axios.post(`${API_BASE_URL}/production`, requestPayload, {
           headers: getAuthHeaders()
         });
         
-        // Add to local state
-        setProductionRequests(prev => [...prev, newRequest]);
+        const createdRequest = response.data;
+        requestId = createdRequest.id.toString();
+        
+        // Upload files if any using the actual request ID
+        if (uploadedFiles.length > 0) {
+          uploadedFilesList = await uploadFilesToAzure(requestId, uploadedFiles);
+          createdRequest.files = uploadedFilesList;
+        }
+        
+        // Add to local state with the actual request from server
+        setProductionRequests(prev => [...prev, createdRequest]);
         
         setSnackbar({
           open: true,
@@ -136,6 +292,8 @@ export const useProduction = (): UseProductionReturn => {
         });
       }
       
+      // Clear uploaded files and close dialog
+      setUploadedFiles([]);
       handleCloseDialog();
     } catch (err) {
       console.error('Error submitting production request:', err);
@@ -147,20 +305,42 @@ export const useProduction = (): UseProductionReturn => {
       
       // For development only - in production, we would not update the state on error
       if (process.env.NODE_ENV === 'development') {
+        let uploadedFilesList: UploadedFile[] = [];
+        
         if (formData.id) {
+          // Upload files if any
+          if (uploadedFiles.length > 0) {
+            uploadedFilesList = await uploadFilesToAzure(String(formData.id), uploadedFiles);
+          }
+          
+          const updatedRequest = { 
+            ...formData as ProductionRequest, 
+            files: [...(formData.files || []), ...uploadedFilesList]
+          };
+          
           setProductionRequests(prev => 
-            prev.map(req => req.id === formData.id ? { ...formData as ProductionRequest } : req)
+            prev.map(req => req.id === formData.id ? updatedRequest : req)
           );
         } else {
           const newRequest: ProductionRequest = {
             ...formData as Omit<ProductionRequest, 'id' | 'requestDate'>,
             id: Date.now().toString(),
             requestDate: new Date().toISOString(),
-            stage: 'request'
+            stage: 'request',
+            files: []
           };
+          
+          // Upload files if any
+          if (uploadedFiles.length > 0) {
+            uploadedFilesList = await uploadFilesToAzure(newRequest.id, uploadedFiles);
+            newRequest.files = uploadedFilesList;
+          }
+          
           setProductionRequests(prev => [...prev, newRequest]);
         }
         
+        // Clear uploaded files and close dialog
+        setUploadedFiles([]);
         handleCloseDialog();
       }
     }
@@ -289,6 +469,9 @@ export const useProduction = (): UseProductionReturn => {
     setFormData,
     snackbar,
     setSnackbar,
+    uploadedFiles,
+    uploadProgress,
+    isUploading,
     handleOpenDialog,
     handleCloseDialog,
     handleInputChange,
@@ -297,6 +480,10 @@ export const useProduction = (): UseProductionReturn => {
     handleMoveRequest,
     handleDeleteRequest,
     handleCloseSnackbar,
+    handleFileUpload,
+    uploadFilesToAzure,
+    downloadFilesFromAzure,
+    downloadSingleFile,
     fetchProductionRequests
   };
 };

@@ -22,6 +22,7 @@ import {
   Stack,
   Snackbar,
   Alert,
+  LinearProgress,
   useTheme
 } from '@mui/material';
 import {
@@ -59,7 +60,6 @@ const workflowStages = [
 const Production: React.FC<ProductionProps> = ({ darkMode }) => {
   const theme = useTheme();
   const { user } = useAuth();
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   
@@ -80,21 +80,19 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
     handleMoveRequest,
     handleDeleteRequest,
     handleCloseSnackbar,
-    fetchProductionRequests
+    fetchProductionRequests,
+    uploadedFiles,
+    uploadProgress,
+    isUploading,
+    handleFileUpload,
+    uploadFilesToAzure,
+    downloadFilesFromAzure,
+    downloadSingleFile
   } = useProduction();
 
-  const handleFileUpload = (files: File[]) => {
-    setUploadedFiles(files);
-  };
-
   const handleFileDownload = (file: UploadedFile) => {
-    if (file.url) {
-      const link = document.createElement('a');
-      link.href = file.url;
-      link.download = file.name;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    if (file.id) {
+      downloadSingleFile(file.id, file.name);
     }
   };
 
@@ -651,7 +649,7 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
               }}
             >
               Conectado como{' '}
-              <Box sx={{ fontWeight: 'bold', color: 'text.primary', display: 'inline' }}>
+              <Box component="span" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
                 {user?.name}
               </Box>
               {' '}({user?.email})
@@ -901,15 +899,118 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
               <Typography variant="h6" sx={{ mb: 2, mt: 2 }}>
                 Archivos adjuntos
               </Typography>
+              
+              {/* Existing files from storage */}
+              {formData.id && formData.files && formData.files.length > 0 && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                    Archivos existentes en almacenamiento:
+                  </Typography>
+                  <Stack spacing={1}>
+                    {formData.files.map((file) => (
+                      <Box 
+                        key={file.id}
+                        sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: 1,
+                          p: 1.5,
+                          borderRadius: 1,
+                          bgcolor: 'action.hover',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          '&:hover': {
+                            bgcolor: 'action.selected'
+                          }
+                        }}
+                      >
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            flex: 1,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {file.name}
+                        </Typography>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            color: 'text.secondary',
+                            minWidth: 'fit-content'
+                          }}
+                        >
+                          {(file.size / 1024 / 1024).toFixed(2)} MB
+                        </Typography>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFilePreview(file);
+                          }}
+                          sx={{ 
+                            '&:hover': {
+                              bgcolor: 'info.main',
+                              color: 'info.contrastText'
+                            }
+                          }}
+                        >
+                          <VisibilityIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFileDownload(file);
+                          }}
+                          sx={{ 
+                            '&:hover': {
+                              bgcolor: 'primary.main',
+                              color: 'primary.contrastText'
+                            }
+                          }}
+                        >
+                          <DownloadIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Box>
+              )}
+              
               <FileUpload
                 files={uploadedFiles}
                 onFilesChange={handleFileUpload}
                 acceptedTypes={['.pdf', '.xlsx', '.xls', '.mp3', '.mp4', '.jpg', '.jpeg', '.png', '.gif', '.doc', '.docx']}
                 maxFiles={10}
                 maxFileSize={50} // 50MB
+                disabled={isUploading}
                 label="Arrastra archivos aquí o haz clic para seleccionar"
                 helperText="Formatos soportados: PDF, Excel, Audio, Video, Imágenes, Documentos (máx. 50MB por archivo)"
               />
+              
+              {/* Upload Progress */}
+              {isUploading && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    Subiendo archivos a Azure Storage...
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ width: '100%' }}>
+                      <LinearProgress 
+                        variant="determinate" 
+                        value={uploadProgress} 
+                        sx={{ height: 8, borderRadius: 4 }}
+                      />
+                    </Box>
+                    <Typography variant="body2" color="text.secondary">
+                      {Math.round(uploadProgress)}%
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
             </Box>
             
             {formData.id && (
@@ -934,15 +1035,25 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
-          <Button onClick={handleCloseDialog} variant="outlined">
+          <Button 
+            onClick={handleCloseDialog} 
+            variant="outlined"
+            disabled={isUploading}
+          >
             Cancelar
           </Button>
           <Button 
             onClick={handleSubmit} 
             variant="contained" 
+            disabled={isUploading}
             startIcon={formData.id ? <EditIcon /> : <AddIcon />}
           >
-            {formData.id ? 'Actualizar' : 'Crear'}
+            {isUploading 
+              ? 'Subiendo archivos...' 
+              : formData.id 
+                ? 'Actualizar' 
+                : 'Crear'
+            }
           </Button>
         </DialogActions>
       </Dialog>

@@ -50,10 +50,7 @@ import Layout from '../../components/Layout';
 const AdminPanel = ({ darkMode, selectedMenu = 'usuarios', onMenuSelect, setDarkMode, onBack }) => {
   const { user } = useAuth();
   
-  // Add debugging for selectedMenu prop changes
-  React.useEffect(() => {
-    console.log('AdminPanel - selectedMenu prop changed to:', selectedMenu);
-  }, [selectedMenu]);
+
 
   const {
     users,
@@ -91,20 +88,15 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios', onMenuSelect, setDark
   } = useAdminPanel();
 
   const renderContent = () => {
-    console.log('AdminPanel - renderContent called with selectedMenu:', selectedMenu);
     switch (selectedMenu) {
       case 'historial':
-        console.log('AdminPanel - Rendering historial view');
         return <LoadDocumentsOCbyUserView darkMode={darkMode} />;
       case 'upload':
-        console.log('AdminPanel - Rendering upload view');
         return <UploadForm hideHeader={true} darkMode={darkMode} onUploadComplete={() => {}} onBackToLogin={() => {}} setDarkMode={() => {}} onGoToAdmin={() => {}} onGoToDashboard={() => {}} />;
       case 'dashboard':
-        console.log('AdminPanel - Rendering dashboard view');
         return <DashboardGeneral darkMode={darkMode} setDarkMode={() => {}} onBack={() => {}} onGoToAdmin={() => {}} onGoToUpload={() => {}} />;
       case 'usuarios':
       default:
-        console.log('AdminPanel - Rendering user management view');
         return renderUserManagement();
     }
   };

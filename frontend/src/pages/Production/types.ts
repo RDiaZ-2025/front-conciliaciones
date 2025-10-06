@@ -45,7 +45,10 @@ export interface UseProductionReturn {
   setFormData: React.Dispatch<React.SetStateAction<FormData>>;
   snackbar: SnackbarState;
   setSnackbar: React.Dispatch<React.SetStateAction<SnackbarState>>;
-  handleOpenDialog: (request?: ProductionRequest | null) => void;
+  uploadedFiles: File[];
+  uploadProgress: number;
+  isUploading: boolean;
+  handleOpenDialog: (request?: ProductionRequest | null) => Promise<void>;
   handleCloseDialog: () => void;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleSelectChange: (e: React.ChangeEvent<{ name?: string; value: unknown }>) => void;
@@ -53,5 +56,9 @@ export interface UseProductionReturn {
   handleDeleteRequest: (id: string) => Promise<void>;
   handleMoveRequest: (id: string) => Promise<void>;
   handleCloseSnackbar: () => void;
+  handleFileUpload: (files: File[]) => void;
+  uploadFilesToAzure: (requestId: string, files: File[]) => Promise<UploadedFile[]>;
+  downloadFilesFromAzure: (requestId: string) => Promise<void>;
+  downloadSingleFile: (fileId: string, fileName: string) => Promise<void>;
   fetchProductionRequests: () => Promise<void>;
 }

@@ -101,14 +101,7 @@ const NavigationDrawer = ({
     };
   }) : defaultMenuItems;
 
-  // Debug logging
-  console.log('NavigationDrawer - Database items:', dbMenuItems);
-  console.log('NavigationDrawer - Final items:', items);
-  console.log('NavigationDrawer - Loading:', loading);
-  console.log('NavigationDrawer - Error:', error);
-
   const handleMenuItemClick = (item) => {
-    console.log('NavigationDrawer - Menu item clicked:', item);
     if (onMenuSelect) {
       // Pass the item's label as the menu ID for proper mapping in App.jsx
       onMenuSelect(item.label);
@@ -173,13 +166,6 @@ const NavigationDrawer = ({
             <List sx={{ p: 0 }}>
               {items.map((item) => {
                 const isDisabled = item.permission && !hasPermission(item.permission);
-
-                // Debug logging for each item
-                console.log(`Menu item ${item.id} (${item.label}):`, {
-                  permission: item.permission,
-                  hasPermission: item.permission ? hasPermission(item.permission) : 'no permission required',
-                  isDisabled
-                });
 
                 return (
                   <ListItem key={item.id} disablePadding sx={{ mb: 1 }}>
