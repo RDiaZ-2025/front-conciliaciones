@@ -1,15 +1,15 @@
 import React from "react";
-import { 
-  Box, 
-  Button, 
-  LinearProgress, 
-  Typography, 
-  Alert, 
-  Stepper, 
-  Step, 
-  StepLabel, 
-  Paper, 
-  Fade, 
+import {
+  Box,
+  Button,
+  LinearProgress,
+  Typography,
+  Alert,
+  Stepper,
+  Step,
+  StepLabel,
+  Paper,
+  Fade,
   IconButton,
   Container,
   Stack,
@@ -27,9 +27,9 @@ import {
   ListItemText,
   Avatar
 } from "@mui/material";
-import { 
-  ArrowBack as ArrowBackIcon, 
-  Dashboard as DashboardIcon, 
+import {
+  ArrowBack as ArrowBackIcon,
+  Dashboard as DashboardIcon,
   AdminPanelSettings as AdminIcon,
   Person as PersonIcon,
   Business as BusinessIcon,
@@ -45,7 +45,7 @@ import type { UploadFormProps } from './types';
 
 const steps = [
   "Tipo de Usuario",
-  "Subir Excel", 
+  "Subir Excel",
   "Subir PDF",
   "Materiales y Confirmación"
 ];
@@ -70,19 +70,19 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
 
   const renderExcelPreview = () => {
     if (!state.excelFile) return null;
-    
+
     return (
-      <Paper 
-        elevation={2} 
-        sx={{ 
-          p: theme => theme.spacing(2), 
-          mb: theme => theme.spacing(2), 
+      <Paper
+        elevation={2}
+        sx={{
+          p: theme => theme.spacing(2),
+          mb: theme => theme.spacing(2),
           bgcolor: 'action.hover',
           border: theme => `1px solid ${theme.palette.divider}`
         }}
       >
-        <Typography 
-          variant="subtitle2" 
+        <Typography
+          variant="subtitle2"
           sx={{
             fontWeight: theme => theme.typography.fontWeightBold,
             mb: theme => theme.spacing(1),
@@ -94,8 +94,8 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
         <List dense>
           {state.debugExcelValues.map((v, i) => (
             <ListItem key={i} sx={{ py: 0.5 }}>
-              <ListItemText 
-                primary={v} 
+              <ListItemText
+                primary={v}
                 primaryTypographyProps={{
                   variant: 'body2',
                   color: 'text.secondary'
@@ -110,20 +110,20 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
 
   const renderPdfPreview = () => {
     if (!state.pdfFile || !state.pdfUploaded || !state.pdfThumbnail) return null;
-    
+
     return (
-      <Paper 
-        elevation={2} 
-        sx={{ 
-          p: theme => theme.spacing(2), 
-          mb: theme => theme.spacing(2), 
+      <Paper
+        elevation={2}
+        sx={{
+          p: theme => theme.spacing(2),
+          mb: theme => theme.spacing(2),
           bgcolor: 'action.hover',
           border: theme => `1px solid ${theme.palette.divider}`,
           textAlign: 'center'
         }}
       >
-        <Typography 
-          variant="subtitle2" 
+        <Typography
+          variant="subtitle2"
           sx={{
             fontWeight: theme => theme.typography.fontWeightBold,
             mb: theme => theme.spacing(1),
@@ -132,7 +132,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
         >
           Previsualización PDF:
         </Typography>
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
           <Box
             component="iframe"
             src={state.pdfThumbnail}
@@ -158,18 +158,18 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
         return (
           <Fade in={state.activeStep === 0}>
             <Box>
-              <Typography 
-                variant="h5" 
-                sx={{ 
-                  mb: theme => theme.spacing(3), 
-                  fontWeight: theme => theme.typography.fontWeightBold, 
-                  textAlign: 'center', 
+              <Typography
+                variant="h5"
+                sx={{
+                  mb: theme => theme.spacing(3),
+                  fontWeight: theme => theme.typography.fontWeightBold,
+                  textAlign: 'center',
                   color: 'text.primary'
                 }}
               >
                 Selecciona Cliente o Agencia
               </Typography>
-              
+
               <Stack spacing={2} alignItems="center">
                 <Card
                   elevation={state.tipoUsuario === 'cliente' ? 8 : 2}
@@ -180,8 +180,8 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                     transition: theme => theme.transitions.create(['transform', 'box-shadow', 'border'], {
                       duration: theme.transitions.duration.standard,
                     }),
-                    border: theme => state.tipoUsuario === 'cliente' 
-                      ? `3px solid ${theme.palette.primary.main}` 
+                    border: theme => state.tipoUsuario === 'cliente'
+                      ? `3px solid ${theme.palette.primary.main}`
                       : `2px solid transparent`,
                     bgcolor: state.tipoUsuario === 'cliente' ? 'action.selected' : 'background.paper',
                     '&:hover': {
@@ -191,19 +191,19 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                   }}
                   onClick={() => setTipoUsuario('cliente')}
                 >
-                  <CardContent sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                  <CardContent sx={{
+                    display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'space-between',
                     height: '100%',
                     p: theme => theme.spacing(2)
                   }}>
                     <Stack direction="row" alignItems="center" spacing={2}>
                       <PersonIcon sx={{ fontSize: 48, color: 'primary.main' }} />
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          fontWeight: theme => theme.typography.fontWeightBold, 
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          fontWeight: theme => theme.typography.fontWeightBold,
                           color: 'text.primary'
                         }}
                       >
@@ -225,8 +225,8 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                     transition: theme => theme.transitions.create(['transform', 'box-shadow', 'border'], {
                       duration: theme.transitions.duration.standard,
                     }),
-                    border: theme => state.tipoUsuario === 'agencia' 
-                      ? `3px solid ${theme.palette.primary.main}` 
+                    border: theme => state.tipoUsuario === 'agencia'
+                      ? `3px solid ${theme.palette.primary.main}`
                       : `2px solid transparent`,
                     bgcolor: state.tipoUsuario === 'agencia' ? 'action.selected' : 'background.paper',
                     '&:hover': {
@@ -236,19 +236,19 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                   }}
                   onClick={() => setTipoUsuario('agencia')}
                 >
-                  <CardContent sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                  <CardContent sx={{
+                    display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'space-between',
                     height: '100%',
                     p: theme => theme.spacing(2)
                   }}>
                     <Stack direction="row" alignItems="center" spacing={2}>
                       <BusinessIcon sx={{ fontSize: 48, color: 'primary.main' }} />
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          fontWeight: theme => theme.typography.fontWeightBold, 
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          fontWeight: theme => theme.typography.fontWeightBold,
                           color: 'text.primary'
                         }}
                       >
@@ -267,7 +267,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                 color="primary"
                 fullWidth
                 size="large"
-                sx={{ 
+                sx={{
                   mt: theme => theme.spacing(4),
                   fontWeight: theme => theme.typography.fontWeightBold,
                   py: theme => theme.spacing(1.5),
@@ -288,12 +288,12 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
         return (
           <Fade in={state.activeStep === 1}>
             <Box>
-              <Typography 
-                variant="subtitle1" 
-                sx={{ 
-                  mt: theme => theme.spacing(2), 
-                  mb: theme => theme.spacing(1), 
-                  fontWeight: theme => theme.typography.fontWeightBold, 
+              <Typography
+                variant="subtitle1"
+                sx={{
+                  mt: theme => theme.spacing(2),
+                  mb: theme => theme.spacing(1),
+                  fontWeight: theme => theme.typography.fontWeightBold,
                   color: 'text.primary'
                 }}
               >
@@ -331,8 +331,8 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                 color="primary"
                 fullWidth
                 size="large"
-                sx={{ 
-                  mt: theme => theme.spacing(2), 
+                sx={{
+                  mt: theme => theme.spacing(2),
                   fontWeight: theme => theme.typography.fontWeightBold,
                   py: theme => theme.spacing(1.5),
                   borderRadius: theme => theme.spacing(1)
@@ -354,12 +354,12 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
         return (
           <Fade in={state.activeStep === 2}>
             <Box>
-              <Typography 
-                variant="subtitle1" 
-                sx={{ 
-                  mt: theme => theme.spacing(2), 
-                  mb: theme => theme.spacing(1), 
-                  fontWeight: theme => theme.typography.fontWeightBold, 
+              <Typography
+                variant="subtitle1"
+                sx={{
+                  mt: theme => theme.spacing(2),
+                  mb: theme => theme.spacing(1),
+                  fontWeight: theme => theme.typography.fontWeightBold,
                   color: 'text.primary'
                 }}
               >
@@ -394,11 +394,11 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
               {renderPdfPreview()}
               {state.pdfUploaded && (
                 <Box sx={{ mt: theme => theme.spacing(2), mb: theme => theme.spacing(1), textAlign: 'center' }}>
-                  <Typography 
-                    variant="body1" 
-                    sx={{ 
-                      fontWeight: theme => theme.typography.fontWeightMedium, 
-                      mb: theme => theme.spacing(1), 
+                  <Typography
+                    variant="body1"
+                    sx={{
+                      fontWeight: theme => theme.typography.fontWeightMedium,
+                      mb: theme => theme.spacing(1),
                       color: 'text.primary'
                     }}
                   >
@@ -423,7 +423,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                     <Button
                       variant={state.manualPdfConfirmation === false ? "contained" : "outlined"}
                       color="error"
-                      sx={{ 
+                      sx={{
                         fontWeight: theme => theme.typography.fontWeightBold,
                         borderRadius: theme => theme.spacing(1)
                       }}
@@ -453,7 +453,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                   color="primary"
                   fullWidth
                   size="large"
-                  sx={{ 
+                  sx={{
                     mt: theme => theme.spacing(2),
                     fontWeight: theme => theme.typography.fontWeightBold,
                     py: theme => theme.spacing(1.5),
@@ -477,27 +477,27 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
           return (
             <Fade in={true}>
               <Box sx={{ textAlign: 'center', mt: theme => theme.spacing(4) }}>
-                <Alert 
-                  severity="success" 
-                  sx={{ 
-                    fontSize: 18, 
-                    fontWeight: theme => theme.typography.fontWeightBold, 
+                <Alert
+                  severity="success"
+                  sx={{
+                    fontSize: 18,
+                    fontWeight: theme => theme.typography.fontWeightBold,
                     mb: theme => theme.spacing(3)
                   }}
                 >
                   ✅ ¡Archivos enviados correctamente!
                 </Alert>
-                <Paper 
-                  elevation={1} 
-                  sx={{ 
-                    p: theme => theme.spacing(2), 
-                    mt: theme => theme.spacing(2), 
+                <Paper
+                  elevation={1}
+                  sx={{
+                    p: theme => theme.spacing(2),
+                    mt: theme => theme.spacing(2),
                     bgcolor: 'action.hover',
                     border: theme => `1px solid ${theme.palette.divider}`
                   }}
                 >
-                  <Typography 
-                    variant="subtitle2" 
+                  <Typography
+                    variant="subtitle2"
                     sx={{
                       fontWeight: theme => theme.typography.fontWeightBold,
                       mb: theme => theme.spacing(1),
@@ -508,31 +508,31 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                   </Typography>
                   <List dense>
                     <ListItem sx={{ py: 0.5 }}>
-                      <ListItemText 
+                      <ListItemText
                         primary={`Tipo: ${state.tipoUsuario === 'cliente' ? 'Cliente' : 'Agencia'}`}
                         primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
                       />
                     </ListItem>
                     <ListItem sx={{ py: 0.5 }}>
-                      <ListItemText 
+                      <ListItemText
                         primary={`Excel: ${state.excelFile?.name || 'No seleccionado'}`}
-                        primaryTypographyProps={{ 
-                          variant: 'body2', 
+                        primaryTypographyProps={{
+                          variant: 'body2',
                           color: state.excelFile?.name ? 'text.secondary' : 'text.disabled'
                         }}
                       />
                     </ListItem>
                     <ListItem sx={{ py: 0.5 }}>
-                      <ListItemText 
+                      <ListItemText
                         primary={`PDF: ${state.pdfFile?.name || 'No seleccionado'}`}
-                        primaryTypographyProps={{ 
-                          variant: 'body2', 
+                        primaryTypographyProps={{
+                          variant: 'body2',
                           color: state.pdfFile?.name ? 'text.secondary' : 'text.disabled'
                         }}
                       />
                     </ListItem>
                     <ListItem sx={{ py: 0.5 }}>
-                      <ListItemText 
+                      <ListItemText
                         primary={`Materiales: ${state.materiales.length > 0 ? state.materiales.length + ' archivo(s)' : 'Ninguno'}`}
                         primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
                       />
@@ -543,16 +543,16 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
             </Fade>
           );
         }
-        
+
         return (
           <Fade in={state.activeStep === 3}>
             <Box>
-              <Typography 
-                variant="subtitle1" 
-                sx={{ 
-                  mt: theme => theme.spacing(2), 
-                  mb: theme => theme.spacing(1), 
-                  fontWeight: theme => theme.typography.fontWeightBold, 
+              <Typography
+                variant="subtitle1"
+                sx={{
+                  mt: theme => theme.spacing(2),
+                  mb: theme => theme.spacing(1),
+                  fontWeight: theme => theme.typography.fontWeightBold,
                   color: 'text.primary'
                 }}
               >
@@ -572,16 +572,16 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                     setDeseaSubirMateriales(value);
                   }}
                 >
-                  <FormControlLabel 
-                    value="si" 
-                    control={<Radio />} 
-                    label="Sí" 
+                  <FormControlLabel
+                    value="si"
+                    control={<Radio />}
+                    label="Sí"
                     disabled={state.uploading}
                   />
-                  <FormControlLabel 
-                    value="no" 
-                    control={<Radio />} 
-                    label="No" 
+                  <FormControlLabel
+                    value="no"
+                    control={<Radio />}
+                    label="No"
                     disabled={state.uploading}
                   />
                 </RadioGroup>
@@ -607,7 +607,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                   Seleccionar archivos
                 </Button>
                 {state.materiales.length > 0 && (
-                  <Chip 
+                  <Chip
                     label={`${state.materiales.length} archivo(s) seleccionado(s)`}
                     color="primary"
                     variant="outlined"
@@ -631,9 +631,9 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                       <Stack direction="row" alignItems="center" justifyContent="space-between">
                         <Stack direction="row" alignItems="center" spacing={1.5}>
                           <FolderIcon sx={{ color: 'primary.main', fontSize: 24 }} />
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
+                          <Typography
+                            variant="body2"
+                            sx={{
                               fontWeight: theme => theme.typography.fontWeightMedium,
                               color: 'text.primary'
                             }}
@@ -642,9 +642,9 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                             {file.name}
                           </Typography>
                         </Stack>
-                        <CheckCircleIcon 
-                          sx={{ 
-                            color: 'success.main', 
+                        <CheckCircleIcon
+                          sx={{
+                            color: 'success.main',
                             fontSize: 20
                           }}
                           titleAccess="Archivo listo para subir"
@@ -654,17 +654,17 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                   ))}
                 </Stack>
               )}
-              <Paper 
-                elevation={1} 
-                sx={{ 
-                  p: theme => theme.spacing(2), 
-                  mt: theme => theme.spacing(2), 
+              <Paper
+                elevation={1}
+                sx={{
+                  p: theme => theme.spacing(2),
+                  mt: theme => theme.spacing(2),
                   bgcolor: 'action.hover',
                   border: theme => `1px solid ${theme.palette.divider}`
                 }}
               >
-                <Typography 
-                  variant="subtitle2" 
+                <Typography
+                  variant="subtitle2"
                   sx={{
                     fontWeight: theme => theme.typography.fontWeightBold,
                     mb: theme => theme.spacing(1),
@@ -675,31 +675,31 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                 </Typography>
                 <List dense>
                   <ListItem sx={{ py: 0.5 }}>
-                    <ListItemText 
+                    <ListItemText
                       primary={`Tipo: ${state.tipoUsuario === 'cliente' ? 'Cliente' : 'Agencia'}`}
                       primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
                     />
                   </ListItem>
                   <ListItem sx={{ py: 0.5 }}>
-                    <ListItemText 
+                    <ListItemText
                       primary={`Excel: ${state.excelFile?.name || 'No seleccionado'}`}
-                      primaryTypographyProps={{ 
-                        variant: 'body2', 
+                      primaryTypographyProps={{
+                        variant: 'body2',
                         color: state.excelFile?.name ? 'text.secondary' : 'text.disabled'
                       }}
                     />
                   </ListItem>
                   <ListItem sx={{ py: 0.5 }}>
-                    <ListItemText 
+                    <ListItemText
                       primary={`PDF: ${state.pdfFile?.name || 'No seleccionado'}`}
-                      primaryTypographyProps={{ 
-                        variant: 'body2', 
+                      primaryTypographyProps={{
+                        variant: 'body2',
                         color: state.pdfFile?.name ? 'text.secondary' : 'text.disabled'
                       }}
                     />
                   </ListItem>
                   <ListItem sx={{ py: 0.5 }}>
-                    <ListItemText 
+                    <ListItemText
                       primary={`Materiales: ${state.materiales.length > 0 ? state.materiales.length + ' archivo(s)' : 'Ninguno'}`}
                       primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
                     />
@@ -711,8 +711,8 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                 color="primary"
                 fullWidth
                 size="large"
-                sx={{ 
-                  mt: theme => theme.spacing(2), 
+                sx={{
+                  mt: theme => theme.spacing(2),
                   fontWeight: theme => theme.typography.fontWeightBold,
                   py: theme => theme.spacing(2),
                   borderRadius: theme => theme.spacing(1)
@@ -744,65 +744,65 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
         position: 'relative',
         overflow: 'auto'
       }}
-    >        
+    >
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 4 }}>
         <Avatar
-            src="/Claro-Media-Logo.jpg"
-            alt="Claro Media Logo"
-            className="heartbeat"
-            sx={{
-              width: theme => theme.spacing(32.5),
-              height: theme => theme.spacing(12),
-              borderRadius: 0
-            }}
-          />
+          src="/Claro-Media-Logo.jpg"
+          alt="Claro Media Logo"
+          className="heartbeat"
+          sx={{
+            width: theme => theme.spacing(32.5),
+            height: theme => theme.spacing(12),
+            borderRadius: 0
+          }}
+        />
       </Box>
-      
+
       <Container maxWidth="sm" sx={{ mb: 4 }}>
-        <Paper 
-          elevation={2} 
-          sx={{ 
-            p: theme => theme.spacing(4), 
-            borderRadius: theme => theme.spacing(2), 
+        <Paper
+          elevation={2}
+          sx={{
+            p: theme => theme.spacing(4),
+            borderRadius: theme => theme.spacing(2),
             bgcolor: 'background.paper',
             border: theme => `1px solid ${theme.palette.divider}`,
             boxShadow: theme => theme.shadows[4]
           }}
         >
-        <Stepper activeStep={state.activeStep} alternativeLabel sx={{ mb: 3 }}>
-          {steps.map((label) => (
-            <Step key={label}>
-              <StepLabel
-                StepIconProps={{
-                  sx: {
-                    color: 'primary.main',
-                    '&.Mui-active': { color: 'primary.main' },
-                    '&.Mui-completed': { color: 'primary.main' }
-                  }
-                }}
-                sx={{
-                  '& .MuiStepLabel-label': {
-                    color: 'text.primary'
-                  }
-                }}
-              >
-                {label}
-              </StepLabel>
-            </Step>
-          ))}
-        </Stepper>
-        
-        {state.uploading && (
-          <LinearProgress sx={{ mb: 2 }} />
-        )}
-        
-        {renderStepContent(state.activeStep)}
-        
-        {state.message && (
-          <Alert severity={state.message.startsWith("✅") ? "success" : "error"} sx={{ mt: 2, mb: 1 }}>
-            {state.message}
-          </Alert>
-        )}
+          <Stepper activeStep={state.activeStep} alternativeLabel sx={{ mb: 3 }}>
+            {steps.map((label) => (
+              <Step key={label}>
+                <StepLabel
+                  StepIconProps={{
+                    sx: {
+                      color: 'primary.main',
+                      '&.Mui-active': { color: 'primary.main' },
+                      '&.Mui-completed': { color: 'primary.main' }
+                    }
+                  }}
+                  sx={{
+                    '& .MuiStepLabel-label': {
+                      color: 'text.primary'
+                    }
+                  }}
+                >
+                  {label}
+                </StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+
+          {state.uploading && (
+            <LinearProgress sx={{ mb: 2 }} />
+          )}
+
+          {renderStepContent(state.activeStep)}
+
+          {state.message && (
+            <Alert severity={state.message.startsWith("✅") ? "success" : "error"} sx={{ mt: 2, mb: 1 }}>
+              {state.message}
+            </Alert>
+          )}
         </Paper>
       </Container>
     </Box>
