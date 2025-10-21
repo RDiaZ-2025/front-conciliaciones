@@ -4,10 +4,16 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/azure-static-web-apps-blue-pebble-080603f0f.yml'
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
       - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/azure-static-web-apps-blue-pebble-080603f0f.yml'
 
 jobs:
   build_and_deploy_job:
