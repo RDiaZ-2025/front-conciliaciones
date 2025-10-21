@@ -40,8 +40,10 @@ export const AppDataSource = new DataSource({
   // Entity configuration
   entities: entities,
   
-  // Migration configuration
-  migrations: ['src/migrations/*.ts'],
+  // Migration configuration - detect if running from compiled code
+  migrations: __filename.includes('dist') 
+    ? ['dist/migrations/*.js'] 
+    : ['src/migrations/*.ts'],
   migrationsTableName: 'typeorm_migrations',
   
   // Development settings

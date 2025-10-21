@@ -21,22 +21,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js version
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: '20'
           cache: 'npm'
-          cache-dependency-path: 'backend/package-lock.json'
+          cache-dependency-path: package-lock.json
 
-      - name: Install backend dependencies
-        working-directory: ./backend
+      - name: Install monorepo dependencies
         run: |
-          npm ci --only=production
+          npm ci
 
       - name: Build backend
         working-directory: ./backend
         run: |
           npm run build
+
+      - name: Copy necessary files for deployment
+        run: |
+          cp package.json backend/
+          cp package-lock.json backend/
+          mkdir -p backend/node_modules
+          cp -r node_modules/* backend/node_modules/
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -47,6 +53,7 @@ jobs:
             backend/package.json
             backend/package-lock.json
             backend/node_modules/
+            backend/.env
 
   deploy:
     runs-on: ubuntu-latest
