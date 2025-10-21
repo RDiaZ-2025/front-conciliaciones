@@ -26,7 +26,9 @@ const app = express();
 const corsOptions = {
   origin: [
     process.env.FRONTEND_URL || 'http://localhost:5173',
-    'http://localhost:5174' // Puerto alternativo cuando 5173 está ocupado
+    'http://localhost:5173', // Desarrollo local
+    'http://localhost:5174', // Puerto alternativo cuando 5173 está ocupado
+    'https://blue-pebble-080603f0f.azurestaticapps.net' // Producción
   ],
   credentials: true,
   optionsSuccessStatus: 200

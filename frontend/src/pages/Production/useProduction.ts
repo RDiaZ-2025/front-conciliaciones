@@ -21,7 +21,7 @@ const initialFormData: FormData = {
 };
 
 // API base URL - should be configured from environment variables
-const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:22741';
+const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:22741/api';
 
 export const useProduction = (): UseProductionReturn => {
   const [productionRequests, setProductionRequests] = useState<ProductionRequest[]>([]);
