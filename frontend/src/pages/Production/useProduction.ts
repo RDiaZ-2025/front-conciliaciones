@@ -149,7 +149,7 @@ export const useProduction = (): UseProductionReturn => {
       });
 
       const uploadedFiles: UploadedFile[] = uploadResults.map((result, index) => ({
-        id: `${requestId}-${Date.now()}-${index}`,
+        id: `${folderPath}/${result.fileName}`,
         name: result.fileName,
         size: files[index].size,
         type: files[index].type,

@@ -304,19 +304,28 @@ class AzureStorageService {
    */
   async downloadSingleFile(blobName: string, fileName?: string): Promise<void> {
     try {
-      const blockBlobClient = this.containerClient.getBlockBlobClient(blobName);
+      // Allow passing a full URL; extract blob path if needed
+      let resolvedBlobName = blobName;
+      if (/^https?:\/\//i.test(blobName)) {
+        const url = new URL(blobName);
+        const parts = url.pathname.split('/').filter(Boolean);
+        // parts: [container, ...blobSegments]
+        resolvedBlobName = decodeURIComponent(parts.slice(1).join('/'));
+      }
+
+      const blockBlobClient = this.containerClient.getBlockBlobClient(resolvedBlobName);
       const downloadResponse = await blockBlobClient.download();
       const blobData = await downloadResponse.blobBody;
 
       if (blobData) {
-        const url = window.URL.createObjectURL(await blobData);
+        const objectUrl = window.URL.createObjectURL(await blobData);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName || blobName.split('/').pop() || 'download';
+        a.href = objectUrl;
+        a.download = fileName || resolvedBlobName.split('/').pop() || 'download';
         document.body.appendChild(a);
         a.click();
         a.remove();
-        window.URL.revokeObjectURL(url);
+        window.URL.revokeObjectURL(objectUrl);
       }
     } catch (error) {
       console.error('Error downloading file:', error);
