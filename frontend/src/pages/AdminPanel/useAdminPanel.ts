@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { ROLES, PERMISSIONS, PERMISSION_LABELS, PERMISSION_DESCRIPTIONS, PERMISSION_COLORS } from '../../constants/auth';
+import { apiRequest } from '../../services/baseApiService';
 import type { User, Permission, FormData, AccessHistoryRecord, SnackbarState, UseAdminPanelReturn } from './types';
 
 export const useAdminPanel = (): UseAdminPanelReturn => {
@@ -42,17 +43,8 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
 
   const loadAvailablePermissions = async () => {
     try {
-      const response = await fetch('/api/users/permissions/all', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-        }
-      });
-      if (response.ok) {
-        const result = await response.json();
-        setAvailablePermissions(result.data || []);
-      } else {
-        console.error('Error al cargar permisos disponibles');
-      }
+      const result = await apiRequest('/users/permissions/all');
+      setAvailablePermissions(result.data || []);
     } catch (error) {
       console.error('Error al cargar permisos:', error);
     }

@@ -281,7 +281,10 @@ export class UserController {
 
   static async getAllPermissions(req: Request, res: Response): Promise<void> {
     try {
+      console.log('getAllPermissions called - checking database connection...');
+      
       if (!AppDataSource.isInitialized) {
+        console.error('Database not initialized in getAllPermissions');
         res.status(503).json({
           success: false,
           message: 'Base de datos no disponible'
@@ -289,12 +292,15 @@ export class UserController {
         return;
       }
 
+      console.log('Database initialized, getting permission repository...');
       const permissionRepository = AppDataSource.getRepository(Permission);
 
+      console.log('Fetching permissions from database...');
       const permissions = await permissionRepository.find({
         order: { name: 'ASC' }
       });
 
+      console.log(`Found ${permissions.length} permissions`);
       res.status(200).json({
         success: true,
         data: permissions.map(permission => ({
@@ -307,7 +313,8 @@ export class UserController {
       console.error('Error obteniendo permisos:', error);
       res.status(500).json({
         success: false,
-        message: 'Error interno del servidor'
+        message: 'Error interno del servidor',
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
       });
     }
   }

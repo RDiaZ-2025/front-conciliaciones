@@ -55,7 +55,10 @@ export const optionalAuth = (req: Request, res: Response, next: NextFunction): v
 export const requirePermission = (permission: string) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      console.log(`requirePermission called for: ${permission}`);
+      
       if (!req.user) {
+        console.log('No user in request - authentication failed');
         res.status(401).json({
           success: false,
           message: 'Token de acceso requerido'
@@ -63,11 +66,16 @@ export const requirePermission = (permission: string) => {
         return;
       }
 
+      console.log(`User authenticated: ${req.user.userId}, checking permissions...`);
+      
       // Obtener permisos del usuario desde la base de datos
       const userPermissions = await AuthService.getUserPermissions(req.user.userId);
       
+      console.log(`User permissions: ${userPermissions.join(', ')}`);
+      
       // Comparar directamente con los permisos de la base de datos
       if (!userPermissions.includes(permission)) {
+        console.log(`Permission denied: user does not have ${permission}`);
         res.status(403).json({
           success: false,
           message: `Permiso requerido: ${permission}`
@@ -75,6 +83,7 @@ export const requirePermission = (permission: string) => {
         return;
       }
 
+      console.log(`Permission granted: ${permission}`);
       next();
     } catch (error) {
       console.error('Error verificando permisos:', error);

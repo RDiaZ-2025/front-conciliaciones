@@ -65,6 +65,17 @@ app.get('/health', skipLogging, (req, res) => {
   });
 });
 
+// Test route for debugging Azure deployment
+app.get('/api/test/permissions', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Test route working',
+    data: [
+      { id: 1, name: 'test_permission', description: 'Test permission' }
+    ]
+  });
+});
+
 // Rutas de la API
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
