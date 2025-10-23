@@ -333,9 +333,29 @@ class AzureStorageService {
     }
   }
 
-  /**
-   * Generate folder path for production requests
-   */
+  // New: return blob data for preview without triggering a download
+  async getBlobData(blobNameOrUrl: string): Promise<Blob> {
+    try {
+      let resolvedBlobName = blobNameOrUrl;
+      if (/^https?:\/\//i.test(blobNameOrUrl)) {
+        const url = new URL(blobNameOrUrl);
+        const parts = url.pathname.split('/').filter(Boolean);
+        resolvedBlobName = decodeURIComponent(parts.slice(1).join('/'));
+      }
+
+      const blockBlobClient = this.containerClient.getBlockBlobClient(resolvedBlobName);
+      const downloadResponse = await blockBlobClient.download();
+      const blobBody = await downloadResponse.blobBody;
+      if (!blobBody) {
+        throw new Error('Blob body not available');
+      }
+      return await blobBody; // actual Blob
+    } catch (error) {
+      console.error('Error getting blob data:', error);
+      throw error;
+    }
+  }
+
   static generateProductionFolderPath(requestId: string): string {
     return `Produccion/${requestId}`;
   }

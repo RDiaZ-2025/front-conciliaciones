@@ -57,6 +57,29 @@ const workflowStages = [
   { id: 'completed', label: 'Completado y entregado' }
 ];
 
+// Consistent date formatter: displays the same date as in the dialog.
+function formatDateDisplay(dateLike?: string | Date): string {
+  if (!dateLike) return 'No definida';
+  try {
+    const date = typeof dateLike === 'string' ? new Date(dateLike) : dateLike;
+    if (isNaN(date.getTime())) {
+      // Handle plain YYYY-MM-DD strings without timezone
+      if (typeof dateLike === 'string') {
+        const m = dateLike.match(/^\d{4}-\d{2}-\d{2}$/);
+        if (m) {
+          const [y, mo, d] = dateLike.split('-');
+          return `${d}/${mo}/${y}`;
+        }
+      }
+      return '';
+    }
+    // Force UTC to avoid timezone shifts between card and dialog
+    return date.toLocaleDateString(undefined, { timeZone: 'UTC' });
+  } catch {
+    return '';
+  }
+}
+
 const Production: React.FC<ProductionProps> = ({ darkMode }) => {
   const theme = useTheme();
   const { user } = useAuth();
@@ -87,7 +110,8 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
     handleFileUpload,
     uploadFilesToAzure,
     downloadFilesFromAzure,
-    downloadSingleFile
+    downloadSingleFile,
+    getFileForPreview
   } = useProduction();
 
   const handleFileDownload = (file: UploadedFile) => {
@@ -98,46 +122,14 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
 
   const handleFilePreview = async (file: UploadedFile) => {
     try {
-      // Convert UploadedFile to File object for preview
-      if (file.url) {
-        const response = await fetch(file.url);
-        
-        // Check if the response is ok
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const blob = await response.blob();
-        
-        // Use the original file size if available, otherwise use blob size
-        const fileSize = file.size || blob.size || 0;
-        
-        // Ensure we have a valid file size
-        if (fileSize === 0) {
-          console.warn('File size is 0, this might cause display issues');
-        }
-        
-        const fileObject = new File([blob], file.name, { 
-          type: file.type || blob.type,
-          lastModified: new Date(file.uploadDate).getTime()
-        });
-        
-        // Override the size property to ensure it's correct
-        Object.defineProperty(fileObject, 'size', {
-          value: fileSize,
-          writable: false,
-          enumerable: true,
-          configurable: false
-        });
-        
+      const fileObject = await getFileForPreview(file);
+      if (fileObject) {
         setPreviewFile(fileObject);
         setIsPreviewOpen(true);
       } else {
-        // If no URL, show error message
-        console.warn('File URL not available for preview');
         setSnackbar({
           open: true,
-          message: 'No se puede previsualizar el archivo: URL no disponible',
+          message: 'No se pudo preparar el archivo para previsualización',
           severity: 'error'
         });
       }
@@ -277,7 +269,8 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
               <Box component="span" sx={{ fontWeight: 'medium', color: 'text.primary' }}>
                 Fecha de solicitud:
               </Box>{' '}
-              {new Date(request.requestDate).toLocaleDateString()}
+              {/* changed */}
+              {formatDateDisplay(request.requestDate as unknown as string)}
             </Typography>
           </Box>
           
@@ -354,7 +347,8 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
               <Box component="span" sx={{ fontWeight: 'medium', color: 'text.primary' }}>
                 Fecha de entrega:
               </Box>{' '}
-              {request.deliveryDate ? new Date(request.deliveryDate).toLocaleDateString() : 'No definida'}
+              {/* changed */}
+              {formatDateDisplay(request.deliveryDate as unknown as string)}
             </Typography>
           </Box>
           
@@ -715,7 +709,7 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
           </Button>
         </Box>
       </Paper>
-
+ 
       {/* Production Requests List */}
       <Box sx={{ mt: 4 }}>
         {loading ? (
@@ -801,7 +795,7 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
            </Box>
          )}
       </Box>
-
+ 
       {/* Dialog for creating/editing production requests */}
       <Dialog 
         open={openDialog} 
@@ -844,7 +838,7 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
                 margin="normal"
               />
             </Box>
-
+ 
             <Box>
               <TextField
                 fullWidth
@@ -1057,7 +1051,7 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
           </Button>
         </DialogActions>
       </Dialog>
-
+ 
       {/* Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}
@@ -1074,7 +1068,7 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
           {snackbar.message}
         </Alert>
       </Snackbar>
-
+ 
       {/* File Preview Modal */}
       {previewFile && (
         <FilePreview
@@ -1087,5 +1081,5 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
     </Box>
   );
 };
-
+ 
 export default Production;

@@ -61,4 +61,5 @@ export interface UseProductionReturn {
   downloadFilesFromAzure: (requestId: string) => Promise<void>;
   downloadSingleFile: (fileId: string, fileName: string) => Promise<void>;
   fetchProductionRequests: () => Promise<void>;
+  getFileForPreview: (file: UploadedFile) => Promise<File | null>;
 }

@@ -20,6 +20,28 @@ const initialFormData: FormData = {
   stage: 'request'
 };
 
+// Formateadores de fecha
+const formatDateForInput = (date?: string): string => {
+  if (!date) return '';
+  const parsed = new Date(date);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+  const m = date.match(/^([0-3]\d)\/([0-1]\d)\/(\d{4})$/);
+  if (m) {
+    const [_, dd, mm, yyyy] = m;
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  return '';
+};
+
+const formatDateForApi = (date?: string | null): string | null => {
+  if (!date) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+  const normalized = formatDateForInput(date);
+  return normalized || null;
+};
+
 // API base URL - should be configured from environment variables
 const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:22741/api';
 
@@ -65,7 +87,10 @@ export const useProduction = (): UseProductionReturn => {
   // Handle dialog open
   const handleOpenDialog = async (request: ProductionRequest | null = null) => {
     if (request) {
-      setFormData(request);
+      setFormData({
+        ...request,
+        deliveryDate: formatDateForInput(request.deliveryDate)
+      });
       // Fetch existing files from Azure Storage
       if (request.id) {
         try {
@@ -119,7 +144,7 @@ export const useProduction = (): UseProductionReturn => {
   };
 
   // Fetch existing files from Azure Storage
-  const fetchExistingFiles = async (requestId: string): Promise<UploadedFile[]> => {
+  async function fetchExistingFiles(requestId: string): Promise<UploadedFile[]> {
     try {
       const folderPath = AzureStorageService.generateProductionFolderPath(requestId);
       const filesDetails = await azureStorageService.getFilesDetails(folderPath);
@@ -127,6 +152,37 @@ export const useProduction = (): UseProductionReturn => {
     } catch (error) {
       console.error('Error fetching existing files:', error);
       return [];
+    }
+  }
+
+  // Helper: build a File object for preview using Azure SDK
+  const getFileForPreview = async (file: UploadedFile): Promise<File | null> => {
+    try {
+      const source = file.id || file.url || '';
+      if (!source) {
+        throw new Error('File identifier missing');
+      }
+      const blob = await azureStorageService.getBlobData(source);
+      const fileSize = file.size || blob.size || 0;
+      const fileObject = new File([blob], file.name, {
+        type: file.type || blob.type,
+        lastModified: new Date(file.uploadDate).getTime()
+      });
+      Object.defineProperty(fileObject, 'size', {
+        value: fileSize,
+        writable: false,
+        enumerable: true,
+        configurable: false
+      });
+      return fileObject;
+    } catch (error) {
+      console.error('Error creating preview file:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error al cargar el archivo para previsualización',
+        severity: 'error'
+      });
+      return null;
     }
   };
 
@@ -237,7 +293,17 @@ export const useProduction = (): UseProductionReturn => {
 
       if (formData.id) {
         // Update existing request
-        await axios.put(`${API_BASE_URL}/production/${formData.id}`, formData, {
+        const updatePayload = {
+          name: formData.name,
+          department: formData.department,
+          contactPerson: formData.contactPerson,
+          assignedTeam: formData.assignedTeam,
+          deliveryDate: formatDateForApi(formData.deliveryDate || ''),
+          observations: formData.observations,
+          stage: formData.stage || 'request'
+        };
+
+        await axios.put(`${API_BASE_URL}/production/${formData.id}`, updatePayload, {
           headers: getAuthHeaders()
         });
         
@@ -248,7 +314,8 @@ export const useProduction = (): UseProductionReturn => {
         
         // Update local state with files
         const updatedRequest = { 
-          ...formData as ProductionRequest, 
+          ...(formData as ProductionRequest), 
+          deliveryDate: updatePayload.deliveryDate || undefined,
           files: [...(formData.files || []), ...uploadedFilesList]
         };
         
@@ -265,7 +332,8 @@ export const useProduction = (): UseProductionReturn => {
         // Create new request
         const { files, id, requestDate, stage, ...requestData } = formData;
         const requestPayload = {
-          ...requestData
+          ...requestData,
+          deliveryDate: formatDateForApi(requestData.deliveryDate || '')
         };
         
         // Create the request on the server and get the actual ID
@@ -275,6 +343,7 @@ export const useProduction = (): UseProductionReturn => {
         
         const createdRequest = response.data;
         requestId = createdRequest.id.toString();
+
         
         // Upload files if any using the actual request ID
         if (uploadedFiles.length > 0) {
@@ -484,7 +553,8 @@ export const useProduction = (): UseProductionReturn => {
     uploadFilesToAzure,
     downloadFilesFromAzure,
     downloadSingleFile,
-    fetchProductionRequests
+    fetchProductionRequests,
+    getFileForPreview
   };
 };
 
