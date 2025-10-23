@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BlobServiceClient } from '@azure/storage-blob';
 import { getApiBaseUrl } from '../../services/baseApiService';
 import type { LoadDocumentsState, UseLoadDocumentsReturn, Document, AzureDownloadConfig } from './types';
+import JSZip from 'jszip';
 
 const AZURE_CONFIG: AzureDownloadConfig = {
   sasToken: "sv=2024-11-04&ss=bfqt&srt=sco&sp=rwdlacupiytfx&se=2026-07-18T00:00:00Z&st=2025-07-17T12:00:00Z&spr=https&sig=5bOczB2JntgCnxgUF621l2zNepka4FohFR8hzCUuMt0%3D",
@@ -109,6 +110,7 @@ export const useLoadDocumentsOCbyUserView = (): UseLoadDocumentsReturn => {
        ];
       
       let blobs: string[] = [];
+      let selectedPrefix: string | null = null;
       
       for (const folderPath of possiblePaths) {
          console.log('Searching for blobs with prefix:', folderPath);
@@ -124,6 +126,10 @@ export const useLoadDocumentsOCbyUserView = (): UseLoadDocumentsReturn => {
            }
            
            console.log(`Found ${foundInThisPath} new blobs with prefix: ${folderPath}`);
+           
+           if (foundInThisPath > 0) {
+             selectedPrefix = folderPath;
+           }
            
            if (blobs.length > 0) {
              console.log(`Total blobs found so far: ${blobs.length}`);
@@ -154,22 +160,32 @@ export const useLoadDocumentsOCbyUserView = (): UseLoadDocumentsReturn => {
         return;
       }
       
+      // Create a ZIP and add each blob content
+      const zip = new JSZip();
+      
       for (const blobName of blobs) {
         const blockBlobClient = containerClient.getBlockBlobClient(blobName);
         const downloadResponse = await blockBlobClient.download();
-        const blobData = await downloadResponse.blobBody;
+        const blobObj = await downloadResponse.blobBody;
         
-        if (blobData) {
-          const url = window.URL.createObjectURL(await blobData);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = blobName.split('/').pop() || 'download';
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          window.URL.revokeObjectURL(url);
+        if (blobObj) {
+          const arrayBuffer = await blobObj.arrayBuffer();
+          const relativeName = (selectedPrefix && blobName.startsWith(selectedPrefix))
+            ? blobName.substring(selectedPrefix.length).replace(/^\/+/, '')
+            : (blobName.split('/').pop() || blobName);
+          zip.file(relativeName, arrayBuffer);
         }
       }
+      
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = window.URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${idFolder}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
     } catch (err: any) {
       console.error('Error downloading files:', err);
       console.error('Error details:', {
