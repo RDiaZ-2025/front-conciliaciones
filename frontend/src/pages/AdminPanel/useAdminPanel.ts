@@ -250,6 +250,28 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
   };
 
   const handleToggleStatus = async (userEmail: string, currentStatus: number) => {
+    // Prevent users from disabling their own account regardless of permissions
+    try {
+      const currentUserEmail = (user?.email || '').toLowerCase();
+      const targetEmail = (userEmail || '').toLowerCase();
+      if (currentUserEmail && targetEmail === currentUserEmail) {
+        setSnackbar({ 
+          open: true, 
+          message: 'No puedes deshabilitar tu propia cuenta', 
+          severity: 'error' 
+        });
+        return;
+      }
+    } catch (e) {
+      // If anything goes wrong in the guard, fail closed
+      setSnackbar({ 
+        open: true, 
+        message: 'Acción no permitida sobre tu propia cuenta', 
+        severity: 'error' 
+      });
+      return;
+    }
+
     const action = currentStatus === 1 ? 'deshabilitar' : 'habilitar';
     const confirmMessage = `¿Estás seguro de que quieres ${action} este usuario?`;
 
