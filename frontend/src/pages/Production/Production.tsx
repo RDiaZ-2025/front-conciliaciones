@@ -179,6 +179,40 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
     }
   };
 
+  // Validate required fields for creating a new request
+  const validateCreate = (): boolean => {
+    if (formData.id) return true; // editing path not validated here
+    const requiredFields = [
+      { key: 'name', label: 'Nombre de la solicitud' },
+      { key: 'department', label: 'Departamento' },
+      { key: 'contactPerson', label: 'Persona de contacto' },
+      { key: 'assignedTeam', label: 'Equipo asignado' },
+      { key: 'deliveryDate', label: 'Fecha de entrega' },
+      { key: 'observations', label: 'Observaciones' }
+    ] as const;
+
+    const missing = requiredFields.filter(({ key }) => {
+      const val = (formData as any)[key];
+      return !val || (typeof val === 'string' && val.trim() === '');
+    });
+
+    if (missing.length > 0) {
+      const names = missing.map(m => m.label).join(', ');
+      setSnackbar({
+        open: true,
+        message: `Por favor completa todos los campos requeridos: ${names}`,
+        severity: 'error'
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const handleCreateClick = async () => {
+    if (!validateCreate()) return;
+    await handleSubmit();
+  };
+
   const renderRequestCard = (request: ProductionRequest) => (
     <Card 
       key={request.id} 
@@ -873,6 +907,7 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
                 onChange={handleInputChange}
                 InputLabelProps={{ shrink: true }}
                 margin="normal"
+                required
               />
             </Box>
             
@@ -886,6 +921,7 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
                 multiline
                 rows={4}
                 margin="normal"
+                required
               />
             </Box>
             
@@ -1037,7 +1073,7 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
             Cancelar
           </Button>
           <Button 
-            onClick={handleSubmit} 
+            onClick={formData.id ? handleSubmit : handleCreateClick} 
             variant="contained" 
             disabled={isUploading}
             startIcon={formData.id ? <EditIcon /> : <AddIcon />}
