@@ -473,7 +473,7 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
         materialsOk = true; // No materials to upload
         setMessage("✅ Archivos principales subidos correctamente. Enviando notificación...");
       }
-      const n8nResponse = await fetch("https://renediaz2025.app.n8n.cloud/webhook/a4784977-134a-4f09-9ea3-04c85c5ba3b7", {
+      const n8nResponse = await fetch("https://renediaz2025.app.n8n.cloud/webhook-test/3212b026-14d0-42b1-a305-e9ba4182d90f", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
