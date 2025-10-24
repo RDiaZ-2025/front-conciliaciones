@@ -78,7 +78,8 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
     pdfThumbnail: null,
     envioExitoso: false,
     manualPdfConfirmation: null,
-    uploadCompleted: false
+    uploadCompleted: false,
+    guid: null
   });
 
   const updateState = (updates: Partial<UploadFormState>) => {
@@ -139,7 +140,8 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
       pdfThumbnail: null,
       envioExitoso: false,
       manualPdfConfirmation: null,
-      uploadCompleted: false
+      uploadCompleted: false,
+      guid: null
     });
   };
 
@@ -279,7 +281,10 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
       return;
     }
 
-    updateState({ excelFile: file });
+    // Generate GUID when Excel file is selected
+    const guid = crypto.randomUUID();
+    updateState({ excelFile: file, guid });
+    
     const validation = await validateExcel(file);
     
     if (!validation.isValid) {
@@ -289,7 +294,7 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
     }
 
     updateState({ uploading: true });
-    const uploaded = await uploadToAzure(file, "EntradaDatosParaProcesar");
+    const uploaded = await uploadToAzure(file, `validationsOC/${guid}`);
     
     if (uploaded) {
       updateState({ 
@@ -319,6 +324,12 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
     
     if (!file) return;
 
+    // Ensure GUID exists (should be generated when Excel was selected)
+    if (!state.guid) {
+      setMessage("❌ Error: Debe seleccionar primero el archivo Excel para generar el identificador único.");
+      return;
+    }
+
     const validation = await validatePdf(file);
     
     if (!validation.isValid) {
@@ -327,7 +338,7 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
     }
 
     updateState({ uploading: true });
-    const uploaded = await uploadToAzure(file, "EntradaDatosParaProcesar");
+    const uploaded = await uploadToAzure(file, `validationsOC/${state.guid}`);
     
     if (uploaded) {
       updateState({ 
@@ -384,9 +395,15 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
   const uploadMaterialesToAzure = async (): Promise<boolean> => {
     if (state.materiales.length === 0) return true;
     
+    // Ensure GUID exists
+    if (!state.guid) {
+      console.error('Error: GUID not found for materials upload');
+      return false;
+    }
+    
     try {
       const uploadPromises = state.materiales.map(file => 
-        uploadToAzure(file, "EntradaDatosParaProcesar")
+        uploadToAzure(file, `validationsOC/${state.guid}`)
       );
       
       const results = await Promise.all(uploadPromises);
@@ -403,19 +420,25 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
     let dbOk = false;
     let materialsOk = false;
     let mainFilesOk = false;
-    let uuid = crypto.randomUUID();
     
     try {
       // First upload main files (Excel and PDF) to ensure they are in storage
       setMessage("📤 Subiendo archivos principales al storage...");
       const mainFilePromises: Promise<boolean>[] = [];
       
+      // Ensure GUID exists
+      if (!state.guid) {
+        setMessage("❌ Error: No se encontró el identificador único. Debe seleccionar primero el archivo Excel.");
+        updateState({ uploading: false });
+        return;
+      }
+      
       if (state.excelFile) {
-        mainFilePromises.push(uploadToAzure(state.excelFile, "EntradaDatosParaProcesar"));
+        mainFilePromises.push(uploadToAzure(state.excelFile, `validationsOC/${state.guid}`));
       }
       
       if (state.pdfFile) {
-        mainFilePromises.push(uploadToAzure(state.pdfFile, "EntradaDatosParaProcesar"));
+        mainFilePromises.push(uploadToAzure(state.pdfFile, `validationsOC/${state.guid}`));
       }
       
       if (mainFilePromises.length > 0) {
@@ -454,10 +477,13 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tipoUsuario: state.tipoUsuario,
+          excelFilename: state.excelFile?.name,
+          pdfFilename: state.pdfFile?.name,
           archivos: [state.excelFile?.name, state.pdfFile?.name],
           deseaSubirMateriales: state.deseaSubirMateriales,
           materiales: state.materiales.map(f => f.name),
-          id: uuid,
+          guid: state.guid,
+          id: state.guid,
           data: state.debugExcelValues.reduce((acc, curr) => {
             const [key, ...rest] = curr.split(":");
             acc[key.trim()] = rest.join(":").trim();
@@ -476,7 +502,7 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
       setMessage("✅ Notificación a n8n exitosa. Registrando en base de datos...");
       
       const userId = user?.id || 1;
-      const folderId = uuid;
+      const folderId = state.guid;
       const fecha = new Date().toISOString();
       const status = "uploaded";
       

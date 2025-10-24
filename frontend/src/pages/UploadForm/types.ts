@@ -26,6 +26,7 @@ export interface UploadFormState {
   envioExitoso: boolean;
   manualPdfConfirmation: boolean | null;
   uploadCompleted: boolean;
+  guid: string | null;
 }
 
 export interface RequiredCell {

@@ -96,17 +96,22 @@ export const useLoadDocumentsOCbyUserView = (): UseLoadDocumentsReturn => {
       // Convert ID to lowercase to match Azure storage
       const lowerIdFolder = idFolder.toLowerCase();
       
-      // Try different possible folder path variations
+      // Try different possible folder path variations for validationsOC
        const possiblePaths = [
-         `${lowerIdFolder}`, // Try just the ID first (most likely based on Azure structure)
+         `validationsOC/${lowerIdFolder}`,
+         `validationsOC/${lowerIdFolder}/`,
+         `validationsoc/${lowerIdFolder}`,
+         `validationsoc/${lowerIdFolder}/`,
+         // Also try original case as fallback
+         `validationsOC/${idFolder}`,
+         `validationsOC/${idFolder}/`,
+         // Legacy paths as fallback
+         `${lowerIdFolder}`,
          `${lowerIdFolder}/`,
          `salidadatosprocesados/${lowerIdFolder}`,
          `SalidaDatosProcesados/${lowerIdFolder}`,
          `salidadatosprocesados/${lowerIdFolder}/`,
-         `SalidaDatosProcesados/${lowerIdFolder}/`,
-         // Also try original case as fallback
-         `${idFolder}`,
-         `${idFolder}/`
+         `SalidaDatosProcesados/${lowerIdFolder}/`
        ];
       
       let blobs: string[] = [];
@@ -211,11 +216,9 @@ export const useLoadDocumentsOCbyUserView = (): UseLoadDocumentsReturn => {
 
   const filteredDocs = state.documents.filter((doc: Document) => {
     const userName = typeof doc.UserName === 'string' ? doc.UserName : (doc.IdUser ? String(doc.IdUser) : '');
-    const fileName = typeof doc.FileName === 'string' ? doc.FileName : (typeof doc.NombreArchivo === 'string' ? doc.NombreArchivo : '');
     const status = typeof doc.Status === 'string' ? doc.Status : '';
     
     return userName.toLowerCase().includes(state.search.toLowerCase()) ||
-           fileName.toLowerCase().includes(state.search.toLowerCase()) ||
            status.toLowerCase().includes(state.search.toLowerCase());
   });
 

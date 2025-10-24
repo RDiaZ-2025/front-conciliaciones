@@ -93,7 +93,7 @@ const LoadDocumentsOCbyUserView: React.FC<LoadDocumentsOCbyUserViewProps> = ({ d
               <TextField
                 variant="outlined"
                 size="medium"
-                placeholder="Buscar usuario, archivo o estado"
+                placeholder="Buscar usuario o estado"
                 value={state.search}
                 onChange={e => setSearch(e.target.value)}
                 sx={{ 
@@ -158,17 +158,6 @@ const LoadDocumentsOCbyUserView: React.FC<LoadDocumentsOCbyUserViewProps> = ({ d
                       top: 0,
                       zIndex: 5
                     }}>
-                      Nombre de Archivo
-                    </TableCell>
-                    <TableCell sx={{ 
-                      bgcolor: 'action.hover',
-                      color: 'text.primary',
-                      fontWeight: theme => theme.typography.fontWeightBold,
-                      py: theme => theme.spacing(2),
-                      position: 'sticky',
-                      top: 0,
-                      zIndex: 5
-                    }}>
                       Fecha de Subida
                     </TableCell>
                     <TableCell sx={{ 
@@ -200,7 +189,7 @@ const LoadDocumentsOCbyUserView: React.FC<LoadDocumentsOCbyUserViewProps> = ({ d
               <TableBody>
                 {state.error ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center">
+                    <TableCell colSpan={4} align="center">
                       <Alert 
                         severity="error" 
                         sx={{ 
@@ -214,14 +203,14 @@ const LoadDocumentsOCbyUserView: React.FC<LoadDocumentsOCbyUserViewProps> = ({ d
                   </TableRow>
                 ) : state.loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: theme => theme.spacing(4) }}>
+                    <TableCell colSpan={4} align="center" sx={{ py: theme => theme.spacing(4) }}>
                       <CircularProgress size={40} />
                     </TableCell>
                   </TableRow>
                 ) : filteredDocs.length === 0 ? (
                   <TableRow>
                     <TableCell 
-                      colSpan={5} 
+                      colSpan={4} 
                       align="center" 
                       sx={{ 
                         py: theme => theme.spacing(6),
@@ -256,13 +245,6 @@ const LoadDocumentsOCbyUserView: React.FC<LoadDocumentsOCbyUserViewProps> = ({ d
                         py: theme => theme.spacing(2)
                       }}>
                         {doc.UserEmail || doc.UserName || doc.IdUser}
-                      </TableCell>
-                      <TableCell sx={{ 
-                        color: 'text.primary',
-                        fontWeight: theme => theme.typography.fontWeightMedium,
-                        py: theme => theme.spacing(2)
-                      }}>
-                        {doc.FileName || doc.NombreArchivo || 'Sin nombre'}
                       </TableCell>
                       <TableCell sx={{ 
                         color: 'text.primary',
