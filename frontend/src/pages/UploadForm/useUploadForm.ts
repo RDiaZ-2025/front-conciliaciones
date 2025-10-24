@@ -4,6 +4,7 @@ import { BlobServiceClient } from '@azure/storage-blob';
 import * as XLSX from 'xlsx';
 import * as pdfjsLib from 'pdfjs-dist';
 import { GlobalWorkerOptions } from 'pdfjs-dist';
+import { getApiBaseUrl } from '../../services/baseApiService';
 import type { UploadFormProps, UploadFormState, UseUploadFormReturn, RequiredCell, ValidationResult, AzureConfig, PDFValidationConfig, ExcelValidationConfig } from './types';
 
 GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.min.js';
@@ -506,7 +507,7 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
       const fecha = new Date().toISOString();
       const status = "uploaded";
       
-      const response = await fetch("/api/load-documents", {
+      const response = await fetch(`${getApiBaseUrl()}/load-documents`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
