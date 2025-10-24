@@ -46,6 +46,7 @@ import LoadDocumentsOCbyUserView from '../LoadDocumentsOCbyUserView';
 import UploadForm from '../UploadForm';
 import DashboardGeneral from '../DashboardGeneral';
 import Layout from '../../components/Layout';
+import PageHeader from '../../components/PageHeader';
 
 const AdminPanel = ({ darkMode, selectedMenu = 'usuarios', onMenuSelect, setDarkMode, onBack }) => {
   const { user } = useAuth();
@@ -113,44 +114,11 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios', onMenuSelect, setDark
 
     return (
       <Box sx={{ width: '100%', maxWidth: '1400px', margin: '0 auto' }}>
-        <Box sx={{ mb: theme => theme.spacing(6), textAlign: 'center' }}>
-        <Stack direction="row" alignItems="center" justifyContent="center" spacing={3} sx={{ mb: 3 }}>
-          <Box
-            sx={{
-              p: theme => theme.spacing(1.3),
-              borderRadius: '50%',
-              bgcolor: 'primary.main',
-              height: 48,
-              width: 48,
-              boxShadow: theme => theme.shadows[4]
-            }}
-          >
-            <AdminIcon sx={{ fontSize: 32, color: 'common.white' }} />
-          </Box>
-          <Box>
-            <Typography
-              variant="h4"
-              sx={{
-                fontWeight: theme => theme.typography.fontWeightBold,
-                color: 'text.primary',
-                letterSpacing: '-0.02em'
-              }}
-            >
-              Panel de Administración
-            </Typography>
-            <Typography
-              variant="subtitle1"
-              sx={{
-                color: 'text.secondary',
-                fontWeight: theme => theme.typography.fontWeightRegular,
-                mt: 0.5
-              }}
-            >
-              Gestión avanzada de usuarios y permisos
-            </Typography>
-          </Box>
-        </Stack>
-      </Box>
+        <PageHeader
+          icon={<AdminIcon sx={{ fontSize: 32, color: 'common.white' }} />}
+          title="Panel de Administración"
+          subtitle="Gestión avanzada de usuarios y permisos"
+        />
 
       <Paper
         elevation={2}

@@ -346,7 +346,39 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
 
   const handleMaterialesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setMateriales(files);
+    const maxSizeInBytes = 1024 * 1024 * 1024; // 1GB in bytes
+    
+    // Filter files that exceed the size limit
+    const validFiles: File[] = [];
+    const invalidFiles: string[] = [];
+    
+    files.forEach(file => {
+      if (file.size > maxSizeInBytes) {
+        invalidFiles.push(file.name);
+      } else {
+        validFiles.push(file);
+      }
+    });
+    
+    // Show error message if there are invalid files
+    if (invalidFiles.length > 0) {
+      const fileList = invalidFiles.join(', ');
+      updateState({
+        message: `❌ Los siguientes archivos exceden el límite de 1GB y no se pueden subir: ${fileList}`,
+        uploading: false
+      });
+      
+      // Clear the input to prevent confusion
+      if (e.target) {
+        e.target.value = '';
+      }
+    } else {
+      // Clear any previous error messages
+      updateState({ message: "" });
+    }
+    
+    // Only set valid files
+    setMateriales(validFiles);
   };
 
   const uploadMaterialesToAzure = async (): Promise<boolean> => {

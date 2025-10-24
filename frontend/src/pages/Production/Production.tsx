@@ -44,6 +44,7 @@ import { ProductionRequest, ProductionProps, UploadedFile } from './types';
 import { useAuth } from '../../contexts/AuthContext';
 import FileUpload from '../../components/FileUpload';
 import FilePreview from '../../components/FilePreview';
+import PageHeader from '../../components/PageHeader';
 
 const workflowStages = [
   { id: 'request', label: 'Solicitud' },
@@ -592,50 +593,11 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
 
   return (
     <Box sx={{ width: '100%', maxWidth: '1400px', margin: '0 auto', p: { xs: theme.spacing(2), sm: theme.spacing(3) } }}>
-      <Box sx={{ mb: theme.spacing(6), textAlign: 'center' }}>
-        <Stack 
-          direction={{ xs: 'column', sm: 'row' }} 
-          alignItems="center" 
-          justifyContent="center" 
-          spacing={3} 
-          sx={{ mb: 3 }}
-        >
-          <Box
-            sx={{
-                p: theme.spacing(1),
-                borderRadius: '50%',
-                bgcolor: 'primary.main',
-                height: 48,
-                width: 48,
-                boxShadow: theme.shadows[4]
-              }}
-          >
-            <AssignmentIcon sx={{ fontSize: 32, color: 'common.white' }} />
-          </Box>
-          <Box>
-            <Typography
-              variant="h4"
-              sx={{
-                fontWeight: theme.typography.fontWeightBold,
-                color: 'text.primary',
-                letterSpacing: '-0.02em'
-              }}
-            >
-              Gestión de Producción
-            </Typography>
-            <Typography
-              variant="subtitle1"
-              sx={{
-                color: 'text.secondary',
-                fontWeight: theme.typography.fontWeightRegular,
-                mt: 0.5
-              }}
-            >
-              Seguimiento de solicitudes en el flujo de producción
-            </Typography>
-          </Box>
-        </Stack>
-      </Box>
+      <PageHeader
+        icon={<AssignmentIcon sx={{ fontSize: 32, color: 'common.white' }} />}
+        title="Gestión de Producción"
+        subtitle="Seguimiento de solicitudes en el flujo de producción"
+      />
 
       <Paper
         elevation={3}
@@ -685,64 +647,20 @@ const Production: React.FC<ProductionProps> = ({ darkMode }) => {
           </Box>
         </Stack>
       </Paper>
-
-      <Paper
-        elevation={2}
+      <Button
+        variant="contained"
+        startIcon={<AddIcon />}
+        onClick={() => handleOpenDialog()}
         sx={{
-          bgcolor: 'background.paper',
-          borderRadius: Number(theme.shape.borderRadius) * 2,
-          border: `1px solid ${theme.palette.divider}`,
-          overflow: 'hidden',
-          mb: 4
+          fontWeight: theme.typography.fontWeightBold,
+          px: theme.spacing(3),
+          py: theme.spacing(1),
+          borderRadius: theme.spacing(1),
+          textTransform: 'none'
         }}
       >
-        <Box
-          sx={{
-            p: theme.spacing(4),
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            borderBottom: `1px solid ${theme.palette.divider}`,
-            bgcolor: 'action.hover'
-          }}
-        >
-          <Box>
-            <Typography 
-              variant="h5" 
-              sx={{
-                color: 'text.primary',
-                fontWeight: theme.typography.fontWeightBold,
-                mb: 0.5
-              }}
-            >
-              Solicitudes de Producción
-            </Typography>
-            <Typography 
-              variant="body2" 
-              sx={{
-                color: 'text.secondary',
-                fontWeight: theme.typography.fontWeightMedium
-              }}
-            >
-              Gestiona y realiza seguimiento de las solicitudes en el flujo de producción
-            </Typography>
-          </Box>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenDialog()}
-            sx={{
-              fontWeight: theme.typography.fontWeightBold,
-              px: theme.spacing(3),
-              py: theme.spacing(1),
-              borderRadius: theme.spacing(1),
-              textTransform: 'none'
-            }}
-          >
-            Nueva Solicitud
-          </Button>
-        </Box>
-      </Paper>
+        Nueva Solicitud
+      </Button>
  
       {/* Production Requests List */}
       <Box sx={{ mt: 4 }}>

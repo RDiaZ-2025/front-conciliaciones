@@ -50,6 +50,15 @@ const steps = [
   "Materiales y Confirmación"
 ];
 
+// Utility function to format file sizes
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
 const UploadForm: React.FC<UploadFormProps> = (props) => {
   const { hasPermission } = useAuth();
   const {
@@ -558,6 +567,16 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
               >
                 3. ¿Desea subir materiales?
               </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  mb: theme => theme.spacing(2),
+                  color: 'text.secondary',
+                  fontStyle: 'italic'
+                }}
+              >
+                Nota: Cada archivo debe ser menor a 1GB
+              </Typography>
               <FormControl component="fieldset" sx={{ mb: 2 }}>
                 <RadioGroup
                   row
@@ -631,16 +650,27 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
                       <Stack direction="row" alignItems="center" justifyContent="space-between">
                         <Stack direction="row" alignItems="center" spacing={1.5}>
                           <FolderIcon sx={{ color: 'primary.main', fontSize: 24 }} />
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              fontWeight: theme => theme.typography.fontWeightMedium,
-                              color: 'text.primary'
-                            }}
-                            title={file.name}
-                          >
-                            {file.name}
-                          </Typography>
+                          <Stack direction="column" spacing={0.5}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontWeight: theme => theme.typography.fontWeightMedium,
+                                color: 'text.primary'
+                              }}
+                              title={file.name}
+                            >
+                              {file.name}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: 'text.secondary',
+                                fontSize: '0.75rem'
+                              }}
+                            >
+                              {formatFileSize(file.size)}
+                            </Typography>
+                          </Stack>
                         </Stack>
                         <CheckCircleIcon
                           sx={{
