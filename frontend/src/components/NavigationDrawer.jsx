@@ -231,7 +231,7 @@ const NavigationDrawer = ({
                         <ArrowBackIcon />
                       </ListItemIcon>
                       <ListItemText
-                        primary="Volver"
+                        primary="Salir"
                         sx={{
                           '& .MuiListItemText-primary': {
                             fontSize: '0.95rem',
