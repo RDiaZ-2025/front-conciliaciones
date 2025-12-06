@@ -13,7 +13,6 @@ import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import productionRoutes from './routes/productionRoutes';
 import menuRoutes from './routes/menuRoutes';
-import roleRoutes from './routes/roleRoutes';
 
 // Importar middleware de logging
 import { actionLogger, skipLogging } from './middleware/actionLogger';
@@ -83,7 +82,6 @@ app.use('/api/users', userRoutes);
 app.use('/api/load-documents', loadDocumentsOCbyUserRouter);
 app.use('/api/production', productionRoutes);
 app.use('/api/menus', menuRoutes);
-app.use('/api/roles', roleRoutes);
 
 // Ruta 404
 app.use('*', (req, res) => {
@@ -96,7 +94,7 @@ app.use('*', (req, res) => {
 // Middleware de manejo de errores
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Error no manejado:', err);
-  
+
   res.status(500).json({
     success: false,
     message: 'Error interno del servidor',

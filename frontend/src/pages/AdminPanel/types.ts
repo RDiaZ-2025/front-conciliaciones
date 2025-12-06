@@ -3,20 +3,10 @@ export interface User {
   name: string;
   email: string;
   permissions?: string[];
-  role?: string;
-  roleId?: number;
-  roleName?: string;
   status: number;
   lastAccess?: string;
   createdAt?: string;
   updatedAt?: string;
-}
-
-export interface Role {
-  id: number;
-  name: string;
-  description?: string;
-  permissions?: Permission[];
 }
 
 export interface Permission {
@@ -32,7 +22,6 @@ export interface FormData {
   email: string;
   password: string;
   permissions: string[];
-  roleId?: number;
 }
 
 export interface AccessHistoryRecord {
@@ -58,7 +47,6 @@ export interface AdminPanelProps {
 
 export interface UseAdminPanelReturn {
   users: User[];
-  roles: Role[];
   openDialog: boolean;
   setOpenDialog: (open: boolean) => void;
   editingUser: User | null;
@@ -71,10 +59,6 @@ export interface UseAdminPanelReturn {
   setShowAccessHistory: (show: boolean) => void;
   snackbar: SnackbarState;
   setSnackbar: (snackbar: SnackbarState) => void;
-  openRoleDialog: boolean;
-  setOpenRoleDialog: (open: boolean) => void;
-  selectedUserForRole: User | null;
-  setSelectedUserForRole: (user: User | null) => void;
   searchUser: string;
   setSearchUser: (search: string) => void;
   currentPage: number;
@@ -87,18 +71,10 @@ export interface UseAdminPanelReturn {
   handleToggleAccessHistory: () => void;
   handleOpenDialog: (userToEdit?: User | null) => void;
   handleCloseDialog: () => void;
-  handleOpenRoleDialog: (userData: User) => void;
-  handleCloseRoleDialog: () => void;
-  handleRoleChange: (roleId: number) => Promise<void>;
-  handleDirectRoleChange: (userData: User, roleId: number) => Promise<void>;
-  getRoleDescription: (role: string) => string;
   handleSubmit: () => Promise<void>;
   handleToggleStatus: (userEmail: string, currentStatus: number) => Promise<void>;
-  getRoleLabel: (role: string) => string;
-  getRoleColor: (role: string) => string;
   getPermissionLabel: (permission: string) => string;
   getPermissionDescription: (permission: string) => string;
   getPermissionColor: (permission: string) => string;
   handlePermissionChange: (userData: User, newPermissions: string[]) => Promise<void>;
-  handleTogglePermission: (permission: string | Permission) => void;
 }

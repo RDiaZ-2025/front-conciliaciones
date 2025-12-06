@@ -7,7 +7,6 @@ export interface CreateUserRequest {
   email: string;
   password: string;
   permissions?: string[];
-  roleId?: number;
 }
 
 export interface CreateUserResponse {
@@ -17,7 +16,6 @@ export interface CreateUserResponse {
     name: string;
     email: string;
     permissions: string[];
-    roleId?: number;
   };
   message?: string;
 }
@@ -28,7 +26,6 @@ export interface UpdateUserRequest {
   password?: string;
   permissions?: string[];
   status?: number;
-  roleId?: number;
 }
 
 export class UserService {
@@ -68,8 +65,7 @@ export class UserService {
         name: userData.name,
         email: userData.email,
         passwordHash: passwordHash,
-        status: 1,
-        roleId: userData.roleId || null
+        status: 1
       });
 
       const savedUser = await userRepository.save(newUser);
@@ -109,8 +105,7 @@ export class UserService {
           id: savedUser.id,
           name: savedUser.name,
           email: savedUser.email,
-          permissions: assignedPermissions,
-          roleId: savedUser.roleId || undefined
+          permissions: assignedPermissions
         },
         message: 'Usuario creado exitosamente'
       };
@@ -135,8 +130,7 @@ export class UserService {
 
       // Obtener todos los usuarios ordenados por nombre
       const users = await userRepository.find({
-        order: { name: 'ASC' },
-        relations: ['role', 'role.permissions']
+        order: { name: 'ASC' }
       });
 
       // Obtener permisos para cada usuario
@@ -147,10 +141,7 @@ export class UserService {
           relations: ['permission']
         });
 
-        const directPermissions = userPermissions.map(up => up.permission.name);
-        const rolePermissions = user.role?.permissions?.map(p => p.name) || [];
-
-        const permissions = [...new Set([...directPermissions, ...rolePermissions])];
+        const permissions = userPermissions.map(up => up.permission.name);
 
         usersWithPermissions.push({
           id: user.id,
@@ -158,9 +149,7 @@ export class UserService {
           email: user.email,
           lastAccess: user.lastAccess,
           status: user.status,
-          permissions,
-          roleId: user.roleId,
-          roleName: user.role?.name
+          permissions
         });
       }
 
@@ -183,8 +172,7 @@ export class UserService {
 
       // Buscar el usuario por ID y status activo
       const user = await userRepository.findOne({
-        where: { id: userId, status: 1 },
-        relations: ['role', 'role.permissions']
+        where: { id: userId, status: 1 }
       });
 
       if (!user) {
@@ -198,9 +186,6 @@ export class UserService {
       });
 
       const directPermissions = userPermissions.map(up => up.permission.name);
-      const rolePermissions = user.role?.permissions?.map(p => p.name) || [];
-
-      const permissions = [...new Set([...directPermissions, ...rolePermissions])];
 
       return {
         id: user.id,
@@ -208,9 +193,7 @@ export class UserService {
         email: user.email,
         lastAccess: user.lastAccess,
         status: user.status,
-        permissions: permissions,
-        roleId: user.roleId,
-        roleName: user.role?.name
+        permissions: directPermissions
       };
     } catch (error) {
       console.error('❌ Error getting user by ID:', error);
@@ -260,10 +243,6 @@ export class UserService {
 
       if (updateData.status !== undefined) {
         user.status = updateData.status;
-      }
-
-      if (updateData.roleId !== undefined) {
-        user.roleId = updateData.roleId;
       }
 
       // Guardar cambios del usuario

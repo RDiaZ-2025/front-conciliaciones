@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { ROLES, PERMISSIONS, PERMISSION_LABELS, PERMISSION_DESCRIPTIONS, PERMISSION_COLORS } from '../../constants/auth';
+import { PERMISSIONS, PERMISSION_LABELS, PERMISSION_DESCRIPTIONS, PERMISSION_COLORS } from '../../constants/auth';
 import { apiRequest } from '../../services/baseApiService';
 import { userService } from '../../services/userService';
 import type { User, Permission, FormData, AccessHistoryRecord, SnackbarState, UseAdminPanelReturn } from './types';
@@ -8,7 +8,6 @@ import type { User, Permission, FormData, AccessHistoryRecord, SnackbarState, Us
 export const useAdminPanel = (): UseAdminPanelReturn => {
   const { getAllUsers, createUser, updateUser, toggleUserStatus, user, hasPermission, availablePermissions } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
 
   const [openDialog, setOpenDialog] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -21,8 +20,6 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
   const [accessHistory, setAccessHistory] = useState<AccessHistoryRecord[]>([]);
   const [showAccessHistory, setShowAccessHistory] = useState(false);
   const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
-  const [openRoleDialog, setOpenRoleDialog] = useState(false);
-  const [selectedUserForRole, setSelectedUserForRole] = useState<User | null>(null);
   const [searchUser, setSearchUser] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 5;
@@ -39,17 +36,6 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
         setSnackbar({ open: true, message: 'Error al cargar usuarios', severity: 'error' });
       }
       console.error('Error al obtener usuarios:', error);
-    }
-  };
-
-  const loadRoles = async () => {
-    try {
-      const response = await userService.getAllRoles();
-      if (response.success) {
-        setRoles(response.data);
-      }
-    } catch (error) {
-      console.error('Error cargando roles:', error);
     }
   };
 
@@ -116,31 +102,17 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
 
   useEffect(() => {
     refreshUsers();
-    loadRoles();
     loadAvailablePermissions();
   }, []);
 
   const handleOpenDialog = (user?: User) => {
     if (user) {
       setEditingUser(user);
-
-      // Filter out permissions that are already granted by the role
-      let initialPermissions = user.permissions || [];
-      if (user.roleId) {
-        const userRole = roles.find(r => r.id === user.roleId);
-        if (userRole && userRole.permissions) {
-          initialPermissions = initialPermissions.filter(
-            p => !userRole.permissions.some(rp => rp.name === p.name)
-          );
-        }
-      }
-
       setFormData({
         name: user.name,
         email: user.email,
         password: '',
-        permissions: initialPermissions.map(p => p.name),
-        roleId: user.roleId
+        permissions: user.permissions?.map(p => p) || []
       });
     } else {
       setEditingUser(null);
@@ -148,8 +120,7 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
         name: '',
         email: '',
         password: '',
-        permissions: [],
-        roleId: undefined
+        permissions: []
       });
     }
     setOpenDialog(true);
@@ -158,89 +129,7 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingUser(null);
-    setFormData({ name: '', email: '', password: '', permissions: [], roleId: undefined });
-  };
-
-  const handleOpenRoleDialog = (userData: User) => {
-    setSelectedUserForRole(userData);
-    setOpenRoleDialog(true);
-  };
-
-  const handleCloseRoleDialog = () => {
-    setOpenRoleDialog(false);
-    setSelectedUserForRole(null);
-  };
-
-  const handleRoleChange = async (roleId: number) => {
-    if (!selectedUserForRole) return;
-
-    try {
-      const role = roles.find(r => r.id === roleId);
-      const roleName = role?.name || '';
-
-      setUsers(prevUsers =>
-        prevUsers.map(user =>
-          user.email === selectedUserForRole.email
-            ? { ...user, role: roleName, roleId: roleId }
-            : user
-        )
-      );
-
-      setSelectedUserForRole(prev => prev ? { ...prev, role: roleName, roleId: roleId } : null);
-
-      await userService.updateUserRole(selectedUserForRole.id as number, roleId);
-      setSnackbar({ open: true, message: 'Rol actualizado exitosamente', severity: 'success' });
-
-      handleCloseRoleDialog();
-
-      await refreshUsers();
-    } catch (error: any) {
-      await refreshUsers();
-      setSnackbar({ open: true, message: error.message, severity: 'error' });
-    }
-  };
-
-  const handleDirectRoleChange = async (userData: User, roleId: number) => {
-    try {
-      const role = roles.find(r => r.id === roleId);
-      const roleName = role?.name || '';
-
-      setUsers(prevUsers =>
-        prevUsers.map(user =>
-          user.email === userData.email
-            ? { ...user, role: roleName, roleId: roleId }
-            : user
-        )
-      );
-
-      await userService.updateUserRole(userData.id as number, roleId);
-      setSnackbar({ open: true, message: `Rol actualizado a ${getRoleLabel(roleName)} exitosamente`, severity: 'success' });
-
-      await refreshUsers();
-    } catch (error: any) {
-      await refreshUsers();
-      setSnackbar({ open: true, message: error.message, severity: 'error' });
-    }
-  };
-
-  const getRoleDescription = (role: string): string => {
-    const foundRole = roles.find(r => r.name === role);
-    if (foundRole && foundRole.description) {
-      return foundRole.description;
-    }
-
-    switch (role) {
-      case ROLES.UPLOAD_ONLY:
-        return 'Puede cargar archivos únicamente';
-      case ROLES.DASHBOARD_ONLY:
-        return 'Puede ver el dashboard únicamente';
-      case ROLES.FULL_ACCESS:
-        return 'Puede cargar archivos y ver dashboard';
-      case ROLES.ADMIN:
-        return 'Acceso completo y gestión de usuarios';
-      default:
-        return 'Rol no definido';
-    }
+    setFormData({ name: '', email: '', password: '', permissions: [] });
   };
 
   const handleSubmit = async () => {
@@ -254,8 +143,7 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
         const updates: any = {
           name: formData.name,
           email: formData.email,
-          permissions: formData.permissions.map(p => typeof p === 'string' ? p.toUpperCase() : ((p as any).Name || (p as any).name || String(p)).toUpperCase()),
-          roleId: formData.roleId
+          permissions: formData.permissions.map(p => typeof p === 'string' ? p.toUpperCase() : ((p as any).Name || (p as any).name || String(p)).toUpperCase())
         };
         if (formData.password) {
           updates.password = formData.password;
@@ -333,47 +221,6 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
     }
   };
 
-  const getRoleLabel = (role: string): string => {
-    if (!role || role === null || role === '') {
-      return 'Sin rol';
-    }
-    // Try to find in loaded roles first
-    const foundRole = roles.find(r => r.name === role);
-    if (foundRole) {
-      // Map technical names to friendly names if possible, otherwise return name
-      const labels: Record<string, string> = {
-        'admin': 'Administrador',
-        'dashboard_only': 'Solo Dashboard',
-        'full_access': 'Acceso Completo'
-      };
-      return labels[role] || foundRole.name;
-    }
-
-    const labels: Record<string, string> = {
-      [ROLES.ADMIN]: 'Administrador',
-      [ROLES.UPLOAD_ONLY]: 'Solo Carga',
-      [ROLES.DASHBOARD_ONLY]: 'Solo Dashboard',
-      [ROLES.FULL_ACCESS]: 'Acceso Completo'
-    };
-    return labels[role] || role;
-  };
-
-  const getRoleColor = (role: string): string => {
-    if (!role || role === null || role === '') {
-      return 'warning';
-    }
-    const colors: Record<string, string> = {
-      'admin': 'error',
-      'dashboard_only': 'secondary',
-      'full_access': 'success',
-      [ROLES.ADMIN]: 'error',
-      [ROLES.UPLOAD_ONLY]: 'primary',
-      [ROLES.DASHBOARD_ONLY]: 'secondary',
-      [ROLES.FULL_ACCESS]: 'success'
-    };
-    return colors[role] || 'default';
-  };
-
   const getPermissionLabel = (permission: string): string => {
     const found = availablePermissions.find(p => p.name === permission);
     // Use description if available, or label if we had one, or name
@@ -425,30 +272,8 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
     }
   };
 
-  const handleTogglePermission = (permission: string | Permission) => {
-    if (!selectedUserForRole) { return; }
-
-    const currentPermissions = selectedUserForRole.permissions || [];
-    const permissionName = typeof permission === 'string' ? permission : ((permission as any).Name || (permission as any).name || String(permission));
-
-    let newPermissions: string[];
-    if (currentPermissions.includes(permissionName)) {
-      newPermissions = currentPermissions.filter(p => p !== permissionName);
-    } else {
-      newPermissions = [...currentPermissions, permissionName];
-    }
-    const uniquePermissions = Array.from(new Set(newPermissions.map(p => typeof p === 'string' ? p : ((p as any).Name || (p as any).name || String(p)))));
-
-    setSelectedUserForRole(prev => ({
-      ...prev!,
-      permissions: uniquePermissions
-    }));
-    handlePermissionChange(selectedUserForRole, uniquePermissions);
-  };
-
   return {
     users,
-    roles,
     openDialog,
     setOpenDialog,
     editingUser,
@@ -461,10 +286,6 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
     setShowAccessHistory,
     snackbar,
     setSnackbar,
-    openRoleDialog,
-    setOpenRoleDialog,
-    selectedUserForRole,
-    setSelectedUserForRole,
     searchUser,
     setSearchUser,
     currentPage,
@@ -477,26 +298,11 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
     handleToggleAccessHistory,
     handleOpenDialog,
     handleCloseDialog,
-    handleOpenRoleDialog,
-    handleCloseRoleDialog,
-    handleRoleChange,
-    handleDirectRoleChange,
-    getRoleDescription,
     handleSubmit,
     handleToggleStatus,
-    getRoleLabel,
-    getRoleColor,
     getPermissionLabel,
     getPermissionDescription,
     getPermissionColor,
-    handlePermissionChange,
-    handleTogglePermission
+    handlePermissionChange
   };
 };
-
-
-
-
-
-
-

@@ -7,10 +7,9 @@
  */
 
 // User Management Models
-export { User } from './User';
-export { Permission } from './Permission';
-export { PermissionByUser } from './PermissionByUser';
-export { Role } from './Role';
+export * from './User';
+export * from './Permission';
+export * from './PermissionByUser';
 
 // Document Management Models
 export { LoadDocumentsOCbyUser } from './LoadDocumentsOCbyUser';
@@ -31,7 +30,6 @@ export { UserActionLog } from './UserActionLog';
 import { User } from './User';
 import { Permission } from './Permission';
 import { PermissionByUser } from './PermissionByUser';
-import { Role } from './Role';
 import { LoadDocumentsOCbyUser } from './LoadDocumentsOCbyUser';
 import { MenuItem } from './MenuItem';
 import { ProductionRequest } from './ProductionRequest';
@@ -41,7 +39,6 @@ export const entities = [
   User,
   Permission,
   PermissionByUser,
-  Role,
   LoadDocumentsOCbyUser,
   MenuItem,
   ProductionRequest,
@@ -58,8 +55,7 @@ export const ModelCategories = {
   Auth: {
     User,
     Permission,
-    PermissionByUser,
-    Role
+    PermissionByUser
   },
 
   /**

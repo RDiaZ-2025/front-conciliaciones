@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '../services/authService';
 import { userService } from '../services/userService';
-import { ROLES, PERMISSIONS, ROLE_PERMISSIONS } from '../constants/auth';
+import { PERMISSIONS } from '../constants/auth';
 
 const AuthContext = createContext();
 
@@ -76,8 +76,7 @@ function AuthProvider({ children }) {
           id: response.user.id,
           name: response.user.name,
           email: response.user.email,
-          permissions: response.user.permissions,
-          role: ROLES.ADMIN
+          permissions: response.user.permissions
         };
 
         setUser(userData);
@@ -137,6 +136,7 @@ function AuthProvider({ children }) {
       [PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES]: ['historial_carga_archivos_comerciales', 'HISTORIAL_CARGA_ARCHIVOS_COMERCIALES', 'history_load_commercial_files', 'HISTORY_LOAD_COMMERCIAL_FILES'],
       [PERMISSIONS.PRODUCTION_MANAGEMENT]: ['production_management', 'PRODUCTION_MANAGEMENT', 'PRODUCTION']
     };
+
     if (user.permissions && Array.isArray(user.permissions)) {
       const mappedPermissions = permissionMapping[permission] || [permission];
       const hasPermissionResult = mappedPermissions.some(mappedPerm => user.permissions.includes(mappedPerm));
@@ -145,18 +145,12 @@ function AuthProvider({ children }) {
       }
       return hasPermissionResult;
     }
-    const userPermissions = ROLE_PERMISSIONS[user.role] || [];
-    const roleResult = userPermissions.includes(permission);
-    return roleResult;
+
+    return false;
   };
 
   const hasAnyPermission = (permissions) => {
     return permissions.some(permission => hasPermission(permission));
-  };
-
-  const hasRole = (role) => {
-    if (!user) return false;
-    return user.role === role;
   };
 
   const getUserPermissions = () => {
@@ -164,7 +158,7 @@ function AuthProvider({ children }) {
     if (user.permissions && Array.isArray(user.permissions)) {
       return user.permissions;
     }
-    return ROLE_PERMISSIONS[user.role] || [];
+    return [];
   };
 
   const createUser = async (userData) => {
@@ -292,8 +286,6 @@ function AuthProvider({ children }) {
     logout,
     hasPermission,
     hasAnyPermission,
-    hasRole,
-    isAdmin: () => hasRole(ROLES.ADMIN),
     availablePermissions,
     getAllUsers,
     createUser,

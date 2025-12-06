@@ -47,8 +47,7 @@ export class AuthService {
 
     // Buscar usuario por email
     const user = await userRepository.findOne({
-      where: { email: credentials.email },
-      relations: ['role', 'role.permissions']
+      where: { email: credentials.email }
     });
 
     if (!user) {
@@ -82,10 +81,7 @@ export class AuthService {
     });
 
     // Combinar permisos del rol y permisos directos
-    const directPermissions = userPermissions.map(up => up.permission.name);
-    const rolePermissions = user.role?.permissions?.map(p => p.name) || [];
-
-    const permissions = [...new Set([...directPermissions, ...rolePermissions])];
+    const permissions = userPermissions.map(up => up.permission.name);
 
     // Actualizar último acceso
     await userRepository.update(user.id, { lastAccess: new Date() });
@@ -102,8 +98,7 @@ export class AuthService {
         id: user.id,
         name: user.name,
         email: user.email,
-        permissions,
-        role: user.role?.name || null
+        permissions
       },
       token
     };
@@ -181,8 +176,7 @@ export class AuthService {
       const permissionByUserRepository = AppDataSource.getRepository(PermissionByUser);
 
       const user = await userRepository.findOne({
-        where: { id: decoded.userId },
-        relations: ['role', 'role.permissions']
+        where: { id: decoded.userId }
       });
 
       if (!user) {
@@ -194,16 +188,12 @@ export class AuthService {
         relations: ['permission']
       });
 
-      const directPermissions = userPermissions.map(up => up.permission.name);
-      const rolePermissions = user.role?.permissions?.map(p => p.name) || [];
-
-      const permissions = [...new Set([...directPermissions, ...rolePermissions])];
+      const permissions = userPermissions.map(up => up.permission.name);
 
       return {
         userId: user.id,
         email: user.email,
         permissions,
-        role: user.role?.name || null,
         exp: decoded.exp
       };
     } catch (error) {

@@ -32,17 +32,6 @@ export const userService = {
   getAllPermissions: async () => {
     return apiRequest('/users/permissions/all');
   },
-
-  getAllRoles: async () => {
-    return apiRequest('/roles');
-  },
-
-  updateUserRole: async (userId, roleId) => {
-    return await apiRequest(`/users/${userId}`, {
-      method: 'PUT',
-      body: JSON.stringify({ roleId }),
-    });
-  },
 };
 
 export default userService;

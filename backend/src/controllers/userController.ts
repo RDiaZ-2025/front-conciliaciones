@@ -14,7 +14,7 @@ export class UserController {
         });
         return;
       }
-      
+
       // Usar el servicio de usuarios que ya tiene la lógica corregida
       const users = await UserService.getAllUsers();
 
@@ -37,7 +37,7 @@ export class UserController {
   static async getUserById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      
+
       if (!AppDataSource.isInitialized) {
         res.status(503).json({
           success: false,
@@ -45,12 +45,12 @@ export class UserController {
         });
         return;
       }
-      
+
       const userRepository = AppDataSource.getRepository(User);
-      
+
       const user = await userRepository
         .createQueryBuilder('user')
-        .leftJoinAndSelect('user.permissionsByUser', 'permissionsByUser')
+        .leftJoinAndSelect('user.permissions', 'permissionsByUser')
         .leftJoinAndSelect('permissionsByUser.permission', 'permission')
         .where('user.id = :userId AND user.status = :status', { userId: parseInt(id), status: 1 })
         .getOne();
@@ -63,7 +63,10 @@ export class UserController {
         return;
       }
 
-      const permissions = user.permissions?.map((pbu: any) => pbu.permission?.name).filter(Boolean) || [];
+      // Filter out undefined values and ensure type safety
+      const permissions = user.permissions
+        ?.map((pbu: any) => pbu.permission?.name)
+        .filter((name: any): name is string => !!name) || [];
 
       res.status(200).json({
         success: true,
@@ -121,7 +124,7 @@ export class UserController {
               const permissionByUser = new PermissionByUser();
               permissionByUser.userId = parseInt(id);
               permissionByUser.permissionId = permission.id;
-              
+
               await permissionByUserRepository.save(permissionByUser);
             }
           }
@@ -201,7 +204,7 @@ export class UserController {
     try {
       const { id } = req.params;
       const { name, email, password, permissions } = req.body;
-      
+
       const result = await UserService.updateUser(parseInt(id), {
         name,
         email,
@@ -241,25 +244,25 @@ export class UserController {
 
       // Verificar que el usuario existe
       const user = await userRepository.findOne({
-      where: { id: parseInt(id) },
-      select: ['id', 'status']
-    });
-
-    if (!user) {
-      res.status(404).json({
-        success: false,
-        message: 'Usuario no encontrado'
+        where: { id: parseInt(id) },
+        select: ['id', 'status']
       });
-      return;
-    }
 
-    const currentStatus = user.status;
-    const newStatus = currentStatus === 1 ? 0 : 1;
+      if (!user) {
+        res.status(404).json({
+          success: false,
+          message: 'Usuario no encontrado'
+        });
+        return;
+      }
 
-    await userRepository.update(
-      { id: parseInt(id) },
-      { status: newStatus }
-    );
+      const currentStatus = user.status;
+      const newStatus = currentStatus === 1 ? 0 : 1;
+
+      await userRepository.update(
+        { id: parseInt(id) },
+        { status: newStatus }
+      );
 
       res.status(200).json({
         success: true,

@@ -29,7 +29,8 @@ import {
   Checkbox,
   FormControlLabel,
   FormGroup,
-  Divider
+  Divider,
+  Autocomplete
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -38,7 +39,9 @@ import {
   Person as PersonIcon,
   History as HistoryIcon,
   Block as BlockIcon,
-  CheckCircle as CheckCircleIcon
+  CheckCircle as CheckCircleIcon,
+  CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
+  CheckBox as CheckBoxIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAdminPanel } from './useAdminPanel';
@@ -51,11 +54,8 @@ import PageHeader from '../../components/PageHeader';
 const AdminPanel = ({ darkMode, selectedMenu = 'usuarios', onMenuSelect, setDarkMode, onBack }) => {
   const { user } = useAuth();
 
-
-
   const {
     users,
-    roles,
     openDialog,
     editingUser,
     formData,
@@ -65,8 +65,6 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios', onMenuSelect, setDark
     showAccessHistory,
     snackbar,
     setSnackbar,
-    openRoleDialog,
-    selectedUserForRole,
     searchUser,
     setSearchUser,
     currentPage,
@@ -75,16 +73,11 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios', onMenuSelect, setDark
     handleToggleAccessHistory,
     handleOpenDialog,
     handleCloseDialog,
-    handleOpenRoleDialog,
-    handleCloseRoleDialog,
     handleSubmit,
     handleToggleStatus,
-    getRoleLabel,
-    getRoleColor,
     getPermissionLabel,
     getPermissionDescription,
     getPermissionColor,
-    handleTogglePermission,
     formatLoginTime,
     loadAccessHistory
   } = useAdminPanel();
@@ -218,6 +211,7 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios', onMenuSelect, setDark
                 value={searchUser}
                 onChange={e => setSearchUser(e.target.value)}
                 sx={{ minWidth: 220 }}
+                autoComplete="off"
               />
               <Button
                 variant="contained"
@@ -326,23 +320,6 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios', onMenuSelect, setDark
                               />
                             );
                           })
-                        ) : userData.role ? (
-                          (() => {
-                            const chipColor = getRoleColor(userData.role);
-                            const validColors = ['default', 'primary', 'secondary', 'error', 'info', 'success', 'warning'];
-                            return (
-                              <Chip
-                                label={getRoleLabel(userData.role)}
-                                color={validColors.includes(chipColor) ? chipColor as any : 'default'}
-                                size="small"
-                                variant="outlined"
-                                sx={{
-                                  fontWeight: theme => theme.typography.fontWeightMedium,
-                                  borderRadius: theme => theme.spacing(1)
-                                }}
-                              />
-                            );
-                          })()
                         ) : (
                           <Chip
                             label="Sin permisos"
@@ -436,6 +413,7 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios', onMenuSelect, setDark
             }}
           >
             <Typography
+              component="span"
               variant="h5"
               sx={{
                 fontWeight: theme => theme.typography.fontWeightBold,
@@ -474,23 +452,6 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios', onMenuSelect, setDark
                 required={!editingUser}
                 variant="outlined"
               />
-              <FormControl fullWidth variant="outlined">
-                <InputLabel>Rol</InputLabel>
-                <Select
-                  value={formData.roleId || ''}
-                  onChange={(e) => setFormData({ ...formData, roleId: Number(e.target.value) })}
-                  label="Rol"
-                >
-                  <MenuItem value="">
-                    <em>Sin rol</em>
-                  </MenuItem>
-                  {roles.map((role) => (
-                    <MenuItem key={role.id} value={role.id}>
-                      {role.name} {role.description ? `- ${role.description}` : ''}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
               <Divider />
               <Typography
                 variant="h6"
@@ -501,55 +462,84 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios', onMenuSelect, setDark
               >
                 Permisos
               </Typography>
-              <FormGroup>
-                {availablePermissions.map((permission: any) => {
-                  const permissionName = typeof permission === 'string' ? permission : permission.Name || permission.name || '';
-                  const selectedRole = roles.find(r => r.id === formData.roleId);
-                  const isRolePermission = selectedRole?.permissions?.some(rp => rp.name === permissionName);
-
-                  return (
-                    <FormControlLabel
-                      key={permissionName}
-                      control={
-                        <Checkbox
-                          checked={!!isRolePermission || formData.permissions.includes(permissionName)}
-                          onChange={(e) => {
-                            if (isRolePermission) return;
-                            if (e.target.checked) {
-                              setFormData({
-                                ...formData,
-                                permissions: [...formData.permissions, permissionName || '']
-                              });
-                            } else {
-                              setFormData({
-                                ...formData,
-                                permissions: formData.permissions.filter(p => p !== permissionName)
-                              });
-                            }
-                          }}
-                          color="primary"
-                          disabled={!!isRolePermission}
-                        />
-                      }
-                      label={
-                        <Box>
-                          <Typography variant="body1" sx={{ fontWeight: 'medium', display: 'block' }}>
-                            {getPermissionLabel(permissionName)}
-                            {isRolePermission && (
-                              <Typography component="span" variant="caption" sx={{ ml: 1, color: 'text.secondary', fontStyle: 'italic' }}>
-                                (Por Rol)
-                              </Typography>
-                            )}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ display: 'block' }}>
-                            {getPermissionDescription(permissionName)}
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                  );
-                })}
-              </FormGroup>
+              {(() => {
+                return (
+                  <Autocomplete
+                    multiple
+                    id="permissions-select"
+                    options={availablePermissions}
+                    disableCloseOnSelect
+                    getOptionLabel={(option) => {
+                      if (!option) return '';
+                      const name = typeof option === 'string' ? option : (option.name || option.Name || '');
+                      return getPermissionLabel(name);
+                    }}
+                    isOptionEqualToValue={(option, value) => {
+                      if (!option || !value) return false;
+                      const optName = typeof option === 'string' ? option : (option.name || option.Name);
+                      const valName = typeof value === 'string' ? value : (value.name || value.Name);
+                      return optName === valName;
+                    }}
+                    value={availablePermissions.filter(p => {
+                      if (!p) return false;
+                      const pName = typeof p === 'string' ? p : (p.name || p.Name);
+                      return formData.permissions.includes(pName);
+                    })}
+                    onChange={(event, newValue) => {
+                      const newNames = newValue
+                        .filter(v => v) // Filter out undefined/null
+                        .map(v => typeof v === 'string' ? v : (v.name || v.Name));
+                      setFormData({ ...formData, permissions: newNames });
+                    }}
+                    renderOption={(props, option, { selected }) => {
+                      if (!option) return null;
+                      const name = typeof option === 'string' ? option : (option.name || option.Name || '');
+                      const { key, ...otherProps } = props;
+                      return (
+                        <li key={key} {...otherProps}>
+                          <Checkbox
+                            icon={<CheckBoxOutlineBlankIcon fontSize="small" />}
+                            checkedIcon={<CheckBoxIcon fontSize="small" />}
+                            style={{ marginRight: 8 }}
+                            checked={selected}
+                          />
+                          <Box>
+                            <Typography variant="body1">
+                              {getPermissionLabel(name)}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              {getPermissionDescription(name)}
+                            </Typography>
+                          </Box>
+                        </li>
+                      );
+                    }}
+                    renderTags={(value, getTagProps) =>
+                      value.map((option, index) => {
+                        if (!option) return null;
+                        const name = typeof option === 'string' ? option : (option.name || option.Name || '');
+                        const { key, ...tagProps } = getTagProps({ index });
+                        return (
+                          <Chip
+                            key={key}
+                            label={getPermissionLabel(name)}
+                            {...tagProps}
+                            size="small"
+                            variant="outlined"
+                          />
+                        );
+                      })
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Seleccionar permisos"
+                        placeholder="Permisos"
+                      />
+                    )}
+                  />
+                );
+              })()}
             </Stack>
           </DialogContent>
           <DialogActions

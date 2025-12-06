@@ -73,11 +73,10 @@ const UnauthorizedAccess = ({ darkMode, onBackToHome }) => {
 const ProtectedRoute = ({ 
   children, 
   requiredPermission, 
-  requiredRole,
   darkMode = false,
   onUnauthorized 
 }) => {
-  const { user, hasPermission, hasRole } = useAuth();
+  const { user, hasPermission } = useAuth();
 
   // Si no hay usuario logueado, no mostrar nada (el App.jsx manejará la redirección)
   if (!user) {
@@ -86,9 +85,8 @@ const ProtectedRoute = ({
 
   // Verificar permisos
   const hasRequiredPermission = requiredPermission ? hasPermission(requiredPermission) : true;
-  const hasRequiredRole = requiredRole ? hasRole(requiredRole) : true;
 
-  if (!hasRequiredPermission || !hasRequiredRole) {
+  if (!hasRequiredPermission) {
     return (
       <UnauthorizedAccess 
         darkMode={darkMode} 
