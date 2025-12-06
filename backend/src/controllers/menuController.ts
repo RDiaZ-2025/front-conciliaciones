@@ -10,6 +10,7 @@ export interface MenuItemResponse {
   parentId?: number;
   displayOrder: number;
   isActive: boolean;
+  permissionName?: string;
   children?: MenuItemResponse[];
 }
 
@@ -55,13 +56,21 @@ const buildMenuHierarchy = (menuItems: MenuItemResponse[]): MenuItemResponse[] =
 };
 
 // Helper function to filter menus by permissions (recursive)
-// Note: Since permissions are removed from the database, this function now returns all menus
 const filterMenusByPermissions = (menus: MenuItemResponse[], userPermissions: string[]): MenuItemResponse[] => {
   return menus.filter(menu => {
-    // Since permissionRequired is removed, all menus are accessible
+    // If menu requires a permission, check if user has it
+    if (menu.permissionName && !userPermissions.includes(menu.permissionName)) {
+      return false;
+    }
+
     // If menu has children, filter them recursively
     if (menu.children && menu.children.length > 0) {
       menu.children = filterMenusByPermissions(menu.children, userPermissions);
+      
+      // If all children are filtered out and the menu itself has no route, hide it
+      // (Unless it's a root item that might be just a container? logic depends on requirements)
+      // For now, if it has no route and no visible children, we might want to hide it.
+      // But let's keep it simple: just filter based on direct permission first.
     }
 
     return true;
@@ -82,7 +91,8 @@ export const getAllMenuItems = async (req: Request, res: Response): Promise<void
     
     const menuItems = await menuItemRepository.find({
       where: { isActive: true },
-      order: { displayOrder: 'ASC' }
+      order: { displayOrder: 'ASC' },
+      relations: ['permission']
     });
 
     const menuItemsResponse: MenuItemResponse[] = menuItems.map(item => ({
@@ -92,7 +102,8 @@ export const getAllMenuItems = async (req: Request, res: Response): Promise<void
       route: item.route || undefined,
       parentId: item.parentId || undefined,
       displayOrder: item.displayOrder,
-      isActive: item.isActive
+      isActive: item.isActive,
+      permissionName: item.permission?.name
     }));
 
     const hierarchicalMenus = buildMenuHierarchy(menuItemsResponse);
@@ -135,7 +146,8 @@ export const getMenuItemsByPermissions = async (req: Request, res: Response): Pr
     
     const menuItems = await menuItemRepository.find({
       where: { isActive: true },
-      order: { displayOrder: 'ASC' }
+      order: { displayOrder: 'ASC' },
+      relations: ['permission']
     });
 
     const menuItemsResponse: MenuItemResponse[] = menuItems.map(item => ({
@@ -145,7 +157,8 @@ export const getMenuItemsByPermissions = async (req: Request, res: Response): Pr
       route: item.route || undefined,
       parentId: item.parentId || undefined,
       displayOrder: item.displayOrder,
-      isActive: item.isActive
+      isActive: item.isActive,
+      permissionName: item.permission?.name
     }));
 
     // Build hierarchy first
@@ -177,7 +190,8 @@ export const createMenuItem = async (req: Request, res: Response): Promise<void>
       icon, 
       route, 
       parentId, 
-      displayOrder = 0 
+      displayOrder = 0,
+      permissionId
     } = req.body;
 
     if (!label) {
@@ -240,8 +254,9 @@ export const updateMenuItem = async (req: Request, res: Response): Promise<void>
       icon, 
       route, 
       parentId, 
-      displayOrder,
-      isActive 
+      displayOrder, 
+      isActive,
+      permissionId
     } = req.body;
 
     if (!AppDataSource.isInitialized) {

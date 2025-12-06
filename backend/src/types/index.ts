@@ -31,6 +31,7 @@ export interface LoginResponse {
     name: string;
     email: string;
     permissions: string[];
+    role?: string | null;
   };
   token?: string;
   message?: string;
@@ -46,6 +47,8 @@ export interface ApiResponse<T = any> {
 export interface JWTPayload {
   userId: number;
   email: string;
+  permissions?: string[];
+  role?: string | null;
   iat?: number;
   exp?: number;
 }

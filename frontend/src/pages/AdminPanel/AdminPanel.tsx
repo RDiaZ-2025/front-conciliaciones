@@ -50,11 +50,12 @@ import PageHeader from '../../components/PageHeader';
 
 const AdminPanel = ({ darkMode, selectedMenu = 'usuarios', onMenuSelect, setDarkMode, onBack }) => {
   const { user } = useAuth();
-  
+
 
 
   const {
     users,
+    roles,
     openDialog,
     editingUser,
     formData,
@@ -93,9 +94,9 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios', onMenuSelect, setDark
       case 'historial':
         return <LoadDocumentsOCbyUserView darkMode={darkMode} />;
       case 'upload':
-        return <UploadForm hideHeader={true} darkMode={darkMode} onUploadComplete={() => {}} onBackToLogin={() => {}} setDarkMode={() => {}} onGoToAdmin={() => {}} onGoToDashboard={() => {}} />;
+        return <UploadForm hideHeader={true} darkMode={darkMode} onUploadComplete={() => { }} onBackToLogin={() => { }} setDarkMode={() => { }} onGoToAdmin={() => { }} onGoToDashboard={() => { }} />;
       case 'dashboard':
-        return <DashboardGeneral darkMode={darkMode} setDarkMode={() => {}} onBack={() => {}} onGoToAdmin={() => {}} onGoToUpload={() => {}} />;
+        return <DashboardGeneral darkMode={darkMode} setDarkMode={() => { }} onBack={() => { }} onGoToAdmin={() => { }} onGoToUpload={() => { }} />;
       case 'usuarios':
       default:
         return renderUserManagement();
@@ -108,7 +109,7 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios', onMenuSelect, setDark
       u.name?.toLowerCase().includes(searchUser.toLowerCase()) ||
       u.email?.toLowerCase().includes(searchUser.toLowerCase())
     );
-    
+
     const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
     const paginatedUsers = filteredUsers.slice((currentPage - 1) * usersPerPage, currentPage * usersPerPage);
 
@@ -120,456 +121,483 @@ const AdminPanel = ({ darkMode, selectedMenu = 'usuarios', onMenuSelect, setDark
           subtitle="Gestión avanzada de usuarios y permisos"
         />
 
-      <Paper
-        elevation={2}
-        sx={{
-          p: theme => theme.spacing(4),
-          mb: theme => theme.spacing(4),
-          bgcolor: 'background.paper',
-          borderRadius: theme => theme.spacing(2),
-          border: theme => `1px solid ${theme.palette.divider}`
-        }}
-      >
-        <Stack direction="row" alignItems="center" spacing={3}>
-          <Box
-            sx={{
-              p: theme => theme.spacing(2),
-              borderRadius: theme => theme.spacing(1.5),
-              bgcolor: 'action.hover',
-              border: theme => `1px solid ${theme.palette.divider}`
-            }}
-          >
-            <PersonIcon sx={{ fontSize: 28, color: 'primary.main' }} />
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            <Typography 
-              variant="h6" 
-              sx={{
-                color: 'text.primary',
-                fontWeight: theme => theme.typography.fontWeightBold,
-                mb: 0.5
-              }}
-            >
-              Sesión Activa
-            </Typography>
-            <Typography 
-              variant="body1"
-              sx={{
-                color: 'text.secondary',
-                lineHeight: 1.6
-              }}
-            >
-              Conectado como{' '}
-              <Box component="span" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-                {user?.name}
-              </Box>
-              {' '}({user?.email})
-            </Typography>
-          </Box>
-        </Stack>
-      </Paper>
-
-      <Paper
-        elevation={2}
-        sx={{
-          bgcolor: 'background.paper',
-          borderRadius: theme => theme.spacing(2),
-          border: theme => `1px solid ${theme.palette.divider}`,
-          overflow: 'hidden'
-        }}
-      >
-        <Box
+        <Paper
+          elevation={2}
           sx={{
             p: theme => theme.spacing(4),
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            borderBottom: theme => `1px solid ${theme.palette.divider}`,
-            bgcolor: 'action.hover'
-          }}
-        >
-          <Box>
-            <Typography 
-              variant="h5" 
-              sx={{
-                color: 'text.primary',
-                fontWeight: theme => theme.typography.fontWeightBold,
-                mb: 0.5
-              }}
-            >
-              Gestión de Usuarios
-            </Typography>
-            <Typography 
-              variant="body2" 
-              sx={{
-                color: 'text.secondary',
-                fontWeight: theme => theme.typography.fontWeightMedium
-              }}
-            >
-              Administra usuarios y sus permisos del sistema
-            </Typography>
-          </Box>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <TextField
-              variant="outlined"
-              size="small"
-              placeholder="Buscar usuario..."
-              value={searchUser}
-              onChange={e => setSearchUser(e.target.value)}
-              sx={{ minWidth: 220 }}
-            />
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => handleOpenDialog()}
-              sx={{
-                fontWeight: theme => theme.typography.fontWeightBold,
-                px: theme => theme.spacing(3),
-                py: theme => theme.spacing(1.5),
-                borderRadius: theme => theme.spacing(1.5),
-                textTransform: 'none'
-              }}
-            >
-              Nuevo Usuario
-            </Button>
-          </Stack>
-        </Box>
-
-        <TableContainer sx={{ maxHeight: theme => theme.spacing(75) }}>
-          <Table stickyHeader>
-            <TableHead>
-              <TableRow>
-                {['Usuario', 'Email', 'Permisos', 'Estado', 'Acciones'].map((header) => (
-                  <TableCell 
-                    key={header} 
-                    sx={{ 
-                      bgcolor: 'action.hover',
-                      color: 'text.primary',
-                      fontWeight: theme => theme.typography.fontWeightBold,
-                      py: theme => theme.spacing(2),
-                      textAlign: header === 'Estado' || header === 'Acciones' ? 'center' : 'left'
-                    }}
-                  >
-                    {header}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {paginatedUsers.map((userData, index) => (
-                <TableRow 
-                  key={userData.id || userData.email || index}
-                  sx={{
-                    '&:nth-of-type(odd)': {
-                      bgcolor: 'action.hover'
-                    },
-                    '&:hover': {
-                      bgcolor: 'action.selected',
-                      transform: 'translateY(-1px)',
-                      boxShadow: theme => theme.shadows[2]
-                    },
-                    transition: theme => theme.transitions.create(['background-color', 'transform', 'box-shadow'], {
-                      duration: theme.transitions.duration.short,
-                    })
-                  }}
-                >
-                  <TableCell sx={{ py: theme => theme.spacing(2) }}>
-                    <Stack direction="row" alignItems="center" spacing={2}>
-                      <Box
-                        sx={{
-                          p: theme => theme.spacing(1),
-                          borderRadius: theme => theme.spacing(1),
-                          bgcolor: 'primary.light',
-                          color: 'primary.contrastText'
-                        }}
-                      >
-                        <PersonIcon sx={{ fontSize: 20 }} />
-                      </Box>
-                      <Typography 
-                        sx={{
-                          color: 'text.primary',
-                          fontWeight: theme => theme.typography.fontWeightBold
-                        }}
-                      >
-                        {userData.name}
-                      </Typography>
-                    </Stack>
-                  </TableCell>
-                  <TableCell sx={{ py: theme => theme.spacing(2) }}>
-                    <Typography 
-                      sx={{
-                        color: 'text.secondary',
-                        fontWeight: theme => theme.typography.fontWeightMedium
-                      }}
-                    >
-                      {userData.email}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ py: theme => theme.spacing(2) }}>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, maxWidth: 300 }}>
-                      {userData.permissions && Array.isArray(userData.permissions) && userData.permissions.length > 0 ? (
-                        Array.from(new Set(userData.permissions.map((p: any) => typeof p === 'string' ? p : p.Name || p.name))).map((permissionName, permIdx) => {
-                           const chipColor = getPermissionColor(permissionName);
-                           const validColors = ['default', 'primary', 'secondary', 'error', 'info', 'success', 'warning'];
-                           return (
-                             <Chip
-                               key={`perm-${permissionName}-${permIdx}`}
-                               label={getPermissionLabel(permissionName)}
-                               color={validColors.includes(chipColor) ? chipColor as any : 'default'}
-                               size="small"
-                               variant="outlined"
-                               sx={{ 
-                                 fontWeight: theme => theme.typography.fontWeightMedium,
-                                 borderRadius: theme => theme.spacing(1)
-                               }}
-                             />
-                           );
-                         })
-                      ) : userData.role ? (
-                        (() => {
-                          const chipColor = getRoleColor(userData.role);
-                          const validColors = ['default', 'primary', 'secondary', 'error', 'info', 'success', 'warning'];
-                          return (
-                            <Chip
-                              label={getRoleLabel(userData.role)}
-                              color={validColors.includes(chipColor) ? chipColor as any : 'default'}
-                              size="small"
-                              variant="outlined"
-                              sx={{ 
-                                fontWeight: theme => theme.typography.fontWeightMedium,
-                                borderRadius: theme => theme.spacing(1)
-                              }}
-                            />
-                          );
-                        })()
-                      ) : (
-                        <Chip
-                          label="Sin permisos"
-                          color="default"
-                          size="small"
-                          variant="outlined"
-                          sx={{ 
-                            fontWeight: theme => theme.typography.fontWeightMedium,
-                            borderRadius: theme => theme.spacing(1)
-                          }}
-                        />
-                      )}
-                    </Box>
-                  </TableCell>
-                  <TableCell align="center" sx={{ py: theme => theme.spacing(2) }}>
-                    <Chip
-                      label={userData.status === 1 ? 'Activo' : 'Inactivo'}
-                      color={userData.status === 1 ? 'success' : 'error'}
-                      size="small"
-                      variant="outlined"
-                      sx={{ 
-                        fontWeight: theme => theme.typography.fontWeightMedium,
-                        borderRadius: theme => theme.spacing(1)
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell align="center" sx={{ py: theme => theme.spacing(2) }}>
-                    <Stack direction="row" spacing={1} justifyContent="center">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleOpenDialog(userData)}
-                        sx={{ color: userData.status === 1 ? 'success.main' : 'error.main' }}
-                        title="Editar usuario"
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleToggleStatus(userData.email, userData.status)}
-                        sx={{ color: userData.status === 1 ? 'error.main' : 'success.main' }}
-                        title={userData.status === 1 ? 'Desactivar' : 'Activar'}
-                      >
-                        {userData.status === 1 ? <BlockIcon fontSize="small" /> : <CheckCircleIcon fontSize="small" />}
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleToggleAccessHistory()}
-                        sx={{ color: 'info.main' }}
-                        title="Ver historial"
-                      >
-                        <HistoryIcon fontSize="small" />
-                      </IconButton>
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        {totalPages > 1 && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: theme => theme.spacing(3) }}>
-            <Pagination
-              count={totalPages}
-              page={currentPage}
-              onChange={(event, value) => setCurrentPage(value)}
-              color="primary"
-              size="large"
-            />
-          </Box>
-        )}
-      </Paper>
-
-      <Dialog
-        open={openDialog}
-        onClose={handleCloseDialog}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: {
+            mb: theme => theme.spacing(4),
+            bgcolor: 'background.paper',
             borderRadius: theme => theme.spacing(2),
             border: theme => `1px solid ${theme.palette.divider}`
-          }
-        }}
-      >
-        <DialogTitle
-          sx={{
-            bgcolor: 'action.hover',
-            borderBottom: theme => `1px solid ${theme.palette.divider}`,
-            p: theme => theme.spacing(3)
           }}
         >
-          <Typography
-            variant="h5"
+          <Stack direction="row" alignItems="center" spacing={3}>
+            <Box
+              sx={{
+                p: theme => theme.spacing(2),
+                borderRadius: theme => theme.spacing(1.5),
+                bgcolor: 'action.hover',
+                border: theme => `1px solid ${theme.palette.divider}`
+              }}
+            >
+              <PersonIcon sx={{ fontSize: 28, color: 'primary.main' }} />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography
+                variant="h6"
+                sx={{
+                  color: 'text.primary',
+                  fontWeight: theme => theme.typography.fontWeightBold,
+                  mb: 0.5
+                }}
+              >
+                Sesión Activa
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  color: 'text.secondary',
+                  lineHeight: 1.6
+                }}
+              >
+                Conectado como{' '}
+                <Box component="span" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                  {user?.name}
+                </Box>
+                {' '}({user?.email})
+              </Typography>
+            </Box>
+          </Stack>
+        </Paper>
+
+        <Paper
+          elevation={2}
+          sx={{
+            bgcolor: 'background.paper',
+            borderRadius: theme => theme.spacing(2),
+            border: theme => `1px solid ${theme.palette.divider}`,
+            overflow: 'hidden'
+          }}
+        >
+          <Box
             sx={{
-              fontWeight: theme => theme.typography.fontWeightBold,
-              color: 'text.primary'
+              p: theme => theme.spacing(4),
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderBottom: theme => `1px solid ${theme.palette.divider}`,
+              bgcolor: 'action.hover'
             }}
           >
-            {editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
-          </Typography>
-        </DialogTitle>
-        <DialogContent sx={{ p: theme => theme.spacing(3) }}>
-          <Stack spacing={3} sx={{ mt: 1 }}>
-            <TextField
-              label="Nombre"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value || '' })}
-              fullWidth
-              required
-              variant="outlined"
-            />
-            <TextField
-              label="Email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value || '' })}
-              fullWidth
-              required
-              variant="outlined"
-              disabled={!!editingUser}
-            />
-            <TextField
-              label={editingUser ? 'Nueva Contraseña (opcional)' : 'Contraseña'}
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value || '' })}
-              fullWidth
-              required={!editingUser}
-              variant="outlined"
-            />
-            <Divider />
+            <Box>
+              <Typography
+                variant="h5"
+                sx={{
+                  color: 'text.primary',
+                  fontWeight: theme => theme.typography.fontWeightBold,
+                  mb: 0.5
+                }}
+              >
+                Gestión de Usuarios
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                  fontWeight: theme => theme.typography.fontWeightMedium
+                }}
+              >
+                Administra usuarios y sus permisos del sistema
+              </Typography>
+            </Box>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <TextField
+                variant="outlined"
+                size="small"
+                placeholder="Buscar usuario..."
+                value={searchUser}
+                onChange={e => setSearchUser(e.target.value)}
+                sx={{ minWidth: 220 }}
+              />
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => handleOpenDialog()}
+                sx={{
+                  fontWeight: theme => theme.typography.fontWeightBold,
+                  px: theme => theme.spacing(3),
+                  py: theme => theme.spacing(1.5),
+                  borderRadius: theme => theme.spacing(1.5),
+                  textTransform: 'none'
+                }}
+              >
+                Nuevo Usuario
+              </Button>
+            </Stack>
+          </Box>
+
+          <TableContainer sx={{ maxHeight: theme => theme.spacing(75) }}>
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow>
+                  {['Usuario', 'Email', 'Permisos', 'Estado', 'Acciones'].map((header) => (
+                    <TableCell
+                      key={header}
+                      sx={{
+                        bgcolor: 'action.hover',
+                        color: 'text.primary',
+                        fontWeight: theme => theme.typography.fontWeightBold,
+                        py: theme => theme.spacing(2),
+                        textAlign: header === 'Estado' || header === 'Acciones' ? 'center' : 'left'
+                      }}
+                    >
+                      {header}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {paginatedUsers.map((userData, index) => (
+                  <TableRow
+                    key={userData.id || userData.email || index}
+                    sx={{
+                      '&:nth-of-type(odd)': {
+                        bgcolor: 'action.hover'
+                      },
+                      '&:hover': {
+                        bgcolor: 'action.selected',
+                        transform: 'translateY(-1px)',
+                        boxShadow: theme => theme.shadows[2]
+                      },
+                      transition: theme => theme.transitions.create(['background-color', 'transform', 'box-shadow'], {
+                        duration: theme.transitions.duration.short,
+                      })
+                    }}
+                  >
+                    <TableCell sx={{ py: theme => theme.spacing(2) }}>
+                      <Stack direction="row" alignItems="center" spacing={2}>
+                        <Box
+                          sx={{
+                            p: theme => theme.spacing(1),
+                            borderRadius: theme => theme.spacing(1),
+                            bgcolor: 'primary.light',
+                            color: 'primary.contrastText'
+                          }}
+                        >
+                          <PersonIcon sx={{ fontSize: 20 }} />
+                        </Box>
+                        <Typography
+                          sx={{
+                            color: 'text.primary',
+                            fontWeight: theme => theme.typography.fontWeightBold
+                          }}
+                        >
+                          {userData.name}
+                        </Typography>
+                      </Stack>
+                    </TableCell>
+                    <TableCell sx={{ py: theme => theme.spacing(2) }}>
+                      <Typography
+                        sx={{
+                          color: 'text.secondary',
+                          fontWeight: theme => theme.typography.fontWeightMedium
+                        }}
+                      >
+                        {userData.email}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={{ py: theme => theme.spacing(2) }}>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, maxWidth: 300 }}>
+                        {userData.permissions && Array.isArray(userData.permissions) && userData.permissions.length > 0 ? (
+                          Array.from(new Set(userData.permissions.map((p: any) => typeof p === 'string' ? p : p.Name || p.name))).map((permissionName, permIdx) => {
+                            const chipColor = getPermissionColor(permissionName);
+                            const validColors = ['default', 'primary', 'secondary', 'error', 'info', 'success', 'warning'];
+                            return (
+                              <Chip
+                                key={`perm-${permissionName}-${permIdx}`}
+                                label={getPermissionLabel(permissionName)}
+                                color={validColors.includes(chipColor) ? chipColor as any : 'default'}
+                                size="small"
+                                variant="outlined"
+                                sx={{
+                                  fontWeight: theme => theme.typography.fontWeightMedium,
+                                  borderRadius: theme => theme.spacing(1)
+                                }}
+                              />
+                            );
+                          })
+                        ) : userData.role ? (
+                          (() => {
+                            const chipColor = getRoleColor(userData.role);
+                            const validColors = ['default', 'primary', 'secondary', 'error', 'info', 'success', 'warning'];
+                            return (
+                              <Chip
+                                label={getRoleLabel(userData.role)}
+                                color={validColors.includes(chipColor) ? chipColor as any : 'default'}
+                                size="small"
+                                variant="outlined"
+                                sx={{
+                                  fontWeight: theme => theme.typography.fontWeightMedium,
+                                  borderRadius: theme => theme.spacing(1)
+                                }}
+                              />
+                            );
+                          })()
+                        ) : (
+                          <Chip
+                            label="Sin permisos"
+                            color="default"
+                            size="small"
+                            variant="outlined"
+                            sx={{
+                              fontWeight: theme => theme.typography.fontWeightMedium,
+                              borderRadius: theme => theme.spacing(1)
+                            }}
+                          />
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell align="center" sx={{ py: theme => theme.spacing(2) }}>
+                      <Chip
+                        label={userData.status === 1 ? 'Activo' : 'Inactivo'}
+                        color={userData.status === 1 ? 'success' : 'error'}
+                        size="small"
+                        variant="outlined"
+                        sx={{
+                          fontWeight: theme => theme.typography.fontWeightMedium,
+                          borderRadius: theme => theme.spacing(1)
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell align="center" sx={{ py: theme => theme.spacing(2) }}>
+                      <Stack direction="row" spacing={1} justifyContent="center">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleOpenDialog(userData)}
+                          sx={{ color: userData.status === 1 ? 'success.main' : 'error.main' }}
+                          title="Editar usuario"
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleToggleStatus(userData.email, userData.status)}
+                          sx={{ color: userData.status === 1 ? 'error.main' : 'success.main' }}
+                          title={userData.status === 1 ? 'Desactivar' : 'Activar'}
+                        >
+                          {userData.status === 1 ? <BlockIcon fontSize="small" /> : <CheckCircleIcon fontSize="small" />}
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleToggleAccessHistory()}
+                          sx={{ color: 'info.main' }}
+                          title="Ver historial"
+                        >
+                          <HistoryIcon fontSize="small" />
+                        </IconButton>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {totalPages > 1 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: theme => theme.spacing(3) }}>
+              <Pagination
+                count={totalPages}
+                page={currentPage}
+                onChange={(event, value) => setCurrentPage(value)}
+                color="primary"
+                size="large"
+              />
+            </Box>
+          )}
+        </Paper>
+
+        <Dialog
+          open={openDialog}
+          onClose={handleCloseDialog}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: theme => theme.spacing(2),
+              border: theme => `1px solid ${theme.palette.divider}`
+            }
+          }}
+        >
+          <DialogTitle
+            sx={{
+              bgcolor: 'action.hover',
+              borderBottom: theme => `1px solid ${theme.palette.divider}`,
+              p: theme => theme.spacing(3)
+            }}
+          >
             <Typography
-              variant="h6"
+              variant="h5"
               sx={{
                 fontWeight: theme => theme.typography.fontWeightBold,
                 color: 'text.primary'
               }}
             >
-              Permisos
+              {editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
             </Typography>
-            <FormGroup>
-              {availablePermissions.map((permission: any) => {
-                const permissionName = typeof permission === 'string' ? permission : permission.Name || permission.name || '';
-                return (
-                  <FormControlLabel
-                    key={permissionName}
-                    control={
-                      <Checkbox
-                        checked={formData.permissions.includes(permissionName)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setFormData({
-                              ...formData,
-                              permissions: [...formData.permissions, permissionName || '']
-                            });
-                          } else {
-                            setFormData({
-                              ...formData,
-                              permissions: formData.permissions.filter(p => p !== permissionName)
-                            });
-                          }
-                        }}
-                        color="primary"
-                      />
-                    }
-                    label={
-                      <Box>
-                        <Typography variant="body1" sx={{ fontWeight: 'medium', display: 'block' }}>
-                          {getPermissionLabel(permissionName)}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ display: 'block' }}>
-                          {getPermissionDescription(permissionName)}
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                );
-              })}
-            </FormGroup>
-          </Stack>
-        </DialogContent>
-        <DialogActions
-          sx={{
-            p: theme => theme.spacing(3),
-            borderTop: theme => `1px solid ${theme.palette.divider}`,
-            bgcolor: 'action.hover'
-          }}
-        >
-          <Button
-            onClick={handleCloseDialog}
-            variant="outlined"
-            sx={{
-              fontWeight: theme => theme.typography.fontWeightBold,
-              px: theme => theme.spacing(3),
-              borderRadius: theme => theme.spacing(1)
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            variant="contained"
-            sx={{
-              fontWeight: theme => theme.typography.fontWeightBold,
-              px: theme => theme.spacing(3),
-              borderRadius: theme => theme.spacing(1)
-            }}
-          >
-            {editingUser ? 'Actualizar' : 'Crear'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+          </DialogTitle>
+          <DialogContent sx={{ p: theme => theme.spacing(3) }}>
+            <Stack spacing={3} sx={{ mt: 1 }}>
+              <TextField
+                label="Nombre"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value || '' })}
+                fullWidth
+                required
+                variant="outlined"
+              />
+              <TextField
+                label="Email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value || '' })}
+                fullWidth
+                required
+                variant="outlined"
+                disabled={!!editingUser}
+              />
+              <TextField
+                label={editingUser ? 'Nueva Contraseña (opcional)' : 'Contraseña'}
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value || '' })}
+                fullWidth
+                required={!editingUser}
+                variant="outlined"
+              />
+              <FormControl fullWidth variant="outlined">
+                <InputLabel>Rol</InputLabel>
+                <Select
+                  value={formData.roleId || ''}
+                  onChange={(e) => setFormData({ ...formData, roleId: Number(e.target.value) })}
+                  label="Rol"
+                >
+                  <MenuItem value="">
+                    <em>Sin rol</em>
+                  </MenuItem>
+                  {roles.map((role) => (
+                    <MenuItem key={role.id} value={role.id}>
+                      {role.name} {role.description ? `- ${role.description}` : ''}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Divider />
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: theme => theme.typography.fontWeightBold,
+                  color: 'text.primary'
+                }}
+              >
+                Permisos
+              </Typography>
+              <FormGroup>
+                {availablePermissions.map((permission: any) => {
+                  const permissionName = typeof permission === 'string' ? permission : permission.Name || permission.name || '';
+                  const selectedRole = roles.find(r => r.id === formData.roleId);
+                  const isRolePermission = selectedRole?.permissions?.some(rp => rp.name === permissionName);
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert
+                  return (
+                    <FormControlLabel
+                      key={permissionName}
+                      control={
+                        <Checkbox
+                          checked={!!isRolePermission || formData.permissions.includes(permissionName)}
+                          onChange={(e) => {
+                            if (isRolePermission) return;
+                            if (e.target.checked) {
+                              setFormData({
+                                ...formData,
+                                permissions: [...formData.permissions, permissionName || '']
+                              });
+                            } else {
+                              setFormData({
+                                ...formData,
+                                permissions: formData.permissions.filter(p => p !== permissionName)
+                              });
+                            }
+                          }}
+                          color="primary"
+                          disabled={!!isRolePermission}
+                        />
+                      }
+                      label={
+                        <Box>
+                          <Typography variant="body1" sx={{ fontWeight: 'medium', display: 'block' }}>
+                            {getPermissionLabel(permissionName)}
+                            {isRolePermission && (
+                              <Typography component="span" variant="caption" sx={{ ml: 1, color: 'text.secondary', fontStyle: 'italic' }}>
+                                (Por Rol)
+                              </Typography>
+                            )}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ display: 'block' }}>
+                            {getPermissionDescription(permissionName)}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  );
+                })}
+              </FormGroup>
+            </Stack>
+          </DialogContent>
+          <DialogActions
+            sx={{
+              p: theme => theme.spacing(3),
+              borderTop: theme => `1px solid ${theme.palette.divider}`,
+              bgcolor: 'action.hover'
+            }}
+          >
+            <Button
+              onClick={handleCloseDialog}
+              variant="outlined"
+              sx={{
+                fontWeight: theme => theme.typography.fontWeightBold,
+                px: theme => theme.spacing(3),
+                borderRadius: theme => theme.spacing(1)
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              variant="contained"
+              sx={{
+                fontWeight: theme => theme.typography.fontWeightBold,
+                px: theme => theme.spacing(3),
+                borderRadius: theme => theme.spacing(1)
+              }}
+            >
+              {editingUser ? 'Actualizar' : 'Crear'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
           onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
         >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Box>
+          <Alert
+            onClose={() => setSnackbar({ ...snackbar, open: false })}
+            severity={snackbar.severity}
+            sx={{ width: '100%' }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+      </Box>
     );
   };
 

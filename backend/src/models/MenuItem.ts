@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, Index } from 'typeorm';
+import { Permission } from './Permission';
 
 /**
  * MenuItem entity representing hierarchical menu structure
@@ -50,6 +51,12 @@ export class MenuItem {
   isActive!: boolean;
 
   /**
+   * Permission ID required to view this menu item
+   */
+  @Column({ name: 'PermissionId', type: 'int', nullable: true })
+  permissionId!: number | null;
+
+  /**
    * Self-referencing many-to-one relationship for parent menu item
    */
   @ManyToOne(() => MenuItem, menuItem => menuItem.children, {
@@ -58,6 +65,13 @@ export class MenuItem {
   })
   @JoinColumn({ name: 'ParentId' })
   parent!: MenuItem | null;
+
+  /**
+   * Relationship to Permission entity
+   */
+  @ManyToOne(() => Permission, { nullable: true })
+  @JoinColumn({ name: 'PermissionId' })
+  permission!: Permission | null;
 
   /**
    * Self-referencing one-to-many relationship for child menu items
@@ -107,12 +121,12 @@ export class MenuItem {
   getBreadcrumbPath(): string[] {
     const path: string[] = [];
     let current: MenuItem | null = this;
-    
+
     while (current) {
       path.unshift(current.label);
       current = current.parent;
     }
-    
+
     return path;
   }
 

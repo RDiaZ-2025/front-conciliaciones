@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { PermissionByUser } from './PermissionByUser';
 import { LoadDocumentsOCbyUser } from './LoadDocumentsOCbyUser';
+import { Role } from './Role';
 
 /**
  * User entity representing system users
@@ -45,6 +46,19 @@ export class User {
      */
     @Column({ name: 'Status', type: 'int', nullable: false, default: 1 })
     status!: number;
+
+    /**
+     * User role ID
+     */
+    @Column({ name: 'RoleId', type: 'int', nullable: true })
+    roleId!: number | null;
+
+    /**
+     * User role
+     */
+    @ManyToOne(() => Role, role => role.users)
+    @JoinColumn({ name: 'RoleId' })
+    role!: Role;
 
     /**
      * Record creation timestamp

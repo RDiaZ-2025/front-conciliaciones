@@ -19,6 +19,7 @@ function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState({});
+  const [availablePermissions, setAvailablePermissions] = useState([]);
 
   useEffect(() => {
     try {
@@ -51,10 +52,25 @@ function AuthProvider({ children }) {
     initializeAuth();
   }, []);
 
+  // Fetch available permissions when user is logged in
+  useEffect(() => {
+    if (user) {
+      userService.getAllPermissions()
+        .then(response => {
+          if (response.success) {
+            setAvailablePermissions(response.data);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching permissions:', error);
+        });
+    }
+  }, [user]);
+
   const login = async (email, password) => {
     try {
       const response = await authService.login({ email, password });
-      
+
       if (response.success) {
         const userData = {
           id: response.user.id,
@@ -63,30 +79,30 @@ function AuthProvider({ children }) {
           permissions: response.user.permissions,
           role: ROLES.ADMIN
         };
-        
+
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
-        
+
         if (response.token) {
           localStorage.setItem('auth_token', response.token);
         }
-        
+
         const loginRecord = {
           userId: userData.id,
           email: userData.email,
           loginTime: new Date().toISOString(),
           timestamp: Date.now()
         };
-        
+
         const frontendHistory = JSON.parse(localStorage.getItem('frontend_login_history') || '[]');
         frontendHistory.push(loginRecord);
-        
+
         if (frontendHistory.length > 100) {
           frontendHistory.splice(0, frontendHistory.length - 100);
         }
-        
+
         localStorage.setItem('frontend_login_history', JSON.stringify(frontendHistory));
-        
+
         return { success: true };
       } else {
         throw new Error(response.message || 'Credenciales inválidas');
@@ -112,7 +128,7 @@ function AuthProvider({ children }) {
     if (!user) {
       return false;
     }
-    
+
     // Mapeo de permisos del backend a permisos del frontend
     const permissionMapping = {
       [PERMISSIONS.ADMIN_PANEL]: ['admin_panel', 'ADMIN_PANEL'],
@@ -134,6 +150,10 @@ function AuthProvider({ children }) {
     return roleResult;
   };
 
+  const hasAnyPermission = (permissions) => {
+    return permissions.some(permission => hasPermission(permission));
+  };
+
   const hasRole = (role) => {
     if (!user) return false;
     return user.role === role;
@@ -151,18 +171,18 @@ function AuthProvider({ children }) {
     if (!hasPermission(PERMISSIONS.ADMIN_PANEL)) {
       throw new Error('No tienes permisos para crear usuarios');
     }
-    
+
     try {
       const newUser = await userService.createUser({
         ...userData,
         createdAt: new Date().toISOString()
       });
-      
+
       setUsers(prev => ({
         ...prev,
         [newUser.email]: newUser
       }));
-      
+
       return newUser;
     } catch (error) {
       const newUser = {
@@ -171,12 +191,12 @@ function AuthProvider({ children }) {
         createdAt: new Date().toISOString(),
         lastLogin: null
       };
-      
+
       setUsers(prev => ({
         ...prev,
         [newUser.email]: newUser
       }));
-      
+
       return newUser;
     }
   };
@@ -243,22 +263,22 @@ function AuthProvider({ children }) {
     if (!hasPermission(PERMISSIONS.ADMIN_PANEL)) {
       throw new Error('No tienes permisos para ver usuarios');
     }
-    
+
     try {
       const response = await userService.getAllUsers();
       const apiUsers = response.data || response;
-      
+
       if (!Array.isArray(apiUsers)) {
         throw new Error('La respuesta de la API no contiene un array de usuarios válido');
       }
-      
+
       const usersMap = {};
       apiUsers.forEach(user => {
         usersMap[user.email] = user;
       });
-      
+
       setUsers(usersMap);
-      
+
       return apiUsers;
     } catch (error) {
       return Object.values(users).map(({ password, ...userWithoutPassword }) => userWithoutPassword);
@@ -271,20 +291,17 @@ function AuthProvider({ children }) {
     login,
     logout,
     hasPermission,
+    hasAnyPermission,
     hasRole,
-    getUserPermissions,
+    isAdmin: () => hasRole(ROLES.ADMIN),
+    availablePermissions,
+    getAllUsers,
     createUser,
     updateUser,
-    // Remove all references to deleteUser (function definitions, imports, and usages)
-    toggleUserStatus,
-    getAllUsers
+    toggleUserStatus
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export default AuthProvider;

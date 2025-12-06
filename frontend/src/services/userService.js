@@ -29,10 +29,18 @@ export const userService = {
     return apiRequest(`/users/${userId}`);
   },
 
-  updateUserRole: async (userId, role) => {
+  getAllPermissions: async () => {
+    return apiRequest('/users/permissions/all');
+  },
+
+  getAllRoles: async () => {
+    return apiRequest('/roles');
+  },
+
+  updateUserRole: async (userId, roleId) => {
     return await apiRequest(`/users/${userId}`, {
       method: 'PUT',
-      body: JSON.stringify({ role }),
+      body: JSON.stringify({ roleId }),
     });
   },
 };

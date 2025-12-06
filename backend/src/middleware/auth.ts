@@ -11,7 +11,7 @@ declare global {
   }
 }
 
-export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
+export const authenticateToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -23,7 +23,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     return;
   }
 
-  const decoded = AuthService.verifyToken(token);
+  const decoded = await AuthService.verifyToken(token);
 
   if (!decoded) {
     res.status(403).json({
@@ -37,12 +37,12 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
   next();
 };
 
-export const optionalAuth = (req: Request, res: Response, next: NextFunction): void => {
+export const optionalAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
   if (token) {
-    const decoded = AuthService.verifyToken(token);
+    const decoded = await AuthService.verifyToken(token);
     if (decoded) {
       req.user = decoded;
     }

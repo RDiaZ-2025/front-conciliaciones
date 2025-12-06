@@ -4,10 +4,19 @@ export interface User {
   email: string;
   permissions?: string[];
   role?: string;
+  roleId?: number;
+  roleName?: string;
   status: number;
   lastAccess?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface Role {
+  id: number;
+  name: string;
+  description?: string;
+  permissions?: Permission[];
 }
 
 export interface Permission {
@@ -23,6 +32,7 @@ export interface FormData {
   email: string;
   password: string;
   permissions: string[];
+  roleId?: number;
 }
 
 export interface AccessHistoryRecord {
@@ -48,6 +58,7 @@ export interface AdminPanelProps {
 
 export interface UseAdminPanelReturn {
   users: User[];
+  roles: Role[];
   openDialog: boolean;
   setOpenDialog: (open: boolean) => void;
   editingUser: User | null;
@@ -78,8 +89,8 @@ export interface UseAdminPanelReturn {
   handleCloseDialog: () => void;
   handleOpenRoleDialog: (userData: User) => void;
   handleCloseRoleDialog: () => void;
-  handleRoleChange: (newRole: string) => Promise<void>;
-  handleDirectRoleChange: (userData: User, newRole: string) => Promise<void>;
+  handleRoleChange: (roleId: number) => Promise<void>;
+  handleDirectRoleChange: (userData: User, roleId: number) => Promise<void>;
   getRoleDescription: (role: string) => string;
   handleSubmit: () => Promise<void>;
   handleToggleStatus: (userEmail: string, currentStatus: number) => Promise<void>;

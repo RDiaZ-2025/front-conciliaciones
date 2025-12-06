@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { ROLES, PERMISSIONS, PERMISSION_LABELS, PERMISSION_DESCRIPTIONS, PERMISSION_COLORS } from '../../constants/auth';
 import { apiRequest } from '../../services/baseApiService';
+import { userService } from '../../services/userService';
 import type { User, Permission, FormData, AccessHistoryRecord, SnackbarState, UseAdminPanelReturn } from './types';
 
 export const useAdminPanel = (): UseAdminPanelReturn => {
-  const { getAllUsers, createUser, updateUser, toggleUserStatus, user, hasPermission } = useAuth();
+  const { getAllUsers, createUser, updateUser, toggleUserStatus, user, hasPermission, availablePermissions } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
 
   const [openDialog, setOpenDialog] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -16,7 +18,6 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
     password: '',
     permissions: []
   });
-  const [availablePermissions, setAvailablePermissions] = useState<Permission[]>([]);
   const [accessHistory, setAccessHistory] = useState<AccessHistoryRecord[]>([]);
   const [showAccessHistory, setShowAccessHistory] = useState(false);
   const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
@@ -41,13 +42,21 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
     }
   };
 
-  const loadAvailablePermissions = async () => {
+  const loadRoles = async () => {
     try {
-      const result = await apiRequest('/users/permissions/all');
-      setAvailablePermissions(result.data || []);
+      const response = await userService.getAllRoles();
+      if (response.success) {
+        setRoles(response.data);
+      }
     } catch (error) {
-      console.error('Error al cargar permisos:', error);
+      console.error('Error cargando roles:', error);
     }
+  };
+
+  const loadAvailablePermissions = async () => {
+    // Now handled by AuthContext, but keeping function to satisfy interface if needed
+    // or we can remove it if the component doesn't call it explicitly.
+    // If the component calls it, it might be redundant.
   };
 
   const loadAccessHistory = () => {
@@ -107,17 +116,31 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
 
   useEffect(() => {
     refreshUsers();
+    loadRoles();
     loadAvailablePermissions();
   }, []);
 
-  const handleOpenDialog = (userToEdit: User | null = null) => {
-    if (userToEdit) {
-      setEditingUser(userToEdit);
+  const handleOpenDialog = (user?: User) => {
+    if (user) {
+      setEditingUser(user);
+
+      // Filter out permissions that are already granted by the role
+      let initialPermissions = user.permissions || [];
+      if (user.roleId) {
+        const userRole = roles.find(r => r.id === user.roleId);
+        if (userRole && userRole.permissions) {
+          initialPermissions = initialPermissions.filter(
+            p => !userRole.permissions.some(rp => rp.name === p.name)
+          );
+        }
+      }
+
       setFormData({
-        name: userToEdit.name,
-        email: userToEdit.email,
+        name: user.name,
+        email: user.email,
         password: '',
-        permissions: userToEdit.permissions ? userToEdit.permissions.map(p => typeof p === 'string' ? p : (p as any).Name || (p as any).name || p) : []
+        permissions: initialPermissions.map(p => p.name),
+        roleId: user.roleId
       });
     } else {
       setEditingUser(null);
@@ -125,7 +148,8 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
         name: '',
         email: '',
         password: '',
-        permissions: []
+        permissions: [],
+        roleId: undefined
       });
     }
     setOpenDialog(true);
@@ -134,7 +158,7 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingUser(null);
-    setFormData({ name: '', email: '', password: '', permissions: [] });
+    setFormData({ name: '', email: '', password: '', permissions: [], roleId: undefined });
   };
 
   const handleOpenRoleDialog = (userData: User) => {
@@ -147,21 +171,24 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
     setSelectedUserForRole(null);
   };
 
-  const handleRoleChange = async (newRole: string) => {
+  const handleRoleChange = async (roleId: number) => {
     if (!selectedUserForRole) return;
 
     try {
+      const role = roles.find(r => r.id === roleId);
+      const roleName = role?.name || '';
+
       setUsers(prevUsers =>
         prevUsers.map(user =>
           user.email === selectedUserForRole.email
-            ? { ...user, role: newRole }
+            ? { ...user, role: roleName, roleId: roleId }
             : user
         )
       );
 
-      setSelectedUserForRole(prev => prev ? { ...prev, role: newRole } : null);
+      setSelectedUserForRole(prev => prev ? { ...prev, role: roleName, roleId: roleId } : null);
 
-      await updateUser(selectedUserForRole.id, { role: newRole });
+      await userService.updateUserRole(selectedUserForRole.id as number, roleId);
       setSnackbar({ open: true, message: 'Rol actualizado exitosamente', severity: 'success' });
 
       handleCloseRoleDialog();
@@ -173,18 +200,21 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
     }
   };
 
-  const handleDirectRoleChange = async (userData: User, newRole: string) => {
+  const handleDirectRoleChange = async (userData: User, roleId: number) => {
     try {
+      const role = roles.find(r => r.id === roleId);
+      const roleName = role?.name || '';
+
       setUsers(prevUsers =>
         prevUsers.map(user =>
           user.email === userData.email
-            ? { ...user, role: newRole }
+            ? { ...user, role: roleName, roleId: roleId }
             : user
         )
       );
 
-      await updateUser(userData.id, { role: newRole });
-      setSnackbar({ open: true, message: `Rol actualizado a ${getRoleLabel(newRole)} exitosamente`, severity: 'success' });
+      await userService.updateUserRole(userData.id as number, roleId);
+      setSnackbar({ open: true, message: `Rol actualizado a ${getRoleLabel(roleName)} exitosamente`, severity: 'success' });
 
       await refreshUsers();
     } catch (error: any) {
@@ -194,6 +224,11 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
   };
 
   const getRoleDescription = (role: string): string => {
+    const foundRole = roles.find(r => r.name === role);
+    if (foundRole && foundRole.description) {
+      return foundRole.description;
+    }
+
     switch (role) {
       case ROLES.UPLOAD_ONLY:
         return 'Puede cargar archivos únicamente';
@@ -219,7 +254,8 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
         const updates: any = {
           name: formData.name,
           email: formData.email,
-          permissions: formData.permissions.map(p => typeof p === 'string' ? p.toUpperCase() : ((p as any).Name || (p as any).name || String(p)).toUpperCase())
+          permissions: formData.permissions.map(p => typeof p === 'string' ? p.toUpperCase() : ((p as any).Name || (p as any).name || String(p)).toUpperCase()),
+          roleId: formData.roleId
         };
         if (formData.password) {
           updates.password = formData.password;
@@ -301,6 +337,18 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
     if (!role || role === null || role === '') {
       return 'Sin rol';
     }
+    // Try to find in loaded roles first
+    const foundRole = roles.find(r => r.name === role);
+    if (foundRole) {
+      // Map technical names to friendly names if possible, otherwise return name
+      const labels: Record<string, string> = {
+        'admin': 'Administrador',
+        'dashboard_only': 'Solo Dashboard',
+        'full_access': 'Acceso Completo'
+      };
+      return labels[role] || foundRole.name;
+    }
+
     const labels: Record<string, string> = {
       [ROLES.ADMIN]: 'Administrador',
       [ROLES.UPLOAD_ONLY]: 'Solo Carga',
@@ -315,6 +363,9 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
       return 'warning';
     }
     const colors: Record<string, string> = {
+      'admin': 'error',
+      'dashboard_only': 'secondary',
+      'full_access': 'success',
       [ROLES.ADMIN]: 'error',
       [ROLES.UPLOAD_ONLY]: 'primary',
       [ROLES.DASHBOARD_ONLY]: 'secondary',
@@ -324,11 +375,14 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
   };
 
   const getPermissionLabel = (permission: string): string => {
-    return PERMISSION_LABELS[permission] || permission;
+    const found = availablePermissions.find(p => p.name === permission);
+    // Use description if available, or label if we had one, or name
+    return found?.description || found?.name || PERMISSION_LABELS[permission] || permission;
   };
 
   const getPermissionDescription = (permission: string): string => {
-    return PERMISSION_DESCRIPTIONS[permission] || 'Permiso personalizado';
+    const found = availablePermissions.find(p => p.name === permission);
+    return found?.description || PERMISSION_DESCRIPTIONS[permission] || 'Permiso personalizado';
   };
 
   const getPermissionColor = (permission: string): string => {
@@ -394,6 +448,7 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
 
   return {
     users,
+    roles,
     openDialog,
     setOpenDialog,
     editingUser,
@@ -438,4 +493,10 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
     handleTogglePermission
   };
 };
+
+
+
+
+
+
 

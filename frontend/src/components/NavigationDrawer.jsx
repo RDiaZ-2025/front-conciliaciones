@@ -85,7 +85,11 @@ const NavigationDrawer = ({
       'PeopleIcon': PeopleIcon,
       'AssignmentIcon': AssignmentIcon,
       'ImageIcon': ImageIcon,
-      'MenuBookIcon': MenuBookIcon
+      'MenuBookIcon': MenuBookIcon,
+      'CloudUploadIcon': UploadIcon,
+      'AnalyticsIcon': DashboardIcon,
+      'SupervisorAccountIcon': PeopleIcon,
+      'FactoryIcon': AssignmentIcon
     };
 
     const IconComponent = iconMap[item.icon] || AssignmentIcon;
@@ -160,29 +164,21 @@ const NavigationDrawer = ({
             </Box>
           ) : (
             <List sx={{ p: 0 }}>
-              {items.map((item) => {
-                const isDisabled = item.permission && !hasPermission(item.permission);
-
+              {items.filter(item => !item.permission || hasPermission(item.permission)).map((item) => {
                 return (
                   <ListItem key={item.id} disablePadding sx={{ mb: 1 }}>
                     <ListItemButton
                       onClick={() => handleMenuItemClick(item)}
-                      disabled={isDisabled}
                       sx={{
                         borderRadius: 2,
                         '&:hover': {
                           bgcolor: darkMode ? 'grey.800' : 'action.hover'
-                        },
-                        '&.Mui-disabled': {
-                          opacity: 0.5
                         }
                       }}
                     >
                       <ListItemIcon
                         sx={{
-                          color: isDisabled
-                            ? (darkMode ? 'grey.600' : 'action.disabled')
-                            : (darkMode ? 'common.white' : 'primary.main'),
+                          color: darkMode ? 'common.white' : 'primary.main',
                           minWidth: 40
                         }}
                       >
@@ -194,9 +190,7 @@ const NavigationDrawer = ({
                           '& .MuiListItemText-primary': {
                             fontSize: '0.95rem',
                             fontWeight: 500,
-                            color: isDisabled
-                              ? (darkMode ? 'grey.600' : 'action.disabled')
-                              : (darkMode ? 'common.white' : 'text.primary')
+                            color: darkMode ? 'common.white' : 'text.primary'
                           }
                         }}
                       />

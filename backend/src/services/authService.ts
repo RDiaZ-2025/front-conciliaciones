@@ -47,7 +47,8 @@ export class AuthService {
 
     // Buscar usuario por email
     const user = await userRepository.findOne({
-      where: { email: credentials.email }
+      where: { email: credentials.email },
+      relations: ['role', 'role.permissions']
     });
 
     if (!user) {
@@ -80,7 +81,11 @@ export class AuthService {
       relations: ['permission']
     });
 
-    const permissions = userPermissions.map(up => up.permission.name);
+    // Combinar permisos del rol y permisos directos
+    const directPermissions = userPermissions.map(up => up.permission.name);
+    const rolePermissions = user.role?.permissions?.map(p => p.name) || [];
+
+    const permissions = [...new Set([...directPermissions, ...rolePermissions])];
 
     // Actualizar último acceso
     await userRepository.update(user.id, { lastAccess: new Date() });
@@ -97,7 +102,8 @@ export class AuthService {
         id: user.id,
         name: user.name,
         email: user.email,
-        permissions
+        permissions,
+        role: user.role?.name || null
       },
       token
     };
@@ -167,12 +173,41 @@ export class AuthService {
     } as jwt.SignOptions);
   }
 
-  static verifyToken(token: string): JWTPayload | null {
+  static async verifyToken(token: string): Promise<JWTPayload | null> {
     try {
-      return jwt.verify(token, this.JWT_SECRET) as JWTPayload;
+      const decoded = jwt.verify(token, this.JWT_SECRET) as JWTPayload;
+
+      const userRepository = AppDataSource.getRepository(User);
+      const permissionByUserRepository = AppDataSource.getRepository(PermissionByUser);
+
+      const user = await userRepository.findOne({
+        where: { id: decoded.userId },
+        relations: ['role', 'role.permissions']
+      });
+
+      if (!user) {
+        throw new Error('Usuario no encontrado');
+      }
+
+      const userPermissions = await permissionByUserRepository.find({
+        where: { userId: user.id },
+        relations: ['permission']
+      });
+
+      const directPermissions = userPermissions.map(up => up.permission.name);
+      const rolePermissions = user.role?.permissions?.map(p => p.name) || [];
+
+      const permissions = [...new Set([...directPermissions, ...rolePermissions])];
+
+      return {
+        userId: user.id,
+        email: user.email,
+        permissions,
+        role: user.role?.name || null,
+        exp: decoded.exp
+      };
     } catch (error) {
-      console.error('❌ Token verification error:', error);
-      return null;
+      throw new Error('Token inválido');
     }
   }
 

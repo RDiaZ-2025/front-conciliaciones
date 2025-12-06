@@ -37,7 +37,8 @@ const transformMenuItems = (menuItems, level = 0) => {
       route: item.route,
       displayOrder: item.displayOrder,
       level: level, // Add level for potential indentation
-      hasChildren: item.children && item.children.length > 0
+      hasChildren: item.children && item.children.length > 0,
+      permission: item.permissionName // Pass permission name from backend
     });
     
     // Recursively add children
