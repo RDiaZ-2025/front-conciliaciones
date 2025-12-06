@@ -55,7 +55,7 @@ const PDF_CONFIG: PDFValidationConfig = {
 
 const steps = [
   "Tipo de Usuario",
-  "Subir Excel", 
+  "Subir Excel",
   "Subir PDF",
   "Materiales y Confirmación"
 ];
@@ -161,7 +161,7 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
         try {
           const data = new Uint8Array(e.target!.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: "array" });
-          
+
           if (!workbook.SheetNames.includes(EXCEL_CONFIG.requiredSheet)) {
             return resolve({
               isValid: false,
@@ -178,7 +178,7 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
             const cellRef = XLSX.utils.encode_cell({ r: cell.row - 1, c: cell.col });
             const value = ws[cellRef] ? ws[cellRef].v : null;
             debugValues.push(`${cell.label}: ${value}`);
-            
+
             if (value === null || value === undefined || value === "") {
               missing.push(cell.label);
             }
@@ -201,7 +201,7 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
           });
         }
       };
-      
+
       reader.onerror = () => {
         resolve({
           isValid: false,
@@ -209,7 +209,7 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
           debugValues: []
         });
       };
-      
+
       reader.readAsArrayBuffer(file);
     });
   };
@@ -224,7 +224,7 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
 
     const header = await file.slice(0, 5).arrayBuffer();
     const headerStr = String.fromCharCode(...new Uint8Array(header));
-    
+
     if (!headerStr.startsWith("%PDF-")) {
       return {
         isValid: false,
@@ -267,14 +267,14 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
 
   const handleExcelChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    updateState({ 
-      excelFile: null, 
-      excelUploaded: false, 
-      debugExcelValues: [], 
+    updateState({
+      excelFile: null,
+      excelUploaded: false,
+      debugExcelValues: [],
       message: "",
-      pdfWarning: "" 
+      pdfWarning: ""
     });
-    
+
     if (!file) return;
 
     if (!file.name.toLowerCase().endsWith('.xlsx')) {
@@ -285,9 +285,9 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
     // Generate GUID when Excel file is selected
     const guid = crypto.randomUUID();
     updateState({ excelFile: file, guid });
-    
+
     const validation = await validateExcel(file);
-    
+
     if (!validation.isValid) {
       setMessage(validation.message!);
       updateState({ debugExcelValues: validation.debugValues || [] });
@@ -296,33 +296,33 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
 
     updateState({ uploading: true });
     const uploaded = await uploadToAzure(file, `validationsOC/${guid}`);
-    
+
     if (uploaded) {
-      updateState({ 
-        excelUploaded: true, 
+      updateState({
+        excelUploaded: true,
         debugExcelValues: validation.debugValues || [],
-        message: "✅ Excel subido correctamente." 
+        message: "✅ Excel subido correctamente."
       });
     } else {
-      updateState({ 
+      updateState({
         excelUploaded: false,
-        message: "❌ Error al subir el Excel a Azure." 
+        message: "❌ Error al subir el Excel a Azure."
       });
     }
-    
+
     updateState({ uploading: false });
   };
 
   const handlePdfChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    updateState({ 
-      pdfFile: file || null, 
-      message: "", 
-      debugPdfText: "", 
-      pdfUploaded: false, 
-      pdfWarning: "" 
+    updateState({
+      pdfFile: file || null,
+      message: "",
+      debugPdfText: "",
+      pdfUploaded: false,
+      pdfWarning: ""
     });
-    
+
     if (!file) return;
 
     // Ensure GUID exists (should be generated when Excel was selected)
@@ -332,7 +332,7 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
     }
 
     const validation = await validatePdf(file);
-    
+
     if (!validation.isValid) {
       setMessage(validation.message!);
       return;
@@ -340,18 +340,18 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
 
     updateState({ uploading: true });
     const uploaded = await uploadToAzure(file, `validationsOC/${state.guid}`);
-    
+
     if (uploaded) {
-      updateState({ 
+      updateState({
         pdfUploaded: true,
         uploading: false,
         pdfWarning: ""
       });
     } else {
-      updateState({ 
+      updateState({
         pdfUploaded: false,
         uploading: false,
-        message: "❌ Error al subir el PDF a Azure." 
+        message: "❌ Error al subir el PDF a Azure."
       });
     }
   };
@@ -359,11 +359,11 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
   const handleMaterialesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const maxSizeInBytes = 1024 * 1024 * 1024; // 1GB in bytes
-    
+
     // Filter files that exceed the size limit
     const validFiles: File[] = [];
     const invalidFiles: string[] = [];
-    
+
     files.forEach(file => {
       if (file.size > maxSizeInBytes) {
         invalidFiles.push(file.name);
@@ -371,7 +371,7 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
         validFiles.push(file);
       }
     });
-    
+
     // Show error message if there are invalid files
     if (invalidFiles.length > 0) {
       const fileList = invalidFiles.join(', ');
@@ -379,7 +379,7 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
         message: `❌ Los siguientes archivos exceden el límite de 1GB y no se pueden subir: ${fileList}`,
         uploading: false
       });
-      
+
       // Clear the input to prevent confusion
       if (e.target) {
         e.target.value = '';
@@ -388,25 +388,25 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
       // Clear any previous error messages
       updateState({ message: "" });
     }
-    
+
     // Only set valid files
     setMateriales(validFiles);
   };
 
   const uploadMaterialesToAzure = async (): Promise<boolean> => {
     if (state.materiales.length === 0) return true;
-    
+
     // Ensure GUID exists
     if (!state.guid) {
       console.error('Error: GUID not found for materials upload');
       return false;
     }
-    
+
     try {
-      const uploadPromises = state.materiales.map(file => 
+      const uploadPromises = state.materiales.map(file =>
         uploadToAzure(file, `validationsOC/${state.guid}`)
       );
-      
+
       const results = await Promise.all(uploadPromises);
       return results.every(result => result === true);
     } catch (err) {
@@ -421,53 +421,53 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
     let dbOk = false;
     let materialsOk = false;
     let mainFilesOk = false;
-    
+
     try {
       // First upload main files (Excel and PDF) to ensure they are in storage
       setMessage("📤 Subiendo archivos principales al storage...");
       const mainFilePromises: Promise<boolean>[] = [];
-      
+
       // Ensure GUID exists
       if (!state.guid) {
         setMessage("❌ Error: No se encontró el identificador único. Debe seleccionar primero el archivo Excel.");
         updateState({ uploading: false });
         return;
       }
-      
+
       if (state.excelFile) {
         mainFilePromises.push(uploadToAzure(state.excelFile, `validationsOC/${state.guid}`));
       }
-      
+
       if (state.pdfFile) {
         mainFilePromises.push(uploadToAzure(state.pdfFile, `validationsOC/${state.guid}`));
       }
-      
+
       if (mainFilePromises.length > 0) {
         const mainFileResults = await Promise.all(mainFilePromises);
         mainFilesOk = mainFileResults.every(result => result === true);
-        
+
         if (!mainFilesOk) {
           setMessage("❌ Error al subir los archivos principales al storage. Verifica los archivos e intenta nuevamente.");
           updateState({ uploading: false });
           return;
         }
-        
+
         setMessage("✅ Archivos principales subidos correctamente.");
       } else {
         mainFilesOk = true; // No main files to upload
       }
-      
+
       // Then upload materials if user selected to upload them
       if (state.deseaSubirMateriales === true && state.materiales.length > 0) {
         setMessage("📤 Subiendo materiales al storage...");
         materialsOk = await uploadMaterialesToAzure();
-        
+
         if (!materialsOk) {
           setMessage("❌ Error al subir los materiales al storage. Verifica los archivos e intenta nuevamente.");
           updateState({ uploading: false });
           return;
         }
-        
+
         setMessage("✅ Todos los archivos subidos correctamente. Enviando notificación...");
       } else {
         materialsOk = true; // No materials to upload
@@ -492,21 +492,21 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
           }, {} as Record<string, string>),
         })
       });
-      
+
       if (!n8nResponse.ok) {
         setMessage("❌ Error: No se pudo notificar a n8n. Verifica la conexión o el flujo externo.");
         updateState({ uploading: false });
         return;
       }
-      
+
       n8nOk = true;
       setMessage("✅ Notificación a n8n exitosa. Registrando en base de datos...");
-      
+
       const userId = user?.id || 1;
       const folderId = state.guid;
       const fecha = new Date().toISOString();
       const status = "uploaded";
-      
+
       const response = await fetch(`${getApiBaseUrl()}/load-documents`, {
         method: "POST",
         headers: {
@@ -521,21 +521,21 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
           filename: state.excelFile?.name || state.pdfFile?.name || ""
         })
       });
-      
+
       if (!response.ok) {
         setMessage("✅ Notificación a n8n exitosa. ❌ Error al registrar en base de datos.");
         updateState({ uploading: false });
         return;
       }
-      
+
       dbOk = true;
-      const materialsMessage = state.deseaSubirMateriales === true && state.materiales.length > 0 
-        ? "✅ Materiales subidos. " 
+      const materialsMessage = state.deseaSubirMateriales === true && state.materiales.length > 0
+        ? "✅ Materiales subidos. "
         : "";
       const mainFilesMessage = (state.excelFile || state.pdfFile) ? "✅ Archivos principales subidos." : "";
       setMessage(`${mainFilesMessage}${materialsMessage}✅ Notificación a n8n exitosa. ✅ Registro en base de datos exitoso.`);
       updateState({ envioExitoso: true });
-      
+
       // Reset form after successful submission with a delay to show success message
       setTimeout(() => {
         resetForm();
@@ -553,7 +553,7 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
         setMessage("❌ Error inesperado: " + err.message);
       }
     }
-    
+
     updateState({ uploading: false });
   };
 
@@ -563,7 +563,7 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
     } else {
       document.body.classList.remove('dark-mode');
     }
-    
+
     return () => {
       document.body.classList.remove('dark-mode');
     };
@@ -571,19 +571,19 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
 
   useEffect(() => {
     let cancelled = false;
-    
+
     const generateThumbnail = async () => {
       if (!state.pdfFile) {
         updateState({ pdfThumbnail: null });
         return;
       }
-      
+
       const thumbnail = await generatePdfThumbnail(state.pdfFile);
       if (!cancelled) {
         updateState({ pdfThumbnail: thumbnail });
       }
     };
-    
+
     generateThumbnail();
     return () => { cancelled = true; };
   }, [state.pdfFile]);
@@ -595,10 +595,10 @@ export const useUploadForm = (props: UploadFormProps): UseUploadFormReturn => {
         if (siguienteButton) {
           const buttonRect = siguienteButton.getBoundingClientRect();
           const windowHeight = window.innerHeight;
-          
+
           if (buttonRect.bottom > windowHeight || buttonRect.top < 0) {
             const targetPosition = window.pageYOffset + buttonRect.top - (windowHeight / 2) + (buttonRect.height / 2);
-            
+
             window.scrollTo({
               top: Math.max(0, targetPosition),
               behavior: 'smooth'

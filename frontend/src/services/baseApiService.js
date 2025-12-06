@@ -22,8 +22,13 @@ export const apiRequest = async (endpoint, options = {}) => {
   };
 
   const token = localStorage.getItem('auth_token');
-  if (token) {
+  if (token && token !== 'null' && token !== 'undefined') {
     config.headers.Authorization = `Bearer ${token}`;
+  } else {
+    // Clean up invalid token if present
+    if (token === 'null' || token === 'undefined') {
+      localStorage.removeItem('auth_token');
+    }
   }
 
   const response = await fetch(url, config);

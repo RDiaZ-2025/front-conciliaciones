@@ -13,19 +13,24 @@ declare global {
 
 export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  const token = authHeader && authHeader.split(' ')[1];
+
+  console.log('🔒 authenticateToken: Header:', authHeader ? 'Present' : 'Missing');
+  console.log('🔒 authenticateToken: Token:', token ? token.substring(0, 20) + '...' : 'Missing');
 
   if (!token) {
+    console.log('❌ authenticateToken: Token not provided');
     res.status(401).json({
       success: false,
-      message: 'Token de acceso requerido'
+      message: 'Token no proporcionado'
     });
     return;
   }
 
   const decoded = AuthService.verifyToken(token);
-  
+
   if (!decoded) {
+    console.log('❌ authenticateToken: Token verification failed');
     res.status(403).json({
       success: false,
       message: 'Token inválido o expirado'
@@ -33,6 +38,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     return;
   }
 
+  console.log(`✅ authenticateToken: Token verified for user ${decoded.userId} (${decoded.email})`);
   req.user = decoded;
   next();
 };
@@ -56,7 +62,7 @@ export const requirePermission = (permission: string) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       console.log(`requirePermission called for: ${permission}`);
-      
+
       if (!req.user) {
         console.log('No user in request - authentication failed');
         res.status(401).json({
@@ -67,12 +73,12 @@ export const requirePermission = (permission: string) => {
       }
 
       console.log(`User authenticated: ${req.user.userId}, checking permissions...`);
-      
+
       // Obtener permisos del usuario desde la base de datos
       const userPermissions = await AuthService.getUserPermissions(req.user.userId);
-      
+
       console.log(`User permissions: ${userPermissions.join(', ')}`);
-      
+
       // Comparar directamente con los permisos de la base de datos
       if (!userPermissions.includes(permission)) {
         console.log(`Permission denied: user does not have ${permission}`);
@@ -109,9 +115,9 @@ export const requireAnyPermission = (permissions: string[]) => {
 
       // Obtener permisos del usuario desde la base de datos
       const userPermissions = await AuthService.getUserPermissions(req.user.userId);
-      
+
       const hasPermission = permissions.some(permission => userPermissions.includes(permission));
-      
+
       if (!hasPermission) {
         res.status(403).json({
           success: false,
@@ -145,9 +151,9 @@ export const requireAllPermissions = (permissions: string[]) => {
 
       // Obtener permisos del usuario desde la base de datos
       const userPermissions = await AuthService.getUserPermissions(req.user.userId);
-      
+
       const hasAllPermissions = permissions.every(permission => userPermissions.includes(permission));
-      
+
       if (!hasAllPermissions) {
         const missingPermissions = permissions.filter(permission => !userPermissions.includes(permission));
         res.status(403).json({

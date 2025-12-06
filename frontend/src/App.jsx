@@ -10,6 +10,8 @@ import UploadForm from './pages/UploadForm';
 import AdminPanel from './pages/AdminPanel';
 import Production from './pages/Production/Production';
 import LoadDocumentsOCbyUserView from './pages/LoadDocumentsOCbyUserView';
+import Portada15Minutos from './pages/Portada15Minutos';
+import MenuManagement from './pages/MenuManagement';
 import DarkModeToggle from './components/DarkModeToggle';
 import logoClaroMedia from '/Claro-Media-Logo.jpg';
 import { PERMISSIONS } from './constants/auth';
@@ -96,6 +98,8 @@ function AppContent() {
       'Cargar Documentos': 'upload', 
       'Dashboard de Gestión': 'dashboard',
       'Producción': 'production',
+      'Portada 15 Minutos': 'portada15',
+      'Gestión de Menús': 'menu-management',
       'Usuarios': 'admin'
     };
     
@@ -122,6 +126,8 @@ function AppContent() {
       'upload': PERMISSIONS.DOCUMENT_UPLOAD,
       'dashboard': PERMISSIONS.MANAGEMENT_DASHBOARD,
       'production': PERMISSIONS.PRODUCTION_MANAGEMENT,
+      'portada15': PERMISSIONS.PORTADA_15_MINUTOS,
+      'menu-management': PERMISSIONS.MANAGE_MENUS,
       'admin': PERMISSIONS.ADMIN_PANEL,
       'usuarios': PERMISSIONS.ADMIN_PANEL
     };
@@ -161,6 +167,26 @@ function AppContent() {
             <Production 
               darkMode={darkMode}
             />
+          </ProtectedRoute>
+        );
+      case 'portada15':
+        return (
+          <ProtectedRoute 
+            requiredPermission={PERMISSIONS.PORTADA_15_MINUTOS}
+            darkMode={darkMode}
+            onUnauthorized={handleUnauthorized}
+          >
+            <Portada15Minutos />
+          </ProtectedRoute>
+        );
+      case 'menu-management':
+        return (
+          <ProtectedRoute 
+            requiredPermission={PERMISSIONS.MANAGE_MENUS}
+            darkMode={darkMode}
+            onUnauthorized={handleUnauthorized}
+          >
+            <MenuManagement />
           </ProtectedRoute>
         );
       case 'upload':
@@ -302,3 +328,4 @@ function App() {
 }
 
 export default App;
+

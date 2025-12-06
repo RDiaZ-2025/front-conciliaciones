@@ -20,7 +20,9 @@ import {
   People as PeopleIcon,
   ArrowBack as ArrowBackIcon,
   Close as CloseIcon,
-  Assignment as AssignmentIcon
+  Assignment as AssignmentIcon,
+  Image as ImageIcon,
+  MenuBook as MenuBookIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { PERMISSIONS } from '../constants/auth';
@@ -37,15 +39,33 @@ const NavigationDrawer = ({
   const { menuItems: dbMenuItems, loading, error } = useMenuItems();
 
   // Permission mapping for menu items
-  const getPermissionForMenuItem = (itemId) => {
+  const getPermissionForMenuItem = (item) => {
     const permissionMap = {
       'historial': PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES,
       'upload': PERMISSIONS.DOCUMENT_UPLOAD,
       'dashboard': PERMISSIONS.MANAGEMENT_DASHBOARD,
       'production': PERMISSIONS.PRODUCTION_MANAGEMENT,
-      'usuarios': PERMISSIONS.ADMIN_PANEL
+      'usuarios': PERMISSIONS.ADMIN_PANEL,
+      'portada15': PERMISSIONS.PORTADA_15_MINUTOS,
+      'menu-management': PERMISSIONS.MANAGE_MENUS
     };
-    return permissionMap[itemId];
+
+    if (permissionMap[item.id]) {
+      return permissionMap[item.id];
+    }
+
+    // Fallback mapping by label for database items (which have numeric IDs)
+    const permissionMapByLabel = {
+      'Historial Carga Archivos': PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES,
+      'Cargar Documentos': PERMISSIONS.DOCUMENT_UPLOAD,
+      'Dashboard de Gestión': PERMISSIONS.MANAGEMENT_DASHBOARD,
+      'Producción': PERMISSIONS.PRODUCTION_MANAGEMENT,
+      'Usuarios': PERMISSIONS.ADMIN_PANEL,
+      'Portada 15 Minutos': PERMISSIONS.PORTADA_15_MINUTOS,
+      'Gestión de Menús': PERMISSIONS.MANAGE_MENUS
+    };
+
+    return permissionMapByLabel[item.label];
   };
 
   const defaultMenuItems = [
@@ -74,6 +94,18 @@ const NavigationDrawer = ({
       permission: PERMISSIONS.PRODUCTION_MANAGEMENT
     },
     {
+      id: 'portada15',
+      label: 'Portada 15 Minutos',
+      icon: <ImageIcon />,
+      permission: PERMISSIONS.PORTADA_15_MINUTOS
+    },
+    {
+      id: 'menu-management',
+      label: 'Gestión de Menús',
+      icon: <MenuBookIcon />,
+      permission: PERMISSIONS.MANAGE_MENUS
+    },
+    {
       id: 'usuarios',
       label: 'Usuarios',
       icon: <PeopleIcon />,
@@ -89,7 +121,9 @@ const NavigationDrawer = ({
       'UploadIcon': UploadIcon,
       'DashboardIcon': DashboardIcon,
       'PeopleIcon': PeopleIcon,
-      'AssignmentIcon': AssignmentIcon
+      'AssignmentIcon': AssignmentIcon,
+      'ImageIcon': ImageIcon,
+      'MenuBookIcon': MenuBookIcon
     };
 
     const IconComponent = iconMap[item.icon] || AssignmentIcon;
@@ -97,7 +131,7 @@ const NavigationDrawer = ({
     return {
       ...item,
       icon: <IconComponent />,
-      permission: getPermissionForMenuItem(item.id) // Add permission mapping
+      permission: getPermissionForMenuItem(item) // Update to pass the whole item
     };
   }) : defaultMenuItems;
 

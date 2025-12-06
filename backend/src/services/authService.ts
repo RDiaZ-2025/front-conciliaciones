@@ -28,7 +28,7 @@ export class AuthService {
         hasEmail: !!credentials.email,
         hasPassword: !!credentials.password
       });
-      
+
       if (!AppDataSource.isInitialized) {
         console.error('❌ Base de datos no disponible');
         return {
@@ -36,12 +36,12 @@ export class AuthService {
           message: 'Servicio de autenticación no disponible'
         };
       }
-      
+
       console.log('🔄 Using TypeORM for authentication');
       const result = await this.loginWithTypeORM(credentials);
       console.log('🔐 Login result:', { success: result.success, email: credentials.email });
       return result;
-      
+
     } catch (error) {
       console.error('Error en login:', error);
       return {
@@ -121,9 +121,9 @@ export class AuthService {
         console.error('Base de datos no disponible');
         return null;
       }
-      
+
       const userRepository = AppDataSource.getRepository(User);
-      
+
       const user = await userRepository.findOne({
         where: { id: userId, status: 1 }
       });
@@ -141,9 +141,9 @@ export class AuthService {
         console.error('Base de datos no disponible para obtener permisos');
         return [];
       }
-      
+
       const permissionByUserRepository = AppDataSource.getRepository(PermissionByUser);
-      
+
       const userPermissions = await permissionByUserRepository.find({
         where: { userId: userId },
         relations: ['permission']
@@ -162,9 +162,9 @@ export class AuthService {
         console.error('Base de datos no disponible para actualizar último login');
         return;
       }
-      
+
       const userRepository = AppDataSource.getRepository(User);
-      
+
       await userRepository.update(userId, { lastAccess: new Date() });
     } catch (error) {
       console.error('Error actualizando último acceso:', error);
@@ -172,6 +172,7 @@ export class AuthService {
   }
 
   static generateToken(payload: JWTPayload): string {
+    console.log('🔑 Generating token with secret:', this.JWT_SECRET ? '***' : 'MISSING');
     return jwt.sign(payload, this.JWT_SECRET, {
       expiresIn: this.JWT_EXPIRES_IN
     } as jwt.SignOptions);
@@ -179,8 +180,10 @@ export class AuthService {
 
   static verifyToken(token: string): JWTPayload | null {
     try {
+      console.log('🔍 AuthService.verifyToken: Verifying token against secret starting with:', this.JWT_SECRET ? this.JWT_SECRET.substring(0, 3) + '***' : 'UNDEFINED');
       return jwt.verify(token, this.JWT_SECRET) as JWTPayload;
     } catch (error) {
+      console.error('❌ Token verification error:', error);
       return null;
     }
   }
