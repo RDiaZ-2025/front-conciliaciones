@@ -31,6 +31,7 @@ async function main() {
         break;
         
       default:
+        /*
         console.log(`
 🔧 Migration CLI Tool
 
@@ -38,7 +39,7 @@ Usage: npm run migrate [command]
 
 Available commands:
   run     - Run all pending migrations
-  revert  - Revert the last migration  
+  revert  - Revert the last migration
   status  - Show migration status
 
 Examples:
@@ -46,6 +47,7 @@ Examples:
   npm run migrate status
   npm run migrate revert
         `);
+        */
         break;
     }
   } catch (error) {
