@@ -23,6 +23,9 @@ export { ProductionRequest } from './ProductionRequest';
 // Audit and Logging Models
 export { UserActionLog } from './UserActionLog';
 
+// Cover 15 Minute Models
+export { Cover15Minute } from './Cover15Minute';
+
 /**
  * Array of all entity classes for TypeORM configuration
  * Use this array when configuring TypeORM connection
@@ -34,6 +37,7 @@ import { LoadDocumentsOCbyUser } from './LoadDocumentsOCbyUser';
 import { MenuItem } from './MenuItem';
 import { ProductionRequest } from './ProductionRequest';
 import { UserActionLog } from './UserActionLog';
+import { Cover15Minute } from './Cover15Minute';
 
 export const entities = [
   User,
@@ -42,7 +46,8 @@ export const entities = [
   LoadDocumentsOCbyUser,
   MenuItem,
   ProductionRequest,
-  UserActionLog
+  UserActionLog,
+  Cover15Minute
 ];
 
 /**
@@ -77,6 +82,13 @@ export const ModelCategories = {
    */
   Production: {
     ProductionRequest
+  },
+
+  /**
+   * Cover 15 Minute models
+   */
+  Covers: {
+    Cover15Minute
   },
 
   /**

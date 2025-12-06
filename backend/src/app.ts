@@ -13,6 +13,7 @@ import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import productionRoutes from './routes/productionRoutes';
 import menuRoutes from './routes/menuRoutes';
+import cover15MinuteRoutes from './routes/cover15MinuteRoutes';
 
 // Importar middleware de logging
 import { actionLogger, skipLogging } from './middleware/actionLogger';
@@ -82,6 +83,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/load-documents', loadDocumentsOCbyUserRouter);
 app.use('/api/production', productionRoutes);
 app.use('/api/menus', menuRoutes);
+app.use('/api/covers-15-minutes', cover15MinuteRoutes);
 
 // Ruta 404
 app.use('*', (req, res) => {

@@ -7,8 +7,17 @@ export interface Portada15MinutosState {
     message: string | null;
 }
 
+export interface CoverHistoryItem {
+    id: number;
+    uploaderLog: string;
+    timestamp: string;
+    url: string;
+}
+
 export interface UsePortada15MinutosReturn {
     state: Portada15MinutosState;
+    currentImageUrl: string;
+    history: CoverHistoryItem[];
     handleFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void;
     handleUpload: () => Promise<void>;
     handleClear: () => void;
@@ -19,3 +28,4 @@ export interface AzureConfig {
     containerName: string;
     storageAccountName: string;
 }
+
