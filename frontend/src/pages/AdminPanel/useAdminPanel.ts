@@ -7,7 +7,7 @@ import type { User, Permission, FormData, AccessHistoryRecord, SnackbarState, Us
 export const useAdminPanel = (): UseAdminPanelReturn => {
   const { getAllUsers, createUser, updateUser, toggleUserStatus, user, hasPermission } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
-  
+
   const [openDialog, setOpenDialog] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState<FormData>({
@@ -54,9 +54,9 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
     try {
       const backendHistory = JSON.parse(localStorage.getItem('user_access_history') || '{}');
       const frontendHistory = JSON.parse(localStorage.getItem('frontend_login_history') || '[]');
-      
+
       const combinedHistory: AccessHistoryRecord[] = [];
-      
+
       Object.keys(backendHistory).forEach(email => {
         backendHistory[email].forEach((record: any) => {
           combinedHistory.push({
@@ -65,19 +65,17 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
           });
         });
       });
-      
+
       frontendHistory.forEach((record: any) => {
         combinedHistory.push({
           ...record,
           source: 'frontend' as const
         });
       });
-      
+
       combinedHistory.sort((a, b) => new Date(b.loginTime).getTime() - new Date(a.loginTime).getTime());
-      
+
       setAccessHistory(combinedHistory);
-      
-      console.log('✅ Historial de accesos cargado:', combinedHistory.length, 'registros');
     } catch (error) {
       console.error('Error cargando historial de accesos:', error);
       setSnackbar({ open: true, message: 'Error al cargar historial de accesos', severity: 'error' });
@@ -151,23 +149,23 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
 
   const handleRoleChange = async (newRole: string) => {
     if (!selectedUserForRole) return;
-    
+
     try {
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          user.email === selectedUserForRole.email 
+      setUsers(prevUsers =>
+        prevUsers.map(user =>
+          user.email === selectedUserForRole.email
             ? { ...user, role: newRole }
             : user
         )
       );
-      
+
       setSelectedUserForRole(prev => prev ? { ...prev, role: newRole } : null);
-      
+
       await updateUser(selectedUserForRole.id, { role: newRole });
       setSnackbar({ open: true, message: 'Rol actualizado exitosamente', severity: 'success' });
-      
+
       handleCloseRoleDialog();
-      
+
       await refreshUsers();
     } catch (error: any) {
       await refreshUsers();
@@ -177,17 +175,17 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
 
   const handleDirectRoleChange = async (userData: User, newRole: string) => {
     try {
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          user.email === userData.email 
+      setUsers(prevUsers =>
+        prevUsers.map(user =>
+          user.email === userData.email
             ? { ...user, role: newRole }
             : user
         )
       );
-      
+
       await updateUser(userData.id, { role: newRole });
       setSnackbar({ open: true, message: `Rol actualizado a ${getRoleLabel(newRole)} exitosamente`, severity: 'success' });
-      
+
       await refreshUsers();
     } catch (error: any) {
       await refreshUsers();
@@ -217,7 +215,7 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
           setSnackbar({ open: true, message: 'Error: El usuario no tiene email válido', severity: 'error' });
           return;
         }
-        console.log('Updating user:', editingUser.email, 'with data:', formData);
+
         const updates: any = {
           name: formData.name,
           email: formData.email,
@@ -226,9 +224,9 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
         if (formData.password) {
           updates.password = formData.password;
         }
-        console.log('Calling updateUser with email:', editingUser.email, 'and updates:', updates);
+
         await updateUser(editingUser.email, updates);
-        console.log('Update successful for user:', editingUser.email);
+
         setSnackbar({ open: true, message: 'Usuario actualizado exitosamente', severity: 'success' });
       } else {
         if (!formData.name || !formData.email || !formData.password) {
@@ -255,19 +253,19 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
       const currentUserEmail = (user?.email || '').toLowerCase();
       const targetEmail = (userEmail || '').toLowerCase();
       if (currentUserEmail && targetEmail === currentUserEmail) {
-        setSnackbar({ 
-          open: true, 
-          message: 'No puedes deshabilitar tu propia cuenta', 
-          severity: 'error' 
+        setSnackbar({
+          open: true,
+          message: 'No puedes deshabilitar tu propia cuenta',
+          severity: 'error'
         });
         return;
       }
     } catch (e) {
       // If anything goes wrong in the guard, fail closed
-      setSnackbar({ 
-        open: true, 
-        message: 'Acción no permitida sobre tu propia cuenta', 
-        severity: 'error' 
+      setSnackbar({
+        open: true,
+        message: 'Acción no permitida sobre tu propia cuenta',
+        severity: 'error'
       });
       return;
     }
@@ -287,10 +285,10 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
         );
         await refreshUsers();
         const statusMessage = result.newStatus === 1 ? 'habilitado' : 'deshabilitado';
-        setSnackbar({ 
-          open: true, 
-          message: `Usuario ${statusMessage} exitosamente`, 
-          severity: 'success' 
+        setSnackbar({
+          open: true,
+          message: `Usuario ${statusMessage} exitosamente`,
+          severity: 'success'
         });
       } catch (error: any) {
         await refreshUsers();
@@ -339,14 +337,14 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
 
   const handlePermissionChange = async (userData: User, newPermissions: string[]) => {
     try {
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          user.email === userData.email 
+      setUsers(prevUsers =>
+        prevUsers.map(user =>
+          user.email === userData.email
             ? { ...user, permissions: newPermissions }
             : user
         )
       );
-      
+
       const response = await fetch(`/api/users/${userData.id}/permissions`, {
         method: 'PUT',
         headers: {
@@ -355,7 +353,7 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
         },
         body: JSON.stringify({ permissions: newPermissions })
       });
-      
+
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
           setSnackbar({ open: true, message: 'Sesión expirada o sin permisos. Por favor, inicia sesión nuevamente.', severity: 'error' });
@@ -364,7 +362,7 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
           throw new Error('Error al actualizar permisos');
         }
       }
-      
+
       setSnackbar({ open: true, message: 'Permisos actualizados exitosamente', severity: 'success' });
       await refreshUsers();
     } catch (error: any) {
@@ -375,10 +373,10 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
 
   const handleTogglePermission = (permission: string | Permission) => {
     if (!selectedUserForRole) { return; }
-    
+
     const currentPermissions = selectedUserForRole.permissions || [];
     const permissionName = typeof permission === 'string' ? permission : ((permission as any).Name || (permission as any).name || String(permission));
-    
+
     let newPermissions: string[];
     if (currentPermissions.includes(permissionName)) {
       newPermissions = currentPermissions.filter(p => p !== permissionName);
@@ -386,7 +384,7 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
       newPermissions = [...currentPermissions, permissionName];
     }
     const uniquePermissions = Array.from(new Set(newPermissions.map(p => typeof p === 'string' ? p : ((p as any).Name || (p as any).name || String(p)))));
-    
+
     setSelectedUserForRole(prev => ({
       ...prev!,
       permissions: uniquePermissions
@@ -440,3 +438,4 @@ export const useAdminPanel = (): UseAdminPanelReturn => {
     handleTogglePermission
   };
 };
+

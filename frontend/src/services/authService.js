@@ -2,13 +2,9 @@ import { apiRequest } from './baseApiService';
 
 export const authService = {
   login: async (credentials) => {
-    console.log('🔍 apiService.login: Credenciales recibidas:', credentials);
     const { email, password } = credentials;
-    console.log('🔍 apiService.login: Datos extraídos:', { email, password, emailType: typeof email, passwordType: typeof password });
     
     const requestBody = { email, password };
-    console.log('🔍 apiService.login: Body a enviar:', requestBody);
-    console.log('🔍 apiService.login: Body JSON:', JSON.stringify(requestBody));
     
     const response = await apiRequest('/auth/login', {
       method: 'POST',

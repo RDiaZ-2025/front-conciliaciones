@@ -80,11 +80,6 @@ export class UserService {
               where: { name: permissionName }
             });
 
-            console.log('[PERMISSION DEBUG]', {
-              permissionName,
-              foundPermission: permission
-            });
-
             if (permission) {
               // Asignar el permiso al usuario
               const permissionByUser = permissionByUserRepository.create({
@@ -92,7 +87,7 @@ export class UserService {
                 permissionId: permission.id,
                 assignedAt: new Date()
               });
-              
+
               await permissionByUserRepository.save(permissionByUser);
               assignedPermissions.push(permissionName);
             } else {
@@ -103,13 +98,6 @@ export class UserService {
           }
         }
       }
-
-      console.log('✅ User created in database:', {
-        id: savedUser.id,
-        name: savedUser.name,
-        email: savedUser.email,
-        permissions: assignedPermissions
-      });
 
       return {
         success: true,
@@ -152,9 +140,9 @@ export class UserService {
           where: { userId: user.id },
           relations: ['permission']
         });
-        
+
         const permissions = userPermissions.map(up => up.permission.name);
-        
+
         usersWithPermissions.push({
           id: user.id,
           name: user.name,
@@ -278,7 +266,7 @@ export class UserService {
                 permissionId: permission.id,
                 assignedAt: new Date()
               });
-              
+
               await permissionByUserRepository.save(permissionByUser);
             }
           } catch (permError) {

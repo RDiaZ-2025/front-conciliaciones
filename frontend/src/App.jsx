@@ -90,33 +90,30 @@ function AppContent() {
   };
 
   const handleMenuSelect = (menuId) => {
-    console.log('Menu selected:', menuId);
-    
+
     // Map menu labels to view IDs
     const menuLabelToViewMap = {
       'Historial Carga Archivos': 'historial',
-      'Cargar Documentos': 'upload', 
+      'Cargar Documentos': 'upload',
       'Dashboard de Gestión': 'dashboard',
       'Producción': 'production',
       'Portada 15 Minutos': 'portada15',
       'Gestión de Menús': 'menu-management',
       'Usuarios': 'admin'
     };
-    
+
     // Get the view ID from the menu label
     const viewId = menuLabelToViewMap[menuId] || menuId;
-    
-    console.log('Mapped view ID:', viewId);
-    
+
+
     // Check if user has permission for the selected menu
     const hasRequiredPermission = checkMenuPermission(viewId);
-    
+
     if (!hasRequiredPermission) {
       console.warn(`User does not have permission for menu: ${menuId}`);
       return;
     }
-    
-    console.log('Setting current view to:', viewId);
+
     setCurrentView(viewId);
   };
 
@@ -131,26 +128,25 @@ function AppContent() {
       'admin': PERMISSIONS.ADMIN_PANEL,
       'usuarios': PERMISSIONS.ADMIN_PANEL
     };
-    
+
     const requiredPermission = permissionMap[menuId];
     return requiredPermission ? hasPermission(requiredPermission) : true;
   };
 
   // Add useEffect to track state changes
   useEffect(() => {
-    console.log('App.jsx - State changed:', { currentView, selectedMenu });
   }, [currentView, selectedMenu]);
 
   const renderAuthenticatedContent = () => {
     switch (currentView) {
       case 'historial':
         return (
-          <ProtectedRoute 
+          <ProtectedRoute
             requiredPermission={PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES}
             darkMode={darkMode}
             onUnauthorized={handleUnauthorized}
           >
-            <LoadDocumentsOCbyUserView 
+            <LoadDocumentsOCbyUserView
               darkMode={darkMode}
               setDarkMode={setDarkMode}
               onBack={handleBackToLogin}
@@ -159,19 +155,19 @@ function AppContent() {
         );
       case 'production':
         return (
-          <ProtectedRoute 
+          <ProtectedRoute
             requiredPermission={PERMISSIONS.PRODUCTION_MANAGEMENT}
             darkMode={darkMode}
             onUnauthorized={handleUnauthorized}
           >
-            <Production 
+            <Production
               darkMode={darkMode}
             />
           </ProtectedRoute>
         );
       case 'portada15':
         return (
-          <ProtectedRoute 
+          <ProtectedRoute
             requiredPermission={PERMISSIONS.PORTADA_15_MINUTOS}
             darkMode={darkMode}
             onUnauthorized={handleUnauthorized}
@@ -181,7 +177,7 @@ function AppContent() {
         );
       case 'menu-management':
         return (
-          <ProtectedRoute 
+          <ProtectedRoute
             requiredPermission={PERMISSIONS.MANAGE_MENUS}
             darkMode={darkMode}
             onUnauthorized={handleUnauthorized}
@@ -191,7 +187,7 @@ function AppContent() {
         );
       case 'upload':
         return (
-          <ProtectedRoute 
+          <ProtectedRoute
             requiredPermission={PERMISSIONS.DOCUMENT_UPLOAD}
             darkMode={darkMode}
             onUnauthorized={handleUnauthorized}
@@ -209,12 +205,12 @@ function AppContent() {
         );
       case 'dashboard':
         return (
-          <ProtectedRoute 
+          <ProtectedRoute
             requiredPermission={PERMISSIONS.MANAGEMENT_DASHBOARD}
             darkMode={darkMode}
             onUnauthorized={handleUnauthorized}
           >
-            <DashboardGeneral 
+            <DashboardGeneral
               darkMode={darkMode}
               setDarkMode={setDarkMode}
               onBack={handleBackToLogin}
@@ -226,7 +222,7 @@ function AppContent() {
       case 'admin':
       case 'usuarios':
         return (
-          <ProtectedRoute 
+          <ProtectedRoute
             requiredPermission={PERMISSIONS.ADMIN_PANEL}
             darkMode={darkMode}
             onUnauthorized={handleUnauthorized}
@@ -243,7 +239,7 @@ function AppContent() {
       default:
         console.warn(`Unknown view: ${currentView}`);
         return (
-          <ProtectedRoute 
+          <ProtectedRoute
             requiredPermission={PERMISSIONS.DOCUMENT_UPLOAD}
             darkMode={darkMode}
             onUnauthorized={handleUnauthorized}
@@ -265,8 +261,8 @@ function AppContent() {
     if (currentView === 'login') {
       return (
         <Box sx={{ py: theme => theme.spacing(2) }}>
-          <Login 
-            onLogin={handleLogin} 
+          <Login
+            onLogin={handleLogin}
             darkMode={darkMode}
             setDarkMode={setDarkMode}
           />
@@ -314,7 +310,7 @@ function AppContent() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-        {renderCurrentView()}
+      {renderCurrentView()}
     </ThemeProvider>
   );
 }
@@ -328,4 +324,3 @@ function App() {
 }
 
 export default App;
-

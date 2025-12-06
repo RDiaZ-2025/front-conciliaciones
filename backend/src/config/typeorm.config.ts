@@ -58,10 +58,6 @@ export const initializeDatabase = async (): Promise<void> => {
   try {
     if (!AppDataSource.isInitialized) {
       await AppDataSource.initialize();
-      console.log('✅ TypeORM DataSource initialized successfully');
-      console.log(`📊 Database: ${config.database}`);
-    } else {
-      console.log('✅ TypeORM DataSource already initialized');
     }
   } catch (error) {
     console.error('❌ Error initializing TypeORM DataSource:', error);
@@ -76,7 +72,6 @@ export const closeDatabase = async (): Promise<void> => {
   try {
     if (AppDataSource.isInitialized) {
       await AppDataSource.destroy();
-      console.log('✅ TypeORM DataSource closed successfully');
     }
   } catch (error) {
     console.error('❌ Error closing TypeORM DataSource:', error);

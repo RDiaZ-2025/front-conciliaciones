@@ -40,6 +40,10 @@ const NavigationDrawer = ({
 
   // Permission mapping for menu items
   const getPermissionForMenuItem = (item) => {
+    // We expect the permission to be already attached to the item from the DB or backend
+    // If not, we can try to map it, but ideally it should come from the source
+    if (item.permission) return item.permission;
+
     const permissionMap = {
       'historial': PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES,
       'upload': PERMISSIONS.DOCUMENT_UPLOAD,
@@ -68,52 +72,10 @@ const NavigationDrawer = ({
     return permissionMapByLabel[item.label];
   };
 
-  const defaultMenuItems = [
-    {
-      id: 'historial',
-      label: 'Historial Carga Archivos',
-      icon: <HistoryIcon />,
-      permission: PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES
-    },
-    {
-      id: 'upload',
-      label: 'Cargar Documentos',
-      icon: <UploadIcon />,
-      permission: PERMISSIONS.DOCUMENT_UPLOAD
-    },
-    {
-      id: 'dashboard',
-      label: 'Dashboard de Gestión',
-      icon: <DashboardIcon />,
-      permission: PERMISSIONS.MANAGEMENT_DASHBOARD
-    },
-    {
-      id: 'production',
-      label: 'Producción',
-      icon: <AssignmentIcon />,
-      permission: PERMISSIONS.PRODUCTION_MANAGEMENT
-    },
-    {
-      id: 'portada15',
-      label: 'Portada 15 Minutos',
-      icon: <ImageIcon />,
-      permission: PERMISSIONS.PORTADA_15_MINUTOS
-    },
-    {
-      id: 'menu-management',
-      label: 'Gestión de Menús',
-      icon: <MenuBookIcon />,
-      permission: PERMISSIONS.MANAGE_MENUS
-    },
-    {
-      id: 'usuarios',
-      label: 'Usuarios',
-      icon: <PeopleIcon />,
-      permission: PERMISSIONS.ADMIN_PANEL
-    }
-  ];
+  // We rely on dbMenuItems now. If empty, we show nothing or error state.
+  const defaultMenuItems = [];
 
-  // Use database menu items if available, otherwise fall back to default
+  // Use database menu items if available
   const items = dbMenuItems && dbMenuItems.length > 0 ? dbMenuItems.map(item => {
     // Map icon names to actual icon components
     const iconMap = {

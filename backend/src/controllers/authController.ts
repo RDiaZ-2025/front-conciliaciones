@@ -10,17 +10,8 @@ export class AuthController {
     try {
       const { email, password }: LoginRequest = req.body;
 
-      // Debug: Log de las credenciales recibidas
-      console.log('🔍 Login attempt:', {
-        email: email,
-        passwordLength: password ? password.length : 0,
-        hasEmail: !!email,
-        hasPassword: !!password
-      });
-
       // Validación básica
       if (!email || !password) {
-        console.log('❌ Missing credentials');
         res.status(400).json({
           success: false,
           message: 'Email y contraseña son requeridos'
@@ -29,7 +20,6 @@ export class AuthController {
       }
 
       const result = await AuthService.login({ email, password });
-      console.log('🔐 Login result:', { success: result.success, email });
 
       if (result.success) {
         res.status(200).json(result);
@@ -55,11 +45,9 @@ export class AuthController {
         return;
       }
 
-      console.log('🔍 Verificando usuario:', req.user);
-
       // Obtener usuario de la base de datos
       const user = await AuthService.getUserById(req.user.userId);
-      
+
       if (!user) {
         res.status(404).json({
           success: false,
@@ -70,8 +58,7 @@ export class AuthController {
 
       // Obtener permisos del usuario
       const permissions = await AuthService.getUserPermissions(req.user.userId);
-      
-      console.log('✅ Usuario de base de datos verificado:', req.user.email);
+
       res.status(200).json({
         success: true,
         data: {
@@ -161,9 +148,8 @@ export class AuthController {
               }
             }
 
-            console.log(`✅ Usuario ${userData.email} creado exitosamente`);
           } else {
-            console.log(`ℹ️ Usuario ${userData.email} ya existe`);
+
           }
         }
 

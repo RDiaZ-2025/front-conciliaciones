@@ -157,8 +157,6 @@ export class UserController {
         permissions?: string[];
       } = req.body;
 
-      console.log('🔍 Creating user:', { name, email, permissions });
-
       // Validación básica
       if (!name || !email || !password) {
         res.status(400).json({
@@ -186,10 +184,8 @@ export class UserController {
       });
 
       if (result.success) {
-        console.log('✅ User created successfully:', result.user?.email);
         res.status(201).json(result);
       } else {
-        console.log('❌ User creation failed:', result.message);
         res.status(400).json(result);
       }
     } catch (error) {
@@ -281,8 +277,6 @@ export class UserController {
 
   static async getAllPermissions(req: Request, res: Response): Promise<void> {
     try {
-      console.log('getAllPermissions called - checking database connection...');
-      
       if (!AppDataSource.isInitialized) {
         console.error('Database not initialized in getAllPermissions');
         res.status(503).json({
@@ -292,15 +286,12 @@ export class UserController {
         return;
       }
 
-      console.log('Database initialized, getting permission repository...');
       const permissionRepository = AppDataSource.getRepository(Permission);
 
-      console.log('Fetching permissions from database...');
       const permissions = await permissionRepository.find({
         order: { name: 'ASC' }
       });
 
-      console.log(`Found ${permissions.length} permissions`);
       res.status(200).json({
         success: true,
         data: permissions.map(permission => ({

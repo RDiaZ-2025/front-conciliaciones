@@ -19,49 +19,8 @@ const iconMap = {
   'FactoryIcon': FactoryIcon
 };
 
-// Default fallback menu items with permissions
-const defaultMenuItems = [
-  {
-    id: 'historial',
-    label: 'Historial Carga Archivos',
-    icon: 'HistoryIcon',
-    route: '/historial',
-    displayOrder: 1,
-    permission: PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES
-  },
-  {
-    id: 'upload',
-    label: 'Cargar Documentos',
-    icon: 'CloudUploadIcon',
-    route: '/upload',
-    displayOrder: 2,
-    permission: PERMISSIONS.DOCUMENT_UPLOAD
-  },
-  {
-    id: 'dashboard',
-    label: 'Dashboard de Gestión',
-    icon: 'AnalyticsIcon',
-    route: '/dashboard',
-    displayOrder: 3,
-    permission: PERMISSIONS.MANAGEMENT_DASHBOARD
-  },
-  {
-    id: 'production',
-    label: 'Producción',
-    icon: 'FactoryIcon',
-    route: '/production',
-    displayOrder: 4,
-    permission: PERMISSIONS.PRODUCTION_MANAGEMENT
-  },
-  {
-    id: 'usuarios',
-    label: 'Usuarios',
-    icon: 'SupervisorAccountIcon',
-    route: '/admin',
-    displayOrder: 5,
-    permission: PERMISSIONS.ADMIN_PANEL
-  }
-];
+// Default fallback menu items (empty array as we want to enforce dynamic loading)
+const defaultMenuItems = [];
 
 // Transform hierarchical menu items to flat structure for NavigationDrawer
 const transformMenuItems = (menuItems, level = 0) => {

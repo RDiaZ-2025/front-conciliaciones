@@ -78,20 +78,11 @@ export const useLoadDocumentsOCbyUserView = (): UseLoadDocumentsReturn => {
   const handleDownload = async (idFolder: string): Promise<void> => {
     if (!idFolder) return;
     
-    console.log('Starting download for ID:', idFolder);
-    console.log('Azure Config:', {
-      storageAccountName: AZURE_CONFIG.storageAccountName,
-      containerName: AZURE_CONFIG.containerName,
-      sasTokenLength: AZURE_CONFIG.sasToken.length
-    });
-    
     try {
       const blobService = new BlobServiceClient(
         `https://${AZURE_CONFIG.storageAccountName}.blob.core.windows.net/?${AZURE_CONFIG.sasToken}`
       );
       const containerClient = blobService.getContainerClient(AZURE_CONFIG.containerName);
-      
-      console.log('Successfully connected to Azure Blob Storage');
       
       // Convert ID to lowercase to match Azure storage
       const lowerIdFolder = idFolder.toLowerCase();
@@ -118,26 +109,21 @@ export const useLoadDocumentsOCbyUserView = (): UseLoadDocumentsReturn => {
       let selectedPrefix: string | null = null;
       
       for (const folderPath of possiblePaths) {
-         console.log('Searching for blobs with prefix:', folderPath);
          
          try {
            let foundInThisPath = 0;
            for await (const blob of containerClient.listBlobsFlat({ prefix: folderPath })) {
-             console.log('Found blob:', blob.name);
              if (!blobs.includes(blob.name)) {
                blobs.push(blob.name);
                foundInThisPath++;
              }
            }
            
-           console.log(`Found ${foundInThisPath} new blobs with prefix: ${folderPath}`);
-           
            if (foundInThisPath > 0) {
              selectedPrefix = folderPath;
            }
            
            if (blobs.length > 0) {
-             console.log(`Total blobs found so far: ${blobs.length}`);
              break; // Stop searching once we find files
            }
          } catch (pathError) {
@@ -145,23 +131,18 @@ export const useLoadDocumentsOCbyUserView = (): UseLoadDocumentsReturn => {
          }
        }
       
-      console.log('Total unique blobs found:', blobs.length);
-      
       if (blobs.length === 0) {
         // List first 20 blobs in container to help debug
-        console.log('No blobs found with any prefix. Listing first 20 blobs in container for debugging:');
         try {
           let debugCount = 0;
           for await (const blob of containerClient.listBlobsFlat()) {
-            console.log(`Container blob ${debugCount + 1}:`, blob.name);
             debugCount++;
             if (debugCount >= 20) break;
           }
-          console.log(`Total blobs checked: ${debugCount}`);
         } catch (debugError) {
           console.error('Error listing container blobs for debugging:', debugError);
         }
-        alert(`No se encontraron archivos para el ID: ${idFolder}. Revisa la consola para más detalles.`);
+        alert(`No se encontraron archivos para el ID: ${idFolder}.`);
         return;
       }
       

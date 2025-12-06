@@ -15,19 +15,11 @@ export class AuthService {
     // Debug: verificar que JWT_SECRET esté cargado
     if (!process.env.JWT_SECRET) {
       console.warn('⚠️ JWT_SECRET no encontrado en variables de entorno, usando fallback');
-    } else {
-      console.log('✅ JWT_SECRET cargado correctamente');
     }
   }
 
   static async login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
-      console.log('🔍 Login attempt:', {
-        email: credentials.email,
-        passwordLength: credentials.password.length,
-        hasEmail: !!credentials.email,
-        hasPassword: !!credentials.password
-      });
 
       if (!AppDataSource.isInitialized) {
         console.error('❌ Base de datos no disponible');
@@ -37,9 +29,7 @@ export class AuthService {
         };
       }
 
-      console.log('🔄 Using TypeORM for authentication');
       const result = await this.loginWithTypeORM(credentials);
-      console.log('🔐 Login result:', { success: result.success, email: credentials.email });
       return result;
 
     } catch (error) {
@@ -172,7 +162,6 @@ export class AuthService {
   }
 
   static generateToken(payload: JWTPayload): string {
-    console.log('🔑 Generating token with secret:', this.JWT_SECRET ? '***' : 'MISSING');
     return jwt.sign(payload, this.JWT_SECRET, {
       expiresIn: this.JWT_EXPIRES_IN
     } as jwt.SignOptions);
@@ -180,7 +169,6 @@ export class AuthService {
 
   static verifyToken(token: string): JWTPayload | null {
     try {
-      console.log('🔍 AuthService.verifyToken: Verifying token against secret starting with:', this.JWT_SECRET ? this.JWT_SECRET.substring(0, 3) + '***' : 'UNDEFINED');
       return jwt.verify(token, this.JWT_SECRET) as JWTPayload;
     } catch (error) {
       console.error('❌ Token verification error:', error);

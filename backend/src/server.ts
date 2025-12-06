@@ -12,30 +12,20 @@ const PORT = process.env.PORT || 8246;
 const startServer = async (): Promise<void> => {
   try {
     // Conectar a la base de datos con TypeORM
-    console.log('🔄 Inicializando TypeORM...');
     await AppDataSource.initialize();
-    console.log('✅ TypeORM inicializado exitosamente');
 
     // Iniciar el servidor
     const server = app.listen(PORT, () => {
-      console.log('🚀 Servidor iniciado exitosamente');
-      console.log(`📡 Puerto: ${PORT}`);
-      console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔗 URL: http://localhost:${PORT}`);
-      console.log(`🏥 Health Check: http://localhost:${PORT}/health`);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      // Server started
     });
 
     // Manejo de cierre graceful
     const gracefulShutdown = async (signal: string): Promise<void> => {
-      console.log(`\n🛑 Recibida señal ${signal}. Cerrando servidor...`);
       
       server.close(async () => {
-        console.log('🔌 Servidor HTTP cerrado');
         
         try {
           await AppDataSource.destroy();
-          console.log('✅ TypeORM desconectado');
           process.exit(0);
         } catch (error) {
           console.error('❌ Error cerrando TypeORM:', error);

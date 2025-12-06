@@ -27,16 +27,13 @@ let pool: sql.ConnectionPool | null = null;
 export const connectDB = async (): Promise<void> => {
   try {
     if (pool && pool.connected) {
-      console.log('✅ Ya conectado a SQL Server');
       return;
     }
 
     pool = new sql.ConnectionPool(config);
     await pool.connect();
-    
-    console.log('✅ Conectado exitosamente a SQL Server');
-    console.log(`📊 Base de datos: ${config.database}`);
-    
+
+
     // Configurar eventos de la conexión
     pool.on('error', (err: Error) => {
       console.error('❌ Error en la conexión de base de datos:', err);
@@ -63,7 +60,6 @@ export const closeDB = async (): Promise<void> => {
   if (pool) {
     await pool.close();
     pool = null;
-    console.log('🔌 Conexión a base de datos cerrada');
   }
 };
 
