@@ -175,9 +175,17 @@ Copy-Item "backend/package-lock.json" "$deployDir/"
 Copy-Item "backend/web.config" "$deployDir/"
 Copy-Item "backend/.env" "$deployDir/" -ErrorAction SilentlyContinue
 
-# Set-Location $deployDir
-# npm ci
-# Set-Location ".."
+Write-Step "Installing production dependencies"
+Set-Location $deployDir
+try {
+    npm ci --omit=dev
+    Write-Success "Production dependencies installed"
+}
+catch {
+    Write-Warning "Failed to install dependencies. Deployment might fail if node_modules are missing."
+}
+Set-Location ".."
+
 Write-Step "Creating deployment archive"
 $archivePath = "voc-backend-deployment.zip"
 if (Test-Path $archivePath) {
