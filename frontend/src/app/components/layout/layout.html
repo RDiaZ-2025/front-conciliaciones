@@ -1,0 +1,75 @@
+<mat-toolbar color="primary" class="app-toolbar">
+  <button mat-icon-button (click)="toggleDrawer()">
+    <mat-icon>menu</mat-icon>
+  </button>
+  <span class="spacer"></span>
+  <img src="assets/Claro-Media-Logo.jpg" alt="Logo" class="toolbar-logo">
+</mat-toolbar>
+
+<mat-drawer-container class="drawer-container" autosize>
+  <mat-drawer #drawer mode="over" [opened]="isDrawerOpen()" (closed)="isDrawerOpen.set(false)" class="app-drawer">
+    <div class="drawer-header">
+      <h3>Menú de Navegación</h3>
+      <button mat-icon-button (click)="toggleDrawer()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+    
+    <mat-divider></mat-divider>
+
+    <div *ngIf="loading()" class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+    </div>
+
+    <div *ngIf="error()" class="error-container">
+      <p>{{ error() }}</p>
+    </div>
+
+    <mat-nav-list *ngIf="!loading() && !error()">
+      <ng-container *ngFor="let item of menuItems()">
+        <ng-container *ngIf="hasPermission(item)">
+          
+          <!-- Item with children -->
+          <mat-expansion-panel *ngIf="item.children && item.children.length > 0" class="menu-expansion-panel" [class.mat-elevation-z0]="true">
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                <mat-icon class="menu-icon">{{ getIconName(item.icon) }}</mat-icon>
+                {{ item.label }}
+              </mat-panel-title>
+            </mat-expansion-panel-header>
+            
+            <mat-nav-list class="nested-list">
+              <ng-container *ngFor="let child of item.children">
+                 <a mat-list-item (click)="onMenuClick(child)" *ngIf="hasPermission(child)">
+                   <mat-icon matListItemIcon>{{ getIconName(child.icon) }}</mat-icon>
+                   <span matListItemTitle>{{ child.label }}</span>
+                 </a>
+              </ng-container>
+            </mat-nav-list>
+          </mat-expansion-panel>
+
+          <!-- Item without children -->
+          <a mat-list-item (click)="onMenuClick(item)" *ngIf="!item.children || item.children.length === 0">
+            <mat-icon matListItemIcon>{{ getIconName(item.icon) }}</mat-icon>
+            <span matListItemTitle>{{ item.label }}</span>
+          </a>
+
+        </ng-container>
+      </ng-container>
+
+      <mat-divider></mat-divider>
+      
+      <a mat-list-item (click)="logout()">
+        <mat-icon matListItemIcon>exit_to_app</mat-icon>
+        <span matListItemTitle>Cerrar Sesión</span>
+      </a>
+    </mat-nav-list>
+
+  </mat-drawer>
+
+  <mat-drawer-content>
+    <div class="content-container">
+      <router-outlet></router-outlet>
+    </div>
+  </mat-drawer-content>
+</mat-drawer-container>
