@@ -1,24 +1,31 @@
-<div class="flex flex-column gap-4 p-fluid">
-    <form [formGroup]="form" class="flex flex-column gap-3">
-        <div class="field">
-            <label for="name" class="font-bold">Nombre de la solicitud</label>
-            <input pInputText id="name" formControlName="name" placeholder="Ej. Campaña Publicitaria Q3" />
+<div class="flex flex-column gap-2 p-fluid p-4">
+    <form [formGroup]="form" class="flex flex-column gap-2">
+        <div>
+            <p-floatlabel variant="in">
+                <input pInputText id="name" formControlName="name" class="w-full" autocomplete="off" />
+                <label for="name">Nombre de la solicitud</label>
+            </p-floatlabel>
             <small class="p-error" *ngIf="form.get('name')?.invalid && form.get('name')?.dirty">
                 Nombre es requerido
             </small>
         </div>
 
         <div class="formgrid grid">
-            <div class="field col-12 md:col-6">
-                <label for="department" class="font-bold">Departamento</label>
-                <input pInputText id="department" formControlName="department" placeholder="Ej. Marketing" />
+            <div class="col-12 md:col-6 mb-2">
+                <p-floatlabel variant="in">
+                    <input pInputText id="department" formControlName="department" class="w-full" autocomplete="off" />
+                    <label for="department">Departamento</label>
+                </p-floatlabel>
                 <small class="p-error" *ngIf="form.get('department')?.invalid && form.get('department')?.dirty">
                     Departamento es requerido
                 </small>
             </div>
-            <div class="field col-12 md:col-6">
-                <label for="contactPerson" class="font-bold">Persona de contacto</label>
-                <input pInputText id="contactPerson" formControlName="contactPerson" placeholder="Ej. Ana Martínez" />
+            <div class="col-12 md:col-6 mb-2">
+                <p-floatlabel variant="in">
+                    <input pInputText id="contactPerson" formControlName="contactPerson" class="w-full"
+                        autocomplete="off" />
+                    <label for="contactPerson">Persona de contacto</label>
+                </p-floatlabel>
                 <small class="p-error" *ngIf="form.get('contactPerson')?.invalid && form.get('contactPerson')?.dirty">
                     Contacto es requerido
                 </small>
@@ -26,31 +33,37 @@
         </div>
 
         <div class="formgrid grid">
-            <div class="field col-12 md:col-6">
-                <label for="assignedTeam" class="font-bold">Equipo asignado</label>
-                <input pInputText id="assignedTeam" formControlName="assignedTeam"
-                    placeholder="Ej. Equipo Creativo A" />
+            <div class="col-12 md:col-6 mb-2">
+                <p-floatlabel variant="in">
+                    <input pInputText id="assignedTeam" formControlName="assignedTeam" class="w-full"
+                        autocomplete="off" />
+                    <label for="assignedTeam">Equipo asignado</label>
+                </p-floatlabel>
                 <small class="p-error" *ngIf="form.get('assignedTeam')?.invalid && form.get('assignedTeam')?.dirty">
                     Equipo es requerido
                 </small>
             </div>
-            <div class="field col-12 md:col-6">
-                <label for="deliveryDate" class="font-bold">Fecha de entrega</label>
-                <p-datepicker id="deliveryDate" formControlName="deliveryDate" dateFormat="yy-mm-dd" [showIcon]="true"
-                    appendTo="body"></p-datepicker>
+            <div class="col-12 md:col-6 mb-2">
+                <p-floatlabel variant="in">
+                    <p-datepicker id="deliveryDate" formControlName="deliveryDate" dateFormat="yy-mm-dd"
+                        [showIcon]="true" appendTo="body" styleClass="w-full" inputStyleClass="w-full"></p-datepicker>
+                    <label for="deliveryDate">Fecha de entrega</label>
+                </p-floatlabel>
                 <small class="p-error" *ngIf="form.get('deliveryDate')?.invalid && form.get('deliveryDate')?.dirty">
                     Fecha es requerida
                 </small>
             </div>
         </div>
 
-        <div class="field">
-            <label for="observations" class="font-bold">Observaciones</label>
-            <textarea pTextarea id="observations" formControlName="observations" rows="3"
-                autoResize="autoResize"></textarea>
+        <div>
+            <p-floatlabel variant="in">
+                <textarea pTextarea id="observations" formControlName="observations" rows="3" autoResize="autoResize"
+                    class="w-full"></textarea>
+                <label for="observations">Observaciones</label>
+            </p-floatlabel>
         </div>
 
-        <div class="field">
+        <div>
             <label class="font-bold mb-2 block">Archivos adjuntos</label>
 
             <p-fileUpload mode="advanced" name="demo[]" [customUpload]="true" (uploadHandler)="onUpload($event)"

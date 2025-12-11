@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
+import { FloatLabelModule } from 'primeng/floatlabel';
 import { TextareaModule } from 'primeng/textarea';
 import { DatePickerModule } from 'primeng/datepicker';
 import { FileUploadModule } from 'primeng/fileupload';
@@ -20,6 +21,7 @@ import { AzureStorageService } from '../../../../services/azure-storage';
     ReactiveFormsModule,
     ButtonModule,
     InputTextModule,
+    FloatLabelModule,
     TextareaModule,
     DatePickerModule,
     FileUploadModule,
