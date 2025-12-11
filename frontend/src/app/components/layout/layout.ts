@@ -39,23 +39,11 @@ export class LayoutComponent {
   loading = signal(true);
   error = signal<string | null>(null);
 
+  // Expanded menu items state
+  expandedItems = signal<Set<number>>(new Set());
+
   // Drawer state
   isDrawerOpen = false;
-
-  // Icon mapping for PrimeIcons
-  private iconMap: Record<string, string> = {
-    'HistoryIcon': 'pi pi-history',
-    'UploadIcon': 'pi pi-cloud-upload',
-    'DashboardIcon': 'pi pi-chart-bar',
-    'PeopleIcon': 'pi pi-users',
-    'AssignmentIcon': 'pi pi-list',
-    'ImageIcon': 'pi pi-image',
-    'MenuBookIcon': 'pi pi-book',
-    'CloudUploadIcon': 'pi pi-cloud-upload',
-    'AnalyticsIcon': 'pi pi-chart-line',
-    'SupervisorAccountIcon': 'pi pi-users',
-    'FactoryIcon': 'pi pi-building'
-  };
 
   isDarkMode = signal(false);
 
@@ -87,7 +75,11 @@ export class LayoutComponent {
 
   getIconName(iconKey: string | undefined): string {
     if (!iconKey) return 'pi pi-list';
-    return this.iconMap[iconKey] || 'pi pi-list';
+    // If the icon already starts with 'pi ', assume it's a full class
+    if (iconKey.startsWith('pi ')) return iconKey;
+    // Otherwise prepend 'pi ' (assuming the user entered e.g. 'pi-home' or 'home')
+    // Matches the behavior in Menus page where it does 'pi ' + icon
+    return `pi ${iconKey}`;
   }
 
   hasPermission(item: MenuItem): boolean {
@@ -117,10 +109,31 @@ export class LayoutComponent {
   }
 
   onMenuClick(item: MenuItem) {
+    if (item.children && item.children.length > 0) {
+      this.toggleSubmenu(item.id);
+      return;
+    }
+
     if (item.route) {
       this.router.navigate([item.route]);
       this.isDrawerOpen = false;
     }
+  }
+
+  toggleSubmenu(id: number) {
+    this.expandedItems.update(set => {
+      const newSet = new Set(set);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  }
+
+  isExpanded(id: number): boolean {
+    return this.expandedItems().has(id);
   }
 
   private fetchMenuItems() {
@@ -128,15 +141,60 @@ export class LayoutComponent {
     this.menuService.getAllMenuItems().subscribe({
       next: (response) => {
         if (response.success) {
-          // Filter parent items
-          const parents = response.data.filter(item => !item.parentId);
+          const allItems = response.data;
 
-          // Attach children
-          parents.forEach(parent => {
-            parent.children = response.data.filter(child => child.parentId === parent.id);
-          });
+          // Check if the response is a flat list (contains items with parentId)
+          // If yes, we need to build the tree.
+          // If no (only roots), we assume it's already a tree structure.
+          const isFlatList = allItems.some(item => !!item.parentId);
 
-          this.menuItems.set(parents);
+          if (isFlatList) {
+            // Logic for Flat List -> Tree
+            const activeItems = allItems.filter(item => item.isActive !== false);
+
+            // Find parents (roots)
+            const parents = activeItems.filter(item => !item.parentId);
+
+            // Attach children
+            parents.forEach(parent => {
+              // Loose equality to handle string/number mismatch
+              parent.children = activeItems.filter(child => child.parentId == parent.id);
+              // Sort children
+              parent.children.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+            });
+
+            // Sort parents
+            parents.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+
+            this.menuItems.set(parents);
+          } else {
+            // Logic for Pre-built Tree (only roots at top level)
+            // We assume the children are already nested in item.children
+
+            // Filter active roots
+            let roots = allItems.filter(item => item.isActive !== false);
+
+            // Sort roots
+            roots.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+
+            // Recursively sort and filter active children (optional but good practice)
+            const processChildren = (items: MenuItem[]) => {
+              items.forEach(item => {
+                if (item.children) {
+                  // Filter active children
+                  item.children = item.children.filter(child => child.isActive !== false);
+                  // Sort children
+                  item.children.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+                  // Recurse
+                  processChildren(item.children);
+                }
+              });
+            };
+
+            processChildren(roots);
+
+            this.menuItems.set(roots);
+          }
         } else {
           this.error.set(response.message || 'Error al cargar el menú');
         }
