@@ -1,5 +1,6 @@
 <p-dialog [visible]="visible" (visibleChange)="visibleChange.emit($event)"
-    [header]="item ? 'Editar Ítem' : 'Nuevo Ítem'" [modal]="true" [style]="{width: '600px'}">
+    [header]="item ? 'Editar Ítem' : 'Nuevo Ítem'" [modal]="true" [style]="{width: '600px'}"
+    [breakpoints]="{'960px': '75vw', '640px': '95vw'}">
 
     <form [formGroup]="form" class="formgrid grid pt-4">
         <div class="field col-12">
@@ -9,7 +10,7 @@
             </p-floatlabel>
         </div>
 
-        <div class="field col-6">
+        <div class="field col-12 md:col-6">
             <p-floatlabel variant="in">
                 <i [class]="'pi ' + form.get('icon')?.value"
                     style="position: absolute; right: 0.75rem; top: 50%; margin-top: -0.5rem; z-index: 1;"></i>
@@ -18,7 +19,7 @@
             </p-floatlabel>
         </div>
 
-        <div class="field col-6">
+        <div class="field col-12 md:col-6">
             <p-floatlabel variant="in">
                 <input pInputText id="route" formControlName="route" autocomplete="off" class="w-full" />
                 <label for="route">Ruta</label>
@@ -34,7 +35,7 @@
             </p-floatlabel>
         </div>
 
-        <div class="field col-6">
+        <div class="field col-12 md:col-6">
             <p-floatlabel variant="in">
                 <p-inputNumber id="displayOrder" formControlName="displayOrder" [showButtons]="true" [min]="0"
                     class="w-full" styleClass="w-full"></p-inputNumber>
@@ -42,7 +43,7 @@
             </p-floatlabel>
         </div>
 
-        <div class="field col-6 flex align-items-center">
+        <div class="field col-12 md:col-6 flex align-items-center">
             <div class="field-checkbox m-0">
                 <p-checkbox formControlName="isActive" [binary]="true" inputId="isActive"></p-checkbox>
                 <label for="isActive" class="ml-2 cursor-pointer">Activo</label>

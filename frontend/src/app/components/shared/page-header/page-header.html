@@ -1,10 +1,16 @@
-<div class="flex align-items-center gap-3">
-    <div class="flex align-items-center justify-content-center border-round bg-primary text-white"
-        style="width: 48px; height: 48px;">
-        <i [class]="icon + ' text-2xl'"></i>
+<div class="flex flex-column md:flex-row md:align-items-center justify-content-between gap-3">
+    <div class="flex align-items-center gap-3">
+        <div class="flex align-items-center justify-content-center border-round bg-primary text-white"
+            style="width: 48px; height: 48px;">
+            <i [class]="icon + ' text-2xl'"></i>
+        </div>
+        <div class="flex flex-column">
+            <h1 class="m-0 text-3xl font-medium">{{ title }}</h1>
+            <p class="m-0 text-secondary mt-1">{{ subtitle }}</p>
+        </div>
     </div>
-    <div class="flex flex-column">
-        <h1 class="m-0 text-3xl font-medium">{{ title }}</h1>
-        <p class="m-0 text-secondary mt-1">{{ subtitle }}</p>
+    
+    <div class="flex gap-2">
+        <ng-content></ng-content>
     </div>
 </div>
