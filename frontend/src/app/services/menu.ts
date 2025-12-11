@@ -13,6 +13,7 @@ export interface MenuItem {
   isActive: boolean;
   children?: MenuItem[];
   permissionName?: string;
+  permissionId?: number;
 }
 
 export interface MenuApiResponse {

@@ -8,6 +8,7 @@ import { PageHeaderComponent } from '../../components/shared/page-header/page-he
 import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
 import { MenuDialogComponent } from './menu-dialog/menu-dialog';
 import { MenusService } from './menus.service';
+import { PermissionService, Permission } from '../../services/permission.service';
 import { MenuItem, MenuFormData } from './menus.models';
 
 @Component({
@@ -28,23 +29,46 @@ import { MenuItem, MenuFormData } from './menus.models';
 })
 export class MenusComponent implements OnInit {
   private menuService = inject(MenusService);
+  private permissionService = inject(PermissionService);
   private messageService = inject(MessageService);
 
   menuItems = signal<TreeNode[]>([]);
   rawMenuItems = signal<MenuItem[]>([]);
+  permissions = signal<Permission[]>([]);
   loading = signal<boolean>(false);
   dialogVisible = signal<boolean>(false);
   saving = signal<boolean>(false);
   editingItem = signal<MenuItem | null>(null);
 
   parentOptions = signal<{ label: string, value: number | null }[]>([]);
+  permissionOptions = signal<{ label: string, value: number }[]>([]);
 
   ngOnInit() {
-    this.loadMenuItems();
+    this.loadData();
+  }
+
+  loadData() {
+    this.loading.set(true);
+    
+    // Load permissions first, then menus
+    this.permissionService.getAllPermissions().subscribe({
+        next: (response) => {
+            if (response.success) {
+                this.permissions.set(response.data);
+                this.updatePermissionOptions(response.data);
+            }
+            this.loadMenuItems();
+        },
+        error: (err) => {
+            console.error('Error loading permissions:', err);
+            // Still try to load menus even if permissions fail
+            this.loadMenuItems();
+        }
+    });
   }
 
   loadMenuItems() {
-    this.loading.set(true);
+    // loading is already true from loadData
     this.menuService.getMenuItems().subscribe({
       next: (response) => {
         this.rawMenuItems.set(response.data);
@@ -57,6 +81,20 @@ export class MenusComponent implements OnInit {
         this.loading.set(false);
       }
     });
+  }
+
+  updatePermissionOptions(permissions: Permission[]) {
+    const options = permissions.map(p => ({
+        label: p.name,
+        value: p.id
+    }));
+    this.permissionOptions.set(options);
+  }
+
+  getPermissionName(id?: number): string {
+    if (!id) return '-';
+    const permission = this.permissions().find(p => p.id === id);
+    return permission ? permission.name : `ID: ${id}`;
   }
 
   buildTree(items: MenuItem[]): TreeNode[] {

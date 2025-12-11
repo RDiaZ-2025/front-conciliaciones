@@ -12,7 +12,6 @@ import { StyleClassModule } from 'primeng/styleclass';
 
 import { AuthService } from '../../services/auth';
 import { MenuService, MenuItem } from '../../services/menu';
-import { PERMISSIONS } from '../../constants/permissions';
 
 @Component({
   selector: 'app-layout',
@@ -97,22 +96,6 @@ export class LayoutComponent {
     // If item has a specific permission name attached from backend
     if (item.permissionName) {
       return this.authService.hasPermission(item.permissionName);
-    }
-
-    // Fallback mapping based on labels (legacy support)
-    const permissionMapByLabel: Record<string, string> = {
-      'Historial Carga Archivos': PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES,
-      'Cargar Documentos': PERMISSIONS.DOCUMENT_UPLOAD,
-      'Dashboard de Gestión': PERMISSIONS.MANAGEMENT_DASHBOARD,
-      'Producción': PERMISSIONS.PRODUCTION_MANAGEMENT,
-      'Usuarios': PERMISSIONS.ADMIN_PANEL,
-      'Portada 15 Minutos': PERMISSIONS.PORTADA_15_MINUTOS,
-      'Gestión de Menús': PERMISSIONS.MANAGE_MENUS
-    };
-
-    const permission = permissionMapByLabel[item.label];
-    if (permission) {
-      return this.authService.hasPermission(permission);
     }
 
     // If no permission required/found, show it

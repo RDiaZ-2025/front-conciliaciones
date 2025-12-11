@@ -11,6 +11,7 @@ export interface MenuItemResponse {
   displayOrder: number;
   isActive: boolean;
   permissionName?: string;
+  permissionId?: number;
   children?: MenuItemResponse[];
 }
 
@@ -103,7 +104,8 @@ export const getAllMenuItems = async (req: Request, res: Response): Promise<void
       parentId: item.parentId || undefined,
       displayOrder: item.displayOrder,
       isActive: item.isActive,
-      permissionName: item.permission?.name
+      permissionName: item.permission?.name,
+      permissionId: item.permissionId || undefined
     }));
 
     const hierarchicalMenus = buildMenuHierarchy(menuItemsResponse);
@@ -220,6 +222,7 @@ export const createMenuItem = async (req: Request, res: Response): Promise<void>
     newMenuItem.parentId = parentId;
     newMenuItem.displayOrder = displayOrder;
     newMenuItem.isActive = true;
+    newMenuItem.permissionId = permissionId || null;
 
     const savedMenuItem = await menuItemRepository.save(newMenuItem);
 
@@ -232,7 +235,8 @@ export const createMenuItem = async (req: Request, res: Response): Promise<void>
         route: savedMenuItem.route,
         parentId: savedMenuItem.parentId,
         displayOrder: savedMenuItem.displayOrder,
-        isActive: savedMenuItem.isActive
+        isActive: savedMenuItem.isActive,
+        permissionId: savedMenuItem.permissionId
       },
       message: 'Menu item created successfully'
     });
@@ -291,7 +295,8 @@ export const updateMenuItem = async (req: Request, res: Response): Promise<void>
         route: route,
         parentId: parentId,
         displayOrder: displayOrder,
-        isActive: isActive
+        isActive: isActive,
+        permissionId: permissionId || null
       }
     );
 
@@ -309,7 +314,8 @@ export const updateMenuItem = async (req: Request, res: Response): Promise<void>
         route: updatedItem!.route,
         parentId: updatedItem!.parentId,
         displayOrder: updatedItem!.displayOrder,
-        isActive: updatedItem!.isActive
+        isActive: updatedItem!.isActive,
+        permissionId: updatedItem!.permissionId
       },
       message: 'Menu item updated successfully'
     });

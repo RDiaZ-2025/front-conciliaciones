@@ -13,6 +13,7 @@
                     <th>Etiqueta</th>
                     <th>Icono</th>
                     <th>Ruta</th>
+                    <th>Permiso</th>
                     <th>Orden</th>
                     <th>Activo</th>
                     <th>Acciones</th>
@@ -30,6 +31,11 @@
                     </td>
                     <td><span class="text-sm font-mono surface-100 p-1 border-round" *ngIf="rowData.route">{{
                             rowData.route }}</span></td>
+                    <td>
+                        <span class="text-sm surface-100 p-1 border-round" *ngIf="rowData.permissionId">
+                            {{ getPermissionName(rowData.permissionId) }}
+                        </span>
+                    </td>
                     <td>{{ rowData.displayOrder }}</td>
                     <td>
                         <i class="pi"
@@ -54,6 +60,6 @@
     </div>
 
     <app-menu-dialog [visible]="dialogVisible()" (visibleChange)="dialogVisible.set($event)" [item]="editingItem()"
-        [parentOptions]="parentOptions()" [saving]="saving()" (save)="saveItem($event)">
+        [parentOptions]="parentOptions()" [permissionOptions]="permissionOptions()" [saving]="saving()" (save)="saveItem($event)">
     </app-menu-dialog>
 </div>

@@ -35,6 +35,7 @@ export class MenuDialogComponent implements OnChanges {
 
   @Input() item: MenuItem | null = null;
   @Input() parentOptions: { label: string, value: number | null }[] = [];
+  @Input() permissionOptions: { label: string, value: number }[] = [];
   @Input() saving = false;
 
   @Output() save = new EventEmitter<MenuFormData>();
@@ -48,7 +49,8 @@ export class MenuDialogComponent implements OnChanges {
       route: [''],
       parentId: [null],
       displayOrder: [0, Validators.required],
-      isActive: [true]
+      isActive: [true],
+      permissionId: [null]
     });
   }
 
@@ -66,7 +68,8 @@ export class MenuDialogComponent implements OnChanges {
         route: this.item.route || '',
         parentId: this.item.parentId || null,
         displayOrder: this.item.displayOrder,
-        isActive: this.item.isActive
+        isActive: this.item.isActive,
+        permissionId: this.item.permissionId || null
       });
     } else {
       this.form.reset({
@@ -75,7 +78,8 @@ export class MenuDialogComponent implements OnChanges {
         route: '',
         parentId: null,
         displayOrder: 0,
-        isActive: true
+        isActive: true,
+        permissionId: null
       });
     }
   }

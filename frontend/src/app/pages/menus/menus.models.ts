@@ -7,6 +7,7 @@ export interface MenuItem {
     displayOrder: number;
     isActive: boolean;
     children?: MenuItem[];
+    permissionId?: number;
 }
 
 export interface MenuFormData {
@@ -16,4 +17,5 @@ export interface MenuFormData {
     parentId: number | null;
     displayOrder: number;
     isActive: boolean;
+    permissionId: number | null;
 }

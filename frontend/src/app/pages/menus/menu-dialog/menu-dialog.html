@@ -10,6 +10,16 @@
             </p-floatlabel>
         </div>
 
+        <div class="field col-12">
+            <p-floatlabel variant="in">
+                <p-select id="permissionId" formControlName="permissionId" [options]="permissionOptions"
+                    optionLabel="label" optionValue="value" [showClear]="true" class="w-full" appendTo="body"
+                    styleClass="w-full">
+                </p-select>
+                <label for="permissionId">Permiso Requerido</label>
+            </p-floatlabel>
+        </div>
+
         <div class="field col-12 md:col-6">
             <p-floatlabel variant="in">
                 <i [class]="'pi ' + form.get('icon')?.value"
