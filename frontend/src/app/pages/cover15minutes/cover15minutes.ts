@@ -58,7 +58,7 @@ export class Cover15MinutesComponent implements OnInit {
 
   refreshCurrentImage() {
     this.currentImageUrl.set(
-      `https://${this.storageAccountName}.blob.core.windows.net/${this.containerName}/15minutes/cover.png?${this.sasToken}&t=${Date.now()}`
+      `https://${this.storageAccountName}.blob.core.windows.net/${this.containerName}/15minutes/cover.jpg?${this.sasToken}&t=${Date.now()}`
     );
   }
 
@@ -104,8 +104,8 @@ export class Cover15MinutesComponent implements OnInit {
     this.messageService.add({ severity: 'info', summary: 'Subiendo', detail: 'Subiendo imagen...' });
 
     try {
-      const randomName = `15minutes/${crypto.randomUUID()}.png`;
-      const fixedName = `15minutes/cover.png`;
+      const randomName = `15minutes/${crypto.randomUUID()}.jpg`;
+      const fixedName = `15minutes/cover.jpg`;
 
       // 1. Upload with random name (for history)
       await this.azureService.uploadBlob(file, randomName);
