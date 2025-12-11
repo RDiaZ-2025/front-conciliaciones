@@ -23,7 +23,7 @@
         <div class="col-12 md:col-8">
             <div class="card p-4 surface-card border-round shadow-2 h-full">
                 <h2 class="text-xl font-bold mb-3">Subir Nueva Imagen</h2>
-                <p-fileUpload #fileUpload mode="advanced" name="file" accept="image/*" [maxFileSize]="5000000"
+                <p-fileUpload #fileUpload mode="advanced" name="file" accept=".jpg,.jpeg" [maxFileSize]="25000000"
                     [customUpload]="true" (uploadHandler)="onCustomUpload($event)" [multiple]="false"
                     styleClass="w-full">
 
