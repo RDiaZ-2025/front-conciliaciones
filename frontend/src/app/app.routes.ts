@@ -11,7 +11,11 @@ export const routes: Routes = [
     component: LayoutComponent,
     canActivate: [authGuard],
     children: [
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: '', redirectTo: 'home', pathMatch: 'full' },
+      {
+        path: 'home',
+        loadComponent: () => import('./pages/home/home').then(m => m.HomeComponent)
+      },
       {
         path: 'admin',
         loadComponent: () => import('./pages/admin/admin').then(m => m.AdminComponent)

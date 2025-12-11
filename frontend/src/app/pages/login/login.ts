@@ -90,17 +90,6 @@ export class LoginComponent {
   }
 
   private navigateBasedOnPermissions() {
-    if (this.authService.hasPermission(PERMISSIONS.ADMIN_PANEL)) {
-      this.router.navigate(['/admin']);
-    } else if (this.authService.hasPermission(PERMISSIONS.PRODUCTION_MANAGEMENT)) {
-      this.router.navigate(['/production']);
-    } else if (this.authService.hasPermission(PERMISSIONS.DOCUMENT_UPLOAD)) {
-      this.router.navigate(['/upload']);
-    } else if (this.authService.hasPermission(PERMISSIONS.MANAGEMENT_DASHBOARD)) {
-      this.router.navigate(['/dashboard']);
-    } else {
-      // Default fallback if authenticated but no specific landing page
-      this.router.navigate(['/upload']); 
-    }
+    this.router.navigate(['/home']);
   }
 }
