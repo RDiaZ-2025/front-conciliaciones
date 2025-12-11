@@ -1,9 +1,10 @@
 <div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
     <div class="flex justify-content-between align-items-start">
-        <app-page-header title="Validación de Documentos" subtitle="Carga y validación de órdenes de compra" icon="pi pi-file-check" class="flex-grow-1"></app-page-header>
+        <app-page-header title="Validación de Documentos" subtitle="Carga y validación de órdenes de compra"
+            icon="pi pi-file-check" class="flex-grow-1"></app-page-header>
         <p-button label="Volver al Dashboard" icon="pi pi-arrow-left" [text]="true" (onClick)="goBack()"></p-button>
     </div>
-    
+
     <app-session-info></app-session-info>
     <p-toast></p-toast>
 
@@ -19,130 +20,143 @@
             <p-step-panels>
                 <!-- Step 1: Tipo de Usuario -->
                 <p-step-panel [value]="0">
-                    <div class="flex flex-column align-items-center justify-content-center py-6 gap-4">
-                        <h2 class="text-xl font-semibold">Seleccione su tipo de usuario</h2>
-                        <div class="flex gap-4">
-                            <div class="cursor-pointer border-2 border-round p-4 flex flex-column align-items-center gap-3 transition-colors hover:surface-hover"
-                                [class.border-primary]="tipoUsuario() === 'cliente'"
-                                [class.surface-card]="tipoUsuario() !== 'cliente'"
-                                [class.surface-50]="tipoUsuario() === 'cliente'" (click)="setTipoUsuario('cliente')">
-                                <i class="pi pi-user text-4xl text-primary"></i>
-                                <span class="font-medium">Soy Cliente</span>
-                            </div>
-                            <div class="cursor-pointer border-2 border-round p-4 flex flex-column align-items-center gap-3 transition-colors hover:surface-hover"
-                                [class.border-primary]="tipoUsuario() === 'agencia'"
-                                [class.surface-card]="tipoUsuario() !== 'agencia'"
-                                [class.surface-50]="tipoUsuario() === 'agencia'" (click)="setTipoUsuario('agencia')">
-                                <i class="pi pi-briefcase text-4xl text-primary"></i>
-                                <span class="font-medium">Soy Agencia</span>
+                    <ng-template pTemplate="content" let-activateCallback="activateCallback">
+                        <div class="flex flex-column align-items-center justify-content-center py-6 gap-4">
+                            <h2 class="text-xl font-semibold">Seleccione su tipo de usuario</h2>
+                            <div class="flex gap-4">
+                                <div class="cursor-pointer border-2 border-round p-4 flex flex-column align-items-center gap-3 transition-colors hover:surface-hover"
+                                    [class.border-primary]="tipoUsuario() === 'cliente'"
+                                    [class.surface-card]="tipoUsuario() !== 'cliente'"
+                                    [class.surface-50]="tipoUsuario() === 'cliente'"
+                                    (click)="setTipoUsuario('cliente')">
+                                    <i class="pi pi-user text-4xl text-primary"></i>
+                                    <span class="font-medium">Soy Cliente</span>
+                                </div>
+                                <div class="cursor-pointer border-2 border-round p-4 flex flex-column align-items-center gap-3 transition-colors hover:surface-hover"
+                                    [class.border-primary]="tipoUsuario() === 'agencia'"
+                                    [class.surface-card]="tipoUsuario() !== 'agencia'"
+                                    [class.surface-50]="tipoUsuario() === 'agencia'"
+                                    (click)="setTipoUsuario('agencia')">
+                                    <i class="pi pi-briefcase text-4xl text-primary"></i>
+                                    <span class="font-medium">Soy Agencia</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </ng-template>
                 </p-step-panel>
 
                 <!-- Step 2: Subir Excel -->
                 <p-step-panel [value]="1">
-                    <div class="flex flex-column gap-4 py-4">
-                        <p-message severity="info"
-                            text="Seleccione el archivo Excel de Valorización (.xlsx)"></p-message>
+                    <ng-template pTemplate="content" let-activateCallback="activateCallback">
+                        <div class="flex flex-column gap-4 py-4">
+                            <p-message severity="info"
+                                text="Seleccione el archivo Excel de Valorización (.xlsx)"></p-message>
 
-                        <div class="flex justify-content-center">
-                            <p-fileUpload mode="advanced" chooseLabel="Seleccionar Excel" accept=".xlsx"
-                                [maxFileSize]="10000000" [auto]="true" [customUpload]="true"
-                                (uploadHandler)="onExcelSelect($event)" [disabled]="uploading()">
-                            </p-fileUpload>
-                        </div>
+                            <div class="flex justify-content-center">
+                                <p-fileUpload mode="advanced" chooseLabel="Seleccionar Excel" accept=".xlsx"
+                                    [maxFileSize]="10000000" [auto]="true" [customUpload]="true"
+                                    (uploadHandler)="onExcelSelect($event)" [disabled]="uploading()">
+                                </p-fileUpload>
+                            </div>
 
-                        <div *ngIf="debugExcelValues().length > 0" class="surface-ground p-3 border-round">
-                            <h3 class="text-lg font-medium mb-2">Datos extraídos:</h3>
-                            <ul class="list-none p-0 m-0">
-                                <li *ngFor="let item of debugExcelValues()" class="mb-1 text-sm text-600">
-                                    <i class="pi pi-check-circle text-green-500 mr-2"></i>{{ item }}
-                                </li>
-                            </ul>
-                        </div>
+                            <div *ngIf="debugExcelValues().length > 0" class="surface-ground p-3 border-round">
+                                <h3 class="text-lg font-medium mb-2">Datos extraídos:</h3>
+                                <ul class="list-none p-0 m-0">
+                                    <li *ngFor="let item of debugExcelValues()" class="mb-1 text-sm text-600">
+                                        <i class="pi pi-check-circle text-green-500 mr-2"></i>{{ item }}
+                                    </li>
+                                </ul>
+                            </div>
 
-                        <div class="flex justify-content-between mt-4">
-                            <p-button label="Atrás" icon="pi pi-arrow-left" [text]="true"
-                                (onClick)="activeStep.set(0)"></p-button>
-                            <p-button label="Siguiente" icon="pi pi-arrow-right" (onClick)="activeStep.set(2)"
-                                [disabled]="!isExcelStepValid()"></p-button>
+                            <div class="flex justify-content-between mt-4">
+                                <p-button label="Atrás" icon="pi pi-arrow-left" [text]="true"
+                                    (onClick)="activeStep.set(0)"></p-button>
+                                <p-button label="Siguiente" icon="pi pi-arrow-right" (onClick)="activeStep.set(2)"
+                                    [disabled]="!isExcelStepValid()"></p-button>
+                            </div>
                         </div>
-                    </div>
+                    </ng-template>
                 </p-step-panel>
 
                 <!-- Step 3: Subir PDF -->
                 <p-step-panel [value]="2">
-                    <div class="flex flex-column gap-4 py-4">
-                        <p-message severity="info" text="Seleccione el archivo PDF de la Orden de Compra"></p-message>
+                    <ng-template pTemplate="content" let-activateCallback="activateCallback">
+                        <div class="flex flex-column gap-4 py-4">
+                            <p-message severity="info"
+                                text="Seleccione el archivo PDF de la Orden de Compra"></p-message>
 
-                        <div class="flex justify-content-center">
-                            <p-fileUpload mode="advanced" chooseLabel="Seleccionar PDF" accept=".pdf"
-                                [maxFileSize]="10000000" [auto]="true" [customUpload]="true"
-                                (uploadHandler)="onPdfSelect($event)" [disabled]="uploading()">
-                            </p-fileUpload>
-                        </div>
+                            <div class="flex justify-content-center">
+                                <p-fileUpload mode="advanced" chooseLabel="Seleccionar PDF" accept=".pdf"
+                                    [maxFileSize]="10000000" [auto]="true" [customUpload]="true"
+                                    (uploadHandler)="onPdfSelect($event)" [disabled]="uploading()">
+                                </p-fileUpload>
+                            </div>
 
-                        <div *ngIf="pdfThumbnail()" class="flex flex-column align-items-center gap-3 mt-3">
-                            <iframe [src]="pdfThumbnail() | safeUrl" width="100%" height="400px"
-                                class="border-1 surface-border border-round"></iframe>
+                            <div *ngIf="pdfThumbnail()" class="flex flex-column align-items-center gap-3 mt-3">
+                                <iframe [src]="pdfThumbnail() | safeUrl" width="100%" height="400px"
+                                    class="border-1 surface-border border-round"></iframe>
 
-                            <div
-                                class="flex align-items-center gap-2 p-3 surface-ground border-round w-full justify-content-center">
-                                <p-checkbox [ngModel]="manualPdfConfirmation()"
-                                    (ngModelChange)="manualPdfConfirmation.set($event)" [binary]="true"
-                                    inputId="pdfConfirm"></p-checkbox>
-                                <label for="pdfConfirm" class="font-medium">Confirmo que el PDF corresponde a la Orden
-                                    de Compra y está firmado.</label>
+                                <div
+                                    class="flex align-items-center gap-2 p-3 surface-ground border-round w-full justify-content-center">
+                                    <p-checkbox [ngModel]="manualPdfConfirmation()"
+                                        (ngModelChange)="manualPdfConfirmation.set($event)" [binary]="true"
+                                        inputId="pdfConfirm"></p-checkbox>
+                                    <label for="pdfConfirm" class="font-medium">Confirmo que el PDF corresponde a la
+                                        Orden
+                                        de Compra y está firmado.</label>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-content-between mt-4">
+                                <p-button label="Atrás" icon="pi pi-arrow-left" [text]="true"
+                                    (onClick)="activeStep.set(1)"></p-button>
+                                <p-button label="Siguiente" icon="pi pi-arrow-right" (onClick)="activeStep.set(3)"
+                                    [disabled]="!isPdfStepValid()"></p-button>
                             </div>
                         </div>
-
-                        <div class="flex justify-content-between mt-4">
-                            <p-button label="Atrás" icon="pi pi-arrow-left" [text]="true"
-                                (onClick)="activeStep.set(1)"></p-button>
-                            <p-button label="Siguiente" icon="pi pi-arrow-right" (onClick)="activeStep.set(3)"
-                                [disabled]="!isPdfStepValid()"></p-button>
-                        </div>
-                    </div>
+                    </ng-template>
                 </p-step-panel>
 
                 <!-- Step 4: Materiales y Confirmación -->
                 <p-step-panel [value]="3">
-                    <div class="flex flex-column gap-4 py-4">
-                        <div class="flex align-items-center gap-3 mb-4">
-                            <p-checkbox [ngModel]="deseaSubirMateriales()"
-                                (ngModelChange)="deseaSubirMateriales.set($event)" [binary]="true"
-                                inputId="materiales"></p-checkbox>
-                            <label for="materiales" class="text-xl font-medium">¿Desea subir materiales
-                                adicionales?</label>
-                        </div>
+                    <ng-template pTemplate="content" let-activateCallback="activateCallback">
+                        <div class="flex flex-column gap-4 py-4">
+                            <div class="flex align-items-center gap-3 mb-4">
+                                <p-checkbox [ngModel]="deseaSubirMateriales()"
+                                    (ngModelChange)="deseaSubirMateriales.set($event)" [binary]="true"
+                                    inputId="materiales"></p-checkbox>
+                                <label for="materiales" class="text-xl font-medium">¿Desea subir materiales
+                                    adicionales?</label>
+                            </div>
 
-                        <div *ngIf="deseaSubirMateriales()" class="fadein animation-duration-300">
-                            <p-message severity="info" text="Puede subir archivos adicionales hasta 1GB."></p-message>
-                            <p-fileUpload mode="advanced" chooseLabel="Seleccionar Materiales" [multiple]="true"
-                                [maxFileSize]="1073741824" [customUpload]="true"
-                                (uploadHandler)="onMaterialesSelect($event)" [auto]="true">
-                            </p-fileUpload>
+                            <div *ngIf="deseaSubirMateriales()" class="fadein animation-duration-300">
+                                <p-message severity="info"
+                                    text="Puede subir archivos adicionales hasta 1GB."></p-message>
+                                <p-fileUpload mode="advanced" chooseLabel="Seleccionar Materiales" [multiple]="true"
+                                    [maxFileSize]="1073741824" [customUpload]="true"
+                                    (uploadHandler)="onMaterialesSelect($event)" [auto]="true">
+                                </p-fileUpload>
 
-                            <div *ngIf="materiales().length > 0" class="mt-3">
-                                <h4 class="m-0 mb-2">Archivos seleccionados:</h4>
-                                <ul class="list-none p-0 m-0">
-                                    <li *ngFor="let file of materiales()" class="mb-1 text-sm">
-                                        <i class="pi pi-file mr-2"></i>{{ file.name }} ({{ file.size / 1024 / 1024 |
-                                        number:'1.2-2' }} MB)
-                                    </li>
-                                </ul>
+                                <div *ngIf="materiales().length > 0" class="mt-3">
+                                    <h4 class="m-0 mb-2">Archivos seleccionados:</h4>
+                                    <ul class="list-none p-0 m-0">
+                                        <li *ngFor="let file of materiales()" class="mb-1 text-sm">
+                                            <i class="pi pi-file mr-2"></i>{{ file.name }} ({{ file.size / 1024 / 1024 |
+                                            number:'1.2-2' }} MB)
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-content-between mt-4">
+                                <p-button label="Atrás" icon="pi pi-arrow-left" [text]="true"
+                                    (onClick)="activeStep.set(2)"></p-button>
+                                <p-button label="Finalizar y Enviar" icon="pi pi-check" severity="success"
+                                    (onClick)="onSubmit()" [loading]="uploading()" [disabled]="envioExitoso()">
+                                </p-button>
                             </div>
                         </div>
-
-                        <div class="flex justify-content-between mt-4">
-                            <p-button label="Atrás" icon="pi pi-arrow-left" [text]="true"
-                                (onClick)="activeStep.set(2)"></p-button>
-                            <p-button label="Finalizar y Enviar" icon="pi pi-check" severity="success"
-                                (onClick)="onSubmit()" [loading]="uploading()" [disabled]="envioExitoso()">
-                            </p-button>
-                        </div>
-                    </div>
+                    </ng-template>
                 </p-step-panel>
             </p-step-panels>
         </p-stepper>

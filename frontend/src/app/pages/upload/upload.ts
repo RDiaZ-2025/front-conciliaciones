@@ -10,7 +10,7 @@ import { ToastModule } from 'primeng/toast';
 import { MessageModule } from 'primeng/message';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { CheckboxModule } from 'primeng/checkbox';
-import { MessageService } from 'primeng/api';
+import { MessageService, SharedModule } from 'primeng/api';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
 import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
 import { UploadService } from './upload.service';
@@ -31,6 +31,7 @@ import { SafeUrlPipe } from '../../pipes/safe-url.pipe';
     MessageModule,
     RadioButtonModule,
     CheckboxModule,
+    SharedModule,
     SafeUrlPipe,
     PageHeaderComponent,
     SessionInfoComponent
