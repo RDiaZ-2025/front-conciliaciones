@@ -1,0 +1,23 @@
+:host {
+    display: block;
+    width: 100%;
+}
+
+::ng-deep {
+    .p-stepper {
+        .p-stepper-header {
+            font-weight: 600;
+        }
+    }
+
+    .p-fileupload-buttonbar {
+        background: transparent;
+        border: none;
+        padding: 0;
+    }
+
+    .p-fileupload-content {
+        border: 1px dashed var(--surface-border);
+        border-radius: 6px;
+    }
+}

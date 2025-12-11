@@ -1,0 +1,112 @@
+<div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
+    <p-toast></p-toast>
+    
+    <div class="flex justify-content-between align-items-center">
+        <h1 class="text-3xl font-bold m-0">Portada 15 Minutos</h1>
+    </div>
+
+    <div class="grid">
+        <div class="col-12 md:col-6">
+            <div class="card p-4 surface-card border-round shadow-2 h-full">
+                <h2 class="text-xl font-bold mb-3">Imagen Actual</h2>
+                <div class="flex flex-column align-items-center gap-3">
+                    <p-image 
+                        [src]="currentImageUrl()" 
+                        alt="Portada actual" 
+                        width="100%" 
+                        [preview]="true"
+                        styleClass="w-full border-round overflow-hidden shadow-1"
+                        imageClass="w-full h-auto object-cover">
+                    </p-image>
+                    <p-button 
+                        label="Copiar Enlace" 
+                        icon="pi pi-copy" 
+                        severity="secondary" 
+                        (onClick)="copyLink(currentImageUrl())">
+                    </p-button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 md:col-6">
+            <div class="card p-4 surface-card border-round shadow-2 h-full">
+                <h2 class="text-xl font-bold mb-3">Subir Nueva Imagen</h2>
+                <div class="flex flex-column gap-3">
+                    <p-fileUpload 
+                        mode="advanced" 
+                        chooseLabel="Seleccionar" 
+                        accept="image/*" 
+                        [maxFileSize]="5000000" 
+                        [auto]="true" 
+                        [customUpload]="true"
+                        (uploadHandler)="onFileSelect($event)"
+                        [showUploadButton]="false"
+                        [showCancelButton]="false">
+                    </p-fileUpload>
+
+                    <div *ngIf="previewUrl()" class="flex flex-column gap-3 align-items-center fadein animation-duration-300">
+                        <img [src]="previewUrl()" alt="Preview" class="w-full border-round shadow-1" style="max-height: 300px; object-fit: contain;">
+                        
+                        <div class="flex gap-2">
+                            <p-button 
+                                label="Cancelar" 
+                                icon="pi pi-times" 
+                                severity="secondary" 
+                                (onClick)="clearSelection()">
+                            </p-button>
+                            <p-button 
+                                label="Subir y Actualizar" 
+                                icon="pi pi-cloud-upload" 
+                                (onClick)="upload()" 
+                                [loading]="uploading()">
+                            </p-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card p-4 surface-card border-round shadow-2">
+        <h2 class="text-xl font-bold mb-3">Historial</h2>
+        <p-table [value]="history()" [rows]="5" [paginator]="true" styleClass="p-datatable-sm">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>Fecha</th>
+                    <th>Usuario</th>
+                    <th>Imagen</th>
+                    <th>Acciones</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-item>
+                <tr>
+                    <td>{{ item.timestamp | date:'dd/MM/yyyy HH:mm' }}</td>
+                    <td>{{ item.uploaderLog }}</td>
+                    <td>
+                        <p-image 
+                            [src]="item.url" 
+                            alt="History" 
+                            width="50" 
+                            [preview]="true"
+                            styleClass="vertical-align-middle">
+                        </p-image>
+                    </td>
+                    <td>
+                        <p-button 
+                            icon="pi pi-copy" 
+                            [text]="true" 
+                            [rounded]="true" 
+                            pTooltip="Copiar enlace" 
+                            (onClick)="copyLink(item.url)">
+                        </p-button>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="4" class="text-center p-4">No hay historial disponible.</td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>

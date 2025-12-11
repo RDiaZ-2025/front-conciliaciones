@@ -2,13 +2,17 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+
+// PrimeNG Imports
+import { CardModule } from 'primeng/card';
+import { InputTextModule } from 'primeng/inputtext';
+import { PasswordModule } from 'primeng/password';
+import { ButtonModule } from 'primeng/button';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { FloatLabelModule } from 'primeng/floatlabel';
 
 import { AuthService } from '../../services/auth';
 import { PERMISSIONS } from '../../constants/permissions';
@@ -20,14 +24,16 @@ import { PERMISSIONS } from '../../constants/permissions';
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule
+    CardModule,
+    InputTextModule,
+    PasswordModule,
+    ButtonModule,
+    ToastModule,
+    IconFieldModule,
+    InputIconModule,
+    FloatLabelModule
   ],
+  providers: [MessageService],
   templateUrl: './login.html',
   styleUrl: './login.scss'
 })
@@ -35,39 +41,36 @@ export class LoginComponent {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private router = inject(Router);
-  private snackBar = inject(MatSnackBar);
+  private messageService = inject(MessageService);
 
   loginForm = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required]]
   });
 
-  hidePassword = signal(true);
   loading = signal(false);
-  error = signal<string | null>(null);
-
-  togglePasswordVisibility(event: MouseEvent) {
-    event.preventDefault();
-    this.hidePassword.update(value => !value);
-  }
 
   onSubmit() {
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
+      this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'Por favor, complete todos los campos requeridos.' });
       return;
     }
 
     this.loading.set(true);
-    this.error.set(null);
 
     const { email, password } = this.loginForm.value;
 
     this.authService.login({ email: email!, password: password! }).subscribe({
       next: (response) => {
         if (response.success) {
-           this.navigateBasedOnPermissions();
+           this.messageService.add({ severity: 'success', summary: 'Bienvenido', detail: 'Inicio de sesión exitoso' });
+           // Small delay to show the toast
+           setTimeout(() => {
+             this.navigateBasedOnPermissions();
+           }, 500);
         } else {
-           this.error.set(response.message || 'Error al iniciar sesión');
+           this.messageService.add({ severity: 'error', summary: 'Error', detail: response.message || 'Error al iniciar sesión' });
            this.loading.set(false);
         }
       },
@@ -78,9 +81,9 @@ export class LoginComponent {
         if (errorMessage.toLowerCase().includes('deshabilitado') || 
             errorMessage.toLowerCase().includes('sin permisos') || 
             errorMessage.toLowerCase().includes('disabled')) {
-          this.error.set('Usuario deshabilitado o sin permisos. Por favor, contacte al administrador.');
+          this.messageService.add({ severity: 'error', summary: 'Acceso Denegado', detail: 'Usuario deshabilitado o sin permisos. Contacte al administrador.' });
         } else {
-          this.error.set(errorMessage);
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: errorMessage });
         }
       }
     });

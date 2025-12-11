@@ -1,0 +1,21 @@
+// Admin Page Styles
+// Most styles are handled by PrimeFlex utility classes in the HTML
+
+:host {
+    display: block;
+    width: 100%;
+}
+
+// Custom overrides for PrimeNG components if necessary
+::ng-deep {
+    .p-toolbar {
+        border-radius: 0;
+    }
+    
+    .p-datatable {
+        .p-datatable-header {
+            background: transparent;
+            border: none;
+        }
+    }
+}

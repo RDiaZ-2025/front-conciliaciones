@@ -1,0 +1,68 @@
+<div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
+    <p-toast></p-toast>
+
+    <div class="flex justify-content-between align-items-center">
+        <h1 class="text-3xl font-bold m-0">Documentos Subidos por Usuario</h1>
+    </div>
+
+    <div class="card p-4 surface-card border-round shadow-2">
+        <p-table #dt [value]="documents()" [rows]="10" [paginator]="true"
+            [globalFilterFields]="['user_name', 'user_email', 'status', 'idfolder']"
+            [tableStyle]="{ 'min-width': '75rem' }" [rowHover]="true" dataKey="id"
+            currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} registros"
+            [showCurrentPageReport]="true" [loading]="loading()">
+
+            <ng-template pTemplate="caption">
+                <div class="flex align-items-center justify-content-between">
+                    <span class="p-input-icon-left">
+                        <p-iconField iconPosition="left">
+                            <p-inputIcon styleClass="pi pi-search" />
+                            <input pInputText type="text"
+                                (input)="dt.filterGlobal($any($event.target).value, 'contains')"
+                                placeholder="Buscar..." />
+                        </p-iconField>
+                    </span>
+                    <p-button icon="pi pi-refresh" [rounded]="true" [text]="true" (onClick)="loadDocuments()"
+                        pTooltip="Recargar"></p-button>
+                </div>
+            </ng-template>
+
+            <ng-template pTemplate="header">
+                <tr>
+                    <th pSortableColumn="id">ID <p-sortIcon field="id"></p-sortIcon></th>
+                    <th pSortableColumn="Fecha">Fecha <p-sortIcon field="Fecha"></p-sortIcon></th>
+                    <th pSortableColumn="user_name">Usuario <p-sortIcon field="user_name"></p-sortIcon></th>
+                    <th pSortableColumn="user_email">Email <p-sortIcon field="user_email"></p-sortIcon></th>
+                    <th pSortableColumn="status">Estado <p-sortIcon field="status"></p-sortIcon></th>
+                    <th pSortableColumn="idfolder">Carpeta (GUID) <p-sortIcon field="idfolder"></p-sortIcon></th>
+                    <th>Acciones</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-doc>
+                <tr>
+                    <td>{{ doc.id }}</td>
+                    <td>{{ doc.Fecha | date:'dd/MM/yyyy HH:mm' }}</td>
+                    <td>{{ doc.user_name || 'N/A' }}</td>
+                    <td>{{ doc.user_email || 'N/A' }}</td>
+                    <td>
+                        <p-tag [value]="doc.status" [severity]="getStatusSeverity(doc.status)"></p-tag>
+                    </td>
+                    <td><span class="text-sm font-mono surface-100 p-1 border-round">{{ doc.idfolder }}</span></td>
+                    <td>
+                        <p-button icon="pi pi-download" [rounded]="true" [text]="true" severity="help"
+                            (onClick)="downloadFiles(doc)" [disabled]="downloading()"
+                            pTooltip="Descargar Archivos (ZIP)">
+                        </p-button>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="7" class="text-center p-4">No se encontraron documentos.</td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>

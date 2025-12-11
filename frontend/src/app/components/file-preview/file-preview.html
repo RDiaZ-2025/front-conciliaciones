@@ -1,0 +1,83 @@
+<p-dialog [(visible)]="visible" [modal]="true" [style]="{width: '80vw', maxWidth: '1000px'}" [maximizable]="true"
+    [draggable]="false" [resizable]="false" (onHide)="onHide()" [header]="displayName()" styleClass="p-0">
+
+    <div class="flex flex-column align-items-center justify-content-center min-h-30rem bg-black-alpha-90 border-round relative overflow-hidden p-4"
+        *ngIf="!error()">
+
+        <!-- Image Preview -->
+        <ng-container *ngIf="fileType() === 'image' && fileUrl()">
+            <div class="overflow-auto w-full h-full flex align-items-center justify-content-center"
+                style="max-height: 70vh;">
+                <img [src]="fileUrl() | safeUrl" [alt]="displayName()"
+                    class="transition-transform transition-duration-300"
+                    [style.transform]="'scale(' + zoom() + ') rotate(' + rotation() + 'deg)'"
+                    style="max-width: 100%; max-height: 100%; object-fit: contain;" (error)="handleError('la imagen')">
+            </div>
+
+            <!-- Controls -->
+            <div class="absolute bottom-0 right-0 m-3 flex gap-2 bg-black-alpha-70 border-round p-2 z-5">
+                <p-button icon="pi pi-search-plus" [rounded]="true" [text]="true"
+                    styleClass="text-white hover:bg-white-alpha-10" (onClick)="zoomIn()" pTooltip="Acercar"></p-button>
+                <p-button icon="pi pi-search-minus" [rounded]="true" [text]="true"
+                    styleClass="text-white hover:bg-white-alpha-10" (onClick)="zoomOut()" pTooltip="Alejar"></p-button>
+                <p-button icon="pi pi-refresh" [rounded]="true" [text]="true"
+                    styleClass="text-white hover:bg-white-alpha-10" (onClick)="rotateLeft()"
+                    pTooltip="Rotar Izquierda"></p-button>
+                <p-button icon="pi pi-refresh" [rounded]="true" [text]="true"
+                    styleClass="text-white hover:bg-white-alpha-10" [style]="{ transform: 'scaleX(-1)' }"
+                    (onClick)="rotateRight()" pTooltip="Rotar Derecha"></p-button>
+            </div>
+        </ng-container>
+
+        <!-- Video Preview -->
+        <ng-container *ngIf="fileType() === 'video' && fileUrl()">
+            <video [src]="fileUrl() | safeUrl" controls class="w-full max-h-30rem border-round"
+                (error)="handleError('el video')">
+                Tu navegador no soporta la reproducción de video.
+            </video>
+        </ng-container>
+
+        <!-- Audio Preview -->
+        <ng-container *ngIf="fileType() === 'audio' && fileUrl()">
+            <div class="flex flex-column align-items-center gap-4 p-5 bg-white border-round w-full max-w-30rem">
+                <i class="pi pi-volume-up text-6xl text-primary"></i>
+                <div class="text-xl font-medium text-900 text-center">{{ displayName() }}</div>
+                <audio [src]="fileUrl() | safeUrl" controls class="w-full" (error)="handleError('el audio')">
+                    Tu navegador no soporta la reproducción de audio.
+                </audio>
+            </div>
+        </ng-container>
+
+        <!-- PDF Preview -->
+        <ng-container *ngIf="fileType() === 'pdf' && fileUrl()">
+            <iframe [src]="(fileUrl() + '#toolbar=1&navpanes=1&scrollbar=1') | safeUrl" width="100%" height="600px"
+                class="border-none border-round bg-white"></iframe>
+        </ng-container>
+
+        <!-- Document/Other Preview -->
+        <ng-container *ngIf="fileType() === 'document' || fileType() === 'unknown'">
+            <div class="flex flex-column align-items-center gap-3 p-5 bg-white border-round">
+                <i class="pi pi-file text-6xl text-gray-500"></i>
+                <div class="text-xl font-medium text-900">Vista previa no disponible</div>
+                <div class="text-gray-600 text-center">
+                    El archivo {{ displayName() }} no se puede previsualizar.<br>
+                    Descárgalo para verlo.
+                </div>
+                <p-button label="Descargar" icon="pi pi-download" (onClick)="download()"></p-button>
+            </div>
+        </ng-container>
+    </div>
+
+    <!-- Error State -->
+    <div class="flex flex-column align-items-center justify-content-center min-h-20rem gap-3" *ngIf="error()">
+        <i class="pi pi-exclamation-circle text-6xl text-red-500"></i>
+        <div class="text-xl font-medium text-red-500">{{ error() }}</div>
+        <p-button label="Cerrar" icon="pi pi-times" [text]="true" (onClick)="onHide()"></p-button>
+    </div>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cerrar" icon="pi pi-times" [text]="true" (onClick)="onHide()"></p-button>
+        <p-button label="Descargar" icon="pi pi-download" (onClick)="download()"
+            *ngIf="!error() && fileType() !== 'document' && fileType() !== 'unknown'"></p-button>
+    </ng-template>
+</p-dialog>

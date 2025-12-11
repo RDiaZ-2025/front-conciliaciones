@@ -11,24 +11,40 @@ export const routes: Routes = [
     component: LayoutComponent,
     canActivate: [authGuard],
     children: [
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' }, // Default to dashboard or upload
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       {
         path: 'admin',
-        loadComponent: () => import('./pages/login/login').then(m => m.LoginComponent) // Placeholder
+        loadComponent: () => import('./pages/admin/admin').then(m => m.AdminComponent)
       },
       {
         path: 'production',
-        loadComponent: () => import('./pages/login/login').then(m => m.LoginComponent) // Placeholder
+        loadComponent: () => import('./pages/production/production').then(m => m.ProductionComponent)
       },
       {
         path: 'upload',
-        loadComponent: () => import('./pages/login/login').then(m => m.LoginComponent) // Placeholder
+        loadComponent: () => import('./pages/upload/upload').then(m => m.UploadComponent)
+      },
+      {
+        path: 'load-documents',
+        loadComponent: () => import('./pages/load-documents/load-documents').then(m => m.LoadDocumentsComponent)
+      },
+      {
+        path: 'menus',
+        loadComponent: () => import('./pages/menus/menus').then(m => m.MenusComponent)
+      },
+      {
+        path: 'portada',
+        redirectTo: 'cover15minutes',
+        pathMatch: 'full'
+      },
+      {
+        path: 'cover15minutes',
+        loadComponent: () => import('./pages/cover15minutes/cover15minutes').then(m => m.Cover15MinutesComponent)
       },
       {
         path: 'dashboard',
-        loadComponent: () => import('./pages/login/login').then(m => m.LoginComponent) // Placeholder
+        loadComponent: () => import('./pages/dashboard/dashboard').then(m => m.DashboardComponent)
       },
-      // Add other routes here
     ]
   },
 

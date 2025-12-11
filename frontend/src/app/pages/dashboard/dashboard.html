@@ -1,0 +1,165 @@
+<div class="min-h-screen w-full surface-ground p-4 flex flex-column align-items-center relative">
+
+    <!-- Top Controls -->
+    <div class="w-full max-w-7xl py-2">
+        <div class="flex flex-row justify-content-center align-items-center gap-4">
+
+            <!-- Type Selector -->
+            <div class="surface-card p-1 border-round border-1 surface-border shadow-1">
+                <p-selectButton [options]="seguimientoOptions" [ngModel]="tipoSeguimiento()"
+                    (ngModelChange)="tipoSeguimiento.set($event)" optionLabel="label" optionValue="value">
+                </p-selectButton>
+            </div>
+
+            <!-- Date Selectors -->
+            <div class="surface-card p-1 border-round border-1 surface-border shadow-1 flex gap-2">
+                <p-select [options]="years" [ngModel]="selectedYear()" (ngModelChange)="selectedYear.set($event)"
+                    placeholder="Año" class="font-bold">
+                </p-select>
+                <p-select [options]="months" [ngModel]="selectedMonth()" (ngModelChange)="selectedMonth.set($event)"
+                    placeholder="Todos" [showClear]="true" class="font-bold">
+                </p-select>
+            </div>
+
+            <!-- Action Buttons -->
+            @if (hasPermission(PERMISSIONS.DOCUMENT_UPLOAD)) {
+            <p-button label="Cargar" icon="pi pi-upload" severity="secondary" variant="outlined"
+                (onClick)="onGoToUpload()">
+            </p-button>
+            }
+
+            @if (hasPermission(PERMISSIONS.ADMIN_PANEL)) {
+            <p-button label="Admin" icon="pi pi-cog" severity="secondary" variant="outlined" (onClick)="onGoToAdmin()">
+            </p-button>
+            }
+        </div>
+    </div>
+
+    <!-- Chart Section -->
+    <div class="w-full max-w-7xl mb-5">
+        <div class="surface-card p-4 border-round-xl border-1 surface-border shadow-3 relative">
+            <h2 class="text-2xl font-bold text-900 mb-4">Tendencia anual</h2>
+
+            <div class="chart-container flex justify-content-center">
+                <svg width="900" height="280" style="overflow: visible;">
+                    <!-- Grid Lines -->
+                    <line x1="100" y1="0" x2="100" y2="220" class="stroke-300" stroke-width="1" />
+                    <line x1="100" y1="220" x2="880" y2="220" class="stroke-300" stroke-width="1" />
+
+                    @for (y of yTicks(); track $index) {
+                    <line x1="100" [attr.y1]="y" x2="880" [attr.y2]="y" class="stroke-200" stroke-dasharray="2 2" />
+                    }
+
+                    @for (label of yLabels(); track $index) {
+                    <text x="95" [attr.y]="yTicks()[$index] + 5" font-size="12" class="fill-text-secondary"
+                        text-anchor="end">{{label}}</text>
+                    }
+
+                    <!-- Data Bars and Points -->
+                    @for (h of historicoFiltrado(); track h.mes; let i = $index) {
+                    <g>
+                        <!-- Presupuestado Bar -->
+                        <rect
+                            [attr.x]="(historicoFiltrado().length === 1 ? 450 : 120 + i * ((900 - 140) / (historicoFiltrado().length - 1))) - 16"
+                            [attr.y]="getBarY(h.presupuestado)" width="10" [attr.height]="getBarHeight(h.presupuestado)"
+                            class="fill-blue-500 hover:fill-blue-600 cursor-pointer transition-colors transition-duration-200"
+                            rx="4"
+                            (mouseenter)="showTooltip($event, h.mes + ' - Presupuestado: $' + h.presupuestado.toLocaleString())"
+                            (mouseleave)="hideTooltip()" />
+
+                        <!-- Ejecutado Bar -->
+                        <rect
+                            [attr.x]="(historicoFiltrado().length === 1 ? 450 : 120 + i * ((900 - 140) / (historicoFiltrado().length - 1))) + 6"
+                            [attr.y]="getBarY(h.ejecutado)" width="10" [attr.height]="getBarHeight(h.ejecutado)"
+                            class="fill-green-500 hover:fill-green-600 cursor-pointer transition-colors transition-duration-200"
+                            rx="4"
+                            (mouseenter)="showTooltip($event, h.mes + ' - Ejecutado: $' + h.ejecutado.toLocaleString())"
+                            (mouseleave)="hideTooltip()" />
+
+                        <!-- Deviation Point -->
+                        <circle
+                            [attr.cx]="historicoFiltrado().length === 1 ? 450 : 120 + i * ((900 - 140) / (historicoFiltrado().length - 1))"
+                            [attr.cy]="getDifferenceY(h.presupuestado, h.ejecutado)" r="6"
+                            class="fill-red-500 stroke-white" stroke-width="2"
+                            (mouseenter)="showTooltip($event, h.mes + ' - Desviación: $' + (h.ejecutado - h.presupuestado).toLocaleString())"
+                            (mouseleave)="hideTooltip()" style="cursor: pointer;" />
+
+                        <!-- Month Label -->
+                        <text
+                            [attr.x]="historicoFiltrado().length === 1 ? 450 : 120 + i * ((900 - 140) / (historicoFiltrado().length - 1))"
+                            y="244" text-anchor="middle" font-size="14" class="fill-text-secondary">
+                            {{h.mes}}
+                        </text>
+                    </g>
+                    }
+
+                    <!-- Deviation Line -->
+                    <polyline [attr.points]="polylinePoints()" fill="none" class="stroke-red-500" stroke-width="2" />
+                </svg>
+            </div>
+
+            <!-- Custom Tooltip -->
+            @if (tooltip()) {
+            <div class="fixed surface-card p-2 border-round shadow-4 text-sm z-5 pointer-events-none border-1 surface-border"
+                [style.left.px]="tooltip()!.x + 10" [style.top.px]="tooltip()!.y - 10">
+                {{tooltip()!.content}}
+            </div>
+            }
+        </div>
+    </div>
+
+    <!-- Breakdown Table -->
+    <div class="w-full max-w-7xl mb-5">
+        <div class="surface-card p-4 border-round-xl border-1 surface-border shadow-3">
+            <div class="flex justify-content-between align-items-center mb-4">
+                <h2 class="text-2xl font-bold text-red-500 m-0">Desglose por categorías</h2>
+                <p-button label="Exportar CSV" icon="pi pi-download" [text]="true" (onClick)="exportToCSV()">
+                </p-button>
+            </div>
+
+            <p-table [value]="currentData().categorias" dataKey="nombre" styleClass="p-datatable-lg">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 40%">Categoría</th>
+                        <th class="text-right">Presupuestado</th>
+                        <th class="text-right">Ejecutado</th>
+                        <th class="text-right">Desviación</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-category let-expanded="expanded">
+                    <tr [class.surface-hover]="isExpanded(category.nombre)"
+                        (click)="category.subcategorias ? toggleCategory(category.nombre) : null"
+                        class="cursor-pointer transition-colors transition-duration-200 hover:surface-hover">
+                        <td>
+                            <div class="flex align-items-center">
+                                @if (category.subcategorias) {
+                                <i [class]="isExpanded(category.nombre) ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
+                                    class="mr-2 text-500"></i>
+                                } @else {
+                                <i class="pi pi-chevron-right mr-2 text-500"></i>
+                                }
+                                <span class="font-bold">{{category.nombre}}</span>
+                            </div>
+                        </td>
+                        <td class="text-right text-red-500 font-bold">${{category.presupuestado.toLocaleString()}}</td>
+                        <td class="text-right text-green-500 font-bold">${{category.ejecutado.toLocaleString()}}</td>
+                        <td class="text-right text-900 font-bold">${{(category.ejecutado -
+                            category.presupuestado).toLocaleString()}}</td>
+                    </tr>
+                    @if (isExpanded(category.nombre) && category.subcategorias) {
+                    @for (sub of category.subcategorias; track sub.nombre) {
+                    <tr class="surface-50">
+                        <td class="pl-6">
+                            <span class="text-600">{{sub.nombre}}</span>
+                        </td>
+                        <td class="text-right text-red-400">${{sub.presupuestado.toLocaleString()}}</td>
+                        <td class="text-right text-green-400">${{sub.ejecutado.toLocaleString()}}</td>
+                        <td class="text-right text-700">${{(sub.ejecutado - sub.presupuestado).toLocaleString()}}</td>
+                    </tr>
+                    }
+                    }
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
+</div>

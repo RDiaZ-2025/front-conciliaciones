@@ -1,0 +1,18 @@
+:host {
+    display: block;
+}
+
+img {
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+/* Ensure dialog content area has dark background for better preview contrast */
+::ng-deep .p-dialog-content {
+    background-color: transparent !important;
+    padding: 0 !important;
+}
+
+::ng-deep .p-dialog .p-dialog-header {
+    z-index: 1;
+}

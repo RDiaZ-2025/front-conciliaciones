@@ -1,0 +1,110 @@
+<div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
+    <p-toast></p-toast>
+    
+    <div class="flex justify-content-between align-items-center">
+        <h1 class="text-3xl font-bold m-0">Gestión de Menú</h1>
+        <div class="flex gap-2">
+            <p-button label="Nuevo Ítem" icon="pi pi-plus" (onClick)="openNew()"></p-button>
+            <p-button icon="pi pi-refresh" [text]="true" [rounded]="true" (onClick)="loadMenuItems()"></p-button>
+        </div>
+    </div>
+
+    <div class="card p-4 surface-card border-round shadow-2">
+        <p-treeTable [value]="menuItems()" [loading]="loading()" styleClass="p-treetable-sm">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>Etiqueta</th>
+                    <th>Icono</th>
+                    <th>Ruta</th>
+                    <th>Orden</th>
+                    <th>Activo</th>
+                    <th>Acciones</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-rowNode let-rowData="rowData">
+                <tr [ttRow]="rowNode">
+                    <td>
+                        <p-treeTableToggler [rowNode]="rowNode"></p-treeTableToggler>
+                        {{ rowData.label }}
+                    </td>
+                    <td>
+                        <i [class]="'pi ' + rowData.icon" *ngIf="rowData.icon"></i>
+                        <span *ngIf="rowData.icon" class="ml-2 text-sm text-500">{{ rowData.icon }}</span>
+                    </td>
+                    <td><span class="text-sm font-mono surface-100 p-1 border-round" *ngIf="rowData.route">{{ rowData.route }}</span></td>
+                    <td>{{ rowData.displayOrder }}</td>
+                    <td>
+                        <i class="pi" [ngClass]="{'pi-check-circle text-green-500': rowData.isActive, 'pi-times-circle text-red-500': !rowData.isActive}"></i>
+                    </td>
+                    <td>
+                        <div class="flex gap-2">
+                            <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="info" (onClick)="editItem(rowData)"></p-button>
+                            <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" (onClick)="deleteItem(rowData)"></p-button>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="6" class="text-center p-4">No hay ítems de menú definidos.</td>
+                </tr>
+            </ng-template>
+        </p-treeTable>
+    </div>
+
+    <p-dialog 
+        [(visible)]="dialogVisible" 
+        [header]="editingItem() ? 'Editar Ítem' : 'Nuevo Ítem'" 
+        [modal]="true" 
+        [style]="{width: '450px'}"
+        styleClass="p-fluid">
+        
+        <form [formGroup]="form" class="flex flex-column gap-3 pt-3">
+            <div class="field">
+                <label for="label" class="font-medium">Etiqueta</label>
+                <input pInputText id="label" formControlName="label" autofocus />
+            </div>
+
+            <div class="field">
+                <label for="icon" class="font-medium">Icono (PrimeIcons)</label>
+                <div class="p-inputgroup">
+                    <span class="p-inputgroup-addon"><i [class]="'pi ' + form.get('icon')?.value"></i></span>
+                    <input pInputText id="icon" formControlName="icon" placeholder="ej. pi-home" />
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="route" class="font-medium">Ruta</label>
+                <input pInputText id="route" formControlName="route" placeholder="ej. /dashboard" />
+            </div>
+
+            <div class="field">
+                <label for="parentId" class="font-medium">Padre</label>
+                <p-select 
+                    id="parentId" 
+                    formControlName="parentId" 
+                    [options]="parentOptions()" 
+                    optionLabel="label" 
+                    optionValue="value" 
+                    [showClear]="true"
+                    placeholder="Seleccione un padre">
+                </p-select>
+            </div>
+
+            <div class="field">
+                <label for="displayOrder" class="font-medium">Orden</label>
+                <p-inputNumber id="displayOrder" formControlName="displayOrder" [showButtons]="true" [min]="0"></p-inputNumber>
+            </div>
+
+            <div class="field-checkbox">
+                <p-checkbox formControlName="isActive" [binary]="true" inputId="isActive"></p-checkbox>
+                <label for="isActive" class="ml-2">Activo</label>
+            </div>
+        </form>
+
+        <ng-template pTemplate="footer">
+            <p-button label="Cancelar" icon="pi pi-times" [text]="true" (onClick)="dialogVisible.set(false)"></p-button>
+            <p-button label="Guardar" icon="pi pi-check" (onClick)="save()" [loading]="saving()"></p-button>
+        </ng-template>
+    </p-dialog>
+</div>
