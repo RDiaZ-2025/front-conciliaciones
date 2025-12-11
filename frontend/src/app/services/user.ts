@@ -1,7 +1,15 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  user?: T;
+  message?: string;
+}
 
 export interface User {
   id: number;
@@ -47,19 +55,27 @@ export class UserService {
   private apiUrl = `${environment.apiUrl}/users`;
 
   getAllUsers(): Observable<User[]> {
-    return this.http.get<User[]>(this.apiUrl);
+    return this.http.get<ApiResponse<User[]>>(this.apiUrl).pipe(
+      map(response => response.data || [])
+    );
   }
 
   getAllPermissions(): Observable<Permission[]> {
-    return this.http.get<Permission[]>(`${this.apiUrl}/permissions/all`);
+    return this.http.get<ApiResponse<Permission[]>>(`${this.apiUrl}/permissions/all`).pipe(
+      map(response => response.data || [])
+    );
   }
 
   createUser(user: CreateUserDto): Observable<User> {
-    return this.http.post<User>(this.apiUrl, user);
+    return this.http.post<ApiResponse<User>>(this.apiUrl, user).pipe(
+      map(response => response.user || response.data!)
+    );
   }
 
   updateUser(id: number, updates: UpdateUserDto): Observable<User> {
-    return this.http.put<User>(`${this.apiUrl}/${id}`, updates);
+    return this.http.put<ApiResponse<User>>(`${this.apiUrl}/${id}`, updates).pipe(
+      map(response => response.user || response.data!)
+    );
   }
 
   toggleUserStatus(id: number): Observable<{ newStatus: number }> {
