@@ -19,7 +19,7 @@
         <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="flex flex-column gap-4">
 
           <div class="w-full">
-            <p-floatLabel>
+            <p-floatLabel variant="in">
               <p-iconField iconPosition="left">
                 <p-inputIcon styleClass="pi pi-envelope" />
                 <input pInputText id="email" type="email" formControlName="email" class="w-full" />
@@ -37,7 +37,7 @@
           </div>
 
           <div class="w-full relative">
-            <p-floatLabel>
+            <p-floatLabel variant="in">
               <p-password id="password" formControlName="password" [toggleMask]="true" [feedback]="false"
                 styleClass="w-full" inputStyleClass="w-full" [inputStyle]="{'padding-left': '2.5rem'}"
                 [style]="{'width':'100%'}"></p-password>

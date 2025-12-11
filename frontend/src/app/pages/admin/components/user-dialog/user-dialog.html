@@ -1,0 +1,68 @@
+<form [formGroup]="userForm" class="flex flex-column gap-2 pt-3" style="min-width: 400px;">
+
+    <!-- Name Field -->
+    <div class="field mt-2">
+        <p-floatLabel variant="in">
+            <input pInputText id="name" formControlName="name" class="w-full" />
+            <label for="name">Nombre</label>
+        </p-floatLabel>
+        <small class="p-error block mt-1"
+            *ngIf="userForm.get('name')?.hasError('required') && userForm.get('name')?.touched">
+            El nombre es requerido
+        </small>
+    </div>
+
+    <!-- Email Field -->
+    <div class="field mt-2">
+        <p-floatLabel variant="in">
+            <input pInputText id="email" formControlName="email" type="email" class="w-full" />
+            <label for="email">Email</label>
+        </p-floatLabel>
+        <small class="p-error block mt-1"
+            *ngIf="userForm.get('email')?.hasError('required') && userForm.get('email')?.touched">
+            El email es requerido
+        </small>
+        <small class="p-error block mt-1"
+            *ngIf="userForm.get('email')?.hasError('email') && userForm.get('email')?.touched">
+            Email inválido
+        </small>
+    </div>
+
+    <!-- Password Field -->
+    <div class="field mt-2">
+        <p-floatLabel variant="in">
+            <p-password id="password" formControlName="password" [toggleMask]="true" [feedback]="false"
+                styleClass="w-full" inputStyleClass="w-full"></p-password>
+            <label for="password">{{ config.data.isEdit ? 'Nueva Contraseña (opcional)' : 'Contraseña' }}</label>
+        </p-floatLabel>
+        <small class="p-error block mt-1"
+            *ngIf="userForm.get('password')?.hasError('required') && userForm.get('password')?.touched">
+            La contraseña es requerida
+        </small>
+    </div>
+
+    <!-- Permissions Field -->
+    <div class="field mt-2">
+        <p-floatLabel variant="in">
+            <p-multiSelect id="permissions" [options]="availablePermissions" formControlName="permissions"
+                optionLabel="name" optionValue="name" display="chip" appendTo="body" styleClass="w-full">
+                <ng-template let-perm pTemplate="item">
+                    <div class="flex flex-column">
+                        <span class="font-bold">{{ getPermissionLabel(perm.name) }}</span>
+                        <span class="text-sm text-500">{{ getPermissionDescription(perm.name) }}</span>
+                    </div>
+                </ng-template>
+                <ng-template let-perm pTemplate="selectedItem">
+                    {{ getPermissionLabel(perm.name) }}
+                </ng-template>
+            </p-multiSelect>
+            <label for="permissions">Permisos</label>
+        </p-floatLabel>
+    </div>
+
+    <div class="flex justify-content-end gap-2 mt-4">
+        <p-button label="Cancelar" icon="pi pi-times" (onClick)="ref.close()" severity="secondary"></p-button>
+        <p-button label="{{ config.data.isEdit ? 'Actualizar' : 'Crear' }}" icon="pi pi-check" (onClick)="onSubmit()"
+            [disabled]="userForm.invalid"></p-button>
+    </div>
+</form>
