@@ -72,16 +72,26 @@ export class MenusComponent implements OnInit {
       { label: 'Ninguno (Raíz)', value: null }
     ];
 
-    const flatten = (list: MenuItem[], prefix = '') => {
-      list.forEach(item => {
-        options.push({ label: prefix + item.label, value: item.id });
-        if (item.children) {
-          flatten(item.children, prefix + '-- ');
-        }
-      });
-    };
+    // Only show items that are roots (no parentId)
+    // If items is a tree (roots only), we just iterate them.
+    // If items is flat, we filter.
+    // Based on buildTree, items seems to be roots with children nested.
+    // Let's assume items passed here are the roots.
 
-    flatten(items);
+    items.forEach(item => {
+      // If it's a root (no parentId check might be needed if flat list is passed, 
+      // but buildTree suggests items are structured. 
+      // However, loadMenuItems calls updateParentOptions(response.data).
+      // If response.data is flat, we need to filter.
+      // If response.data is tree, it only contains roots.
+
+      // Safer to check parentId if available, or just take all items if they are roots.
+      // Let's filter for safety if it's a flat list mixed with children.
+      if (!item.parentId) {
+        options.push({ label: item.label, value: item.id });
+      }
+    });
+
     this.parentOptions.set(options);
   }
 
@@ -113,7 +123,7 @@ export class MenusComponent implements OnInit {
 
   saveItem(data: MenuFormData) {
     this.saving.set(true);
-    
+
     const request = this.editingItem()
       ? this.menuService.updateMenuItem(this.editingItem()!.id, data)
       : this.menuService.createMenuItem(data);
