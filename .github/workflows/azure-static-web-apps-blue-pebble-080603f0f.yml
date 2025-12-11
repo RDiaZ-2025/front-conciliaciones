@@ -46,7 +46,7 @@ jobs:
           action: "upload"
           app_location: "frontend"
           api_location: "backend" 
-          output_location: "dist"
+          output_location: "dist/frontend/browser"
           github_id_token: ${{ steps.idtoken.outputs.result }}
         env:
           NODE_VERSION: '20'
