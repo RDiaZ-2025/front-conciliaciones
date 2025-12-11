@@ -1,110 +1,114 @@
 <div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
-    <app-page-header title="Portada 15 Minutos" subtitle="Gestión de la imagen de portada" icon="pi pi-image"></app-page-header>
+    <app-page-header title="Portada 15 Minutos" subtitle="Gestión de la imagen de portada"
+        icon="pi pi-image"></app-page-header>
     <app-session-info></app-session-info>
     <p-toast></p-toast>
-    
+
     <div class="grid">
-        <div class="col-12 md:col-6">
+        <div class="col-12 md:col-4">
             <div class="card p-4 surface-card border-round shadow-2 h-full">
                 <h2 class="text-xl font-bold mb-3">Imagen Actual</h2>
                 <div class="flex flex-column align-items-center gap-3">
-                    <p-image 
-                        [src]="currentImageUrl()" 
-                        alt="Portada actual" 
-                        width="100%" 
-                        [preview]="true"
+                    <p-image [src]="currentImageUrl()" alt="Portada actual" width="100%" [preview]="true"
                         styleClass="w-full border-round overflow-hidden shadow-1"
                         imageClass="w-full h-auto object-cover">
                     </p-image>
-                    <p-button 
-                        label="Copiar Enlace" 
-                        icon="pi pi-copy" 
-                        severity="secondary" 
+                    <p-button label="Copiar Enlace" icon="pi pi-copy" severity="secondary"
                         (onClick)="copyLink(currentImageUrl())">
                     </p-button>
                 </div>
             </div>
         </div>
 
-        <div class="col-12 md:col-6">
+        <div class="col-12 md:col-8">
             <div class="card p-4 surface-card border-round shadow-2 h-full">
                 <h2 class="text-xl font-bold mb-3">Subir Nueva Imagen</h2>
-                <div class="flex flex-column gap-3">
-                    <p-fileUpload 
-                        mode="advanced" 
-                        chooseLabel="Seleccionar" 
-                        accept="image/*" 
-                        [maxFileSize]="5000000" 
-                        [auto]="true" 
-                        [customUpload]="true"
-                        (uploadHandler)="onFileSelect($event)"
-                        [showUploadButton]="false"
-                        [showCancelButton]="false">
-                    </p-fileUpload>
+                <p-fileUpload #fileUpload mode="advanced" name="file" accept="image/*" [maxFileSize]="5000000"
+                    [customUpload]="true" (uploadHandler)="onCustomUpload($event)" [multiple]="false"
+                    styleClass="w-full">
 
-                    <div *ngIf="previewUrl()" class="flex flex-column gap-3 align-items-center fadein animation-duration-300">
-                        <img [src]="previewUrl()" alt="Preview" class="w-full border-round shadow-1" style="max-height: 300px; object-fit: contain;">
-                        
-                        <div class="flex gap-2">
-                            <p-button 
-                                label="Cancelar" 
-                                icon="pi pi-times" 
-                                severity="secondary" 
-                                (onClick)="clearSelection()">
-                            </p-button>
-                            <p-button 
-                                label="Subir y Actualizar" 
-                                icon="pi pi-cloud-upload" 
-                                (onClick)="upload()" 
-                                [loading]="uploading()">
-                            </p-button>
+                    <ng-template pTemplate="header" let-files let-chooseCallback="chooseCallback"
+                        let-clearCallback="clearCallback" let-uploadCallback="uploadCallback">
+                        <div class="flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div class="flex align-items-center gap-2">
+                                <p-button (onClick)="chooseCallback()" icon="pi pi-images" label="Seleccionar"
+                                    [outlined]="true"></p-button>
+                                <p-button (onClick)="uploadCallback()" icon="pi pi-cloud-upload" label="Subir"
+                                    severity="success" [disabled]="!files || files.length === 0"
+                                    [loading]="uploading()"></p-button>
+                                <p-button (onClick)="clearCallback()" icon="pi pi-times" label="Cancelar"
+                                    severity="danger" [outlined]="true"
+                                    [disabled]="!files || files.length === 0"></p-button>
+                            </div>
                         </div>
-                    </div>
-                </div>
+                    </ng-template>
+
+                    <ng-template pTemplate="content" let-files let-uploadedFiles="uploadedFiles"
+                        let-removeFileCallback="removeFileCallback">
+                        <div *ngIf="files?.length >0">
+                            <div class="flex flex-wrap p-0 sm:p-5 gap-5">
+                                <div *ngFor="let file of files; let i = index"
+                                    class="card m-0 px-6 flex flex-column border-1 surface-border align-items-center gap-3">
+                                    <div>
+                                        <img role="presentation" [alt]="file.name" [src]="file.objectURL" width="100"
+                                            height="50" class="shadow-2" style="object-fit: contain;" />
+                                    </div>
+                                    <span class="font-semibold">{{ file.name }}</span>
+                                    <div>{{ formatSize(file.size) }}</div>
+                                    <p-button icon="pi pi-times" (onClick)="removeFileCallback($event, i)"
+                                        [outlined]="true" [rounded]="true" severity="danger"></p-button>
+                                </div>
+                            </div>
+                        </div>
+                    </ng-template>
+
+                    <ng-template pTemplate="empty">
+                        <div class="flex align-items-center justify-content-center flex-column py-5">
+                            <i class="pi pi-cloud-upload border-2 border-circle p-5 text-8xl text-400 border-400"></i>
+                            <p class="mt-4 mb-0 text-xl font-medium text-600">Arrastra y suelta la imagen aquí para
+                                subirla.</p>
+                        </div>
+                    </ng-template>
+                </p-fileUpload>
             </div>
         </div>
     </div>
 
     <div class="card p-4 surface-card border-round shadow-2">
         <h2 class="text-xl font-bold mb-3">Historial</h2>
-        <p-table [value]="history()" [rows]="5" [paginator]="true" styleClass="p-datatable-sm">
-            <ng-template pTemplate="header">
-                <tr>
-                    <th>Fecha</th>
-                    <th>Usuario</th>
-                    <th>Imagen</th>
-                    <th>Acciones</th>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-item>
-                <tr>
-                    <td>{{ item.timestamp | date:'dd/MM/yyyy HH:mm' }}</td>
-                    <td>{{ item.uploaderLog }}</td>
-                    <td>
-                        <p-image 
-                            [src]="item.url" 
-                            alt="History" 
-                            width="50" 
-                            [preview]="true"
-                            styleClass="vertical-align-middle">
-                        </p-image>
-                    </td>
-                    <td>
-                        <p-button 
-                            icon="pi pi-copy" 
-                            [text]="true" 
-                            [rounded]="true" 
-                            pTooltip="Copiar enlace" 
-                            (onClick)="copyLink(item.url)">
+
+        <div class="grid">
+            <div *ngFor="let item of history()" class="col-12 md:col-6 lg:col-4 xl:col-3">
+                <div
+                    class="relative border-round overflow-hidden shadow-2 h-full surface-ground hover:shadow-4 transition-all transition-duration-200">
+                    <!-- Image -->
+                    <p-image [src]="item.url" alt="History" width="100%" [preview]="true"
+                        styleClass="w-full h-full block" imageClass="w-full h-full vertical-image">
+                    </p-image>
+
+                    <!-- Top Right Action Button -->
+                    <div class="absolute top-0 right-0 p-2 z-1">
+                        <p-button icon="pi pi-copy" [rounded]="true" [text]="true"
+                            styleClass="bg-black-alpha-40 text-white hover:bg-black-alpha-60 transition-colors transition-duration-200 border-none w-3rem h-3rem"
+                            pTooltip="Copiar enlace" tooltipPosition="left" (onClick)="copyLink(item.url)">
                         </p-button>
-                    </td>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="emptymessage">
-                <tr>
-                    <td colspan="4" class="text-center p-4">No hay historial disponible.</td>
-                </tr>
-            </ng-template>
-        </p-table>
+                    </div>
+
+                    <!-- Bottom Overlay Log -->
+                    <div class="absolute bottom-0 left-0 w-full p-3 overlay-gradient text-white z-1">
+                        <div class="font-bold text-sm mb-1 white-space-nowrap overflow-hidden text-overflow-ellipsis"
+                            [pTooltip]="item.uploaderLog">{{ item.uploaderLog }}</div>
+                        <div class="text-xs opacity-80 flex align-items-center gap-1">
+                            <i class="pi pi-clock text-xs"></i>
+                            {{ item.timestamp | date:'dd/MM/yyyy HH:mm' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div *ngIf="history().length === 0" class="col-12 text-center p-5">
+                <p class="text-600 text-xl">No hay historial disponible.</p>
+            </div>
+        </div>
     </div>
 </div>

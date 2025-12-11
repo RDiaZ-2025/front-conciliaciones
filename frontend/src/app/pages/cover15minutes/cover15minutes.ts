@@ -1,11 +1,10 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
-import { FileUploadModule } from 'primeng/fileupload';
+import { FileUploadModule, FileUpload } from 'primeng/fileupload';
 import { ImageModule } from 'primeng/image';
 import { CardModule } from 'primeng/card';
-import { TableModule } from 'primeng/table';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
@@ -26,7 +25,6 @@ import { CoverHistoryItem } from './cover15minutes.models';
     FileUploadModule,
     ImageModule,
     CardModule,
-    TableModule,
     ToastModule,
     TooltipModule,
     PageHeaderComponent,
@@ -42,6 +40,8 @@ export class Cover15MinutesComponent implements OnInit {
   private messageService = inject(MessageService);
   private authService = inject(AuthService);
 
+  @ViewChild('fileUpload') fileUpload!: FileUpload;
+
   // Constants (should match AzureStorageService config basically)
   private readonly containerName = "conciliacionesv1";
   private readonly storageAccountName = "autoconsumofileserver";
@@ -49,8 +49,6 @@ export class Cover15MinutesComponent implements OnInit {
 
   currentImageUrl = signal<string>('');
   history = signal<CoverHistoryItem[]>([]);
-  selectedFile = signal<File | null>(null);
-  previewUrl = signal<string | null>(null);
   uploading = signal<boolean>(false);
 
   ngOnInit() {
@@ -81,24 +79,25 @@ export class Cover15MinutesComponent implements OnInit {
     });
   }
 
-  onFileSelect(event: any) {
+  formatSize(bytes: number) {
+    if (bytes === 0) {
+      return '0 B';
+    }
+    const k = 1024;
+    const dm = 2;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  }
+
+  onCustomUpload(event: any) {
     const file = event.files[0];
     if (file) {
-      this.selectedFile.set(file);
-      this.previewUrl.set(URL.createObjectURL(file));
+      this.upload(file);
     }
   }
 
-  clearSelection() {
-    if (this.previewUrl()) {
-      URL.revokeObjectURL(this.previewUrl()!);
-    }
-    this.selectedFile.set(null);
-    this.previewUrl.set(null);
-  }
-
-  async upload() {
-    const file = this.selectedFile();
+  async upload(file: File) {
     if (!file) return;
 
     this.uploading.set(true);
@@ -116,14 +115,18 @@ export class Cover15MinutesComponent implements OnInit {
 
       // 3. Save to DB
       const historyUrl = `https://${this.storageAccountName}.blob.core.windows.net/${this.containerName}/${randomName}`;
+      const user = this.authService.currentUser();
+      const uploaderLog = user ? `${user.name} (${user.email})` : 'Unknown User';
 
-      this.coverService.createCover({ url: historyUrl }).subscribe({
+      this.coverService.createCover({ uploaderLog, url: historyUrl }).subscribe({
         next: () => {
           this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Portada actualizada' });
-          this.clearSelection();
           this.refreshCurrentImage();
           this.loadHistory();
           this.uploading.set(false);
+          if (this.fileUpload) {
+            this.fileUpload.clear();
+          }
         },
         error: (err: any) => {
           this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Error al guardar en BD' });
@@ -143,3 +146,4 @@ export class Cover15MinutesComponent implements OnInit {
     });
   }
 }
+

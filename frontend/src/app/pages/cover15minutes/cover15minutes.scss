@@ -2,3 +2,25 @@
     display: block;
     width: 100%;
 }
+
+.vertical-image {
+    aspect-ratio: 9/16;
+    object-fit: cover;
+    width: 100%;
+    display: block;
+}
+
+.overlay-gradient {
+    background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 60%, transparent 100%);
+    pointer-events: none; /* Allow clicks to pass through if needed, though here it's just text */
+}
+
+/* Ensure the p-image container fills the space correctly */
+::ng-deep .p-image.w-full {
+    width: 100%;
+    display: block;
+}
+
+::ng-deep .p-image.h-full {
+    height: 100%;
+}

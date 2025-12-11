@@ -9,13 +9,13 @@ import { CoverHistoryItem } from './cover15minutes.models';
 })
 export class Cover15MinutesService {
   private http = inject(HttpClient);
-  private apiUrl = `${environment.apiUrl}/cover-15-minute`;
+  private apiUrl = `${environment.apiUrl}/covers-15-minutes`;
 
   getAllCovers(): Observable<{ success: boolean; data: CoverHistoryItem[] }> {
     return this.http.get<{ success: boolean; data: CoverHistoryItem[] }>(this.apiUrl);
   }
 
-  createCover(data: { url: string }): Observable<any> {
+  createCover(data: { uploaderLog: string, url: string }): Observable<any> {
     return this.http.post(this.apiUrl, data);
   }
 }
