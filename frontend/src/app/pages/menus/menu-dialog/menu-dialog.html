@@ -1,0 +1,47 @@
+<p-dialog [visible]="visible" (visibleChange)="visibleChange.emit($event)"
+    [header]="item ? 'Editar Ítem' : 'Nuevo Ítem'" [modal]="true" [style]="{width: '450px'}">
+
+    <form [formGroup]="form" class="flex flex-column gap-2 pt-4">
+        <p-floatlabel variant="in">
+            <input pInputText id="label" formControlName="label" autocomplete="off" class="w-full" />
+            <label for="label">Etiqueta</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="in">
+            <i [class]="'pi ' + form.get('icon')?.value"
+                style="position: absolute; right: 0.75rem; top: 50%; margin-top: -0.5rem; z-index: 1;"></i>
+            <input pInputText id="icon" formControlName="icon" autocomplete="off" class="w-full" />
+            <label for="icon">Icono (PrimeIcons)</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="in">
+            <input pInputText id="route" formControlName="route" autocomplete="off" class="w-full" />
+            <label for="route">Ruta</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="in">
+            <p-select id="parentId" formControlName="parentId" [options]="parentOptions" optionLabel="label"
+                optionValue="value" [showClear]="true" class="w-full" appendTo="body">
+            </p-select>
+            <label for="parentId">Padre</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="in">
+            <p-inputNumber id="displayOrder" formControlName="displayOrder" [showButtons]="true" [min]="0"
+                class="w-full"></p-inputNumber>
+            <label for="displayOrder">Orden</label>
+        </p-floatlabel>
+
+        <div class="field-checkbox">
+            <p-checkbox formControlName="isActive" [binary]="true" inputId="isActive"></p-checkbox>
+            <label for="isActive">Activo</label>
+        </div>
+    </form>
+
+    <ng-template pTemplate="footer">
+        <button pButton label="Cancelar" icon="pi pi-times" class="p-button-text"
+            (click)="visibleChange.emit(false)"></button>
+        <button pButton label="Guardar" icon="pi pi-check" class="p-button-text" (click)="onSubmit()"
+            [loading]="saving"></button>
+    </ng-template>
+</p-dialog>

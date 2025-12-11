@@ -1,37 +1,26 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TreeTableModule } from 'primeng/treetable';
 import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
-import { InputTextModule } from 'primeng/inputtext';
-import { InputNumberModule } from 'primeng/inputnumber';
-import { CheckboxModule } from 'primeng/checkbox';
-import { SelectModule } from 'primeng/select';
 import { ToastModule } from 'primeng/toast';
 import { MessageService, TreeNode } from 'primeng/api';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
 import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
+import { MenuDialogComponent } from './menu-dialog/menu-dialog';
 import { MenusService } from './menus.service';
-import { MenuItem } from './menus.models';
+import { MenuItem, MenuFormData } from './menus.models';
 
 @Component({
   selector: 'app-menus',
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
-    ReactiveFormsModule,
     TreeTableModule,
     ButtonModule,
-    DialogModule,
-    InputTextModule,
-    InputNumberModule,
-    CheckboxModule,
-    SelectModule,
     ToastModule,
     PageHeaderComponent,
-    SessionInfoComponent
+    SessionInfoComponent,
+    MenuDialogComponent
   ],
   providers: [MessageService],
   templateUrl: './menus.html',
@@ -40,7 +29,6 @@ import { MenuItem } from './menus.models';
 export class MenusComponent implements OnInit {
   private menuService = inject(MenusService);
   private messageService = inject(MessageService);
-  private fb = inject(FormBuilder);
 
   menuItems = signal<TreeNode[]>([]);
   rawMenuItems = signal<MenuItem[]>([]);
@@ -49,19 +37,7 @@ export class MenusComponent implements OnInit {
   saving = signal<boolean>(false);
   editingItem = signal<MenuItem | null>(null);
 
-  form: FormGroup;
   parentOptions = signal<{ label: string, value: number | null }[]>([]);
-
-  constructor() {
-    this.form = this.fb.group({
-      label: ['', Validators.required],
-      icon: [''],
-      route: [''],
-      parentId: [null],
-      displayOrder: [0, Validators.required],
-      isActive: [true]
-    });
-  }
 
   ngOnInit() {
     this.loadMenuItems();
@@ -111,27 +87,11 @@ export class MenusComponent implements OnInit {
 
   openNew() {
     this.editingItem.set(null);
-    this.form.reset({
-      label: '',
-      icon: '',
-      route: '',
-      parentId: null,
-      displayOrder: 0,
-      isActive: true
-    });
     this.dialogVisible.set(true);
   }
 
   editItem(item: MenuItem) {
     this.editingItem.set(item);
-    this.form.patchValue({
-      label: item.label,
-      icon: item.icon,
-      route: item.route,
-      parentId: item.parentId,
-      displayOrder: item.displayOrder,
-      isActive: item.isActive
-    });
     this.dialogVisible.set(true);
   }
 
@@ -151,11 +111,9 @@ export class MenusComponent implements OnInit {
     });
   }
 
-  save() {
-    if (this.form.invalid) return;
-
+  saveItem(data: MenuFormData) {
     this.saving.set(true);
-    const data = this.form.value;
+    
     const request = this.editingItem()
       ? this.menuService.updateMenuItem(this.editingItem()!.id, data)
       : this.menuService.createMenuItem(data);
