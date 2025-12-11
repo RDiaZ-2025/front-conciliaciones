@@ -1,12 +1,12 @@
 import React from "react";
-import { 
-  Box, 
-  Button, 
-  TextField, 
-  Paper, 
-  Typography, 
-  InputAdornment, 
-  IconButton, 
+import {
+  Box,
+  Button,
+  TextField,
+  Paper,
+  Typography,
+  InputAdornment,
+  IconButton,
   CircularProgress,
   Container,
   Stack,
@@ -15,7 +15,7 @@ import {
   Avatar
 } from "@mui/material";
 import { Visibility, VisibilityOff, Email, Lock } from "@mui/icons-material";
-import claroMediaLogo from "/Claro-Media-Logo.jpg";
+import claroMediaLogo from "/claro-media-logo.png";
 import DarkModeToggle from "../../components/DarkModeToggle";
 import { useLogin } from './useLogin';
 import type { LoginProps } from './types';
@@ -60,10 +60,10 @@ const Login: React.FC<LoginProps> = ({ onLogin, darkMode, setDarkMode }) => {
         }}
       >
         <Box sx={{ position: "absolute", top: theme => theme.spacing(2), right: theme => theme.spacing(2), zIndex: theme => theme.zIndex.modal }}>
-          <DarkModeToggle 
-            darkMode={darkMode} 
-            setDarkMode={setDarkMode} 
-            onLogoClick={() => {}}
+          <DarkModeToggle
+            darkMode={darkMode}
+            setDarkMode={setDarkMode}
+            onLogoClick={() => { }}
             hideLogo={true}
           />
         </Box>
@@ -79,18 +79,18 @@ const Login: React.FC<LoginProps> = ({ onLogin, darkMode, setDarkMode }) => {
               borderRadius: 0
             }}
           />
-          <Paper 
-            elevation={8} 
-            sx={{ 
-              p: theme => theme.spacing(4), 
-              borderRadius: theme => theme.spacing(2), 
+          <Paper
+            elevation={8}
+            sx={{
+              p: theme => theme.spacing(4),
+              borderRadius: theme => theme.spacing(2),
               width: "100%",
               maxWidth: theme => theme.spacing(50),
               bgcolor: 'background.paper'
             }}
           >
-            <Typography 
-              variant="h4" 
+            <Typography
+              variant="h4"
               component="h1"
               sx={{
                 fontWeight: theme => theme.typography.fontWeightRegular,
@@ -102,7 +102,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, darkMode, setDarkMode }) => {
               Iniciar sesión
             </Typography>
 
-            <Typography  
+            <Typography
               component="h3"
               sx={{
                 fontWeight: theme => theme.typography.fontWeightLight,
@@ -113,7 +113,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, darkMode, setDarkMode }) => {
             >
               Bienvenido a Claro Media
             </Typography>
-            
+
             <Box component="form" onSubmit={handleSubmit} noValidate>
               <Stack spacing={3}>
                 <FormControl fullWidth>
@@ -134,7 +134,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, darkMode, setDarkMode }) => {
                     }}
                   />
                 </FormControl>
-                
+
                 <FormControl fullWidth>
                   <TextField
                     label="Contraseña"
@@ -151,8 +151,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, darkMode, setDarkMode }) => {
                       ),
                       endAdornment: (
                         <InputAdornment position="end">
-                          <IconButton 
-                            onClick={() => setShowPassword(!showPassword)} 
+                          <IconButton
+                            onClick={() => setShowPassword(!showPassword)}
                             edge="end"
                             aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                           >
@@ -163,13 +163,13 @@ const Login: React.FC<LoginProps> = ({ onLogin, darkMode, setDarkMode }) => {
                     }}
                   />
                 </FormControl>
-                
+
                 {error && (
                   <Alert severity="error" sx={{ mt: 1 }}>
                     {error}
                   </Alert>
                 )}
-                
+
                 <Button
                   type="submit"
                   variant="contained"

@@ -13,7 +13,7 @@ import LoadDocumentsOCbyUserView from './pages/LoadDocumentsOCbyUserView';
 import Portada15Minutos from './pages/Portada15Minutos';
 import MenuManagement from './pages/MenuManagement';
 import DarkModeToggle from './components/DarkModeToggle';
-import logoClaroMedia from '/Claro-Media-Logo.jpg';
+import logoClaroMedia from '/claro-media-logo.png';
 import { PERMISSIONS } from './constants/auth';
 import createAppTheme from './styles/theme';
 

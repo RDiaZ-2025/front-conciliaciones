@@ -49,6 +49,15 @@ export class LayoutComponent {
 
   constructor() {
     this.fetchMenuItems();
+    this.initTheme();
+  }
+
+  initTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      this.isDarkMode.set(true);
+      document.querySelector('html')?.classList.add('my-app-dark');
+    }
   }
 
   toggleDrawer() {
@@ -64,8 +73,10 @@ export class LayoutComponent {
     const element = document.querySelector('html');
     if (this.isDarkMode()) {
       element?.classList.add('my-app-dark');
+      localStorage.setItem('theme', 'dark');
     } else {
       element?.classList.remove('my-app-dark');
+      localStorage.setItem('theme', 'light');
     }
   }
 

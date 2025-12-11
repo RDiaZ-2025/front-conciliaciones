@@ -38,7 +38,7 @@ import {
 } from "@mui/icons-material";
 import { useAuth } from '../../contexts/AuthContext';
 import { PERMISSIONS } from '../../constants/auth';
-// import claroMediaLogo from "../../assets/Claro-Media-Logo.jpg";
+// import claroMediaLogo from "../../assets/claro-media-logo.png";
 import DarkModeToggle from "../../components/DarkModeToggle";
 import { useUploadForm } from './useUploadForm';
 import type { UploadFormProps } from './types';
@@ -777,7 +777,7 @@ const UploadForm: React.FC<UploadFormProps> = (props) => {
     >
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 4 }}>
         <Avatar
-          src="/Claro-Media-Logo.jpg"
+          src="/claro-media-logo.png"
           alt="Claro Media Logo"
           className="heartbeat"
           sx={{
