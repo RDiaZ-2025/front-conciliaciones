@@ -10,6 +10,8 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
+import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
 import { ProductionService } from '../../services/production';
 import { ProductionRequest, WORKFLOW_STAGES } from './production.models';
 import { ProductionDialogComponent } from './components/production-dialog/production-dialog';
@@ -29,7 +31,9 @@ import { UploadedFile } from './production.models';
     ToastModule,
     ConfirmDialogModule,
     TooltipModule,
-    FilePreviewComponent
+    FilePreviewComponent,
+    PageHeaderComponent,
+    SessionInfoComponent
   ],
   providers: [DialogService, ConfirmationService, MessageService],
   templateUrl: './production.html',

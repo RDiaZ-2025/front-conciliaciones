@@ -1,9 +1,7 @@
 <div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
+    <app-page-header title="Documentos Subidos por Usuario" subtitle="Historial y descarga de documentos" icon="pi pi-folder-open"></app-page-header>
+    <app-session-info></app-session-info>
     <p-toast></p-toast>
-
-    <div class="flex justify-content-between align-items-center">
-        <h1 class="text-3xl font-bold m-0">Documentos Subidos por Usuario</h1>
-    </div>
 
     <div class="card p-4 surface-card border-round shadow-2">
         <p-table #dt [value]="documents()" [rows]="10" [paginator]="true"

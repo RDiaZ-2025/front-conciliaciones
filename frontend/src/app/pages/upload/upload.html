@@ -1,10 +1,11 @@
 <div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
-    <p-toast></p-toast>
-
-    <div class="flex justify-content-between align-items-center">
-        <h1 class="text-3xl font-bold m-0">Validación de Documentos</h1>
+    <div class="flex justify-content-between align-items-start">
+        <app-page-header title="Validación de Documentos" subtitle="Carga y validación de órdenes de compra" icon="pi pi-file-check" class="flex-grow-1"></app-page-header>
         <p-button label="Volver al Dashboard" icon="pi pi-arrow-left" [text]="true" (onClick)="goBack()"></p-button>
     </div>
+    
+    <app-session-info></app-session-info>
+    <p-toast></p-toast>
 
     <div class="card p-4 surface-card border-round shadow-2">
         <p-stepper [value]="activeStep()" (valueChange)="onActiveStepChange($event)" [linear]="true">

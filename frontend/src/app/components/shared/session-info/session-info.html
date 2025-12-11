@@ -1,0 +1,12 @@
+<p-card styleClass="border-round-2xl surface-card shadow-1">
+    <div class="flex align-items-center gap-4">
+        <div class="flex align-items-center justify-content-center p-3 border-round-xl surface-100">
+            <i class="pi pi-user text-primary text-xl"></i>
+        </div>
+        <div class="flex flex-column">
+            <h3 class="m-0 text-lg font-medium mb-1">Sesión Activa</h3>
+            <p class="m-0 text-600">Conectado como <strong class="text-900">{{ currentUser()?.name }}</strong> ({{
+                currentUser()?.email }})</p>
+        </div>
+    </div>
+</p-card>

@@ -10,6 +10,8 @@ import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
+import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
+import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
 import { LoadDocumentsService } from './load-documents.service';
 import { AzureStorageService } from '../../services/azure-storage';
 import { LoadDocument } from './load-documents.models';
@@ -29,7 +31,9 @@ import { saveAs } from 'file-saver';
     InputIconModule,
     TagModule,
     ToastModule,
-    TooltipModule
+    TooltipModule,
+    PageHeaderComponent,
+    SessionInfoComponent
   ],
   providers: [MessageService],
   templateUrl: './load-documents.html',
@@ -43,7 +47,7 @@ export class LoadDocumentsComponent implements OnInit {
   documents = signal<LoadDocument[]>([]);
   loading = signal<boolean>(true);
   downloading = signal<boolean>(false);
-  
+
   // For global filter
   searchValue = signal<string>('');
 
@@ -73,43 +77,43 @@ export class LoadDocumentsComponent implements OnInit {
 
   async downloadFiles(doc: LoadDocument) {
     if (!doc.idfolder) return;
-    
+
     this.downloading.set(true);
     this.messageService.add({ severity: 'info', summary: 'Descargando', detail: 'Preparando archivos para descarga...' });
 
     try {
       const idFolder = doc.idfolder;
       const lowerIdFolder = idFolder.toLowerCase();
-      
+
       const possiblePaths = [
-         `validationsOC/${lowerIdFolder}`,
-         `validationsOC/${lowerIdFolder}/`,
-         `validationsoc/${lowerIdFolder}`,
-         `validationsoc/${lowerIdFolder}/`,
-         `validationsOC/${idFolder}`,
-         `validationsOC/${idFolder}/`,
-         `${lowerIdFolder}`,
-         `${idFolder}`
+        `validationsOC/${lowerIdFolder}`,
+        `validationsOC/${lowerIdFolder}/`,
+        `validationsoc/${lowerIdFolder}`,
+        `validationsoc/${lowerIdFolder}/`,
+        `validationsOC/${idFolder}`,
+        `validationsOC/${idFolder}/`,
+        `${lowerIdFolder}`,
+        `${idFolder}`
       ];
 
       let blobsFound = false;
       const zip = new JSZip();
-      
+
       for (const path of possiblePaths) {
-         const blobs = await this.azureStorageService.listBlobs(path);
-         
-         if (blobs.length > 0) {
-            blobsFound = true;
-            
-            for (const blobName of blobs) {
-                const blob = await this.azureStorageService.downloadBlob(blobName);
-                if (blob) {
-                    const fileName = blobName.split('/').pop() || blobName;
-                    zip.file(fileName, blob);
-                }
+        const blobs = await this.azureStorageService.listBlobs(path);
+
+        if (blobs.length > 0) {
+          blobsFound = true;
+
+          for (const blobName of blobs) {
+            const blob = await this.azureStorageService.downloadBlob(blobName);
+            if (blob) {
+              const fileName = blobName.split('/').pop() || blobName;
+              zip.file(fileName, blob);
             }
-            break; // Found files in this path, stop searching
-         }
+          }
+          break; // Found files in this path, stop searching
+        }
       }
 
       if (blobsFound) {
@@ -129,17 +133,17 @@ export class LoadDocumentsComponent implements OnInit {
   }
 
   getStatusSeverity(status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" | undefined {
-      switch (status?.toLowerCase()) {
-          case 'uploaded':
-          case 'completado':
-              return 'success';
-          case 'pending':
-          case 'pendiente':
-              return 'warn';
-          case 'error':
-              return 'danger';
-          default:
-              return 'info';
-      }
+    switch (status?.toLowerCase()) {
+      case 'uploaded':
+      case 'completado':
+        return 'success';
+      case 'pending':
+      case 'pendiente':
+        return 'warn';
+      case 'error':
+        return 'danger';
+      default:
+        return 'info';
+    }
   }
 }

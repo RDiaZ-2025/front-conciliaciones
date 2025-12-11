@@ -9,6 +9,8 @@ import { TableModule } from 'primeng/table';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
+import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
+import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
 import { AuthService } from '../../services/auth';
 import { AzureStorageService } from '../../services/azure-storage';
 import { Cover15MinutesService } from './cover15minutes.service';
@@ -26,7 +28,9 @@ import { CoverHistoryItem } from './cover15minutes.models';
     CardModule,
     TableModule,
     ToastModule,
-    TooltipModule
+    TooltipModule,
+    PageHeaderComponent,
+    SessionInfoComponent
   ],
   providers: [MessageService],
   templateUrl: './cover15minutes.html',

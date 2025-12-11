@@ -24,6 +24,8 @@ import { PERMISSIONS, PERMISSION_LABELS, PERMISSION_COLORS } from '../../constan
 import { UserDialogComponent } from './components/user-dialog/user-dialog';
 import { HistoryDialogComponent } from './components/history-dialog/history-dialog';
 import { AccessHistoryRecord } from '../../services/user';
+import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
+import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
 
 @Component({
   selector: 'app-admin',
@@ -41,7 +43,9 @@ import { AccessHistoryRecord } from '../../services/user';
     TagModule,
     IconFieldModule,
     InputIconModule,
-    TooltipModule
+    TooltipModule,
+    PageHeaderComponent,
+    SessionInfoComponent
   ],
   providers: [DialogService, MessageService, ConfirmationService],
   templateUrl: './admin.html',

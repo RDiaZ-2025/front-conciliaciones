@@ -1,13 +1,15 @@
 <div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
-    <p-toast></p-toast>
-    
-    <div class="flex justify-content-between align-items-center">
-        <h1 class="text-3xl font-bold m-0">Gestión de Menú</h1>
+    <div class="flex justify-content-between align-items-start">
+        <app-page-header title="Gestión de Menú" subtitle="Administración de la estructura de navegación"
+            icon="pi pi-list" class="flex-grow-1"></app-page-header>
         <div class="flex gap-2">
             <p-button label="Nuevo Ítem" icon="pi pi-plus" (onClick)="openNew()"></p-button>
             <p-button icon="pi pi-refresh" [text]="true" [rounded]="true" (onClick)="loadMenuItems()"></p-button>
         </div>
     </div>
+    <app-session-info></app-session-info>
+    <p-toast></p-toast>
+
 
     <div class="card p-4 surface-card border-round shadow-2">
         <p-treeTable [value]="menuItems()" [loading]="loading()" styleClass="p-treetable-sm">
@@ -31,15 +33,19 @@
                         <i [class]="'pi ' + rowData.icon" *ngIf="rowData.icon"></i>
                         <span *ngIf="rowData.icon" class="ml-2 text-sm text-500">{{ rowData.icon }}</span>
                     </td>
-                    <td><span class="text-sm font-mono surface-100 p-1 border-round" *ngIf="rowData.route">{{ rowData.route }}</span></td>
+                    <td><span class="text-sm font-mono surface-100 p-1 border-round" *ngIf="rowData.route">{{
+                            rowData.route }}</span></td>
                     <td>{{ rowData.displayOrder }}</td>
                     <td>
-                        <i class="pi" [ngClass]="{'pi-check-circle text-green-500': rowData.isActive, 'pi-times-circle text-red-500': !rowData.isActive}"></i>
+                        <i class="pi"
+                            [ngClass]="{'pi-check-circle text-green-500': rowData.isActive, 'pi-times-circle text-red-500': !rowData.isActive}"></i>
                     </td>
                     <td>
                         <div class="flex gap-2">
-                            <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="info" (onClick)="editItem(rowData)"></p-button>
-                            <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" (onClick)="deleteItem(rowData)"></p-button>
+                            <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="info"
+                                (onClick)="editItem(rowData)"></p-button>
+                            <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger"
+                                (onClick)="deleteItem(rowData)"></p-button>
                         </div>
                     </td>
                 </tr>
@@ -52,13 +58,9 @@
         </p-treeTable>
     </div>
 
-    <p-dialog 
-        [(visible)]="dialogVisible" 
-        [header]="editingItem() ? 'Editar Ítem' : 'Nuevo Ítem'" 
-        [modal]="true" 
-        [style]="{width: '450px'}"
-        styleClass="p-fluid">
-        
+    <p-dialog [(visible)]="dialogVisible" [header]="editingItem() ? 'Editar Ítem' : 'Nuevo Ítem'" [modal]="true"
+        [style]="{width: '450px'}" styleClass="p-fluid">
+
         <form [formGroup]="form" class="flex flex-column gap-3 pt-3">
             <div class="field">
                 <label for="label" class="font-medium">Etiqueta</label>
@@ -80,20 +82,15 @@
 
             <div class="field">
                 <label for="parentId" class="font-medium">Padre</label>
-                <p-select 
-                    id="parentId" 
-                    formControlName="parentId" 
-                    [options]="parentOptions()" 
-                    optionLabel="label" 
-                    optionValue="value" 
-                    [showClear]="true"
-                    placeholder="Seleccione un padre">
+                <p-select id="parentId" formControlName="parentId" [options]="parentOptions()" optionLabel="label"
+                    optionValue="value" [showClear]="true" placeholder="Seleccione un padre">
                 </p-select>
             </div>
 
             <div class="field">
                 <label for="displayOrder" class="font-medium">Orden</label>
-                <p-inputNumber id="displayOrder" formControlName="displayOrder" [showButtons]="true" [min]="0"></p-inputNumber>
+                <p-inputNumber id="displayOrder" formControlName="displayOrder" [showButtons]="true"
+                    [min]="0"></p-inputNumber>
             </div>
 
             <div class="field-checkbox">

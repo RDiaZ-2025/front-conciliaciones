@@ -12,8 +12,9 @@ import { TooltipModule } from 'primeng/tooltip';
 import { TagModule } from 'primeng/tag';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
-import { SelectModule } from 'primeng/select'; // Trying SelectModule for v20, fallback to Dropdown if needed
-
+import { SelectModule } from 'primeng/select';
+import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
+import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
 import { AuthService } from '../../services/auth';
 import { PERMISSIONS } from '../../constants/permissions';
 
@@ -190,7 +191,9 @@ const initialData: DashboardData = {
     TooltipModule,
     TagModule,
     IconFieldModule,
-    InputIconModule
+    InputIconModule,
+    PageHeaderComponent,
+    SessionInfoComponent
   ],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.scss']

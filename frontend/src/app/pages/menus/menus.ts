@@ -10,6 +10,8 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { SelectModule } from 'primeng/select';
 import { ToastModule } from 'primeng/toast';
 import { MessageService, TreeNode } from 'primeng/api';
+import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
+import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
 import { MenusService } from './menus.service';
 import { MenuItem } from './menus.models';
 
@@ -27,7 +29,9 @@ import { MenuItem } from './menus.models';
     InputNumberModule,
     CheckboxModule,
     SelectModule,
-    ToastModule
+    ToastModule,
+    PageHeaderComponent,
+    SessionInfoComponent
   ],
   providers: [MessageService],
   templateUrl: './menus.html',
@@ -91,7 +95,7 @@ export class MenusComponent implements OnInit {
     const options: { label: string, value: number | null }[] = [
       { label: 'Ninguno (Raíz)', value: null }
     ];
-    
+
     const flatten = (list: MenuItem[], prefix = '') => {
       list.forEach(item => {
         options.push({ label: prefix + item.label, value: item.id });
