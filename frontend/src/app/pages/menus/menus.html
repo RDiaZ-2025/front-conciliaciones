@@ -60,6 +60,7 @@
     </div>
 
     <app-menu-dialog [visible]="dialogVisible()" (visibleChange)="dialogVisible.set($event)" [item]="editingItem()"
-        [parentOptions]="parentOptions()" [permissionOptions]="permissionOptions()" [saving]="saving()" (save)="saveItem($event)">
+        [parentOptions]="parentOptions()" [permissionOptions]="permissionOptions()" [saving]="saving()"
+        (save)="saveItem($event)">
     </app-menu-dialog>
 </div>
