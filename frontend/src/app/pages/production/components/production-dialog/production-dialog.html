@@ -47,7 +47,7 @@
                 <p-floatlabel variant="in">
                     <p-datepicker id="deliveryDate" formControlName="deliveryDate" dateFormat="yy-mm-dd"
                         [showIcon]="true" appendTo="body" styleClass="w-full" inputStyleClass="w-full"
-                        [minDate]="minDate"></p-datepicker>
+                        [minDate]="minDate" [showTime]="true" hourFormat="12"></p-datepicker>
                     <label for="deliveryDate">Fecha de entrega</label>
                 </p-floatlabel>
                 <small class="p-error" *ngIf="form.get('deliveryDate')?.invalid && form.get('deliveryDate')?.dirty">

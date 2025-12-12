@@ -103,7 +103,7 @@ export class ProductionDialogComponent implements OnInit {
       const result: Partial<ProductionRequest> = {
         ...this.config.data,
         ...formValue,
-        deliveryDate: formValue.deliveryDate ? formValue.deliveryDate.toISOString().split('T')[0] : undefined,
+        deliveryDate: formValue.deliveryDate ? formValue.deliveryDate.toISOString() : undefined,
         files: [...this.existingFiles, ...this.uploadedFiles]
       };
       this.ref.close(result);
