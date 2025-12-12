@@ -43,6 +43,7 @@ export class ProductionDialogComponent implements OnInit {
   uploadedFiles: any[] = [];
   existingFiles: UploadedFile[] = [];
   isUploading = false;
+  minDate: Date = new Date();
 
   ngOnInit() {
     this.isEditMode = !!this.config.data?.id;
