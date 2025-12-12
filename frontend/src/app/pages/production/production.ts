@@ -60,8 +60,15 @@ export class ProductionComponent implements OnInit, OnDestroy {
   
   // SLA Rules state
   slaRulesVisible = signal<boolean>(false);
+  
+  // Historical View state
+  showHistorical = signal<boolean>(false);
 
   workflowStages = WORKFLOW_STAGES;
+
+  // Computed lists
+  activeRequests = computed(() => this.requests().filter(r => r.stage !== 'completed'));
+  historicalRequests = computed(() => this.requests().filter(r => r.stage === 'completed'));
 
   ref: DynamicDialogRef | undefined | null;
 
@@ -139,6 +146,23 @@ export class ProductionComponent implements OnInit, OnDestroy {
     timeString += `${minutes}m`;
 
     return isOverdue ? `Vencido hace ${timeString}` : `${timeString} restantes`;
+  }
+
+  getTotalTime(request: ProductionRequest): string {
+    if (!request.requestDate || !request.deliveryDate) return 'N/A';
+
+    const start = new Date(request.requestDate).getTime();
+    const end = new Date(request.deliveryDate).getTime();
+    const diff = Math.abs(end - start);
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    
+    let result = '';
+    if (days > 0) result += `${days}d `;
+    result += `${hours}h`;
+    
+    return result;
   }
 
   checkSLAAlerts() {
