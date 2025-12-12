@@ -38,6 +38,7 @@ import { MenuItem } from './MenuItem';
 import { ProductionRequest } from './ProductionRequest';
 import { UserActionLog } from './UserActionLog';
 import { Cover15Minute } from './Cover15Minute';
+import { Team } from './Team';
 
 export const entities = [
   User,
@@ -47,7 +48,8 @@ export const entities = [
   MenuItem,
   ProductionRequest,
   UserActionLog,
-  Cover15Minute
+  Cover15Minute,
+  Team
 ];
 
 /**

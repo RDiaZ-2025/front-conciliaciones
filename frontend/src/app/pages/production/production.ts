@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -8,6 +8,8 @@ import { MenuModule } from 'primeng/menu';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
+import { BadgeModule } from 'primeng/badge';
+import { DialogModule } from 'primeng/dialog';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
@@ -31,6 +33,8 @@ import { UploadedFile } from './production.models';
     ToastModule,
     ConfirmDialogModule,
     TooltipModule,
+    BadgeModule,
+    DialogModule,
     FilePreviewComponent,
     PageHeaderComponent,
     SessionInfoComponent
@@ -39,7 +43,7 @@ import { UploadedFile } from './production.models';
   templateUrl: './production.html',
   styleUrl: './production.scss'
 })
-export class ProductionComponent implements OnInit {
+export class ProductionComponent implements OnInit, OnDestroy {
   productionService = inject(ProductionService);
   dialogService = inject(DialogService);
   confirmationService = inject(ConfirmationService);
@@ -53,13 +57,40 @@ export class ProductionComponent implements OnInit {
   previewFile = signal<File | string | null>(null);
   previewVisible = signal<boolean>(false);
   isPreviewLoading = signal<boolean>(false);
+  
+  // SLA Rules state
+  slaRulesVisible = signal<boolean>(false);
+  
+  // Historical View state
+  showHistorical = signal<boolean>(false);
 
   workflowStages = WORKFLOW_STAGES;
 
+  // Computed lists
+  activeRequests = computed(() => this.requests().filter(r => r.stage !== 'completed'));
+  historicalRequests = computed(() => this.requests().filter(r => r.stage === 'completed'));
+
   ref: DynamicDialogRef | undefined | null;
+
+  // SLA Monitoring
+  now = signal<Date>(new Date());
+  private intervalId: any;
+  private alertedRequests = new Set<string>(); // Track alerted requests to avoid spam
 
   ngOnInit() {
     this.loadRequests();
+    
+    // Update time every minute
+    this.intervalId = setInterval(() => {
+      this.now.set(new Date());
+      this.checkSLAAlerts();
+    }, 60000);
+  }
+
+  ngOnDestroy() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+    }
   }
 
   loadRequests() {
@@ -68,6 +99,7 @@ export class ProductionComponent implements OnInit {
       next: (data) => {
         this.requests.set(data);
         this.loading.set(false);
+        this.checkSLAAlerts(); // Check initially after loading
       },
       error: (err) => {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load requests' });
@@ -75,6 +107,87 @@ export class ProductionComponent implements OnInit {
       }
     });
   }
+
+  // ... (rest of the methods)
+
+  getSLAStatus(deliveryDate?: string): 'success' | 'warn' | 'danger' {
+    if (!deliveryDate) return 'success'; // No deadline, so technically "on time" or N/A
+
+    const deadline = new Date(deliveryDate).getTime();
+    const now = this.now().getTime();
+    const diff = deadline - now;
+
+    if (diff < 0) {
+      return 'danger'; // Overdue
+    } else if (diff < 24 * 60 * 60 * 1000) { // Less than 24 hours
+      return 'warn'; // Approaching deadline
+    } else {
+      return 'success'; // On time
+    }
+  }
+
+  getRemainingTime(deliveryDate?: string): string {
+    if (!deliveryDate) return '';
+
+    const deadline = new Date(deliveryDate).getTime();
+    const now = this.now().getTime();
+    let diff = deadline - now;
+    const isOverdue = diff < 0;
+
+    diff = Math.abs(diff);
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    let timeString = '';
+    if (days > 0) timeString += `${days}d `;
+    if (hours > 0) timeString += `${hours}h `;
+    timeString += `${minutes}m`;
+
+    return isOverdue ? `Vencido hace ${timeString}` : `${timeString} restantes`;
+  }
+
+  getTotalTime(request: ProductionRequest): string {
+    if (!request.requestDate || !request.deliveryDate) return 'N/A';
+
+    const start = new Date(request.requestDate).getTime();
+    const end = new Date(request.deliveryDate).getTime();
+    const diff = Math.abs(end - start);
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    
+    let result = '';
+    if (days > 0) result += `${days}d `;
+    result += `${hours}h`;
+    
+    return result;
+  }
+
+  checkSLAAlerts() {
+    const now = this.now().getTime();
+    const twoHours = 2 * 60 * 60 * 1000;
+
+    this.requests().forEach(request => {
+      if (!request.deliveryDate || request.stage === 'completed' || this.alertedRequests.has(request.id)) return;
+
+      const deadline = new Date(request.deliveryDate).getTime();
+      const diff = deadline - now;
+
+      // Trigger alert if within 2 hours and not overdue yet (or just about to be)
+      if (diff > 0 && diff <= twoHours) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Atención: SLA Próximo',
+          detail: `La solicitud "${request.name}" vence en menos de 2 horas.`,
+          life: 5000
+        });
+        this.alertedRequests.add(request.id);
+      }
+    });
+  }
+
 
   openDialog(request?: ProductionRequest) {
     this.ref = this.dialogService.open(ProductionDialogComponent, {

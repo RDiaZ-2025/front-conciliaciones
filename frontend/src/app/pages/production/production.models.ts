@@ -7,6 +7,12 @@ export interface UploadedFile {
   uploadDate: string;
 }
 
+export interface Team {
+  id: number;
+  name: string;
+  description?: string;
+}
+
 export interface ProductionRequest {
   id: string;
   name: string;

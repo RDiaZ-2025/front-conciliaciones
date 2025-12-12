@@ -9,9 +9,11 @@ import { TextareaModule } from 'primeng/textarea';
 import { DatePickerModule } from 'primeng/datepicker';
 import { FileUploadModule } from 'primeng/fileupload';
 import { ToastModule } from 'primeng/toast';
+import { SelectModule } from 'primeng/select';
 import { MessageService } from 'primeng/api';
-import { ProductionRequest, UploadedFile } from '../../production.models';
+import { ProductionRequest, UploadedFile, Team } from '../../production.models';
 import { AzureStorageService } from '../../../../services/azure-storage';
+import { TeamService } from '../../../../services/team.service';
 
 @Component({
   selector: 'app-production-dialog',
@@ -25,7 +27,8 @@ import { AzureStorageService } from '../../../../services/azure-storage';
     TextareaModule,
     DatePickerModule,
     FileUploadModule,
-    ToastModule
+    ToastModule,
+    SelectModule
   ],
   providers: [MessageService],
   templateUrl: './production-dialog.html',
@@ -37,16 +40,21 @@ export class ProductionDialogComponent implements OnInit {
   config = inject(DynamicDialogConfig);
   azureService = inject(AzureStorageService);
   messageService = inject(MessageService);
+  teamService = inject(TeamService);
 
   form!: FormGroup;
   isEditMode = false;
   uploadedFiles: any[] = [];
   existingFiles: UploadedFile[] = [];
   isUploading = false;
+  minDate: Date = new Date();
+  teams: Team[] = [];
 
   ngOnInit() {
     this.isEditMode = !!this.config.data?.id;
     const data = this.config.data || {};
+
+    this.loadTeams();
 
     this.form = this.fb.group({
       name: [data.name || '', Validators.required],
@@ -60,6 +68,20 @@ export class ProductionDialogComponent implements OnInit {
     if (this.isEditMode && data.files) {
       this.existingFiles = data.files;
     }
+  }
+
+  loadTeams() {
+    this.teamService.getTeams().subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.teams = response.data;
+        }
+      },
+      error: (error) => {
+        console.error('Error loading teams', error);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los equipos' });
+      }
+    });
   }
 
   async onUpload(event: any) {
@@ -102,7 +124,7 @@ export class ProductionDialogComponent implements OnInit {
       const result: Partial<ProductionRequest> = {
         ...this.config.data,
         ...formValue,
-        deliveryDate: formValue.deliveryDate ? formValue.deliveryDate.toISOString().split('T')[0] : undefined,
+        deliveryDate: formValue.deliveryDate ? formValue.deliveryDate.toISOString() : undefined,
         files: [...this.existingFiles, ...this.uploadedFiles]
       };
       this.ref.close(result);
