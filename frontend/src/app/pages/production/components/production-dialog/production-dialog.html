@@ -35,8 +35,8 @@
         <div class="formgrid grid">
             <div class="col-12 md:col-6 mb-2">
                 <p-floatlabel variant="in">
-                    <input pInputText id="assignedTeam" formControlName="assignedTeam" class="w-full"
-                        autocomplete="off" />
+                    <p-select id="assignedTeam" formControlName="assignedTeam" [options]="teams" optionLabel="name"
+                        optionValue="name" [style]="{'width':'100%'}" appendTo="body"></p-select>
                     <label for="assignedTeam">Equipo asignado</label>
                 </p-floatlabel>
                 <small class="p-error" *ngIf="form.get('assignedTeam')?.invalid && form.get('assignedTeam')?.dirty">

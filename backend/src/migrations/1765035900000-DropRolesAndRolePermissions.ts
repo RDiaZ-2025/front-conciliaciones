@@ -5,22 +5,22 @@ export class DropRolesAndRolePermissions1765035900000 implements MigrationInterf
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         // First drop foreign keys from Users table if they exist
-        const table = await queryRunner.getTable("users");
-        const foreignKey = table?.foreignKeys.find(fk => fk.columnNames.indexOf("roleId") !== -1);
+        const table = await queryRunner.getTable("Users");
+        const foreignKey = table?.foreignKeys.find(fk => fk.columnNames.indexOf("RoleId") !== -1);
         if (foreignKey) {
-            await queryRunner.dropForeignKey("users", foreignKey);
+            await queryRunner.dropForeignKey("Users", foreignKey);
         }
 
-        // Drop roleId column from users
-        if (table?.columns.find(c => c.name === "roleId")) {
-            await queryRunner.dropColumn("users", "roleId");
+        // Drop RoleId column from Users
+        if (table?.columns.find(c => c.name === "RoleId")) {
+            await queryRunner.dropColumn("Users", "RoleId");
         }
 
         // Drop RolePermissions table
-        await queryRunner.dropTable("role_permissions", true);
+        await queryRunner.dropTable("RolePermissions", true);
 
         // Drop Roles table
-        await queryRunner.dropTable("roles", true);
+        await queryRunner.dropTable("Roles", true);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
