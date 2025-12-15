@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
+import { User } from './User';
 
 /**
  * ProductionRequest entity representing production request management
@@ -43,6 +44,19 @@ export class ProductionRequest {
    */
   @Column({ name: 'AssignedTeam', type: 'nvarchar', length: 255, nullable: false })
   assignedTeam!: string;
+
+  /**
+   * User assigned to handle this request
+   */
+  @Column({ name: 'AssignedUserId', type: 'int', nullable: true })
+  assignedUserId!: number | null;
+
+  /**
+   * Relationship with User entity
+   */
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'AssignedUserId' })
+  assignedUser!: User;
 
   /**
    * Expected or actual delivery date

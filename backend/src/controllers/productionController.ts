@@ -60,6 +60,7 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       department,
       contactPerson,
       assignedTeam,
+      assignedUserId,
       deliveryDate,
       observations
     } = req.body;
@@ -84,6 +85,7 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       department,
       contactPerson,
       assignedTeam,
+      assignedUserId,
       deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
       observations,
       stage: 'request' // Initial stage

@@ -20,6 +20,7 @@ export interface ProductionRequest {
   department: string;
   contactPerson: string;
   assignedTeam: string;
+  assignedUserId?: number;
   deliveryDate?: string;
   observations?: string;
   stage: string;

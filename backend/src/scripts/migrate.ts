@@ -1,6 +1,21 @@
 #!/usr/bin/env node
 
 import 'reflect-metadata';
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+
+// Load environment variables from the root of the project
+const envPath = path.resolve(__dirname, '../../.env');
+const result = dotenv.config({ path: envPath });
+
+if (result.error) {
+  console.warn('⚠️ Could not load .env file from:', envPath);
+  // Try default location
+  dotenv.config();
+}
+
+console.log('Environment loaded. DB_SERVER:', process.env.DB_SERVER ? 'DEFINED' : 'UNDEFINED');
+
 import { MigrationUtils } from '../utils/migration.utils';
 import { closeDatabase } from '../config/typeorm.config';
 

@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Team } from '../pages/production/production.models';
+import { User } from './user';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -17,5 +18,9 @@ export class TeamService {
 
   createTeam(team: Partial<Team>): Observable<{ success: boolean; data: Team }> {
     return this.http.post<{ success: boolean; data: Team }>(this.apiUrl, team);
+  }
+
+  getUsersByTeam(teamId: number): Observable<{ success: boolean; data: User[] }> {
+    return this.http.get<{ success: boolean; data: User[] }>(`${this.apiUrl}/${teamId}/users`);
   }
 }

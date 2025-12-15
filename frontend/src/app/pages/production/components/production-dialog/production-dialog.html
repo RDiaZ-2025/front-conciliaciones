@@ -13,7 +13,8 @@
         <div class="formgrid grid">
             <div class="col-12 md:col-6 mb-2">
                 <p-floatlabel variant="in">
-                    <input pInputText id="department" formControlName="department" class="w-full" autocomplete="off" />
+                    <p-select id="department" formControlName="department" [options]="teams" optionLabel="name"
+                        optionValue="name" [style]="{'width':'100%'}" appendTo="body"></p-select>
                     <label for="department">Departamento</label>
                 </p-floatlabel>
                 <small class="p-error" *ngIf="form.get('department')?.invalid && form.get('department')?.dirty">
@@ -22,8 +23,8 @@
             </div>
             <div class="col-12 md:col-6 mb-2">
                 <p-floatlabel variant="in">
-                    <input pInputText id="contactPerson" formControlName="contactPerson" class="w-full"
-                        autocomplete="off" />
+                    <p-select id="contactPerson" formControlName="contactPerson" [options]="requestingUsers" optionLabel="name"
+                        optionValue="name" [style]="{'width':'100%'}" appendTo="body"></p-select>
                     <label for="contactPerson">Persona de contacto</label>
                 </p-floatlabel>
                 <small class="p-error" *ngIf="form.get('contactPerson')?.invalid && form.get('contactPerson')?.dirty">
@@ -45,15 +46,26 @@
             </div>
             <div class="col-12 md:col-6 mb-2">
                 <p-floatlabel variant="in">
-                    <p-datepicker id="deliveryDate" formControlName="deliveryDate" dateFormat="yy-mm-dd"
-                        [showIcon]="true" appendTo="body" styleClass="w-full" inputStyleClass="w-full"
-                        [minDate]="minDate" [showTime]="true" hourFormat="12"></p-datepicker>
-                    <label for="deliveryDate">Fecha de entrega</label>
+                    <p-select id="assignedUser" formControlName="assignedUserId" [options]="assignedUsers" optionLabel="name"
+                        optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                    <label for="assignedUser">Usuario asignado</label>
                 </p-floatlabel>
-                <small class="p-error" *ngIf="form.get('deliveryDate')?.invalid && form.get('deliveryDate')?.dirty">
-                    Fecha es requerida
+                <small class="p-error" *ngIf="form.get('assignedUserId')?.invalid && form.get('assignedUserId')?.dirty">
+                    Usuario asignado es requerido
                 </small>
             </div>
+        </div>
+
+        <div class="mb-2">
+            <p-floatlabel variant="in">
+                <p-datepicker id="deliveryDate" formControlName="deliveryDate" dateFormat="yy-mm-dd"
+                    [showIcon]="true" appendTo="body" styleClass="w-full" inputStyleClass="w-full"
+                    [minDate]="minDate" [showTime]="true" hourFormat="12"></p-datepicker>
+                <label for="deliveryDate">Fecha de entrega</label>
+            </p-floatlabel>
+            <small class="p-error" *ngIf="form.get('deliveryDate')?.invalid && form.get('deliveryDate')?.dirty">
+                Fecha es requerida
+            </small>
         </div>
 
         <div>

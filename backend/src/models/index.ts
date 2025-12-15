@@ -26,6 +26,10 @@ export { UserActionLog } from './UserActionLog';
 // Cover 15 Minute Models
 export { Cover15Minute } from './Cover15Minute';
 
+// Team Management Models
+export { Team } from './Team';
+export { UserByTeam } from './UserByTeam';
+
 /**
  * Array of all entity classes for TypeORM configuration
  * Use this array when configuring TypeORM connection
@@ -39,6 +43,7 @@ import { ProductionRequest } from './ProductionRequest';
 import { UserActionLog } from './UserActionLog';
 import { Cover15Minute } from './Cover15Minute';
 import { Team } from './Team';
+import { UserByTeam } from './UserByTeam';
 
 export const entities = [
   User,
@@ -49,7 +54,8 @@ export const entities = [
   ProductionRequest,
   UserActionLog,
   Cover15Minute,
-  Team
+  Team,
+  UserByTeam
 ];
 
 /**
@@ -98,20 +104,13 @@ export const ModelCategories = {
    */
   Audit: {
     UserActionLog
+  },
+  
+  /**
+   * Team management models
+   */
+  Team: {
+    Team,
+    UserByTeam
   }
-};
-
-/**
- * Type definitions for model relationships
- */
-export type UserWithPermissions = User & {
-  permissions: (PermissionByUser & { permission: Permission })[];
-};
-
-export type MenuItemWithChildren = MenuItem & {
-  children: MenuItem[];
-};
-
-export type LoadDocumentWithUser = LoadDocumentsOCbyUser & {
-  user: User;
 };

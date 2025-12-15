@@ -14,6 +14,7 @@ import { MessageService } from 'primeng/api';
 import { ProductionRequest, UploadedFile, Team } from '../../production.models';
 import { AzureStorageService } from '../../../../services/azure-storage';
 import { TeamService } from '../../../../services/team.service';
+import { User } from '../../../../services/user';
 
 @Component({
   selector: 'app-production-dialog',
@@ -49,25 +50,40 @@ export class ProductionDialogComponent implements OnInit {
   isUploading = false;
   minDate: Date = new Date();
   teams: Team[] = [];
+  requestingUsers: User[] = [];
+  assignedUsers: User[] = [];
 
   ngOnInit() {
     this.isEditMode = !!this.config.data?.id;
     const data = this.config.data || {};
-
-    this.loadTeams();
 
     this.form = this.fb.group({
       name: [data.name || '', Validators.required],
       department: [data.department || '', Validators.required],
       contactPerson: [data.contactPerson || '', Validators.required],
       assignedTeam: [data.assignedTeam || '', Validators.required],
+      assignedUserId: [data.assignedUserId || null, Validators.required],
       deliveryDate: [data.deliveryDate ? new Date(data.deliveryDate) : null, Validators.required],
       observations: [data.observations || '']
     });
 
+    this.loadTeams();
+
     if (this.isEditMode && data.files) {
       this.existingFiles = data.files;
     }
+
+    this.setupValueChanges();
+  }
+
+  setupValueChanges() {
+    this.form.get('department')?.valueChanges.subscribe(deptName => {
+      this.loadUsersForDepartment(deptName);
+    });
+
+    this.form.get('assignedTeam')?.valueChanges.subscribe(teamName => {
+      this.loadUsersForAssignedTeam(teamName);
+    });
   }
 
   loadTeams() {
@@ -75,6 +91,13 @@ export class ProductionDialogComponent implements OnInit {
       next: (response) => {
         if (response.success) {
           this.teams = response.data;
+          
+          // Initial load of users if data exists
+          const dept = this.form.get('department')?.value;
+          if (dept) this.loadUsersForDepartment(dept);
+
+          const team = this.form.get('assignedTeam')?.value;
+          if (team) this.loadUsersForAssignedTeam(team);
         }
       },
       error: (error) => {
@@ -82,6 +105,36 @@ export class ProductionDialogComponent implements OnInit {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los equipos' });
       }
     });
+  }
+
+  loadUsersForDepartment(deptName: string) {
+    const team = this.teams.find(t => t.name === deptName);
+    if (team) {
+      this.teamService.getUsersByTeam(team.id).subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.requestingUsers = response.data;
+          }
+        }
+      });
+    } else {
+      this.requestingUsers = [];
+    }
+  }
+
+  loadUsersForAssignedTeam(teamName: string) {
+    const team = this.teams.find(t => t.name === teamName);
+    if (team) {
+      this.teamService.getUsersByTeam(team.id).subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.assignedUsers = response.data;
+          }
+        }
+      });
+    } else {
+      this.assignedUsers = [];
+    }
   }
 
   async onUpload(event: any) {

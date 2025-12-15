@@ -53,3 +53,33 @@ export const createTeam = async (req: Request, res: Response): Promise<void> => 
     });
   }
 };
+
+/**
+ * Get users by team ID
+ */
+export const getUsersByTeam = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const teamId = parseInt(req.params.id);
+    
+    if (isNaN(teamId)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid team ID'
+      });
+      return;
+    }
+
+    const users = await teamService.getUsersByTeam(teamId);
+    
+    res.status(200).json({
+      success: true,
+      data: users
+    });
+  } catch (error) {
+    console.error('Error getting users by team:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error retrieving users by team'
+    });
+  }
+};
