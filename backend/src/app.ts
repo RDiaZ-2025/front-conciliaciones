@@ -16,23 +16,19 @@ import teamRoutes from './routes/teamRoutes';
 import menuRoutes from './routes/menuRoutes';
 import permissionRoutes from './routes/permissionRoutes';
 import cover15MinuteRoutes from './routes/cover15MinuteRoutes';
+import storageRoutes from './routes/storageRoutes';
 
-// Importar middleware de logging
 import { actionLogger, skipLogging } from './middleware/actionLogger';
 
-// Cargar variables de entorno
 dotenv.config();
 
 const app = express();
 
-// Configuración de CORS
 const corsOptions = {
   origin: [
     process.env.FRONTEND_URL || 'http://localhost:5173',
-    'http://localhost:5173', // Desarrollo local (Vite/React)
+    'http://localhost:5173', // Desarrollo local
     'http://localhost:5174', // Puerto alternativo cuando 5173 está ocupado
-    'http://localhost:5173', // Desarrollo local (Angular)
-    'https://blue-pebble-080603f0f.azurestaticapps.net', // Producción (URL anterior)
     'https://blue-pebble-080603f0f.3.azurestaticapps.net' // Producción (URL actual)
   ],
   credentials: true,
@@ -89,6 +85,7 @@ app.use('/api/teams', teamRoutes);
 app.use('/api/menus', menuRoutes);
 app.use('/api/permissions', permissionRoutes);
 app.use('/api/covers-15-minutes', cover15MinuteRoutes);
+app.use('/api/storage', storageRoutes);
 
 // Ruta 404
 app.use('*', (req, res) => {

@@ -17,13 +17,12 @@ import { InputIconModule } from 'primeng/inputicon';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
-
-import { AuthService } from '../../services/auth';
-import { UserService, User, CreateUserDto, UpdateUserDto } from '../../services/user';
+import { AuthService } from '../../services/auth.service';
+import { UserService, User, CreateUserDto, UpdateUserDto } from '../../services/user.service';
 import { PERMISSIONS, PERMISSION_LABELS, PERMISSION_COLORS } from '../../constants/permissions';
 import { UserDialogComponent } from './components/user-dialog/user-dialog';
 import { HistoryDialogComponent } from './components/history-dialog/history-dialog';
-import { AccessHistoryRecord } from '../../services/user';
+import { AccessHistoryRecord } from '../../services/user.service';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
 import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
 

@@ -10,8 +10,8 @@ import { RippleModule } from 'primeng/ripple';
 import { AvatarModule } from 'primeng/avatar';
 import { StyleClassModule } from 'primeng/styleclass';
 
-import { AuthService } from '../../services/auth';
-import { MenuService, MenuItem } from '../../services/menu';
+import { AuthService } from '../../services/auth.service';
+import { MenuService, MenuItem } from '../../services/menu.service';
 
 @Component({
   selector: 'app-layout',

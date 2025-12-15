@@ -12,7 +12,7 @@ import { MessageService } from 'primeng/api';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
 import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
 import { LoadDocumentsService } from '../load-documents/load-documents.service';
-import { AzureStorageService } from '../../services/azure-storage';
+import { AzureStorageService } from '../../services/azure-storage.service';
 import { LoadDocument } from '../load-documents/load-documents.models';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';

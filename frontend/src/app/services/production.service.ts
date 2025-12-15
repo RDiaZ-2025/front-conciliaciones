@@ -3,13 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, from, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { ProductionRequest, MOCK_PRODUCTION_REQUESTS } from '../pages/production/production.models';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ProductionService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:22741/api/production'; // Adjust based on environment
+  private apiUrl = `${environment.apiUrl}/production`;
 
   getProductionRequests(): Observable<ProductionRequest[]> {
     return this.http.get<ProductionRequest[]>(this.apiUrl).pipe(

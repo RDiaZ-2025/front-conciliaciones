@@ -1,18 +1,14 @@
-import { Injectable } from '@angular/core';
-import { BlobServiceClient } from '@azure/storage-blob';
+import { Injectable, inject } from '@angular/core';
 import * as XLSX from 'xlsx';
-import { AzureConfig, ExcelValidationConfig, PDFValidationConfig, ValidationResult, RequiredCell } from './upload.models';
+import { ExcelValidationConfig, PDFValidationConfig, ValidationResult, RequiredCell } from './upload.models';
 import { environment } from '../../../environments/environment';
+import { AzureStorageService } from '../../services/azure-storage.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UploadService {
-  private AZURE_CONFIG: AzureConfig = {
-    sasToken: "sv=2024-11-04&ss=bfqt&srt=sco&sp=rwdlacupiytfx&se=2026-07-18T00:00:00Z&st=2025-07-17T12:00:00Z&spr=https&sig=5bOczB2JntgCnxgUF621l2zNepka4FohFR8hzCUuMt0%3D",
-    containerName: "conciliacionesv1",
-    storageAccountName: "autoconsumofileserver"
-  };
+  private azureService = inject(AzureStorageService);
 
   private EXCEL_CONFIG: ExcelValidationConfig = {
     requiredSheet: "Valorización",
@@ -131,13 +127,8 @@ export class UploadService {
 
   async uploadToAzure(file: File, path: string): Promise<boolean> {
     try {
-      const blobService = new BlobServiceClient(
-        `https://${this.AZURE_CONFIG.storageAccountName}.blob.core.windows.net/?${this.AZURE_CONFIG.sasToken}`
-      );
-      const containerClient = blobService.getContainerClient(this.AZURE_CONFIG.containerName);
-      const blockBlobClient = containerClient.getBlockBlobClient(`${path}/${file.name}`);
-      await blockBlobClient.uploadBrowserData(file);
-      return true;
+      const blobName = `${path}/${file.name}`;
+      return await this.azureService.uploadBlob(file, blobName);
     } catch (err) {
       console.error('Azure Upload Error:', err);
       return false;

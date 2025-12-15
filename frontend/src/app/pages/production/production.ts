@@ -14,10 +14,11 @@ import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
 import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
-import { ProductionService } from '../../services/production';
+import { ProductionService } from '../../services/production.service';
 import { ProductionRequest, WORKFLOW_STAGES } from './production.models';
 import { ProductionDialogComponent } from './components/production-dialog/production-dialog';
-import { AzureStorageService } from '../../services/azure-storage';
+import { AnsDialogComponent } from './components/ans-dialog/ans-dialog';
+import { AzureStorageService } from '../../services/azure-storage.service';
 import { FilePreviewComponent } from '../../components/file-preview/file-preview';
 import { UploadedFile } from './production.models';
 
@@ -37,7 +38,8 @@ import { UploadedFile } from './production.models';
     DialogModule,
     FilePreviewComponent,
     PageHeaderComponent,
-    SessionInfoComponent
+    SessionInfoComponent,
+    AnsDialogComponent
   ],
   providers: [DialogService, ConfirmationService, MessageService],
   templateUrl: './production.html',
@@ -57,10 +59,10 @@ export class ProductionComponent implements OnInit, OnDestroy {
   previewFile = signal<File | string | null>(null);
   previewVisible = signal<boolean>(false);
   isPreviewLoading = signal<boolean>(false);
-  
+
   // SLA Rules state
   slaRulesVisible = signal<boolean>(false);
-  
+
   // Historical View state
   showHistorical = signal<boolean>(false);
 
@@ -79,7 +81,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadRequests();
-    
+
     // Update time every minute
     this.intervalId = setInterval(() => {
       this.now.set(new Date());
@@ -157,11 +159,11 @@ export class ProductionComponent implements OnInit, OnDestroy {
 
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
+
     let result = '';
     if (days > 0) result += `${days}d `;
     result += `${hours}h`;
-    
+
     return result;
   }
 

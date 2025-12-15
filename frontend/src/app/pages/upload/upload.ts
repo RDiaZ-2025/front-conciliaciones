@@ -14,7 +14,7 @@ import { MessageService, SharedModule } from 'primeng/api';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
 import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
 import { UploadService } from './upload.service';
-import { AuthService } from '../../services/auth';
+import { AuthService } from '../../services/auth.service';
 import { SafeUrlPipe } from '../../pipes/safe-url.pipe';
 
 @Component({

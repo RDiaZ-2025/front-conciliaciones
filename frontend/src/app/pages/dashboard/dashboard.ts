@@ -15,7 +15,7 @@ import { InputIconModule } from 'primeng/inputicon';
 import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
 import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
-import { AuthService } from '../../services/auth';
+import { AuthService } from '../../services/auth.service';
 import { PERMISSIONS } from '../../constants/permissions';
 
 // Interfaces

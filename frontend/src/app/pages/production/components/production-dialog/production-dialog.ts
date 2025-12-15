@@ -12,9 +12,9 @@ import { ToastModule } from 'primeng/toast';
 import { SelectModule } from 'primeng/select';
 import { MessageService } from 'primeng/api';
 import { ProductionRequest, UploadedFile, Team } from '../../production.models';
-import { AzureStorageService } from '../../../../services/azure-storage';
+import { AzureStorageService } from '../../../../services/azure-storage.service';
 import { TeamService } from '../../../../services/team.service';
-import { User } from '../../../../services/user';
+import { User } from '../../../../services/user.service';
 
 @Component({
   selector: 'app-production-dialog',

@@ -1,11 +1,8 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BlobServiceClient, ContainerClient } from '@azure/storage-blob';
-
-export interface AzureConfig {
-  sasToken: string;
-  containerName: string;
-  storageAccountName: string;
-}
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface UploadOptions {
   folderPath: string;
@@ -25,24 +22,60 @@ export interface UploadResult {
   error?: string;
 }
 
-const AZURE_CONFIG: AzureConfig = {
-  sasToken: "sv=2024-11-04&ss=bfqt&srt=sco&sp=rwdlacupiytfx&se=2026-07-18T00:00:00Z&st=2025-07-17T12:00:00Z&spr=https&sig=5bOczB2JntgCnxgUF621l2zNepka4FohFR8hzCUuMt0%3D",
-  containerName: "conciliacionesv1",
-  storageAccountName: "autoconsumofileserver"
-};
+interface SasTokenResponse {
+  success: boolean;
+  data: {
+    sasToken: string;
+    url: string;
+    accountName: string;
+    containerName: string;
+    expiresOn: string;
+  };
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class AzureStorageService {
-  private blobServiceClient: BlobServiceClient;
-  private containerClient: ContainerClient;
+  private http = inject(HttpClient);
+  private _containerClient: ContainerClient | null = null;
+  private sasToken: string | null = null;
+  private tokenExpiry: Date | null = null;
+  private accountName: string | null = null;
+  private containerName: string | null = null;
 
-  constructor() {
-    this.blobServiceClient = new BlobServiceClient(
-      `https://${AZURE_CONFIG.storageAccountName}.blob.core.windows.net/?${AZURE_CONFIG.sasToken}`
-    );
-    this.containerClient = this.blobServiceClient.getContainerClient(AZURE_CONFIG.containerName);
+  constructor() { }
+
+  private async getContainerClient(): Promise<ContainerClient> {
+    if (this._containerClient && this.tokenExpiry && this.tokenExpiry > new Date()) {
+      return this._containerClient;
+    }
+
+    try {
+      const response = await firstValueFrom(this.http.get<SasTokenResponse>(`${environment.apiUrl}/storage/sas-token`));
+
+      if (!response.success) {
+        throw new Error('Failed to retrieve SAS token');
+      }
+
+      this.sasToken = response.data.sasToken;
+      this.tokenExpiry = new Date(response.data.expiresOn);
+      this.accountName = response.data.accountName;
+      this.containerName = response.data.containerName;
+
+      // Ensure we subtract a buffer (e.g., 5 mins) to refresh before actual expiry
+      this.tokenExpiry.setMinutes(this.tokenExpiry.getMinutes() - 5);
+
+      const blobServiceClient = new BlobServiceClient(
+        `https://${this.accountName}.blob.core.windows.net/${this.sasToken}`
+      );
+
+      this._containerClient = blobServiceClient.getContainerClient(this.containerName);
+      return this._containerClient;
+    } catch (error) {
+      console.error('Error initializing Azure Storage client:', error);
+      throw error;
+    }
   }
 
   /**
@@ -50,9 +83,10 @@ export class AzureStorageService {
    */
   async uploadFile(file: File, options: UploadOptions): Promise<UploadResult> {
     try {
+      const containerClient = await this.getContainerClient();
       const fileName = this.sanitizeFileName(file.name);
       const blobName = `${options.folderPath}/${fileName}`;
-      const blockBlobClient = this.containerClient.getBlockBlobClient(blobName);
+      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
       // Upload with progress tracking
       const uploadOptions = {
@@ -94,7 +128,8 @@ export class AzureStorageService {
   async listBlobs(prefix: string): Promise<string[]> {
     const blobs: string[] = [];
     try {
-      for await (const blob of this.containerClient.listBlobsFlat({ prefix })) {
+      const containerClient = await this.getContainerClient();
+      for await (const blob of containerClient.listBlobsFlat({ prefix })) {
         blobs.push(blob.name);
       }
     } catch (error) {
@@ -108,7 +143,8 @@ export class AzureStorageService {
    */
   async downloadBlob(blobName: string): Promise<Blob | undefined> {
     try {
-      const blockBlobClient = this.containerClient.getBlockBlobClient(blobName);
+      const containerClient = await this.getContainerClient();
+      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
       const downloadResponse = await blockBlobClient.download(0);
       return await downloadResponse.blobBody;
     } catch (error) {
@@ -122,7 +158,8 @@ export class AzureStorageService {
    */
   async uploadBlob(file: Blob | File, blobName: string): Promise<boolean> {
     try {
-      const blockBlobClient = this.containerClient.getBlockBlobClient(blobName);
+      const containerClient = await this.getContainerClient();
+      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
       await blockBlobClient.uploadData(file);
       return true;
     } catch (error) {
@@ -148,6 +185,7 @@ export class AzureStorageService {
    */
   async downloadFiles(options: DownloadOptions): Promise<void> {
     try {
+      const containerClient = await this.getContainerClient();
       const folderPath = options.folderPath.toLowerCase();
 
       // Try different possible folder path variations
@@ -166,7 +204,7 @@ export class AzureStorageService {
 
       for (const searchPath of possiblePaths) {
         try {
-          for await (const blob of this.containerClient.listBlobsFlat({ prefix: searchPath })) {
+          for await (const blob of containerClient.listBlobsFlat({ prefix: searchPath })) {
             if (!blobs.includes(blob.name)) {
               blobs.push(blob.name);
             }
@@ -190,7 +228,7 @@ export class AzureStorageService {
           continue; // Skip if specific file requested and this isn't it
         }
 
-        const blockBlobClient = this.containerClient.getBlockBlobClient(blobName);
+        const blockBlobClient = containerClient.getBlockBlobClient(blobName);
         const downloadResponse = await blockBlobClient.download();
         const blobData = await downloadResponse.blobBody;
 
@@ -216,10 +254,11 @@ export class AzureStorageService {
    */
   async listFiles(folderPath: string): Promise<string[]> {
     try {
+      const containerClient = await this.getContainerClient();
       const blobs: string[] = [];
       const searchPath = folderPath.endsWith('/') ? folderPath : `${folderPath}/`;
 
-      for await (const blob of this.containerClient.listBlobsFlat({ prefix: searchPath })) {
+      for await (const blob of containerClient.listBlobsFlat({ prefix: searchPath })) {
         blobs.push(blob.name);
       }
 
@@ -242,6 +281,7 @@ export class AzureStorageService {
     uploadDate: string;
   }>> {
     try {
+      const containerClient = await this.getContainerClient();
       const files: Array<{
         id: string;
         name: string;
@@ -253,7 +293,7 @@ export class AzureStorageService {
 
       const searchPath = folderPath.endsWith('/') ? folderPath : `${folderPath}/`;
 
-      for await (const blob of this.containerClient.listBlobsFlat({
+      for await (const blob of containerClient.listBlobsFlat({
         prefix: searchPath,
         includeMetadata: true
       })) {
@@ -266,7 +306,7 @@ export class AzureStorageService {
           name: fileName,
           size: blob.properties.contentLength || 0,
           type: mimeType,
-          url: `https://${AZURE_CONFIG.storageAccountName}.blob.core.windows.net/${AZURE_CONFIG.containerName}/${blob.name}`,
+          url: `https://${this.accountName}.blob.core.windows.net/${this.containerName}/${blob.name}`,
           uploadDate: blob.properties.lastModified?.toISOString() || new Date().toISOString()
         });
       }
@@ -304,7 +344,8 @@ export class AzureStorageService {
    */
   async deleteFile(blobName: string): Promise<boolean> {
     try {
-      const blockBlobClient = this.containerClient.getBlockBlobClient(blobName);
+      const containerClient = await this.getContainerClient();
+      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
       await blockBlobClient.delete();
       return true;
     } catch (error) {
@@ -316,8 +357,9 @@ export class AzureStorageService {
   /**
    * Get file URL for preview/download
    */
-  getFileUrl(blobName: string): string {
-    const blockBlobClient = this.containerClient.getBlockBlobClient(blobName);
+  async getFileUrl(blobName: string): Promise<string> {
+    const containerClient = await this.getContainerClient();
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
     return blockBlobClient.url;
   }
 
@@ -326,7 +368,8 @@ export class AzureStorageService {
    */
   async fileExists(blobName: string): Promise<boolean> {
     try {
-      const blockBlobClient = this.containerClient.getBlockBlobClient(blobName);
+      const containerClient = await this.getContainerClient();
+      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
       const exists = await blockBlobClient.exists();
       return exists;
     } catch (error) {
@@ -351,6 +394,7 @@ export class AzureStorageService {
    */
   async downloadSingleFile(blobName: string, fileName?: string): Promise<void> {
     try {
+      const containerClient = await this.getContainerClient();
       // Allow passing a full URL; extract blob path if needed
       let resolvedBlobName = blobName;
       if (/^https?:\/\//i.test(blobName)) {
@@ -360,7 +404,7 @@ export class AzureStorageService {
         resolvedBlobName = decodeURIComponent(parts.slice(1).join('/'));
       }
 
-      const blockBlobClient = this.containerClient.getBlockBlobClient(resolvedBlobName);
+      const blockBlobClient = containerClient.getBlockBlobClient(resolvedBlobName);
       const downloadResponse = await blockBlobClient.download();
       const blobData = await downloadResponse.blobBody;
 
@@ -385,6 +429,7 @@ export class AzureStorageService {
    */
   async getBlobData(blobNameOrUrl: string): Promise<Blob> {
     try {
+      const containerClient = await this.getContainerClient();
       let resolvedBlobName = blobNameOrUrl;
       if (/^https?:\/\//i.test(blobNameOrUrl)) {
         const url = new URL(blobNameOrUrl);
@@ -392,7 +437,7 @@ export class AzureStorageService {
         resolvedBlobName = decodeURIComponent(parts.slice(1).join('/'));
       }
 
-      const blockBlobClient = this.containerClient.getBlockBlobClient(resolvedBlobName);
+      const blockBlobClient = containerClient.getBlockBlobClient(resolvedBlobName);
       const downloadResponse = await blockBlobClient.download();
       const blobBody = await downloadResponse.blobBody;
       if (!blobBody) {

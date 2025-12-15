@@ -14,7 +14,7 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { FloatLabelModule } from 'primeng/floatlabel';
 
-import { AuthService } from '../../services/auth';
+import { AuthService } from '../../services/auth.service';
 import { PERMISSIONS } from '../../constants/permissions';
 
 @Component({

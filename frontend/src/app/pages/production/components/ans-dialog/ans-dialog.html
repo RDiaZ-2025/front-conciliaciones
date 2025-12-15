@@ -1,0 +1,95 @@
+<p-dialog header="Políticas de Servicio y Tiempos de Respuesta (ANS)" [visible]="visible"
+    (visibleChange)="visibleChange.emit($event)" [modal]="true" [style]="{ width: '70vw', maxWidth: '1000px' }"
+    [draggable]="false" [resizable]="false">
+
+    <div class="flex flex-column gap-4 p-4">
+        <!-- Section 1: Workflow Info -->
+        <div class="grid">
+            <div class="col-12 md:col-6">
+                <div class="surface-card p-3 border-round shadow-1 h-full border-left-3 border-blue-500">
+                    <div class="flex align-items-center gap-2 mb-2">
+                        <i class="pi pi-file-o text-xl text-blue-500"></i>
+                        <span class="font-bold text-lg">El Brief Táctico</span>
+                    </div>
+                    <p class="m-0 text-600 mb-2">El Consultor solicita audiencias vía Forms a Data & Research</p>
+                    <div class="flex align-items-center gap-2 text-sm text-700 p-2 border-round">
+                        <i class="pi pi-clock"></i>
+                        <span>Horario: L-V de 8:00am a 6:00pm</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 md:col-6">
+                <div class="surface-card p-3 border-round shadow-1 h-full border-left-3 border-purple-500">
+                    <div class="flex align-items-center gap-2 mb-2">
+                        <i class="pi pi-sitemap text-xl text-purple-500"></i>
+                        <span class="font-bold text-lg">El Brief Estratégico</span>
+                    </div>
+                    <p class="m-0 text-600 mb-2">El Consultor solicita propuesta a Estrategia y Planeación</p>
+                    <div class="flex align-items-center gap-2 text-sm text-700 p-2 border-round">
+                        <i class="pi pi-clock"></i>
+                        <span>Horario: L-V de 7:00am a 5:00pm</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: ANS Cards -->
+        <div>
+            <h3 class="text-xl font-bold mb-3 border-bottom-1 surface-border pb-2">Tiempos de Respuesta (ANS) -
+                Generación de Propuestas Estratégicas</h3>
+            <div class="grid">
+                <!-- BASIC -->
+                <div class="col-12 md:col-6 lg:col-3">
+                    <div class="surface-card p-0 border-round shadow-2 h-full overflow-hidden flex flex-column">
+                        <div class="bg-blue-500 text-white p-2 text-center font-bold">BASIC</div>
+                        <div class="p-3 text-center flex-grow-1 flex flex-column justify-content-center">
+                            <div class="text-3xl font-bold text-orange-500 mb-2">2 días hábiles</div>
+                            <div class="text-sm text-600">Hasta 50 millones con POTENCIAL</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- EXPRESS -->
+                <div class="col-12 md:col-6 lg:col-3">
+                    <div class="surface-card p-0 border-round shadow-2 h-full overflow-hidden flex flex-column">
+                        <div class="bg-blue-400 text-white p-2 text-center font-bold">EXPRESS</div>
+                        <div class="p-3 text-center flex-grow-1 flex flex-column justify-content-center">
+                            <div class="text-3xl font-bold text-orange-500 mb-2">3 días hábiles</div>
+                            <div class="text-sm text-600">Entre 50 y 100 millones</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PRO -->
+                <div class="col-12 md:col-6 lg:col-3">
+                    <div class="surface-card p-0 border-round shadow-2 h-full overflow-hidden flex flex-column">
+                        <div class="bg-blue-600 text-white p-2 text-center font-bold">PRO</div>
+                        <div class="p-3 text-center flex-grow-1 flex flex-column justify-content-center">
+                            <div class="text-3xl font-bold text-orange-500 mb-2">4 días hábiles</div>
+                            <div class="text-sm text-600">Entre 100 y 200 millones</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PREMIUM -->
+                <div class="col-12 md:col-6 lg:col-3">
+                    <div class="surface-card p-0 border-round shadow-2 h-full overflow-hidden flex flex-column">
+                        <div class="bg-blue-800 text-white p-2 text-center font-bold">PREMIUM</div>
+                        <div class="p-3 text-center flex-grow-1 flex flex-column justify-content-center">
+                            <div class="text-3xl font-bold text-orange-500 mb-2">7 días hábiles</div>
+                            <div class="text-sm text-600">200 millones en adelante</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center text-sm text-500 font-italic mt-2">
+            "Toda gran estrategia comienza con una pregunta clara y la audiencia correcta."
+        </div>
+    </div>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cerrar" icon="pi pi-times" (click)="close()" [text]="true"></p-button>
+    </ng-template>
+</p-dialog>

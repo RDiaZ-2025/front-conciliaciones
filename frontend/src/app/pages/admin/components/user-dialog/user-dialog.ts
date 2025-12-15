@@ -7,7 +7,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { FloatLabelModule } from 'primeng/floatlabel';
-import { User, Permission, UserService } from '../../../../services/user';
+import { User, Permission, UserService } from '../../../../services/user.service';
 import { PERMISSION_LABELS, PERMISSION_DESCRIPTIONS } from '../../../../constants/permissions';
 
 export interface UserDialogData {

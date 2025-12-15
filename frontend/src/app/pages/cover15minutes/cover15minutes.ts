@@ -10,8 +10,8 @@ import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
 import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
-import { AuthService } from '../../services/auth';
-import { AzureStorageService } from '../../services/azure-storage';
+import { AuthService } from '../../services/auth.service';
+import { AzureStorageService } from '../../services/azure-storage.service';
 import { Cover15MinutesService } from './cover15minutes.service';
 import { CoverHistoryItem } from './cover15minutes.models';
 
@@ -42,11 +42,6 @@ export class Cover15MinutesComponent implements OnInit {
 
   @ViewChild('fileUpload') fileUpload!: FileUpload;
 
-  // Constants (should match AzureStorageService config basically)
-  private readonly containerName = "conciliacionesv1";
-  private readonly storageAccountName = "autoconsumofileserver";
-  private readonly sasToken = "sv=2024-11-04&ss=bfqt&srt=sco&sp=rwdlacupiytfx&se=2026-07-18T00:00:00Z&st=2025-07-17T12:00:00Z&spr=https&sig=5bOczB2JntgCnxgUF621l2zNepka4FohFR8hzCUuMt0%3D";
-
   currentImageUrl = signal<string>('');
   history = signal<CoverHistoryItem[]>([]);
   uploading = signal<boolean>(false);
@@ -56,20 +51,42 @@ export class Cover15MinutesComponent implements OnInit {
     this.loadHistory();
   }
 
-  refreshCurrentImage() {
-    this.currentImageUrl.set(
-      `https://${this.storageAccountName}.blob.core.windows.net/${this.containerName}/15minutes/cover.jpg?${this.sasToken}&t=${Date.now()}`
-    );
+  async refreshCurrentImage() {
+    try {
+      // Add timestamp to bypass browser cache
+      const url = await this.azureService.getFileUrl('15minutes/cover.jpg');
+      this.currentImageUrl.set(`${url}&t=${Date.now()}`);
+    } catch (error) {
+      console.error('Error refreshing current image:', error);
+    }
   }
 
   loadHistory() {
     this.coverService.getAllCovers().subscribe({
-      next: (response) => {
+      next: async (response) => {
         if (response.success) {
-          const historyWithSas = response.data.map(item => ({
-            ...item,
-            url: `${item.url}?${this.sasToken}`
-          }));
+          // Process history items to get fresh SAS URLs
+          const historyPromises = response.data.map(async (item) => {
+            // Extract blob name from URL if possible, or assume it's stored as full URL
+            // If stored as full URL: https://account.blob.../container/15minutes/guid.jpg
+            let blobName = item.url;
+            if (item.url.includes('/15minutes/')) {
+              const parts = item.url.split('/15minutes/');
+              blobName = `15minutes/${parts[1]}`;
+            }
+
+            // Clean up query params if any
+            blobName = blobName.split('?')[0];
+
+            const signedUrl = await this.azureService.getFileUrl(blobName);
+            return {
+              ...item,
+              url: signedUrl
+            };
+          });
+
+          const historyWithSas = await Promise.all(historyPromises);
+
           // Sort by timestamp desc
           historyWithSas.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
           this.history.set(historyWithSas);
@@ -114,7 +131,10 @@ export class Cover15MinutesComponent implements OnInit {
       await this.azureService.uploadBlob(file, fixedName);
 
       // 3. Save to DB
-      const historyUrl = `https://${this.storageAccountName}.blob.core.windows.net/${this.containerName}/${randomName}`;
+      // Get signed URL to extract the base URL
+      const signedUrl = await this.azureService.getFileUrl(randomName);
+      const historyUrl = signedUrl.split('?')[0]; // Store URL without SAS token
+
       const user = this.authService.currentUser();
       const uploaderLog = user ? `${user.name} (${user.email})` : 'Unknown User';
 

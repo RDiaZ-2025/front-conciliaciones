@@ -4,7 +4,7 @@ import { DynamicDialogRef, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
-import { AccessHistoryRecord } from '../../../../services/user';
+import { AccessHistoryRecord } from '../../../../services/user.service';
 
 @Component({
   selector: 'app-history-dialog',
