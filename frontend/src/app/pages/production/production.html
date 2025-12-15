@@ -1,12 +1,16 @@
 <div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
-    <app-page-header [title]="showHistorical() ? 'Histórico de Producción' : 'Gestión de Producción'" 
-        [subtitle]="showHistorical() ? 'Registro de solicitudes completadas y entregadas' : 'Seguimiento de solicitudes en el flujo de producción'" 
+    <app-page-header [title]="showHistorical() ? 'Histórico de Producción' : 'Gestión de Producción'"
+        [subtitle]="showHistorical() ? 'Registro de solicitudes completadas y entregadas' : 'Seguimiento de solicitudes en el flujo de producción'"
         [icon]="showHistorical() ? 'pi pi-history' : 'pi pi-cog'">
         <div class="flex gap-2">
-            <p-button *ngIf="!showHistorical()" label="Reglas SLA" icon="pi pi-info-circle" [outlined]="true" (click)="slaRulesVisible.set(true)"></p-button>
-            <p-button *ngIf="!showHistorical()" label="Histórico" icon="pi pi-history" [outlined]="true" (click)="showHistorical.set(true)"></p-button>
-            <p-button *ngIf="showHistorical()" label="Volver al Tablero" icon="pi pi-arrow-left" [outlined]="true" (click)="showHistorical.set(false)"></p-button>
-            <p-button *ngIf="!showHistorical()" label="Nueva Solicitud" icon="pi pi-plus" (click)="openDialog()"></p-button>
+            <p-button *ngIf="!showHistorical()" label="Reglas SLA" icon="pi pi-info-circle" [outlined]="true"
+                (click)="slaRulesVisible.set(true)"></p-button>
+            <p-button *ngIf="!showHistorical()" label="Histórico" icon="pi pi-history" [outlined]="true"
+                (click)="showHistorical.set(true)"></p-button>
+            <p-button *ngIf="showHistorical()" label="Volver al Tablero" icon="pi pi-arrow-left" [outlined]="true"
+                (click)="showHistorical.set(false)"></p-button>
+            <p-button *ngIf="!showHistorical()" label="Nueva Solicitud" icon="pi pi-plus"
+                (click)="openDialog()"></p-button>
         </div>
     </app-page-header>
 
@@ -49,7 +53,8 @@
                         <span>Entrega: {{ request.deliveryDate | date:'dd/MM/yyyy hh:mm a' }}</span>
                     </div>
 
-                    <div class="flex align-items-center gap-2 text-sm mt-1" *ngIf="request.deliveryDate && request.stage !== 'completed'">
+                    <div class="flex align-items-center gap-2 text-sm mt-1"
+                        *ngIf="request.deliveryDate && request.stage !== 'completed'">
                         <i class="pi pi-clock" [ngClass]="{
                             'text-green-500': getSLAStatus(request.deliveryDate) === 'success',
                             'text-yellow-500': getSLAStatus(request.deliveryDate) === 'warn',
@@ -181,7 +186,7 @@
 
     <p-dialog header="Políticas de Servicio y Tiempos de Respuesta (ANS)" [(visible)]="slaRulesVisible" [modal]="true"
         [style]="{ width: '70vw', maxWidth: '1000px' }" [draggable]="false" [resizable]="false">
-        
+
         <div class="flex flex-column gap-4">
             <!-- Section 1: Workflow Info -->
             <div class="grid">
@@ -215,7 +220,8 @@
 
             <!-- Section 2: ANS Cards -->
             <div>
-                <h3 class="text-xl font-bold mb-3 border-bottom-1 surface-border pb-2">Tiempos de Respuesta (ANS) - Generación de Propuestas Estratégicas</h3>
+                <h3 class="text-xl font-bold mb-3 border-bottom-1 surface-border pb-2">Tiempos de Respuesta (ANS) -
+                    Generación de Propuestas Estratégicas</h3>
                 <div class="grid">
                     <!-- BASIC -->
                     <div class="col-12 md:col-6 lg:col-3">
@@ -262,7 +268,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="text-center text-sm text-500 font-italic mt-2">
                 "Toda gran estrategia comienza con una pregunta clara y la audiencia correcta."
             </div>
