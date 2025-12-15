@@ -268,7 +268,7 @@ export class UploadComponent {
     this.guid.set(null);
   }
 
-  goBack() {
-    this.router.navigate(['/dashboard']);
+  goToHistorical() {
+    this.router.navigate(['/historical-oc']);
   }
 }

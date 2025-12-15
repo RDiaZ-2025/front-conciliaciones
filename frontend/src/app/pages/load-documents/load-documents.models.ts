@@ -1,12 +1,12 @@
 export interface LoadDocument {
-  id: number;
-  iduser: number;
-  idfolder: string; // GUID
+  Id: number;
+  IdUser: number;
+  IdFolder: string; // GUID
   Fecha: string; // Date string
-  status: string;
-  filename: string;
-  user_name?: string;
-  user_email?: string;
+  Status: string;
+  FileName: string;
+  UserEmail?: string;
+  UserName?: string; // Kept as optional just in case, though backend doesn't seem to return it
 }
 
 export interface LoadDocumentsState {

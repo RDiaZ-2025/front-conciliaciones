@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -6,20 +6,19 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
-import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
 import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
-import { LoadDocumentsService } from './load-documents.service';
+import { LoadDocumentsService } from '../load-documents/load-documents.service';
 import { AzureStorageService } from '../../services/azure-storage';
-import { LoadDocument } from './load-documents.models';
+import { LoadDocument } from '../load-documents/load-documents.models';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
 @Component({
-  selector: 'app-load-documents',
+  selector: 'app-historical-oc',
   standalone: true,
   imports: [
     CommonModule,
@@ -29,17 +28,16 @@ import { saveAs } from 'file-saver';
     InputTextModule,
     IconFieldModule,
     InputIconModule,
-    TagModule,
     ToastModule,
     TooltipModule,
     PageHeaderComponent,
     SessionInfoComponent
   ],
   providers: [MessageService],
-  templateUrl: './load-documents.html',
-  styleUrl: './load-documents.scss'
+  templateUrl: './historical-oc.component.html',
+  styleUrl: './historical-oc.component.scss'
 })
-export class LoadDocumentsComponent implements OnInit {
+export class HistoricalOcComponent implements OnInit {
   private loadDocumentsService = inject(LoadDocumentsService);
   private azureStorageService = inject(AzureStorageService);
   private messageService = inject(MessageService);
@@ -129,21 +127,6 @@ export class LoadDocumentsComponent implements OnInit {
       this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Error al descargar los archivos.' });
     } finally {
       this.downloading.set(false);
-    }
-  }
-
-  getStatusSeverity(status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" | undefined {
-    switch (status?.toLowerCase()) {
-      case 'uploaded':
-      case 'completado':
-        return 'success';
-      case 'pending':
-      case 'pendiente':
-        return 'warn';
-      case 'error':
-        return 'danger';
-      default:
-        return 'info';
     }
   }
 }

@@ -5,7 +5,7 @@
 
     <div class="card p-4 surface-card border-round shadow-2">
         <p-table #dt [value]="documents()" [rows]="10" [paginator]="true"
-            [globalFilterFields]="['UserName', 'UserEmail', 'Status', 'IdFolder']"
+            [globalFilterFields]="['UserName', 'UserEmail']"
             [tableStyle]="{ 'min-width': '75rem' }" [rowHover]="true" dataKey="Id"
             currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} registros"
             [showCurrentPageReport]="true" [loading]="loading()">
@@ -27,26 +27,18 @@
 
             <ng-template pTemplate="header">
                 <tr>
-                    <th pSortableColumn="Id">ID <p-sortIcon field="Id"></p-sortIcon></th>
                     <th pSortableColumn="Fecha">Fecha <p-sortIcon field="Fecha"></p-sortIcon></th>
                     <th pSortableColumn="UserName">Usuario <p-sortIcon field="UserName"></p-sortIcon></th>
                     <th pSortableColumn="UserEmail">Email <p-sortIcon field="UserEmail"></p-sortIcon></th>
-                    <th pSortableColumn="Status">Estado <p-sortIcon field="Status"></p-sortIcon></th>
-                    <th pSortableColumn="IdFolder">Carpeta (GUID) <p-sortIcon field="IdFolder"></p-sortIcon></th>
                     <th>Acciones</th>
                 </tr>
             </ng-template>
 
             <ng-template pTemplate="body" let-doc>
                 <tr>
-                    <td>{{ doc.Id }}</td>
                     <td>{{ doc.Fecha | date:'dd/MM/yyyy HH:mm' }}</td>
                     <td>{{ doc.UserName || 'N/A' }}</td>
                     <td>{{ doc.UserEmail || 'N/A' }}</td>
-                    <td>
-                        <p-tag [value]="doc.Status" [severity]="getStatusSeverity(doc.Status)"></p-tag>
-                    </td>
-                    <td><span class="text-sm font-mono surface-100 p-1 border-round">{{ doc.IdFolder }}</span></td>
                     <td>
                         <p-button icon="pi pi-download" [rounded]="true" [text]="true" severity="help"
                             (onClick)="downloadFiles(doc)" [disabled]="downloading()"
@@ -58,7 +50,7 @@
 
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="7" class="text-center p-4">No se encontraron documentos.</td>
+                    <td colspan="4" class="text-center p-4">No se encontraron documentos.</td>
                 </tr>
             </ng-template>
         </p-table>

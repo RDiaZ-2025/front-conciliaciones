@@ -61,7 +61,8 @@ export class LoadDocumentsOCbyUserController {
           status: true,
           fileName: true,
           user: {
-            email: true
+            email: true,
+            name: true
           }
         }
       });
@@ -71,6 +72,7 @@ export class LoadDocumentsOCbyUserController {
         IdUser: doc.idUser,
         IdFolder: doc.idFolder,
         UserEmail: doc.user?.email || null,
+        UserName: doc.user?.name || null,
         Fecha: doc.fecha,
         Status: doc.status,
         FileName: doc.fileName

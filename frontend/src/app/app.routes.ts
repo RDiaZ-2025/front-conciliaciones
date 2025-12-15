@@ -33,6 +33,10 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/load-documents/load-documents').then(m => m.LoadDocumentsComponent)
       },
       {
+        path: 'historical-oc',
+        loadComponent: () => import('./pages/historical-oc/historical-oc.component').then(m => m.HistoricalOcComponent)
+      },
+      {
         path: 'menus',
         loadComponent: () => import('./pages/menus/menus').then(m => m.MenusComponent)
       },
