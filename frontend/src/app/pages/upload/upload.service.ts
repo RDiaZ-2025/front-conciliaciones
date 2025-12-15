@@ -125,10 +125,10 @@ export class UploadService {
     return { isValid: true };
   }
 
-  async uploadToAzure(file: File, path: string): Promise<boolean> {
+  async uploadToAzure(file: File, path: string, containerName: string = 'private'): Promise<boolean> {
     try {
       const blobName = `${path}/${file.name}`;
-      return await this.azureService.uploadBlob(file, blobName);
+      return await this.azureService.uploadBlob(file, blobName, containerName);
     } catch (err) {
       console.error('Azure Upload Error:', err);
       return false;

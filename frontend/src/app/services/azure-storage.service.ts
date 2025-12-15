@@ -8,11 +8,13 @@ export interface UploadOptions {
   folderPath: string;
   onProgress?: (progress: number) => void;
   metadata?: Record<string, string>;
+  containerName?: string;
 }
 
 export interface DownloadOptions {
   folderPath: string;
   fileName?: string;
+  containerName?: string;
 }
 
 export interface UploadResult {
@@ -38,42 +40,56 @@ interface SasTokenResponse {
 })
 export class AzureStorageService {
   private http = inject(HttpClient);
-  private _containerClient: ContainerClient | null = null;
-  private sasToken: string | null = null;
-  private tokenExpiry: Date | null = null;
-  private accountName: string | null = null;
-  private containerName: string | null = null;
+
+  // Cache for container sessions
+  private sessions = new Map<string, {
+    client: ContainerClient;
+    expiry: Date;
+    accountName: string;
+  }>();
 
   constructor() { }
 
-  private async getContainerClient(): Promise<ContainerClient> {
-    if (this._containerClient && this.tokenExpiry && this.tokenExpiry > new Date()) {
-      return this._containerClient;
+  private async getContainerClient(containerName: string = 'private'): Promise<ContainerClient> {
+    const session = this.sessions.get(containerName);
+
+    // Check if we have a valid session
+    if (session && session.expiry > new Date()) {
+      return session.client;
     }
 
     try {
-      const response = await firstValueFrom(this.http.get<SasTokenResponse>(`${environment.apiUrl}/storage/sas-token`));
+      // Pass container parameter to backend
+      const response = await firstValueFrom(
+        this.http.get<SasTokenResponse>(`${environment.apiUrl}/storage/sas-token`, {
+          params: { container: containerName }
+        })
+      );
 
       if (!response.success) {
         throw new Error('Failed to retrieve SAS token');
       }
 
-      this.sasToken = response.data.sasToken;
-      this.tokenExpiry = new Date(response.data.expiresOn);
-      this.accountName = response.data.accountName;
-      this.containerName = response.data.containerName;
-
+      const expiryDate = new Date(response.data.expiresOn);
       // Ensure we subtract a buffer (e.g., 5 mins) to refresh before actual expiry
-      this.tokenExpiry.setMinutes(this.tokenExpiry.getMinutes() - 5);
+      expiryDate.setMinutes(expiryDate.getMinutes() - 5);
 
       const blobServiceClient = new BlobServiceClient(
-        `https://${this.accountName}.blob.core.windows.net/${this.sasToken}`
+        `https://${response.data.accountName}.blob.core.windows.net/${response.data.sasToken}`
       );
 
-      this._containerClient = blobServiceClient.getContainerClient(this.containerName);
-      return this._containerClient;
+      const client = blobServiceClient.getContainerClient(response.data.containerName);
+
+      // Store in cache
+      this.sessions.set(containerName, {
+        client,
+        expiry: expiryDate,
+        accountName: response.data.accountName
+      });
+
+      return client;
     } catch (error) {
-      console.error('Error initializing Azure Storage client:', error);
+      console.error(`Error initializing Azure Storage client for container ${containerName}:`, error);
       throw error;
     }
   }
@@ -83,7 +99,7 @@ export class AzureStorageService {
    */
   async uploadFile(file: File, options: UploadOptions): Promise<UploadResult> {
     try {
-      const containerClient = await this.getContainerClient();
+      const containerClient = await this.getContainerClient(options.containerName);
       const fileName = this.sanitizeFileName(file.name);
       const blobName = `${options.folderPath}/${fileName}`;
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
@@ -125,10 +141,10 @@ export class AzureStorageService {
   /**
    * List blobs with a prefix
    */
-  async listBlobs(prefix: string): Promise<string[]> {
+  async listBlobs(prefix: string, containerName: string = 'private'): Promise<string[]> {
     const blobs: string[] = [];
     try {
-      const containerClient = await this.getContainerClient();
+      const containerClient = await this.getContainerClient(containerName);
       for await (const blob of containerClient.listBlobsFlat({ prefix })) {
         blobs.push(blob.name);
       }
@@ -141,9 +157,9 @@ export class AzureStorageService {
   /**
    * Download a blob as a Blob object
    */
-  async downloadBlob(blobName: string): Promise<Blob | undefined> {
+  async downloadBlob(blobName: string, containerName: string = 'private'): Promise<Blob | undefined> {
     try {
-      const containerClient = await this.getContainerClient();
+      const containerClient = await this.getContainerClient(containerName);
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
       const downloadResponse = await blockBlobClient.download(0);
       return await downloadResponse.blobBody;
@@ -156,9 +172,9 @@ export class AzureStorageService {
   /**
    * Upload a single blob with a specific name
    */
-  async uploadBlob(file: Blob | File, blobName: string): Promise<boolean> {
+  async uploadBlob(file: Blob | File, blobName: string, containerName: string = 'private'): Promise<boolean> {
     try {
-      const containerClient = await this.getContainerClient();
+      const containerClient = await this.getContainerClient(containerName);
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
       await blockBlobClient.uploadData(file);
       return true;
@@ -185,7 +201,7 @@ export class AzureStorageService {
    */
   async downloadFiles(options: DownloadOptions): Promise<void> {
     try {
-      const containerClient = await this.getContainerClient();
+      const containerClient = await this.getContainerClient(options.containerName);
       const folderPath = options.folderPath.toLowerCase();
 
       // Try different possible folder path variations
@@ -252,9 +268,9 @@ export class AzureStorageService {
   /**
    * List files in a specific folder
    */
-  async listFiles(folderPath: string): Promise<string[]> {
+  async listFiles(folderPath: string, containerName: string = 'private'): Promise<string[]> {
     try {
-      const containerClient = await this.getContainerClient();
+      const containerClient = await this.getContainerClient(containerName);
       const blobs: string[] = [];
       const searchPath = folderPath.endsWith('/') ? folderPath : `${folderPath}/`;
 
@@ -272,7 +288,7 @@ export class AzureStorageService {
   /**
    * Get detailed file information for a specific folder
    */
-  async getFilesDetails(folderPath: string): Promise<Array<{
+  async getFilesDetails(folderPath: string, containerName: string = 'private'): Promise<Array<{
     id: string;
     name: string;
     size: number;
@@ -281,7 +297,10 @@ export class AzureStorageService {
     uploadDate: string;
   }>> {
     try {
-      const containerClient = await this.getContainerClient();
+      const containerClient = await this.getContainerClient(containerName);
+      const session = this.sessions.get(containerName);
+      const accountName = session?.accountName || 'vocprojectstorage';
+
       const files: Array<{
         id: string;
         name: string;
@@ -306,7 +325,7 @@ export class AzureStorageService {
           name: fileName,
           size: blob.properties.contentLength || 0,
           type: mimeType,
-          url: `https://${this.accountName}.blob.core.windows.net/${this.containerName}/${blob.name}`,
+          url: `https://${accountName}.blob.core.windows.net/${containerName}/${blob.name}`,
           uploadDate: blob.properties.lastModified?.toISOString() || new Date().toISOString()
         });
       }
@@ -318,33 +337,29 @@ export class AzureStorageService {
     }
   }
 
-  /**
-   * Get MIME type based on file extension
-   */
   private getMimeType(extension: string): string {
-    const mimeTypes: Record<string, string> = {
+    const mimeTypes: { [key: string]: string } = {
       'pdf': 'application/pdf',
-      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'xls': 'application/vnd.ms-excel',
-      'mp3': 'audio/mpeg',
-      'mp4': 'video/mp4',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'png': 'image/png',
       'jpg': 'image/jpeg',
       'jpeg': 'image/jpeg',
-      'png': 'image/png',
       'gif': 'image/gif',
-      'doc': 'application/msword',
-      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      'txt': 'text/plain',
+      'csv': 'text/csv'
     };
-
     return mimeTypes[extension] || 'application/octet-stream';
   }
 
   /**
    * Delete a file from Azure Storage
    */
-  async deleteFile(blobName: string): Promise<boolean> {
+  async deleteFile(blobName: string, containerName: string = 'private'): Promise<boolean> {
     try {
-      const containerClient = await this.getContainerClient();
+      const containerClient = await this.getContainerClient(containerName);
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
       await blockBlobClient.delete();
       return true;
@@ -357,8 +372,8 @@ export class AzureStorageService {
   /**
    * Get file URL for preview/download
    */
-  async getFileUrl(blobName: string): Promise<string> {
-    const containerClient = await this.getContainerClient();
+  async getFileUrl(blobName: string, containerName: string = 'private'): Promise<string> {
+    const containerClient = await this.getContainerClient(containerName);
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
     return blockBlobClient.url;
   }
@@ -392,9 +407,9 @@ export class AzureStorageService {
   /**
    * Download a single file by its blob name
    */
-  async downloadSingleFile(blobName: string, fileName?: string): Promise<void> {
+  async downloadSingleFile(blobName: string, fileName?: string, containerName: string = 'private'): Promise<void> {
     try {
-      const containerClient = await this.getContainerClient();
+      const containerClient = await this.getContainerClient(containerName);
       // Allow passing a full URL; extract blob path if needed
       let resolvedBlobName = blobName;
       if (/^https?:\/\//i.test(blobName)) {

@@ -4,10 +4,16 @@ import { StorageSharedKeyCredential, generateBlobSASQueryParameters, ContainerSA
 export class StorageController {
   static async generateSasToken(req: Request, res: Response) {
     try {
-      // Configuration from environment variables
+      // Get container from query or env
+      const allowedContainers = ['private', 'public'];
+      let containerName = req.query.container as string;
+
+      if (!containerName || !allowedContainers.includes(containerName)) {
+        containerName = process.env.AZURE_STORAGE_CONTAINER_NAME || 'private';
+      }
+
       const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME || 'vocprojectstorage';
       const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY;
-      const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME || 'private';
 
       if (!accountKey) {
         return res.status(500).json({

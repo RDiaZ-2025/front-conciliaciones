@@ -54,7 +54,7 @@ export class Cover15MinutesComponent implements OnInit {
   async refreshCurrentImage() {
     try {
       // Add timestamp to bypass browser cache
-      const url = await this.azureService.getFileUrl('15minutes/cover.jpg');
+      const url = await this.azureService.getFileUrl('15minutes/cover.jpg', 'public');
       this.currentImageUrl.set(`${url}&t=${Date.now()}`);
     } catch (error) {
       console.error('Error refreshing current image:', error);
@@ -78,7 +78,7 @@ export class Cover15MinutesComponent implements OnInit {
             // Clean up query params if any
             blobName = blobName.split('?')[0];
 
-            const signedUrl = await this.azureService.getFileUrl(blobName);
+            const signedUrl = await this.azureService.getFileUrl(blobName, 'public');
             return {
               ...item,
               url: signedUrl
@@ -125,14 +125,14 @@ export class Cover15MinutesComponent implements OnInit {
       const fixedName = `15minutes/cover.jpg`;
 
       // 1. Upload with random name (for history)
-      await this.azureService.uploadBlob(file, randomName);
+      await this.azureService.uploadBlob(file, randomName, 'public');
 
       // 2. Upload with fixed name (for current cover)
-      await this.azureService.uploadBlob(file, fixedName);
+      await this.azureService.uploadBlob(file, fixedName, 'public');
 
       // 3. Save to DB
       // Get signed URL to extract the base URL
-      const signedUrl = await this.azureService.getFileUrl(randomName);
+      const signedUrl = await this.azureService.getFileUrl(randomName, 'public');
       const historyUrl = signedUrl.split('?')[0]; // Store URL without SAS token
 
       const user = this.authService.currentUser();
@@ -161,7 +161,8 @@ export class Cover15MinutesComponent implements OnInit {
   }
 
   copyLink(url: string) {
-    navigator.clipboard.writeText(url).then(() => {
+    const cleanUrl = url.split('?')[0];
+    navigator.clipboard.writeText(cleanUrl).then(() => {
       this.messageService.add({ severity: 'success', summary: 'Copiado', detail: 'Enlace copiado al portapapeles' });
     });
   }
