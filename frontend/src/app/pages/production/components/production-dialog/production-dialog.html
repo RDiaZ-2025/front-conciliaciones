@@ -2,7 +2,7 @@
     <form [formGroup]="form" class="flex flex-column gap-2">
         <div>
             <p-floatlabel variant="in">
-                <input pInputText id="name" formControlName="name" class="w-full" autocomplete="off" />
+                <input pInputText id="name" formControlName="name" class="w-full" autocomplete="off" placeholder="Incluya cliente, campaña mes y año" />
                 <label for="name">Nombre de la solicitud</label>
             </p-floatlabel>
             <small class="p-error" *ngIf="form.get('name')?.invalid && form.get('name')?.dirty">

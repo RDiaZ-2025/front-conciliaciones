@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
@@ -42,6 +42,7 @@ export class ProductionDialogComponent implements OnInit {
   azureService = inject(AzureStorageService);
   messageService = inject(MessageService);
   teamService = inject(TeamService);
+  cd = inject(ChangeDetectorRef);
 
   form!: FormGroup;
   isEditMode = false;
@@ -129,11 +130,13 @@ export class ProductionDialogComponent implements OnInit {
         next: (response) => {
           if (response.success) {
             this.assignedUsers = response.data;
+            this.cd.detectChanges();
           }
         }
       });
     } else {
       this.assignedUsers = [];
+      this.cd.detectChanges();
     }
   }
 
