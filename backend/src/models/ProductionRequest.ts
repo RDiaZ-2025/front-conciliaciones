@@ -1,5 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn, OneToOne } from 'typeorm';
 import { User } from './User';
+import { CustomerData } from './CustomerData';
+import { CampaignDetail } from './CampaignDetail';
+import { AudienceData } from './AudienceData';
+import { ProductionInfo } from './ProductionInfo';
 
 /**
  * ProductionRequest entity representing production request management
@@ -57,6 +61,30 @@ export class ProductionRequest {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'AssignedUserId' })
   assignedUser!: User;
+
+  /**
+   * One-to-one relationship with CustomerData
+   */
+  @OneToOne(() => CustomerData, customerData => customerData.productionRequest, { cascade: true })
+  customerData!: CustomerData;
+
+  /**
+   * One-to-one relationship with CampaignDetail
+   */
+  @OneToOne(() => CampaignDetail, campaignDetail => campaignDetail.productionRequest, { cascade: true })
+  campaignDetail!: CampaignDetail;
+
+  /**
+   * One-to-one relationship with AudienceData
+   */
+  @OneToOne(() => AudienceData, audienceData => audienceData.productionRequest, { cascade: true })
+  audienceData!: AudienceData;
+
+  /**
+   * One-to-one relationship with ProductionInfo
+   */
+  @OneToOne(() => ProductionInfo, productionInfo => productionInfo.productionRequest, { cascade: true })
+  productionInfo!: ProductionInfo;
 
   /**
    * Expected or actual delivery date
@@ -129,7 +157,7 @@ export class ProductionRequest {
     if (!this.deliveryDate) {
       return null;
     }
-    
+
     const now = new Date();
     const diffTime = this.deliveryDate.getTime() - now.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -160,23 +188,23 @@ export class ProductionRequest {
    */
   getPriorityLevel(): 'high' | 'medium' | 'low' {
     const daysUntilDelivery = this.getDaysUntilDelivery();
-    
+
     if (daysUntilDelivery === null) {
       return 'low';
     }
-    
+
     if (daysUntilDelivery < 0) {
       return 'high'; // Overdue
     }
-    
+
     if (daysUntilDelivery <= 3) {
       return 'high';
     }
-    
+
     if (daysUntilDelivery <= 7) {
       return 'medium';
     }
-    
+
     return 'low';
   }
 

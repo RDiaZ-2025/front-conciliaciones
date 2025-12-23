@@ -11,6 +11,10 @@ export * from './User';
 export * from './Permission';
 export * from './PermissionByUser';
 export * from './Notification';
+export * from './CustomerData';
+export * from './CampaignDetail';
+export * from './AudienceData';
+export * from './ProductionInfo';
 
 // Document Management Models
 export { LoadDocumentsOCbyUser } from './LoadDocumentsOCbyUser';
@@ -39,6 +43,10 @@ import { User } from './User';
 import { Permission } from './Permission';
 import { PermissionByUser } from './PermissionByUser';
 import { Notification } from './Notification';
+import { CustomerData } from './CustomerData';
+import { CampaignDetail } from './CampaignDetail';
+import { AudienceData } from './AudienceData';
+import { ProductionInfo } from './ProductionInfo';
 import { LoadDocumentsOCbyUser } from './LoadDocumentsOCbyUser';
 import { MenuItem } from './MenuItem';
 import { ProductionRequest } from './ProductionRequest';
@@ -52,6 +60,10 @@ export const entities = [
   Permission,
   PermissionByUser,
   Notification,
+  CustomerData,
+  CampaignDetail,
+  AudienceData,
+  ProductionInfo,
   LoadDocumentsOCbyUser,
   MenuItem,
   ProductionRequest,
@@ -93,7 +105,11 @@ export const ModelCategories = {
    * Production management models
    */
   Production: {
-    ProductionRequest
+    ProductionRequest,
+    CustomerData,
+    CampaignDetail,
+    AudienceData,
+    ProductionInfo
   },
 
   /**
