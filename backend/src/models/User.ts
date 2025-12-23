@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { PermissionByUser } from './PermissionByUser';
 import { LoadDocumentsOCbyUser } from './LoadDocumentsOCbyUser';
+import { Notification } from './Notification';
 
 /**
  * User entity representing system users
@@ -71,6 +72,12 @@ export class User {
      */
     @OneToMany(() => LoadDocumentsOCbyUser, loadDocument => loadDocument.user)
     documentLoads!: LoadDocumentsOCbyUser[];
+
+    /**
+     * One-to-many relationship with notifications
+     */
+    @OneToMany(() => Notification, notification => notification.user)
+    notifications!: Notification[];
 
     /**
      * Check if user is active
