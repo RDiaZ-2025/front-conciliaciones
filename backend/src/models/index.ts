@@ -15,6 +15,8 @@ export * from './CustomerData';
 export * from './CampaignDetail';
 export * from './AudienceData';
 export * from './ProductionInfo';
+export * from './Product';
+export * from './CampaignProduct';
 
 // Document Management Models
 export { LoadDocumentsOCbyUser } from './LoadDocumentsOCbyUser';
@@ -54,6 +56,8 @@ import { UserActionLog } from './UserActionLog';
 import { Cover15Minute } from './Cover15Minute';
 import { Team } from './Team';
 import { UserByTeam } from './UserByTeam';
+import { Product } from './Product';
+import { CampaignProduct } from './CampaignProduct';
 
 export const entities = [
   User,
@@ -70,7 +74,9 @@ export const entities = [
   UserActionLog,
   Cover15Minute,
   Team,
-  UserByTeam
+  UserByTeam,
+  Product,
+  CampaignProduct
 ];
 
 /**

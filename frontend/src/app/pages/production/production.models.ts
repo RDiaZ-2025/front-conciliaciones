@@ -13,6 +13,64 @@ export interface Team {
   description?: string;
 }
 
+export interface CustomerData {
+  clientAgency: string;
+  requesterName: string;
+  requesterEmail: string;
+  requesterPhone?: string;
+  businessName: string;
+  nit: string;
+  serviceStrategy?: boolean;
+  serviceTactical?: boolean;
+  serviceProduction?: boolean;
+  serviceData?: boolean;
+}
+
+export interface AudienceData {
+  gender: string;
+  geo: string;
+  ageRange: string;
+  socioEconomicLevel: string;
+  interests: string;
+  specificDetails: string;
+  campaignContext: string;
+  campaignConcept?: string;
+  assets?: string;
+}
+
+export interface Product {
+  id: number;
+  name: string;
+}
+
+export interface CampaignProduct {
+  id?: number;
+  campaignDetailId?: number;
+  productId: number;
+  quantity: string;
+  product?: Product;
+}
+
+export interface CampaignDetail {
+  budget: string;
+  brand?: string;
+  productService: string;
+  objective: string;
+  campaignProducts?: CampaignProduct[];
+}
+
+export interface ProductionInfo {
+  formatType: string;
+  rightsTime: string;
+  campaignEmissionDate?: string;
+  communicationTone: string;
+  ownAndExternalMedia?: string;
+  tvFormats: string;
+  digitalFormats: string;
+  productionDetails: string;
+  additionalComments?: string;
+}
+
 export interface ProductionRequest {
   id: string;
   name: string;
@@ -25,6 +83,12 @@ export interface ProductionRequest {
   observations?: string;
   stage: string;
   files?: UploadedFile[];
+  
+  // New stepper data
+  customerData?: CustomerData;
+  audienceData?: AudienceData;
+  campaignDetail?: CampaignDetail;
+  productionInfo?: ProductionInfo;
 }
 
 export const WORKFLOW_STAGES = [

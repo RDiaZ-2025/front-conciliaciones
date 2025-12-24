@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormArray } from '@angular/forms';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -10,11 +10,14 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { FileUploadModule } from 'primeng/fileupload';
 import { ToastModule } from 'primeng/toast';
 import { SelectModule } from 'primeng/select';
-import { MessageService } from 'primeng/api';
-import { ProductionRequest, UploadedFile, Team } from '../../production.models';
+import { MenuItem, MessageService } from 'primeng/api';
+import { StepsModule } from 'primeng/steps';
+import { CheckboxModule } from 'primeng/checkbox';
+import { ProductionRequest, UploadedFile, Team, CustomerData, AudienceData, CampaignDetail, ProductionInfo, Product } from '../../production.models';
 import { AzureStorageService } from '../../../../services/azure-storage.service';
 import { TeamService } from '../../../../services/team.service';
 import { User } from '../../../../services/user.service';
+import { ProductionService } from '../../../../services/production.service';
 
 @Component({
   selector: 'app-production-dialog',
@@ -29,7 +32,9 @@ import { User } from '../../../../services/user.service';
     DatePickerModule,
     FileUploadModule,
     ToastModule,
-    SelectModule
+    SelectModule,
+    StepsModule,
+    CheckboxModule
   ],
   providers: [MessageService],
   templateUrl: './production-dialog.html',
@@ -42,6 +47,7 @@ export class ProductionDialogComponent implements OnInit {
   azureService = inject(AzureStorageService);
   messageService = inject(MessageService);
   teamService = inject(TeamService);
+  productionService = inject(ProductionService);
   cd = inject(ChangeDetectorRef);
 
   form!: FormGroup;
@@ -53,28 +59,156 @@ export class ProductionDialogComponent implements OnInit {
   teams: Team[] = [];
   requestingUsers: User[] = [];
   assignedUsers: User[] = [];
+  products: Product[] = [];
+
+  items: MenuItem[] = [];
+  currentStep: number = 0;
 
   ngOnInit() {
     this.isEditMode = !!this.config.data?.id;
     const data = this.config.data || {};
 
+    this.items = [
+      { label: 'Solicitud' },
+      { label: 'Cliente' },
+      { label: 'Campaña' },
+      { label: 'Audiencia' },
+      { label: 'Producción' }
+    ];
+
     this.form = this.fb.group({
+      // Step 1: General Request
       name: [data.name || '', Validators.required],
       department: [data.department || '', Validators.required],
       contactPerson: [data.contactPerson || '', Validators.required],
       assignedTeam: [data.assignedTeam || '', Validators.required],
       assignedUserId: [data.assignedUserId || null, Validators.required],
       deliveryDate: [data.deliveryDate ? new Date(data.deliveryDate) : null, Validators.required],
-      observations: [data.observations || '']
+      observations: [data.observations || ''],
+
+      // Step 2: Customer Information
+      customerData: this.fb.group({
+        clientAgency: [data.customerData?.clientAgency || '', Validators.required],
+        requesterName: [data.customerData?.requesterName || '', Validators.required],
+        requesterEmail: [data.customerData?.requesterEmail || '', [Validators.required, Validators.email]],
+        requesterPhone: [data.customerData?.requesterPhone || ''],
+        businessName: [data.customerData?.businessName || '', Validators.required],
+        nit: [data.customerData?.nit || '', Validators.required],
+        serviceStrategy: [data.customerData?.serviceStrategy || false],
+        serviceTactical: [data.customerData?.serviceTactical || false],
+        serviceProduction: [data.customerData?.serviceProduction || false],
+        serviceData: [data.customerData?.serviceData || false]
+      }),
+
+      // Step 3: Audience Details
+      audienceData: this.fb.group({
+        gender: [data.audienceData?.gender || '', Validators.required],
+        geo: [data.audienceData?.geo || '', Validators.required],
+        ageRange: [data.audienceData?.ageRange || '', Validators.required],
+        socioEconomicLevel: [data.audienceData?.socioEconomicLevel || '', Validators.required],
+        interests: [data.audienceData?.interests || '', Validators.required],
+        specificDetails: [data.audienceData?.specificDetails || '', Validators.required],
+        campaignContext: [data.audienceData?.campaignContext || '', Validators.required],
+        campaignConcept: [data.audienceData?.campaignConcept || ''],
+        assets: [data.audienceData?.assets || '']
+      }),
+
+      // Step 4: Campaign Details
+      campaignDetail: this.fb.group({
+        budget: [data.campaignDetail?.budget || '', Validators.required],
+        brand: [data.campaignDetail?.brand || ''],
+        productService: [data.campaignDetail?.productService || '', Validators.required],
+        objective: [data.campaignDetail?.objective || '', Validators.required],
+        campaignProducts: this.fb.array([])
+      }),
+
+      // Step 5: Production & Formats
+      productionInfo: this.fb.group({
+        formatType: [data.productionInfo?.formatType || '', Validators.required],
+        rightsTime: [data.productionInfo?.rightsTime || '', Validators.required],
+        campaignEmissionDate: [data.productionInfo?.campaignEmissionDate ? new Date(data.productionInfo.campaignEmissionDate) : null],
+        communicationTone: [data.productionInfo?.communicationTone || '', Validators.required],
+        ownAndExternalMedia: [data.productionInfo?.ownAndExternalMedia || ''],
+        tvFormats: [data.productionInfo?.tvFormats || '', Validators.required],
+        digitalFormats: [data.productionInfo?.digitalFormats || '', Validators.required],
+        productionDetails: [data.productionInfo?.productionDetails || '', Validators.required],
+        additionalComments: [data.productionInfo?.additionalComments || '']
+      })
     });
 
     this.loadTeams();
+    this.loadProducts();
 
-    if (this.isEditMode && data.files) {
-      this.existingFiles = data.files;
+    if (this.isEditMode) {
+      this.productionService.getProductionRequestById(this.config.data.id).subscribe({
+        next: (fullData: any) => {
+          // Convert dates
+          if (fullData.deliveryDate) fullData.deliveryDate = new Date(fullData.deliveryDate);
+          if (fullData.productionInfo?.campaignEmissionDate) {
+            fullData.productionInfo.campaignEmissionDate = new Date(fullData.productionInfo.campaignEmissionDate);
+          }
+
+          this.form.patchValue(fullData);
+
+          // Handle FormArray for campaignProducts
+          this.campaignProducts.clear();
+          if (fullData.campaignDetail?.campaignProducts && fullData.campaignDetail.campaignProducts.length > 0) {
+            fullData.campaignDetail.campaignProducts.forEach((cp: any) => this.addCampaignProduct(cp));
+          } else {
+            this.addCampaignProduct();
+          }
+
+          if (fullData.files) {
+            this.existingFiles = fullData.files;
+          }
+        },
+        error: (error: any) => {
+          console.error('Error loading full request details', error);
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los detalles de la solicitud' });
+        }
+      });
+    } else {
+      if (data.campaignDetail?.campaignProducts) {
+        data.campaignDetail.campaignProducts.forEach((cp: any) => this.addCampaignProduct(cp));
+      } else if (this.campaignProducts.length === 0) {
+        this.addCampaignProduct();
+      }
+
+      if (this.isEditMode && data.files) {
+        this.existingFiles = data.files;
+      }
     }
 
     this.setupValueChanges();
+  }
+
+  get campaignProducts() {
+    return (this.form.get('campaignDetail') as FormGroup).get('campaignProducts') as FormArray;
+  }
+
+  addCampaignProduct(data?: any) {
+    const productGroup = this.fb.group({
+      productId: [data?.productId || null, Validators.required],
+      quantity: [data?.quantity || '', Validators.required]
+    });
+    this.campaignProducts.push(productGroup);
+  }
+
+  removeCampaignProduct(index: number) {
+    this.campaignProducts.removeAt(index);
+  }
+
+  loadProducts() {
+    this.productionService.getProducts().subscribe({
+      next: (products) => {
+        this.products = products;
+        this.cd.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error loading products', error);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los productos' });
+      }
+    });
   }
 
   setupValueChanges() {
@@ -92,6 +226,7 @@ export class ProductionDialogComponent implements OnInit {
       next: (response) => {
         if (response.success) {
           this.teams = response.data;
+          this.cd.detectChanges();
           
           // Initial load of users if data exists
           const dept = this.form.get('department')?.value;
@@ -115,11 +250,13 @@ export class ProductionDialogComponent implements OnInit {
         next: (response) => {
           if (response.success) {
             this.requestingUsers = response.data;
+            this.cd.detectChanges();
           }
         }
       });
     } else {
       this.requestingUsers = [];
+      this.cd.detectChanges();
     }
   }
 
@@ -174,6 +311,47 @@ export class ProductionDialogComponent implements OnInit {
     }
   }
 
+  next() {
+    let isValid = false;
+    switch (this.currentStep) {
+      case 0:
+        // Validate main form fields (excluding nested groups)
+        const mainControls = ['name', 'department', 'contactPerson', 'assignedTeam', 'assignedUserId', 'deliveryDate'];
+        isValid = mainControls.every(key => this.form.get(key)?.valid);
+        if (!isValid) {
+          mainControls.forEach(key => this.form.get(key)?.markAsDirty());
+        }
+        break;
+      case 1:
+        const customerGroup = this.form.get('customerData') as FormGroup;
+        isValid = customerGroup.valid;
+        if (!isValid) customerGroup.markAllAsTouched();
+        break;
+      case 2:
+        const campaignGroup = this.form.get('campaignDetail') as FormGroup;
+        isValid = campaignGroup.valid;
+        if (!isValid) campaignGroup.markAllAsTouched();
+        break;
+      case 3:
+        const audienceGroup = this.form.get('audienceData') as FormGroup;
+        isValid = audienceGroup.valid;
+        if (!isValid) audienceGroup.markAllAsTouched();
+        break;
+    }
+
+    if (isValid) {
+      this.currentStep++;
+    } else {
+      this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'Por favor complete todos los campos requeridos' });
+    }
+  }
+
+  prev() {
+    if (this.currentStep > 0) {
+      this.currentStep--;
+    }
+  }
+
   save() {
     if (this.form.valid) {
       const formValue = this.form.value;
@@ -185,12 +363,8 @@ export class ProductionDialogComponent implements OnInit {
       };
       this.ref.close(result);
     } else {
-      Object.keys(this.form.controls).forEach(key => {
-        const control = this.form.get(key);
-        if (control?.invalid) {
-          control.markAsDirty();
-        }
-      });
+      this.form.markAllAsTouched();
+      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Por favor complete todos los campos requeridos en todos los pasos' });
     }
   }
 
@@ -199,7 +373,6 @@ export class ProductionDialogComponent implements OnInit {
   }
 
   removeFile(file: UploadedFile) {
-    // Logic to remove file (visual only for now, or actual delete if needed)
     this.existingFiles = this.existingFiles.filter(f => f.id !== file.id);
     this.uploadedFiles = this.uploadedFiles.filter(f => f.id !== file.id);
   }

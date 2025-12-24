@@ -5,7 +5,8 @@ import {
   createProductionRequest,
   updateProductionRequest,
   moveProductionRequest,
-  deleteProductionRequest
+  deleteProductionRequest,
+  getProducts
 } from '../controllers/productionController';
 import { authenticateToken } from '../middleware/auth';
 
@@ -15,6 +16,7 @@ const router = express.Router();
 router.use(authenticateToken);
 
 // Production request routes
+router.get('/products', getProducts);
 router.get('/', getAllProductionRequests);
 router.get('/:id', getProductionRequestById);
 router.post('/', createProductionRequest);
