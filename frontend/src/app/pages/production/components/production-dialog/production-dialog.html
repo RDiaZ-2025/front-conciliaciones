@@ -6,7 +6,8 @@
         <div *ngIf="currentStep === 0" class="flex flex-column gap-3">
             <div>
                 <p-floatlabel variant="in">
-                    <input pInputText id="name" formControlName="name" class="w-full" autocomplete="off" placeholder="Incluya cliente, campaña mes y año" />
+                    <input pInputText id="name" formControlName="name" class="w-full" autocomplete="off"
+                        placeholder="Incluya cliente, campaña mes y año" />
                     <label for="name">Nombre de la solicitud</label>
                 </p-floatlabel>
                 <small class="p-error" *ngIf="form.get('name')?.invalid && form.get('name')?.dirty">
@@ -27,11 +28,12 @@
                 </div>
                 <div class="col-12 md:col-6 mb-2">
                     <p-floatlabel variant="in">
-                        <p-select id="contactPerson" formControlName="contactPerson" [options]="requestingUsers" optionLabel="name"
-                            optionValue="name" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                        <p-select id="contactPerson" formControlName="contactPerson" [options]="requestingUsers"
+                            optionLabel="name" optionValue="name" [style]="{'width':'100%'}" appendTo="body"></p-select>
                         <label for="contactPerson">Persona que Solicita</label>
                     </p-floatlabel>
-                    <small class="p-error" *ngIf="form.get('contactPerson')?.invalid && form.get('contactPerson')?.dirty">
+                    <small class="p-error"
+                        *ngIf="form.get('contactPerson')?.invalid && form.get('contactPerson')?.dirty">
                         Contacto es requerido
                     </small>
                 </div>
@@ -50,11 +52,12 @@
                 </div>
                 <div class="col-12 md:col-6 mb-2">
                     <p-floatlabel variant="in">
-                        <p-select id="assignedUser" formControlName="assignedUserId" [options]="assignedUsers" optionLabel="name"
-                            optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                        <p-select id="assignedUser" formControlName="assignedUserId" [options]="assignedUsers"
+                            optionLabel="name" optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
                         <label for="assignedUser">Persona asignada</label>
                     </p-floatlabel>
-                    <small class="p-error" *ngIf="form.get('assignedUserId')?.invalid && form.get('assignedUserId')?.dirty">
+                    <small class="p-error"
+                        *ngIf="form.get('assignedUserId')?.invalid && form.get('assignedUserId')?.dirty">
                         Usuario asignado es requerido
                     </small>
                 </div>
@@ -74,39 +77,32 @@
 
             <div>
                 <p-floatlabel variant="in">
-                    <textarea pTextarea id="observations" formControlName="observations" rows="3" autoResize="autoResize"
-                        class="w-full"></textarea>
+                    <textarea pTextarea id="observations" formControlName="observations" rows="3"
+                        autoResize="autoResize" class="w-full"></textarea>
                     <label for="observations">Observaciones</label>
                 </p-floatlabel>
             </div>
 
             <div>
                 <label class="font-bold mb-2 block">Archivos adjuntos</label>
-                <p-fileUpload mode="advanced" name="demo[]" [customUpload]="true" (uploadHandler)="onUpload($event)"
-                    [multiple]="true" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" [maxFileSize]="10000000"
-                    chooseLabel="Seleccionar" uploadLabel="Subir" cancelLabel="Cancelar">
+                <p-fileUpload mode="advanced" name="demo[]" [customUpload]="true" [showUploadButton]="false"
+                    [showCancelButton]="true" (onSelect)="onFileSelect($event)" (onRemove)="onFileRemove($event)"
+                    (onClear)="onFileClear()" [multiple]="true" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
+                    [maxFileSize]="10000000" chooseLabel="Seleccionar" cancelLabel="Cancelar">
                 </p-fileUpload>
-                
-                 <div *ngIf="existingFiles.length > 0 || uploadedFiles.length > 0" class="mt-3">
+
+                <div *ngIf="existingFiles.length > 0" class="mt-3">
                     <div *ngFor="let file of existingFiles"
-                        class="flex align-items-center justify-content-between p-2 surface-hover border-round mb-2">
-                        <div class="flex align-items-center gap-2">
+                        class="flex align-items-center justify-content-between p-2 border-round mb-2">
+                        <div class="flex align-items-center gap-2 cursor-pointer hover:surface-100 p-1 border-round transition-colors"
+                            (click)="downloadFile(file)" pTooltip="Descargar" tooltipPosition="top">
                             <i class="pi pi-file text-primary"></i>
-                            <span class="text-sm">{{file.name}}</span>
+                            <span class="text-sm font-medium">{{file.name}}</span>
+                            <i class="pi pi-download text-xs text-600"></i>
                         </div>
                         <button pButton icon="pi pi-times"
                             class="p-button-text p-button-danger p-button-sm p-0 w-2rem h-2rem"
-                            (click)="removeFile(file)"></button>
-                    </div>
-                    <div *ngFor="let file of uploadedFiles"
-                        class="flex align-items-center justify-content-between p-2 surface-hover border-round mb-2">
-                        <div class="flex align-items-center gap-2">
-                            <i class="pi pi-file text-green-500"></i>
-                            <span class="text-sm">{{file.name}} (Nuevo)</span>
-                        </div>
-                        <button pButton icon="pi pi-times"
-                            class="p-button-text p-button-danger p-button-sm p-0 w-2rem h-2rem"
-                            (click)="removeFile(file)"></button>
+                            (click)="removeFile(file)" pTooltip="Eliminar" tooltipPosition="left"></button>
                     </div>
                 </div>
             </div>
@@ -114,14 +110,14 @@
 
         <!-- Step 1: Customer Information (Moved from Step 2) -->
         <div *ngIf="currentStep === 1" formGroupName="customerData" class="flex flex-column gap-3">
-             <div class="formgrid grid">
+            <div class="formgrid grid">
                 <div class="col-12 md:col-6">
                     <p-floatlabel variant="in">
                         <input pInputText formControlName="clientAgency" class="w-full" />
                         <label>Cliente / Agencia</label>
                     </p-floatlabel>
                 </div>
-                 <div class="col-12 md:col-6">
+                <div class="col-12 md:col-6">
                     <p-floatlabel variant="in">
                         <input pInputText formControlName="requesterName" class="w-full" />
                         <label>Nombre del Solicitante</label>
@@ -129,14 +125,14 @@
                 </div>
             </div>
 
-             <div class="formgrid grid">
+            <div class="formgrid grid">
                 <div class="col-12 md:col-6">
                     <p-floatlabel variant="in">
                         <input pInputText formControlName="requesterEmail" class="w-full" />
                         <label>Email del Solicitante</label>
                     </p-floatlabel>
                 </div>
-                 <div class="col-12 md:col-6">
+                <div class="col-12 md:col-6">
                     <p-floatlabel variant="in">
                         <input pInputText formControlName="requesterPhone" class="w-full" />
                         <label>Teléfono del Solicitante</label>
@@ -151,7 +147,7 @@
                         <label>Razón Social</label>
                     </p-floatlabel>
                 </div>
-                 <div class="col-12 md:col-6">
+                <div class="col-12 md:col-6">
                     <p-floatlabel variant="in">
                         <input pInputText formControlName="nit" class="w-full" />
                         <label>NIT</label>
@@ -170,7 +166,7 @@
                 <div class="flex align-items-center">
                     <p-checkbox formControlName="serviceProduction" [binary]="true" label="Producción"></p-checkbox>
                 </div>
-                 <div class="flex align-items-center">
+                <div class="flex align-items-center">
                     <p-checkbox formControlName="serviceData" [binary]="true" label="Datos"></p-checkbox>
                 </div>
             </div>
@@ -193,12 +189,12 @@
                 </div>
             </div>
 
-             <p-floatlabel variant="in">
+            <p-floatlabel variant="in">
                 <input pInputText formControlName="productService" class="w-full" />
                 <label>Nombre del Producto / Servicio</label>
             </p-floatlabel>
 
-             <p-floatlabel variant="in">
+            <p-floatlabel variant="in">
                 <textarea pTextarea formControlName="objective" rows="4" class="w-full"></textarea>
                 <label>Objetivo de la Campaña</label>
             </p-floatlabel>
@@ -206,14 +202,17 @@
             <div class="flex flex-column gap-2 mt-3">
                 <div class="flex justify-content-between align-items-center">
                     <label class="font-bold">Productos y Cantidades</label>
-                    <button pButton icon="pi pi-plus" label="Agregar Producto" class="p-button-sm p-button-outlined" (click)="addCampaignProduct()"></button>
+                    <button pButton icon="pi pi-plus" label="Agregar Producto" class="p-button-sm p-button-outlined"
+                        (click)="addCampaignProduct()"></button>
                 </div>
 
                 <div formArrayName="campaignProducts" class="flex flex-column gap-2">
-                    <div *ngFor="let product of campaignProducts.controls; let i = index" [formGroupName]="i" class="flex gap-2 align-items-center">
+                    <div *ngFor="let product of campaignProducts.controls; let i = index" [formGroupName]="i"
+                        class="flex gap-2 align-items-center">
                         <div class="flex-1">
                             <p-floatlabel variant="in">
-                                <p-select formControlName="productId" [options]="products" optionLabel="name" optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                                <p-select formControlName="productId" [options]="products" optionLabel="name"
+                                    optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
                                 <label>Producto</label>
                             </p-floatlabel>
                         </div>
@@ -223,7 +222,8 @@
                                 <label>Cantidad</label>
                             </p-floatlabel>
                         </div>
-                        <button pButton icon="pi pi-trash" class="p-button-danger p-button-text" (click)="removeCampaignProduct(i)"></button>
+                        <button pButton icon="pi pi-trash" class="p-button-danger p-button-text"
+                            (click)="removeCampaignProduct(i)"></button>
                     </div>
                 </div>
             </div>
@@ -245,7 +245,7 @@
                     </p-floatlabel>
                 </div>
             </div>
-            
+
             <div class="formgrid grid">
                 <div class="col-12 md:col-6">
                     <p-floatlabel variant="in">
@@ -275,12 +275,12 @@
                 <textarea pTextarea formControlName="campaignContext" rows="2" class="w-full"></textarea>
                 <label>Contexto de la Campaña</label>
             </p-floatlabel>
-            
+
             <p-floatlabel variant="in">
                 <textarea pTextarea formControlName="campaignConcept" rows="2" class="w-full"></textarea>
                 <label>Concepto de la Campaña</label>
             </p-floatlabel>
-             <p-floatlabel variant="in">
+            <p-floatlabel variant="in">
                 <textarea pTextarea formControlName="assets" rows="2" class="w-full"></textarea>
                 <label>Activos</label>
             </p-floatlabel>
@@ -288,7 +288,7 @@
 
         <!-- Step 4: Production & Formats -->
         <div *ngIf="currentStep === 4" formGroupName="productionInfo" class="flex flex-column gap-3">
-             <div class="formgrid grid">
+            <div class="formgrid grid">
                 <div class="col-12 md:col-6">
                     <p-floatlabel variant="in">
                         <input pInputText formControlName="formatType" class="w-full" />
@@ -304,10 +304,10 @@
             </div>
 
             <div class="mb-2">
-                 <p-floatlabel variant="in">
-                    <p-datepicker formControlName="campaignEmissionDate" dateFormat="yy-mm-dd"
-                        [showIcon]="true" appendTo="body" styleClass="w-full" inputStyleClass="w-full"
-                         [showTime]="true" hourFormat="12"></p-datepicker>
+                <p-floatlabel variant="in">
+                    <p-datepicker formControlName="campaignEmissionDate" dateFormat="yy-mm-dd" [showIcon]="true"
+                        appendTo="body" styleClass="w-full" inputStyleClass="w-full" [showTime]="true"
+                        hourFormat="12"></p-datepicker>
                     <label>Fecha de Emisión de Campaña</label>
                 </p-floatlabel>
             </div>
@@ -330,7 +330,7 @@
                     </p-floatlabel>
                 </div>
                 <div class="col-12 md:col-6">
-                     <p-floatlabel variant="in">
+                    <p-floatlabel variant="in">
                         <textarea pTextarea formControlName="digitalFormats" rows="2" class="w-full"></textarea>
                         <label>Formatos Digitales</label>
                     </p-floatlabel>
@@ -341,8 +341,8 @@
                 <textarea pTextarea formControlName="productionDetails" rows="3" class="w-full"></textarea>
                 <label>Detalles de Producción</label>
             </p-floatlabel>
-            
-             <p-floatlabel variant="in">
+
+            <p-floatlabel variant="in">
                 <textarea pTextarea formControlName="additionalComments" rows="3" class="w-full"></textarea>
                 <label>Comentarios Adicionales</label>
             </p-floatlabel>
@@ -351,12 +351,16 @@
     </form>
 
     <div class="flex justify-content-between gap-2 mt-4">
-        <button pButton label="Cancelar" icon="pi pi-times" class="p-button-text p-button-danger" (click)="cancel()"></button>
-        
+        <button pButton label="Cancelar" icon="pi pi-times" class="p-button-text p-button-danger"
+            (click)="cancel()"></button>
+
         <div class="flex gap-2">
-            <button *ngIf="currentStep > 0" pButton label="Atrás" icon="pi pi-arrow-left" class="p-button-outlined" (click)="prev()"></button>
-            <button *ngIf="currentStep < 4" pButton label="Siguiente" icon="pi pi-arrow-right" (click)="next()"></button>
-            <button *ngIf="currentStep === 4" pButton label="Guardar" icon="pi pi-check" (click)="save()" [loading]="isUploading"></button>
+            <button *ngIf="currentStep > 0" pButton label="Atrás" icon="pi pi-arrow-left" class="p-button-outlined"
+                (click)="prev()"></button>
+            <button *ngIf="currentStep < 4" pButton label="Siguiente" icon="pi pi-arrow-right"
+                (click)="next()"></button>
+            <button *ngIf="currentStep === 4" pButton label="Guardar" icon="pi pi-check" (click)="save()"
+                [loading]="isUploading"></button>
         </div>
     </div>
 </div>

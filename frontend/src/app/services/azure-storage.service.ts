@@ -469,6 +469,10 @@ export class AzureStorageService {
     return `Produccion/${requestId}`;
   }
 
+  static generateProductionRequestFolderPath(productionRequestId: string): string {
+    return `productionRequest/${productionRequestId}`;
+  }
+
   static generateDocumentFolderPath(userId: string): string {
     return `salidadatosprocesados/${userId}`;
   }

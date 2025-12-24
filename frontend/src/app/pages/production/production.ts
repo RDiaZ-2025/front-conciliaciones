@@ -204,10 +204,15 @@ export class ProductionComponent implements OnInit, OnDestroy {
     if (this.ref) {
       this.ref.onClose.subscribe((result: Partial<ProductionRequest>) => {
         if (result) {
-          if (result.id && this.requests().find(r => r.id === result.id)) {
-            this.updateRequest(result.id, result);
+          // The dialog already handles the save/update. 
+          // We just need to update the local list.
+          
+          if (result.id && this.requests().some(r => r.id === result.id)) {
+             // Update existing in local list
+             this.requests.update(current => current.map(r => r.id === result.id ? (result as ProductionRequest) : r));
           } else {
-            this.createRequest(result);
+             // Add new to local list
+             this.requests.update(current => [...current, (result as ProductionRequest)]);
           }
         }
       });

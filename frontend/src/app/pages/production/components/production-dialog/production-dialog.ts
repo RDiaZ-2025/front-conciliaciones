@@ -53,6 +53,7 @@ export class ProductionDialogComponent implements OnInit {
   form!: FormGroup;
   isEditMode = false;
   uploadedFiles: any[] = [];
+  selectedFiles: File[] = [];
   existingFiles: UploadedFile[] = [];
   isUploading = false;
   minDate: Date = new Date();
@@ -67,6 +68,11 @@ export class ProductionDialogComponent implements OnInit {
   ngOnInit() {
     this.isEditMode = !!this.config.data?.id;
     const data = this.config.data || {};
+
+    // Load files from Azure Storage if in Edit Mode
+    if (this.isEditMode && this.config.data.id) {
+      this.loadFilesFromStorage(this.config.data.id);
+    }
 
     this.items = [
       { label: 'Solicitud' },
@@ -141,7 +147,9 @@ export class ProductionDialogComponent implements OnInit {
 
     if (this.isEditMode) {
       this.productionService.getProductionRequestById(this.config.data.id).subscribe({
-        next: (fullData: any) => {
+        next: (response: any) => {
+          const fullData = response.data || response;
+
           // Convert dates
           if (fullData.deliveryDate) fullData.deliveryDate = new Date(fullData.deliveryDate);
           if (fullData.productionInfo?.campaignEmissionDate) {
@@ -159,7 +167,13 @@ export class ProductionDialogComponent implements OnInit {
           }
 
           if (fullData.files) {
-            this.existingFiles = fullData.files;
+            // Merge with storage files if they exist, or just use what's in the DB if you prefer.
+            // But since the user requested "load from storage", let's prioritize the storage call we made in ngOnInit
+            // or merge them. For now, let's trust the storage call above.
+            // If DB has metadata we might want to use it, but the storage is the source of truth for "what exists".
+            if (this.existingFiles.length === 0) {
+              this.existingFiles = fullData.files;
+            }
           }
         },
         error: (error: any) => {
@@ -211,6 +225,27 @@ export class ProductionDialogComponent implements OnInit {
     });
   }
 
+  loadFilesFromStorage(requestId: string) {
+    const folderPath = AzureStorageService.generateProductionRequestFolderPath(requestId);
+    this.azureService.listFiles(folderPath, 'private').then(blobs => {
+      this.existingFiles = blobs.map(blobName => {
+        const fileName = blobName.split('/').pop() || blobName;
+        // Basic mapping since listFiles returns strings
+        return {
+          id: blobName,
+          name: fileName,
+          size: 0, // Size not available from simple list
+          type: 'application/octet-stream', // Type unknown without metadata
+          uploadDate: new Date().toISOString()
+        };
+      });
+      // Optionally fetch full details if needed
+      // this.azureService.getFilesDetails(folderPath, 'private').then(files => this.existingFiles = files);
+    }).catch(err => {
+      console.error('Error loading files from storage:', err);
+    });
+  }
+
   setupValueChanges() {
     this.form.get('department')?.valueChanges.subscribe(deptName => {
       this.loadUsersForDepartment(deptName);
@@ -227,7 +262,7 @@ export class ProductionDialogComponent implements OnInit {
         if (response.success) {
           this.teams = response.data;
           this.cd.detectChanges();
-          
+
           // Initial load of users if data exists
           const dept = this.form.get('department')?.value;
           if (dept) this.loadUsersForDepartment(dept);
@@ -277,38 +312,20 @@ export class ProductionDialogComponent implements OnInit {
     }
   }
 
-  async onUpload(event: any) {
-    this.isUploading = true;
-    const files = event.files;
-    const requestId = this.config.data?.id || Date.now().toString(); // Use temp ID if new
+  onFileSelect(event: any) {
+    const files = event.files || [];
+    this.selectedFiles = [...this.selectedFiles, ...files];
+  }
 
-    try {
-      const folderPath = AzureStorageService.generateProductionFolderPath(requestId);
-      const results = await this.azureService.uploadFiles(files, {
-        folderPath,
-        metadata: {
-          requestId,
-          uploadType: 'production'
-        }
-      });
-
-      const newFiles: UploadedFile[] = results.map((result, index) => ({
-        id: `${folderPath}/${result.fileName}`,
-        name: result.fileName,
-        size: files[index].size,
-        type: files[index].type,
-        url: result.url,
-        uploadDate: new Date().toISOString()
-      }));
-
-      this.uploadedFiles = [...this.uploadedFiles, ...newFiles];
-      this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Files uploaded successfully' });
-    } catch (error) {
-      console.error('Upload error', error);
-      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'File upload failed' });
-    } finally {
-      this.isUploading = false;
+  onFileRemove(event: any) {
+    const removedName = event.file?.name;
+    if (removedName) {
+      this.selectedFiles = this.selectedFiles.filter(f => f.name !== removedName);
     }
+  }
+
+  onFileClear() {
+    this.selectedFiles = [];
   }
 
   next() {
@@ -353,18 +370,126 @@ export class ProductionDialogComponent implements OnInit {
   }
 
   save() {
-    if (this.form.valid) {
-      const formValue = this.form.value;
-      const result: Partial<ProductionRequest> = {
-        ...this.config.data,
-        ...formValue,
-        deliveryDate: formValue.deliveryDate ? formValue.deliveryDate.toISOString() : undefined,
-        files: [...this.existingFiles, ...this.uploadedFiles]
-      };
-      this.ref.close(result);
-    } else {
+    if (this.isUploading) {
+      return;
+    }
+
+    if (!this.form.valid) {
       this.form.markAllAsTouched();
       this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Por favor complete todos los campos requeridos en todos los pasos' });
+      return;
+    }
+
+    this.isUploading = true;
+    const formValue = this.form.value;
+    const payload: Partial<ProductionRequest> = {
+      ...this.config.data,
+      ...formValue,
+      deliveryDate: formValue.deliveryDate ? formValue.deliveryDate.toISOString() : undefined
+    };
+
+    const afterPersist = (saved: ProductionRequest | any) => {
+      // Handle potential response wrapper { success: true, data: { ... } }
+      const actualData = saved.data || saved;
+
+      // Log for debugging
+      console.log('Production request saved/updated:', saved);
+
+      const requestId =
+        actualData?.id ??
+        actualData?.Id ??
+        actualData?.requestId ??
+        actualData?.RequestId ??
+        this.config.data?.id;
+
+      console.log('Extracted Request ID:', requestId);
+
+      if (!requestId) {
+        console.error('Could not determine request ID from response', saved);
+        this.isUploading = false;
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo obtener el ID de la solicitud para subir los archivos' });
+        return;
+      }
+
+      const folderPath = AzureStorageService.generateProductionRequestFolderPath(requestId);
+
+      if (this.selectedFiles.length === 0) {
+        this.isUploading = false;
+        const result: Partial<ProductionRequest> = {
+          ...saved,
+          files: [...this.existingFiles]
+        };
+        this.ref.close(result);
+        return;
+      }
+
+      console.log('Files to upload:', this.selectedFiles);
+
+      this.azureService.uploadFiles(this.selectedFiles, {
+        folderPath,
+        containerName: 'private',
+        metadata: {
+          requestId: requestId.toString(),
+          uploadType: 'production'
+        }
+      }).then(results => {
+        console.log('Upload results:', results);
+        const newFiles: UploadedFile[] = results.map((r, index) => ({
+          id: `${folderPath}/${r.fileName}`,
+          name: r.fileName,
+          size: this.selectedFiles[index].size,
+          type: this.selectedFiles[index].type,
+          url: r.url,
+          uploadDate: new Date().toISOString()
+        }));
+
+        const mergedFiles = [...this.existingFiles, ...newFiles];
+        this.productionService.updateProductionRequest(requestId, { files: mergedFiles }).subscribe({
+          next: (updated) => {
+            this.isUploading = false;
+            this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Solicitud guardada y archivos cargados' });
+            this.ref.close({ ...updated, files: mergedFiles });
+          },
+          error: () => {
+            this.isUploading = false;
+            this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'Archivos cargados, pero no se pudieron vincular en la solicitud' });
+            this.ref.close({ ...saved, files: mergedFiles });
+          }
+        });
+      }).catch((err) => {
+        console.error('Upload error:', err);
+        this.isUploading = false;
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los archivos' });
+      });
+    };
+
+    if (this.isEditMode && this.config.data?.id) {
+      this.productionService.updateProductionRequest(this.config.data.id, payload).subscribe({
+        next: (saved) => afterPersist(saved),
+        error: () => {
+          this.isUploading = false;
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar la solicitud' });
+        }
+      });
+    } else {
+      this.productionService.createProductionRequest(payload).subscribe({
+        next: (saved) => afterPersist(saved),
+        error: () => {
+          this.isUploading = false;
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo crear la solicitud' });
+        }
+      });
+    }
+  }
+
+  async downloadFile(file: UploadedFile) {
+    try {
+      this.messageService.add({ severity: 'info', summary: 'Info', detail: 'Descargando archivo...' });
+      await this.azureService.downloadSingleFile(file.id, file.name);
+      this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Archivo descargado' });
+    } catch (error) {
+      console.error('Download error:', error);
+      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo descargar el archivo' });
     }
   }
 
