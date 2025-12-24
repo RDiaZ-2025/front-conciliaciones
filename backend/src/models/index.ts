@@ -6,6 +6,8 @@ export * from './CustomerData';
 export * from './CampaignDetail';
 export * from './AudienceData';
 export * from './ProductionInfo';
+export * from './Product';
+export * from './CampaignProduct';
 
 export { LoadDocumentsOCbyUser } from './LoadDocumentsOCbyUser';
 export { MenuItem } from './MenuItem';
@@ -30,6 +32,8 @@ import { UserActionLog } from './UserActionLog';
 import { Cover15Minute } from './Cover15Minute';
 import { Team } from './Team';
 import { UserByTeam } from './UserByTeam';
+import { Product } from './Product';
+import { CampaignProduct } from './CampaignProduct';
 
 export const entities = [
   User,
@@ -46,7 +50,9 @@ export const entities = [
   UserActionLog,
   Cover15Minute,
   Team,
-  UserByTeam
+  UserByTeam,
+  Product,
+  CampaignProduct
 ];
 
 export const ModelCategories = {

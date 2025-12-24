@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ProductionRequest } from '../models';
+import { ProductionRequest, Product } from '../models';
 import { AppDataSource } from '../config/typeorm.config';
 
 // Get all production requests
@@ -24,6 +24,26 @@ export const getAllProductionRequests = async (req: Request, res: Response): Pro
   }
 };
 
+// Get all products
+export const getProducts = async (req: Request, res: Response): Promise<Response | void> => {
+  try {
+    if (!AppDataSource.isInitialized) {
+      return res.status(503).json({
+        success: false,
+        message: 'Base de datos no disponible'
+      });
+    }
+    
+    const productRepository = AppDataSource.getRepository(Product);
+    const products = await productRepository.find();
+    
+    return res.status(200).json(products);
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    return res.status(500).json({ message: 'Error fetching products', error });
+  }
+};
+
 // Get a single production request by ID
 export const getProductionRequestById = async (req: Request, res: Response): Promise<Response | void> => {
   try {
@@ -38,7 +58,16 @@ export const getProductionRequestById = async (req: Request, res: Response): Pro
     
     const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
     const productionRequest = await productionRequestRepository.findOne({
-      where: { id: parseInt(id) }
+      where: { id: parseInt(id) },
+      relations: [
+        'customerData', 
+        'audienceData', 
+        'campaignDetail', 
+        'campaignDetail.campaignProducts',
+        'campaignDetail.campaignProducts.product',
+        'productionInfo', 
+        'assignedUser'
+      ]
     });
     
     if (!productionRequest) {
@@ -62,7 +91,11 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       assignedTeam,
       assignedUserId,
       deliveryDate,
-      observations
+      observations,
+      customerData,
+      audienceData,
+      campaignDetail,
+      productionInfo
     } = req.body;
     
     // Validate required fields
@@ -88,7 +121,11 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       assignedUserId,
       deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
       observations,
-      stage: 'request' // Initial stage
+      stage: 'request', // Initial stage
+      customerData,
+      audienceData,
+      campaignDetail,
+      productionInfo
     });
     
     const savedRequest = await productionRequestRepository.save(newProductionRequest);
@@ -109,9 +146,14 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
       department,
       contactPerson,
       assignedTeam,
+      assignedUserId,
       deliveryDate,
       observations,
-      stage
+      stage,
+      customerData,
+      audienceData,
+      campaignDetail,
+      productionInfo
     } = req.body;
     
     // Validate required fields
@@ -130,7 +172,14 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
     
     // Check if request exists
     const existingRequest = await productionRequestRepository.findOne({
-      where: { id: parseInt(id) }
+      where: { id: parseInt(id) },
+      relations: [
+        'customerData', 
+        'audienceData', 
+        'campaignDetail', 
+        'campaignDetail.campaignProducts',
+        'productionInfo'
+      ]
     });
     
     if (!existingRequest) {
@@ -142,9 +191,22 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
     existingRequest.department = department;
     existingRequest.contactPerson = contactPerson;
     existingRequest.assignedTeam = assignedTeam;
+    existingRequest.assignedUserId = assignedUserId;
     existingRequest.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
     existingRequest.observations = observations;
     existingRequest.stage = stage;
+    
+    // Update relations
+    if (customerData) existingRequest.customerData = { ...existingRequest.customerData, ...customerData };
+    if (audienceData) existingRequest.audienceData = { ...existingRequest.audienceData, ...audienceData };
+    if (productionInfo) existingRequest.productionInfo = { ...existingRequest.productionInfo, ...productionInfo };
+    
+    if (campaignDetail) {
+      // Handle campaign products separately if needed, or rely on cascade
+      // For deep nested relations like campaignProducts, we might need to handle them carefully
+      // But for now, let's assume cascade works for the main object
+       existingRequest.campaignDetail = { ...existingRequest.campaignDetail, ...campaignDetail };
+    }
     
     const updatedRequest = await productionRequestRepository.save(existingRequest);
     

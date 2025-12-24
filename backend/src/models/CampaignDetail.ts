@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, OneToMany } from 'typeorm';
 import { ProductionRequest } from './ProductionRequest';
+import { CampaignProduct } from './CampaignProduct';
 
 /**
  * CampaignDetail entity representing campaign details for a production request
@@ -27,4 +28,7 @@ export class CampaignDetail {
 
     @Column({ name: 'Objective', type: 'nvarchar', length: 255, nullable: true })
     objective!: string;
+
+    @OneToMany(() => CampaignProduct, campaignProduct => campaignProduct.campaignDetail, { cascade: true })
+    campaignProducts!: CampaignProduct[];
 }
