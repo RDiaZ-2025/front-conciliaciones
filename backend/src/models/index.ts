@@ -1,12 +1,3 @@
-/**
- * Models Index File
- * 
- * This file exports all database models for easy importing throughout the application.
- * Each model represents a table in the database with proper TypeORM annotations,
- * relationships, and business logic methods.
- */
-
-// User Management Models
 export * from './User';
 export * from './Permission';
 export * from './PermissionByUser';
@@ -16,29 +7,14 @@ export * from './CampaignDetail';
 export * from './AudienceData';
 export * from './ProductionInfo';
 
-// Document Management Models
 export { LoadDocumentsOCbyUser } from './LoadDocumentsOCbyUser';
-
-// Menu System Models
 export { MenuItem } from './MenuItem';
-
-// Production Management Models
 export { ProductionRequest } from './ProductionRequest';
-
-// Audit and Logging Models
 export { UserActionLog } from './UserActionLog';
-
-// Cover 15 Minute Models
 export { Cover15Minute } from './Cover15Minute';
-
-// Team Management Models
 export { Team } from './Team';
 export { UserByTeam } from './UserByTeam';
 
-/**
- * Array of all entity classes for TypeORM configuration
- * Use this array when configuring TypeORM connection
- */
 import { User } from './User';
 import { Permission } from './Permission';
 import { PermissionByUser } from './PermissionByUser';
@@ -73,13 +49,7 @@ export const entities = [
   UserByTeam
 ];
 
-/**
- * Model categories for organized access
- */
 export const ModelCategories = {
-  /**
-   * User and authentication related models
-   */
   Auth: {
     User,
     Permission,
@@ -87,9 +57,6 @@ export const ModelCategories = {
     Notification
   },
 
-  /**
-   * Document management models
-   */
   Documents: {
     LoadDocumentsOCbyUser
   },
