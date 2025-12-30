@@ -10,6 +10,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { BadgeModule } from 'primeng/badge';
 import { DialogModule } from 'primeng/dialog';
+import { RippleModule } from 'primeng/ripple';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
@@ -17,6 +18,7 @@ import { SessionInfoComponent } from '../../components/shared/session-info/sessi
 import { ProductionService } from '../../services/production.service';
 import { ProductionRequest, WORKFLOW_STAGES } from './production.models';
 import { ProductionDialogComponent } from './components/production-dialog/production-dialog';
+import { ProductionDetailDialogComponent } from './components/production-detail-dialog/production-detail-dialog';
 import { AnsDialogComponent } from './components/ans-dialog/ans-dialog';
 import { AzureStorageService } from '../../services/azure-storage.service';
 import { FilePreviewComponent } from '../../components/file-preview/file-preview';
@@ -36,6 +38,7 @@ import { UploadedFile } from './production.models';
     TooltipModule,
     BadgeModule,
     DialogModule,
+    RippleModule,
     FilePreviewComponent,
     PageHeaderComponent,
     SessionInfoComponent,
@@ -217,6 +220,21 @@ export class ProductionComponent implements OnInit, OnDestroy {
         }
       });
     }
+  }
+
+  openDetailDialog(request: ProductionRequest) {
+    this.ref = this.dialogService.open(ProductionDetailDialogComponent, {
+      header: 'Detalle de Solicitud',
+      width: '50vw',
+      contentStyle: { overflow: 'auto' },
+      baseZIndex: 10000,
+      maximizable: true,
+      breakpoints: {
+        '960px': '75vw',
+        '640px': '90vw'
+      },
+      data: { request }
+    });
   }
 
   createRequest(request: Partial<ProductionRequest>) {

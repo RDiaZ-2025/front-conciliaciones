@@ -23,4 +23,16 @@ export class TeamService {
   getUsersByTeam(teamId: number): Observable<{ success: boolean; data: User[] }> {
     return this.http.get<{ success: boolean; data: User[] }>(`${this.apiUrl}/${teamId}/users`);
   }
+
+  updateTeam(id: number, team: Partial<Team>): Observable<{ success: boolean; data: Team }> {
+    return this.http.put<{ success: boolean; data: Team }>(`${this.apiUrl}/${id}`, team);
+  }
+
+  deleteTeam(id: number): Observable<{ success: boolean }> {
+    return this.http.delete<{ success: boolean }>(`${this.apiUrl}/${id}`);
+  }
+
+  updateTeamUsers(teamId: number, userIds: number[]): Observable<{ success: boolean }> {
+    return this.http.put<{ success: boolean }>(`${this.apiUrl}/${teamId}/users`, { userIds });
+  }
 }

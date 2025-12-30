@@ -41,6 +41,10 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/menus/menus').then(m => m.MenusComponent)
       },
       {
+        path: 'teams',
+        loadComponent: () => import('./pages/teams/teams').then(m => m.TeamsComponent)
+      },
+      {
         path: 'portada',
         redirectTo: 'cover15minutes',
         pathMatch: 'full'

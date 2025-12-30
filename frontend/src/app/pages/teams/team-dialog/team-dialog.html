@@ -1,0 +1,71 @@
+<p-dialog 
+  [(visible)]="visible" 
+  [style]="{width: '900px', maxWidth: '95vw'}" 
+  [header]="team ? 'Editar Equipo' : 'Nuevo Equipo'" 
+  [modal]="true" 
+  styleClass="p-fluid"
+  [draggable]="false"
+  [resizable]="false"
+  (onHide)="cancel()">
+
+  <ng-template pTemplate="content">
+    <form [formGroup]="form" class="flex flex-column gap-4 mt-3">
+      <div class="field grid">
+        <label for="name" class="col-12 mb-2 md:col-2 md:mb-0 font-bold">Nombre</label>
+        <div class="col-12 md:col-10">
+          <input pInputText id="name" formControlName="name" autofocus class="w-full" placeholder="Ingrese el nombre del equipo" />
+          <small class="p-error block mt-1" *ngIf="form.get('name')?.invalid && form.get('name')?.touched">
+            El nombre es requerido
+          </small>
+        </div>
+      </div>
+      
+      <div class="field grid">
+        <label for="description" class="col-12 mb-2 md:col-2 md:mb-0 font-bold">Descripción</label>
+        <div class="col-12 md:col-10">
+          <textarea pInputTextarea id="description" formControlName="description" rows="3" class="w-full" placeholder="Ingrese una descripción (opcional)"></textarea>
+        </div>
+      </div>
+
+      <div class="field mt-4">
+        <h5 class="mb-3 font-bold">Miembros del Equipo</h5>
+        <p-pickList 
+          [source]="sourceUsers()" 
+          [target]="targetUsers()" 
+          sourceHeader="Usuarios Disponibles" 
+          targetHeader="Miembros del Equipo" 
+          [dragdrop]="true" 
+          [responsive]="true" 
+          [sourceStyle]="{ height: '350px' }" 
+          [targetStyle]="{ height: '350px' }" 
+          filterBy="name,email" 
+          sourceFilterPlaceholder="Buscar por nombre o email" 
+          targetFilterPlaceholder="Buscar por nombre o email"
+          breakpoint="1200px"
+          stripedRows>
+          <ng-template let-user pTemplate="item">
+            <div class="flex align-items-center gap-3 p-2 border-round hover:surface-hover transition-colors transition-duration-150">
+              <div class="flex align-items-center justify-content-center bg-primary border-circle w-3rem h-3rem">
+                <i class="pi pi-user text-xl"></i>
+              </div>
+              <div class="flex flex-column gap-1">
+                <span class="font-bold text-900">{{ user.name }}</span>
+                <span class="text-sm text-600 flex align-items-center gap-1">
+                  <i class="pi pi-envelope text-xs"></i>
+                  {{ user.email }}
+                </span>
+              </div>
+            </div>
+          </ng-template>
+        </p-pickList>
+      </div>
+    </form>
+  </ng-template>
+
+  <ng-template pTemplate="footer">
+    <div class="flex justify-content-end gap-2 pt-3">
+      <p-button label="Cancelar" icon="pi pi-times" (onClick)="cancel()" styleClass="p-button-text p-button-secondary"></p-button>
+      <p-button label="Guardar" icon="pi pi-check" (onClick)="onSubmit()" [loading]="saving()" [disabled]="form.invalid"></p-button>
+    </div>
+  </ng-template>
+</p-dialog>

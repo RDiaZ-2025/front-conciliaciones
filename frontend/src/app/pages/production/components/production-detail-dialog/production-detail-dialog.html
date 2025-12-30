@@ -1,0 +1,95 @@
+<div class="flex flex-column gap-3 p-3">
+    <!-- Header with Name and Status -->
+    <div class="flex justify-content-between align-items-center mb-2">
+        <h2 class="text-xl font-bold m-0 text-700">{{ request.name }}</h2>
+        <p-tag [value]="getStageLabel(request.stage)" [severity]="getStageSeverity(request.stage)"></p-tag>
+    </div>
+
+    <div class="grid">
+        <!-- Request Date -->
+        <div class="col-12 md:col-6">
+            <div class="text-500 text-sm mb-1">Fecha Solicitud</div>
+            <div class="font-medium flex align-items-center gap-2">
+                <i class="pi pi-calendar text-primary"></i>
+                {{ request.requestDate | date:'dd/MM/yyyy HH:mm' }}
+            </div>
+        </div>
+
+        <!-- Delivery Date -->
+        <div class="col-12 md:col-6">
+            <div class="text-500 text-sm mb-1">Fecha Entrega</div>
+            <div class="font-medium flex align-items-center gap-2" *ngIf="request.deliveryDate">
+                <i class="pi pi-check-circle text-green-500"></i>
+                {{ request.deliveryDate | date:'dd/MM/yyyy HH:mm' }}
+            </div>
+            <div class="font-medium text-500 flex align-items-center gap-2" *ngIf="!request.deliveryDate">
+                <i class="pi pi-clock"></i>
+                Pendiente
+            </div>
+        </div>
+
+        <!-- Department -->
+        <div class="col-12 md:col-6">
+            <div class="text-500 text-sm mb-1">Departamento</div>
+            <div class="font-medium flex align-items-center gap-2">
+                <i class="pi pi-building text-primary"></i>
+                {{ request.department }}
+            </div>
+        </div>
+
+        <!-- Contact -->
+        <div class="col-12 md:col-6">
+            <div class="text-500 text-sm mb-1">Contacto</div>
+            <div class="font-medium flex align-items-center gap-2">
+                <i class="pi pi-user text-primary"></i>
+                {{ request.contactPerson }}
+            </div>
+        </div>
+
+        <!-- Team -->
+        <div class="col-12 md:col-6">
+            <div class="text-500 text-sm mb-1">Equipo Asignado</div>
+            <div class="font-medium flex align-items-center gap-2">
+                <i class="pi pi-users text-primary"></i>
+                {{ request.assignedTeam }}
+            </div>
+        </div>
+
+        <!-- Total Time -->
+        <div class="col-12 md:col-6">
+            <div class="text-500 text-sm mb-1">Tiempo Total Producción</div>
+            <div class="font-medium flex align-items-center gap-2">
+                <i class="pi pi-stopwatch text-blue-500"></i>
+                {{ getTotalTime(request) }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Files Section -->
+    <div *ngIf="request.files && request.files.length > 0" class="mt-4">
+        <h3 class="text-lg font-bold mb-3 text-700">Archivos Adjuntos</h3>
+        <div class="flex flex-column gap-2">
+            <div *ngFor="let file of request.files"
+                class="flex align-items-center justify-content-between surface-100 p-2 border-round hover:surface-200 transition-colors transition-duration-150">
+                <div class="flex align-items-center gap-2 overflow-hidden">
+                    <i class="pi pi-file text-primary"></i>
+                    <span class="text-overflow-ellipsis overflow-hidden white-space-nowrap font-medium text-700"
+                        [pTooltip]="file.name">{{ file.name }}</span>
+                </div>
+                <div class="flex gap-1">
+                    <p-button icon="pi pi-eye" [rounded]="true" [text]="true" size="small"
+                        (click)="openPreview(file)" pTooltip="Vista Previa"></p-button>
+                    <p-button icon="pi pi-download" [rounded]="true" [text]="true" size="small"
+                        (click)="downloadFile(file.id, file.name)" pTooltip="Descargar"></p-button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex justify-content-end mt-4 pt-3 border-top-1 surface-border">
+        <p-button label="Cerrar" icon="pi pi-times" (click)="ref.close()" [text]="true" severity="secondary"></p-button>
+    </div>
+
+    <app-file-preview [(visible)]="previewVisible" [file]="previewFile()" (onDownload)="downloadPreviewFile()">
+    </app-file-preview>
+</div>
