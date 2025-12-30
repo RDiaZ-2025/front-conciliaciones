@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import { ProductionRequest, Product } from '../models';
 import { AppDataSource } from '../config/typeorm.config';
+import { NotificationService } from '../services/notificationService';
+
+const notificationService = new NotificationService();
 
 // Get all production requests
 export const getAllProductionRequests = async (req: Request, res: Response): Promise<Response | void> => {
@@ -130,6 +133,21 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
     
     const savedRequest = await productionRequestRepository.save(newProductionRequest);
     
+    // Send notification to assigned user
+    if (assignedUserId) {
+      try {
+        await notificationService.createNotification(
+          assignedUserId,
+          'Nueva Solicitud Asignada',
+          `Se te ha asignado la solicitud de producción: ${name}`,
+          'info'
+        );
+      } catch (notifError) {
+        console.error('Error sending notification:', notifError);
+        // Continue execution, don't fail the request because notification failed
+      }
+    }
+
     return res.status(201).json(savedRequest);
   } catch (error) {
     console.error('Error creating production request:', error);

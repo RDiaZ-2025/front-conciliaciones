@@ -1,13 +1,70 @@
 <div class="layout-wrapper min-h-screen flex flex-column surface-ground">
-   <p-toolbar styleClass="fixed top-0 left-0 right-0 z-5 border-none shadow-2 px-4 py-2" [style]="{'height': '4rem'}">
-      <div class="p-toolbar-group-start gap-2">
+   <p-toolbar styleClass="fixed top-0 left-0 right-0 z-5 border-none shadow-2 px-4 py-2 flex justify-content-between align-items-center" [style]="{'height': '4rem'}">
+      <div class="p-toolbar-group-start flex align-items-center gap-2">
          <p-button icon="pi pi-bars" [text]="true" [rounded]="true" (click)="toggleDrawer()"
             styleClass="text-900 w-3rem h-3rem"></p-button>
          <img src="assets/claro-media-logo.png" alt="Logo" class="h-2rem ml-2">
       </div>
-      <div class="p-toolbar-group-end gap-2">
+      <div class="p-toolbar-group-end flex align-items-center gap-3">
+         <!-- Notification Icon -->
+         <div class="relative flex align-items-center">
+            <p-button icon="pi pi-bell" [text]="true" [rounded]="true" (click)="op.toggle($event)"
+               styleClass="text-900 w-3rem h-3rem"></p-button>
+            <p-badge *ngIf="unreadCount() > 0" [value]="unreadCount().toString()" severity="danger" 
+               styleClass="absolute top-0 right-0" [style]="{'min-width': '1rem', 'height': '1rem', 'line-height': '1rem'}"></p-badge>
+         </div>
+
+         <p-popover #op styleClass="w-25rem">
+            <div class="flex flex-column gap-3 p-3">
+               <div class="flex justify-content-between align-items-center">
+                  <span class="font-bold text-lg">Notificaciones</span>
+                  <p-button *ngIf="unreadCount() > 0" label="Marcar todo como leído" link="true" 
+                     (onClick)="markAllAsRead()" styleClass="p-0 text-sm"></p-button>
+               </div>
+               
+               <div class="flex flex-column gap-2" style="max-height: 400px; overflow-y: auto">
+                  <div *ngIf="notifications().length === 0" class="text-center p-3 text-500">
+                     No tienes notificaciones
+                  </div>
+                  
+                  <div *ngFor="let notification of notifications()" 
+                     class="flex align-items-start gap-3 p-2 border-round hover:surface-100 cursor-pointer transition-colors"
+                     [ngClass]="{'surface-50': !notification.isRead}"
+                     (click)="markAsRead(notification)">
+                     <i [class]="getNotificationIcon(notification.type) + ' text-xl mt-1'"></i>
+                     <div class="flex flex-column gap-1 flex-1">
+                        <div class="flex justify-content-between align-items-start">
+                           <span class="font-bold text-900" [ngClass]="{'text-700': notification.isRead}">
+                              {{ notification.title }}
+                           </span>
+                           <span class="text-xs text-500">{{ notification.createdAt | date:'short' }}</span>
+                        </div>
+                        <p class="m-0 text-700 text-sm line-height-3" [ngClass]="{'text-500': notification.isRead}">
+                           {{ notification.message }}
+                        </p>
+                     </div>
+                     <div *ngIf="!notification.isRead" class="w-1rem h-1rem border-circle bg-blue-500 align-self-center"></div>
+                  </div>
+               </div>
+            </div>
+         </p-popover>
+
          <p-button [icon]="isDarkMode() ? 'pi pi-sun' : 'pi pi-moon'" [text]="true" [rounded]="true"
             (click)="toggleTheme()" styleClass="text-900 w-3rem h-3rem"></p-button>
+
+         <!-- Separator -->
+         <div class="h-2rem w-1px surface-300 mx-2 hidden md:block"></div>
+
+         <!-- User Profile -->
+         <div class="flex align-items-center gap-2 cursor-pointer border-round p-1 hover:surface-100 transition-colors" (click)="userMenu.toggle($event)">
+             <p-avatar [label]="userInitials" shape="circle" styleClass="bg-primary text-white font-bold"></p-avatar>
+             <div class="hidden md:flex flex-column">
+                 <span class="font-semibold text-sm text-900 line-height-2">{{ currentUser()?.name }}</span>
+                 <span class="text-xs text-600 line-height-2">{{ currentUser()?.email }}</span>
+             </div>
+             <i class="pi pi-chevron-down text-600 text-xs"></i>
+         </div>
+         <p-menu #userMenu [model]="userMenuItems" [popup]="true"></p-menu>
       </div>
    </p-toolbar>
 
@@ -54,30 +111,24 @@
                         </li>
                      </ul>
                   </li>
-
+                  
                   <li *ngIf="!item.children || item.children.length === 0" class="mb-1">
                      <a pRipple (click)="onMenuClick(item)"
-                        class="flex align-items-center cursor-pointer p-3 border-round text-700 hover:surface-100 transition-duration-150 transition-colors w-full">
-                        <i [class]="getIconName(item.icon) + ' mr-3 text-lg'"></i>
-                        <span class="font-medium">{{ item.label }}</span>
+                        class="p-3 flex align-items-center cursor-pointer border-round text-700 hover:surface-100 transition-duration-150 transition-colors w-full">
+                        <span class="flex align-items-center gap-3">
+                           <i [class]="getIconName(item.icon) + ' text-lg'"></i>
+                           <span class="font-medium">{{ item.label }}</span>
+                        </span>
                      </a>
                   </li>
 
                </ng-container>
             </ng-container>
          </ul>
-
-         <div class="mt-auto border-top-1 surface-border pt-3">
-            <a pRipple (click)="logout()"
-               class="flex align-items-center cursor-pointer p-3 border-round text-700 hover:surface-100 hover:text-red-500 transition-duration-150 transition-colors w-full">
-               <i class="pi pi-power-off mr-3 text-lg"></i>
-               <span class="font-medium">Cerrar Sesión</span>
-            </a>
-         </div>
       </div>
    </p-drawer>
 
-   <div class="layout-main flex-grow-1 w-full" style="max-width: 1400px; margin: 4rem auto;">
+   <div class="flex-grow-1 p-4" style="margin-top: 4rem;">
       <router-outlet></router-outlet>
    </div>
 </div>

@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect } from '@angular/core';
+import { Component, inject, signal, computed, effect, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, Router } from '@angular/router';
 
@@ -9,9 +9,14 @@ import { ButtonModule } from 'primeng/button';
 import { RippleModule } from 'primeng/ripple';
 import { AvatarModule } from 'primeng/avatar';
 import { StyleClassModule } from 'primeng/styleclass';
+import { PopoverModule } from 'primeng/popover';
+import { BadgeModule } from 'primeng/badge';
+import { MenuModule } from 'primeng/menu';
+import { MenuItem as PrimeMenuItem } from 'primeng/api';
 
 import { AuthService } from '../../services/auth.service';
 import { MenuService, MenuItem } from '../../services/menu.service';
+import { NotificationService, Notification } from '../../services/notification.service';
 
 @Component({
   selector: 'app-layout',
@@ -24,19 +29,30 @@ import { MenuService, MenuItem } from '../../services/menu.service';
     ButtonModule,
     RippleModule,
     AvatarModule,
-    StyleClassModule
+    StyleClassModule,
+    PopoverModule,
+    BadgeModule,
+    MenuModule
   ],
   templateUrl: './layout.html',
   styleUrl: './layout.scss'
 })
-export class LayoutComponent {
+export class LayoutComponent implements OnInit {
   private authService = inject(AuthService);
   private menuService = inject(MenuService);
+  private notificationService = inject(NotificationService);
   private router = inject(Router);
 
   menuItems = signal<MenuItem[]>([]);
   loading = signal(true);
   error = signal<string | null>(null);
+  
+  // Auth signals
+  currentUser = this.authService.currentUser;
+  
+  // Notification signals
+  notifications = this.notificationService.notifications;
+  unreadCount = this.notificationService.unreadCount;
 
   // Expanded menu items state
   expandedItems = signal<Set<number>>(new Set());
@@ -46,10 +62,52 @@ export class LayoutComponent {
 
   isDarkMode = signal(false);
 
+  userMenuItems: PrimeMenuItem[] = [
+    { 
+      label: 'Cerrar Sesión', 
+      icon: 'pi pi-power-off', 
+      command: () => this.logout() 
+    }
+  ];
+
   constructor() {
-    this.fetchMenuItems();
     this.initTheme();
   }
+
+  ngOnInit() {
+    this.fetchMenuItems();
+    this.notificationService.loadNotifications();
+  }
+
+  logout() {
+    this.authService.logout();
+  }
+
+  get userInitials(): string {
+    const user = this.currentUser();
+    if (!user || !user.name) return 'U';
+    return user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+  }
+
+  markAsRead(notification: Notification) {
+    if (!notification.isRead) {
+      this.notificationService.markAsRead(notification.id).subscribe();
+    }
+  }
+
+  markAllAsRead() {
+    this.notificationService.markAllAsRead().subscribe();
+  }
+
+  getNotificationIcon(type: string): string {
+    switch (type) {
+      case 'success': return 'pi pi-check-circle text-green-500';
+      case 'warning': return 'pi pi-exclamation-triangle text-yellow-500';
+      case 'error': return 'pi pi-times-circle text-red-500';
+      default: return 'pi pi-info-circle text-blue-500';
+    }
+  }
+
 
   initTheme() {
     const savedTheme = localStorage.getItem('theme');
@@ -77,10 +135,6 @@ export class LayoutComponent {
       element?.classList.remove('my-app-dark');
       localStorage.setItem('theme', 'light');
     }
-  }
-
-  logout() {
-    this.authService.logout();
   }
 
   getIconName(iconKey: string | undefined): string {
