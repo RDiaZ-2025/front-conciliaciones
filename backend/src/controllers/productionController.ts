@@ -14,9 +14,13 @@ export const getAllProductionRequests = async (req: Request, res: Response): Pro
         message: 'Base de datos no disponible'
       });
     }
+
+    // Filter by assigned user
+    const userId = req.user?.userId;
     
     const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
     const productionRequests = await productionRequestRepository.find({
+      where: { assignedUserId: userId },
       order: { requestDate: 'DESC' }
     });
     
