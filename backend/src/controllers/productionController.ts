@@ -15,13 +15,18 @@ export const getAllProductionRequests = async (req: Request, res: Response): Pro
       });
     }
 
-    // Filter by assigned user
+    // Filter by assigned user or creator (via requesterEmail)
     const userId = req.user?.userId;
+    const userEmail = req.user?.email;
     
     const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
     const productionRequests = await productionRequestRepository.find({
-      where: { assignedUserId: userId },
-      order: { requestDate: 'DESC' }
+      where: [
+        { assignedUserId: userId },
+        { customerData: { requesterEmail: userEmail } }
+      ],
+      order: { requestDate: 'DESC' },
+      relations: ['customerData', 'assignedUser'] // Include relations to support filtering and display
     });
     
     return res.status(200).json(productionRequests);

@@ -1,5 +1,8 @@
-import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
+import { toObservable } from '@angular/core/rxjs-interop';
+import { filter, take } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { ChipModule } from 'primeng/chip'; // Or TagModule
@@ -54,9 +57,12 @@ export class ProductionComponent implements OnInit, OnDestroy {
   confirmationService = inject(ConfirmationService);
   messageService = inject(MessageService);
   azureService = inject(AzureStorageService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
   requests = signal<ProductionRequest[]>([]);
   loading = signal<boolean>(true);
+  loading$ = toObservable(this.loading);
 
   // Preview state
   previewFile = signal<File | string | null>(null);
@@ -85,11 +91,49 @@ export class ProductionComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.loadRequests();
 
+    // Handle deep linking
+    this.route.queryParams.subscribe(params => {
+      if (params['action'] === 'open' && params['requestName']) {
+        this.handleDeepLink(params['requestName']);
+      }
+    });
+
     // Update time every minute
     this.intervalId = setInterval(() => {
       this.now.set(new Date());
       this.checkSLAAlerts();
     }, 60000);
+  }
+
+  handleDeepLink(requestName: string) {
+    if (this.loading()) {
+      this.loading$.pipe(
+        filter(loading => !loading),
+        take(1)
+      ).subscribe(() => {
+        this.findAndOpenRequest(requestName);
+      });
+    } else {
+      this.findAndOpenRequest(requestName);
+    }
+  }
+
+  findAndOpenRequest(name: string) {
+    const request = this.requests().find(r => r.name === name);
+    if (request) {
+      this.openDialog(request);
+      // Clear query params
+      this.router.navigate([], {
+        queryParams: { action: null, requestName: null },
+        queryParamsHandling: 'merge'
+      });
+    } else {
+      this.messageService.add({ 
+        severity: 'warn', 
+        summary: 'Solicitud no encontrada', 
+        detail: `No se encontró la solicitud "${name}".` 
+      });
+    }
   }
 
   ngOnDestroy() {

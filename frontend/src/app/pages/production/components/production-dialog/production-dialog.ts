@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormArray } from '@angular/forms';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
@@ -13,11 +13,12 @@ import { SelectModule } from 'primeng/select';
 import { MenuItem, MessageService } from 'primeng/api';
 import { StepsModule } from 'primeng/steps';
 import { CheckboxModule } from 'primeng/checkbox';
-import { ProductionRequest, UploadedFile, Team, CustomerData, AudienceData, CampaignDetail, ProductionInfo, Product } from '../../production.models';
+import { ProductionRequest, UploadedFile, Team, CustomerData, AudienceData, CampaignDetail, ProductionInfo, Product, WORKFLOW_STAGES } from '../../production.models';
 import { AzureStorageService } from '../../../../services/azure-storage.service';
 import { TeamService } from '../../../../services/team.service';
 import { User } from '../../../../services/user.service';
 import { ProductionService } from '../../../../services/production.service';
+import { AuthService } from '../../../../services/auth.service';
 
 @Component({
   selector: 'app-production-dialog',
@@ -48,10 +49,13 @@ export class ProductionDialogComponent implements OnInit {
   messageService = inject(MessageService);
   teamService = inject(TeamService);
   productionService = inject(ProductionService);
-  cd = inject(ChangeDetectorRef);
+  authService = inject(AuthService);
 
   form!: FormGroup;
   isEditMode = false;
+  canEditCore = true;
+  isAssignedUser = false;
+  
   uploadedFiles: any[] = [];
   selectedFiles: File[] = [];
   existingFiles: UploadedFile[] = [];
@@ -61,6 +65,7 @@ export class ProductionDialogComponent implements OnInit {
   requestingUsers: User[] = [];
   assignedUsers: User[] = [];
   products: Product[] = [];
+  workflowStages = WORKFLOW_STAGES;
 
   items: MenuItem[] = [];
   currentStep: number = 0;
@@ -91,6 +96,7 @@ export class ProductionDialogComponent implements OnInit {
       assignedUserId: [data.assignedUserId || null, Validators.required],
       deliveryDate: [data.deliveryDate ? new Date(data.deliveryDate) : null, Validators.required],
       observations: [data.observations || ''],
+      stage: [data.stage || 'request', Validators.required],
 
       // Step 2: Customer Information
       customerData: this.fb.group({
@@ -157,6 +163,8 @@ export class ProductionDialogComponent implements OnInit {
           }
 
           this.form.patchValue(fullData);
+          
+          this.checkPermissions(fullData);
 
           // Handle FormArray for campaignProducts
           this.campaignProducts.clear();
@@ -216,7 +224,6 @@ export class ProductionDialogComponent implements OnInit {
     this.productionService.getProducts().subscribe({
       next: (products) => {
         this.products = products;
-        this.cd.detectChanges();
       },
       error: (error) => {
         console.error('Error loading products', error);
@@ -261,7 +268,6 @@ export class ProductionDialogComponent implements OnInit {
       next: (response) => {
         if (response.success) {
           this.teams = response.data;
-          this.cd.detectChanges();
 
           // Initial load of users if data exists
           const dept = this.form.get('department')?.value;
@@ -285,13 +291,11 @@ export class ProductionDialogComponent implements OnInit {
         next: (response) => {
           if (response.success) {
             this.requestingUsers = response.data;
-            this.cd.detectChanges();
           }
         }
       });
     } else {
       this.requestingUsers = [];
-      this.cd.detectChanges();
     }
   }
 
@@ -302,13 +306,11 @@ export class ProductionDialogComponent implements OnInit {
         next: (response) => {
           if (response.success) {
             this.assignedUsers = response.data;
-            this.cd.detectChanges();
           }
         }
       });
     } else {
       this.assignedUsers = [];
-      this.cd.detectChanges();
     }
   }
 
@@ -369,6 +371,50 @@ export class ProductionDialogComponent implements OnInit {
     }
   }
 
+  checkPermissions(data: ProductionRequest) {
+    const user = this.authService.currentUser();
+    if (!user) return;
+
+    // Check permissions based on user role and assignment
+    // Assuming permissions array contains strings like 'admin', 'supervisor'
+    const isAdmin = user.permissions?.some(p => p.toLowerCase() === 'admin');
+    const isSupervisor = user.permissions?.some(p => p.toLowerCase() === 'supervisor');
+    
+    // Check if current user is the assigned user
+    // We compare IDs as strings to be safe
+    this.isAssignedUser = String(user.id) === String(data.assignedUserId);
+
+    if (isAdmin || isSupervisor) {
+      this.canEditCore = true;
+      this.form.enable();
+    } else if (this.isAssignedUser) {
+      this.canEditCore = false;
+      this.applyRestrictedMode();
+    } else {
+      // Viewer or other role - readonly
+      this.canEditCore = false;
+      this.form.disable();
+    }
+  }
+
+  applyRestrictedMode() {
+    // Disable all controls first
+    this.form.disable();
+
+    // Enable specific controls for Assigned User
+    // Allowed: Comments/Observations, Files (handled separately), Status (Stage), Progress updates
+    this.form.get('observations')?.enable();
+    this.form.get('stage')?.enable(); // Ensure 'stage' control exists or is added to form
+    
+    // If there are nested form groups for specific editable sections, enable them here
+    // For example, if 'productionInfo' has fields that assigned user can edit:
+    const productionInfo = this.form.get('productionInfo') as FormGroup;
+    if (productionInfo) {
+      productionInfo.get('productionDetails')?.enable();
+      productionInfo.get('additionalComments')?.enable();
+    }
+  }
+
   save() {
     if (this.isUploading) {
       return;
@@ -381,7 +427,7 @@ export class ProductionDialogComponent implements OnInit {
     }
 
     this.isUploading = true;
-    const formValue = this.form.value;
+    const formValue = this.form.getRawValue();
     const payload: Partial<ProductionRequest> = {
       ...this.config.data,
       ...formValue,

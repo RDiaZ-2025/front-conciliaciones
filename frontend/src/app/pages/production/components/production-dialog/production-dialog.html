@@ -75,6 +75,14 @@
                 </small>
             </div>
 
+            <div class="mb-2">
+                <p-floatlabel variant="in">
+                    <p-select id="stage" formControlName="stage" [options]="workflowStages" optionLabel="label"
+                        optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                    <label for="stage">Estado</label>
+                </p-floatlabel>
+            </div>
+
             <div>
                 <p-floatlabel variant="in">
                     <textarea pTextarea id="observations" formControlName="observations" rows="3"

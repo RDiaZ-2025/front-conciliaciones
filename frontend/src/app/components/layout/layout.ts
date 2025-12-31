@@ -89,6 +89,25 @@ export class LayoutComponent implements OnInit {
     return user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
   }
 
+  handleNotificationClick(notification: Notification) {
+    // Always mark as read
+    this.markAsRead(notification);
+
+    // Handle navigation based on notification content
+    if (notification.title === 'Nueva Solicitud Asignada') {
+      const match = notification.message.match(/Se te ha asignado la solicitud de producción: (.*)/);
+      if (match && match[1]) {
+        const requestName = match[1].trim();
+        this.router.navigate(['/production'], { 
+          queryParams: { 
+            action: 'open', 
+            requestName: requestName 
+          } 
+        });
+      }
+    }
+  }
+
   markAsRead(notification: Notification) {
     if (!notification.isRead) {
       this.notificationService.markAsRead(notification.id).subscribe();
