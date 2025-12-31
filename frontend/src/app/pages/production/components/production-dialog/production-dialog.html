@@ -1,6 +1,11 @@
 <div class="flex flex-column gap-2 p-fluid p-4">
     <p-steps [model]="items" [(activeIndex)]="currentStep" [readonly]="false" styleClass="mb-5"></p-steps>
 
+    <div *ngIf="!canEditCore && isAssignedUser" class="bg-blue-50 border-round p-3 mb-3 flex align-items-center gap-2 text-blue-700">
+        <i class="pi pi-info-circle text-xl"></i>
+        <span class="font-medium">Modo Restringido: Solo puedes agregar comentarios, archivos y actualizar el estado.</span>
+    </div>
+
     <form [formGroup]="form" class="flex flex-column gap-2">
         <!-- Step 0: General Request -->
         <div *ngIf="currentStep === 0" class="flex flex-column gap-3">

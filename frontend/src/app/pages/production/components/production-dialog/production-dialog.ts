@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormArray } from '@angular/forms';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
@@ -50,6 +50,7 @@ export class ProductionDialogComponent implements OnInit {
   teamService = inject(TeamService);
   productionService = inject(ProductionService);
   authService = inject(AuthService);
+  cd = inject(ChangeDetectorRef);
 
   form!: FormGroup;
   isEditMode = false;
@@ -332,30 +333,55 @@ export class ProductionDialogComponent implements OnInit {
 
   next() {
     let isValid = false;
-    switch (this.currentStep) {
-      case 0:
-        // Validate main form fields (excluding nested groups)
-        const mainControls = ['name', 'department', 'contactPerson', 'assignedTeam', 'assignedUserId', 'deliveryDate'];
-        isValid = mainControls.every(key => this.form.get(key)?.valid);
-        if (!isValid) {
-          mainControls.forEach(key => this.form.get(key)?.markAsDirty());
-        }
-        break;
-      case 1:
-        const customerGroup = this.form.get('customerData') as FormGroup;
-        isValid = customerGroup.valid;
-        if (!isValid) customerGroup.markAllAsTouched();
-        break;
-      case 2:
-        const campaignGroup = this.form.get('campaignDetail') as FormGroup;
-        isValid = campaignGroup.valid;
-        if (!isValid) campaignGroup.markAllAsTouched();
-        break;
-      case 3:
-        const audienceGroup = this.form.get('audienceData') as FormGroup;
-        isValid = audienceGroup.valid;
-        if (!isValid) audienceGroup.markAllAsTouched();
-        break;
+
+    // If restricted mode (Assigned User), we assume core fields are valid (or we can't change them anyway)
+    // We only need to validate what we can edit.
+    if (!this.canEditCore && this.isAssignedUser) {
+      switch (this.currentStep) {
+        case 0:
+          // Validate stage (required)
+          const stageControl = this.form.get('stage');
+          isValid = stageControl?.valid ?? true;
+          if (!isValid) stageControl?.markAsDirty();
+          break;
+        case 1: // Customer Data - fully disabled
+        case 2: // Campaign Detail - fully disabled
+        case 3: // Audience Data - fully disabled
+          isValid = true;
+          break;
+        case 4: // Production Info - partially enabled
+          const prodInfo = this.form.get('productionInfo') as FormGroup;
+          isValid = prodInfo.valid;
+          if (!isValid) prodInfo.markAllAsTouched();
+          break;
+      }
+    } else {
+      // Normal validation for full edit mode
+      switch (this.currentStep) {
+        case 0:
+          // Validate main form fields (excluding nested groups)
+          const mainControls = ['name', 'department', 'contactPerson', 'assignedTeam', 'assignedUserId', 'deliveryDate', 'stage'];
+          isValid = mainControls.every(key => this.form.get(key)?.valid);
+          if (!isValid) {
+            mainControls.forEach(key => this.form.get(key)?.markAsDirty());
+          }
+          break;
+        case 1:
+          const customerGroup = this.form.get('customerData') as FormGroup;
+          isValid = customerGroup.valid;
+          if (!isValid) customerGroup.markAllAsTouched();
+          break;
+        case 2:
+          const campaignGroup = this.form.get('campaignDetail') as FormGroup;
+          isValid = campaignGroup.valid;
+          if (!isValid) campaignGroup.markAllAsTouched();
+          break;
+        case 3:
+          const audienceGroup = this.form.get('audienceData') as FormGroup;
+          isValid = audienceGroup.valid;
+          if (!isValid) audienceGroup.markAllAsTouched();
+          break;
+      }
     }
 
     if (isValid) {
@@ -395,6 +421,7 @@ export class ProductionDialogComponent implements OnInit {
       this.canEditCore = false;
       this.form.disable();
     }
+    this.cd.detectChanges();
   }
 
   applyRestrictedMode() {
@@ -420,7 +447,23 @@ export class ProductionDialogComponent implements OnInit {
       return;
     }
 
-    if (!this.form.valid) {
+    let isValid = true;
+    if (!this.canEditCore && this.isAssignedUser) {
+      // Restricted mode validation: only check fields enabled for assigned user
+      const stageValid = this.form.get('stage')?.valid ?? true;
+      const prodInfo = this.form.get('productionInfo') as FormGroup;
+      const prodDetailsValid = prodInfo?.get('productionDetails')?.valid ?? true;
+      
+      if (!stageValid || !prodDetailsValid) {
+        isValid = false;
+        if (!stageValid) this.form.get('stage')?.markAsDirty();
+        if (!prodDetailsValid) prodInfo?.get('productionDetails')?.markAsDirty();
+      }
+    } else {
+      isValid = this.form.valid;
+    }
+
+    if (!isValid) {
       this.form.markAllAsTouched();
       this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Por favor complete todos los campos requeridos en todos los pasos' });
       return;
