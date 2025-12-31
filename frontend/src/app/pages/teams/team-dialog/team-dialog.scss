@@ -1,3 +1,40 @@
 :host {
     display: block;
 }
+
+:host ::ng-deep {
+    .p-picklist-list {
+        .p-picklist-item {
+            padding: 0.5rem !important; // Restore padding that was on the inner div
+            border-radius: var(--border-radius);
+            transition: background-color 0.2s;
+
+            // Ensure hover state is visible on the item itself
+            &:not(.p-highlight):hover {
+                background: var(--surface-hover);
+            }
+
+            // Custom selected state
+            &.p-highlight {
+                background: var(--primary-color) !important;
+                color: var(--primary-color-text) !important;
+
+                // Force text colors to be white/contrast when selected
+                .user-name, .user-email, .text-900, .text-600 {
+                    color: var(--primary-color-text) !important;
+                }
+
+                // Invert the icon styles for better contrast
+                // The circle is normally bg-primary (red), so we make it white
+                .user-icon {
+                    background-color: var(--surface-0) !important;
+                    
+                    // The icon inside needs to be the primary color (red)
+                    i {
+                        color: var(--primary-color) !important;
+                    }
+                }
+            }
+        }
+    }
+}

@@ -44,13 +44,13 @@
           breakpoint="1200px"
           stripedRows>
           <ng-template let-user pTemplate="item">
-            <div class="flex align-items-center gap-3 p-2 border-round hover:surface-hover transition-colors transition-duration-150">
-              <div class="flex align-items-center justify-content-center bg-primary border-circle w-3rem h-3rem">
+            <div class="flex align-items-center gap-3">
+              <div class="flex align-items-center justify-content-center bg-primary border-circle w-3rem h-3rem user-icon">
                 <i class="pi pi-user text-xl"></i>
               </div>
               <div class="flex flex-column gap-1">
-                <span class="font-bold text-900">{{ user.name }}</span>
-                <span class="text-sm text-600 flex align-items-center gap-1">
+                <span class="font-bold text-900 user-name">{{ user.name }}</span>
+                <span class="text-sm text-600 flex align-items-center gap-1 user-email">
                   <i class="pi pi-envelope text-xs"></i>
                   {{ user.email }}
                 </span>
