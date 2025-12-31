@@ -17,7 +17,6 @@ import { RippleModule } from 'primeng/ripple';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
-import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
 import { ProductionService } from '../../services/production.service';
 import { ProductionRequest, WORKFLOW_STAGES } from './production.models';
 import { ProductionDialogComponent } from './components/production-dialog/production-dialog';
@@ -44,7 +43,6 @@ import { UploadedFile } from './production.models';
     RippleModule,
     FilePreviewComponent,
     PageHeaderComponent,
-    SessionInfoComponent,
     AnsDialogComponent
   ],
   providers: [DialogService, ConfirmationService, MessageService],

@@ -14,8 +14,6 @@
         </div>
     </app-page-header>
 
-    <app-session-info></app-session-info>
-
     <div class="grid" *ngIf="!showHistorical()">
         <div *ngFor="let request of activeRequests()" class="col-12 md:col-6 lg:col-4 xl:col-3">
             <p-card [style]="{ height: '100%', display: 'flex', flexDirection: 'column' }"
