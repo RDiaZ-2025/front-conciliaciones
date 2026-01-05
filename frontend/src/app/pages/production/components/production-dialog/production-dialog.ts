@@ -433,6 +433,10 @@ export class ProductionDialogComponent implements OnInit {
     this.form.get('observations')?.enable();
     this.form.get('stage')?.enable(); // Ensure 'stage' control exists or is added to form
     
+    // Enable reassignment fields
+    this.form.get('assignedTeam')?.enable();
+    this.form.get('assignedUserId')?.enable();
+    
     // If there are nested form groups for specific editable sections, enable them here
     // For example, if 'productionInfo' has fields that assigned user can edit:
     const productionInfo = this.form.get('productionInfo') as FormGroup;

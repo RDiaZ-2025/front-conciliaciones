@@ -3,7 +3,7 @@
 
     <div *ngIf="!canEditCore && isAssignedUser" class="bg-blue-50 border-round p-3 mb-3 flex align-items-center gap-2 text-blue-700">
         <i class="pi pi-info-circle text-xl"></i>
-        <span class="font-medium">Modo Restringido: Solo puedes agregar comentarios, archivos y actualizar el estado.</span>
+        <span class="font-medium">Modo Restringido: Solo puedes agregar comentarios, archivos, reasignar y actualizar el estado.</span>
     </div>
 
     <form [formGroup]="form" class="flex flex-column gap-2">
