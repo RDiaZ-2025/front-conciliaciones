@@ -70,9 +70,14 @@
 
             <div class="mb-2">
                 <p-floatlabel variant="in">
-                    <p-datepicker id="deliveryDate" formControlName="deliveryDate" dateFormat="yy-mm-dd"
-                        [showIcon]="true" appendTo="body" styleClass="w-full" inputStyleClass="w-full"
-                        [minDate]="minDate" [showTime]="true" hourFormat="12"></p-datepicker>
+                    <ng-container *ngIf="!form.get('deliveryDate')?.disabled">
+                        <p-datepicker id="deliveryDate" formControlName="deliveryDate" dateFormat="yy-mm-dd"
+                            [showIcon]="true" appendTo="body" styleClass="w-full" inputStyleClass="w-full"
+                            [minDate]="minDate" [showTime]="true" hourFormat="12"></p-datepicker>
+                    </ng-container>
+                    <input *ngIf="form.get('deliveryDate')?.disabled" pInputText id="deliveryDate"
+                        [value]="form.get('deliveryDate')?.value | date:'yyyy-MM-dd hh:mm a'" class="w-full"
+                        disabled />
                     <label for="deliveryDate">Fecha de entrega</label>
                 </p-floatlabel>
                 <small class="p-error" *ngIf="form.get('deliveryDate')?.invalid && form.get('deliveryDate')?.dirty">
@@ -319,9 +324,14 @@
 
             <div class="mb-2">
                 <p-floatlabel variant="in">
-                    <p-datepicker formControlName="campaignEmissionDate" dateFormat="yy-mm-dd" [showIcon]="true"
-                        appendTo="body" styleClass="w-full" inputStyleClass="w-full" [showTime]="true"
-                        hourFormat="12"></p-datepicker>
+                    <ng-container *ngIf="!form.get('productionInfo.campaignEmissionDate')?.disabled">
+                        <p-datepicker formControlName="campaignEmissionDate" dateFormat="yy-mm-dd" [showIcon]="true"
+                            appendTo="body" styleClass="w-full" inputStyleClass="w-full" [showTime]="true"
+                            hourFormat="12"></p-datepicker>
+                    </ng-container>
+                    <input *ngIf="form.get('productionInfo.campaignEmissionDate')?.disabled" pInputText
+                        [value]="form.get('productionInfo.campaignEmissionDate')?.value | date:'yyyy-MM-dd hh:mm a'"
+                        class="w-full" disabled />
                     <label>Fecha de Emisión de Campaña</label>
                 </p-floatlabel>
             </div>
