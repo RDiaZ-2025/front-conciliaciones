@@ -151,6 +151,30 @@ export class ProductionDialogComponent implements OnInit {
     });
 
     this.loadTeams();
+
+    // Auto-fill for new requests
+    this.teams$.subscribe(teams => {
+      if (teams.length > 0 && !this.isEditMode && !this.isAssignedUser) {
+        const currentUser = this.authService.currentUser();
+        if (currentUser) {
+          // Set Contact Person (Read-only)
+          this.form.patchValue({ contactPerson: currentUser.name });
+          this.form.get('contactPerson')?.disable();
+
+          // Set Department (Read-only)
+          const userTeams = (currentUser as any).teams as string[];
+          if (userTeams && userTeams.length > 0) {
+            const matchingTeam = teams.find(t => userTeams.includes(t.name));
+            if (matchingTeam) {
+              this.form.patchValue({ department: matchingTeam.name });
+              this.form.get('department')?.disable();
+              this.loadUsersForDepartment(matchingTeam.name);
+            }
+          }
+        }
+      }
+    });
+
     this.loadProducts();
 
     if (this.isEditMode) {
@@ -165,6 +189,10 @@ export class ProductionDialogComponent implements OnInit {
           }
 
           this.form.patchValue(fullData);
+
+          // Disable read-only fields (AC5)
+          this.form.get('department')?.disable();
+          this.form.get('contactPerson')?.disable();
 
           this.checkPermissions(fullData);
 
@@ -362,7 +390,10 @@ export class ProductionDialogComponent implements OnInit {
         case 0:
           // Validate main form fields (excluding nested groups)
           const mainControls = ['name', 'department', 'contactPerson', 'assignedTeam', 'assignedUserId', 'deliveryDate', 'stage'];
-          isValid = mainControls.every(key => this.form.get(key)?.valid);
+          isValid = mainControls.every(key => {
+            const control = this.form.get(key);
+            return control?.valid || control?.disabled;
+          });
           if (!isValid) {
             mainControls.forEach(key => this.form.get(key)?.markAsDirty());
           }

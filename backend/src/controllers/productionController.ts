@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
-import { ProductionRequest, Product } from '../models';
+import { ProductionRequest, Product, User } from '../models';
 import { AppDataSource } from '../config/typeorm.config';
 import { NotificationService } from '../services/notificationService';
 import { ProductionRequestHistoryService } from '../services/productionRequestHistoryService';
+import { AuthService } from '../services/authService';
 
 const notificationService = new NotificationService();
 const historyService = new ProductionRequestHistoryService();
@@ -98,7 +99,7 @@ export const getProductionRequestById = async (req: Request, res: Response): Pro
 // Create a new production request
 export const createProductionRequest = async (req: Request, res: Response): Promise<Response | void> => {
   try {
-    const {
+    let {
       name,
       department,
       contactPerson,
@@ -111,6 +112,26 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       campaignDetail,
       productionInfo
     } = req.body;
+
+    // Validate that requesting user/area matches authenticated user
+    if (req.user?.userId) {
+      const userRepository = AppDataSource.getRepository(User);
+      const currentUser = await userRepository.findOne({ where: { id: req.user.userId } });
+      
+      if (currentUser) {
+        // Enforce contactPerson matches authenticated user
+        contactPerson = currentUser.name;
+        
+        // Enforce Department matches one of the user's teams
+        const userTeams = await AuthService.getUserTeams(currentUser.id);
+        if (userTeams.length > 0) {
+           if (!userTeams.includes(department)) {
+               // If provided department is invalid, default to the first team
+               department = userTeams[0];
+           }
+        }
+      }
+    }
 
     // Validate required fields
     if (!name || !department || !contactPerson || !assignedTeam) {

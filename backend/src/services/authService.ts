@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { User, Permission, PermissionByUser } from '../models';
+import { User, Permission, PermissionByUser, UserByTeam } from '../models';
 import { AppDataSource } from '../config/typeorm.config';
 import { LoginRequest, LoginResponse, JWTPayload } from '../types';
 
@@ -83,6 +83,14 @@ export class AuthService {
     // Combinar permisos del rol y permisos directos
     const permissions = userPermissions.map(up => up.permission.name);
 
+    // Obtener equipos del usuario
+    const userByTeamRepository = AppDataSource.getRepository(UserByTeam);
+    const userTeams = await userByTeamRepository.find({
+      where: { userId: user.id },
+      relations: ['team']
+    });
+    const teams = userTeams.map(ut => ut.team.name);
+
     // Actualizar último acceso
     await userRepository.update(user.id, { lastAccess: new Date() });
 
@@ -98,7 +106,8 @@ export class AuthService {
         id: user.id,
         name: user.name,
         email: user.email,
-        permissions
+        permissions,
+        teams
       },
       token
     };
@@ -143,6 +152,23 @@ export class AuthService {
       return userPermissions.map(up => up.permission.name);
     } catch (error) {
       console.error('Error obteniendo permisos:', error);
+      return [];
+    }
+  }
+
+  static async getUserTeams(userId: number): Promise<string[]> {
+    try {
+      if (!AppDataSource.isInitialized) {
+        return [];
+      }
+      const userByTeamRepository = AppDataSource.getRepository(UserByTeam);
+      const userTeams = await userByTeamRepository.find({
+        where: { userId: userId },
+        relations: ['team']
+      });
+      return userTeams.map(ut => ut.team.name);
+    } catch (error) {
+      console.error('Error getting user teams:', error);
       return [];
     }
   }

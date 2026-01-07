@@ -9,6 +9,7 @@ export interface User {
   name: string;
   email: string;
   permissions: string[];
+  teams?: string[];
 }
 
 export interface LoginResponse {
@@ -53,7 +54,8 @@ export class AuthService {
                         id: rawData.id,
                         name: rawData.name,
                         email: rawData.email,
-                        permissions: permissions
+                        permissions: permissions,
+                        teams: rawData.teams || []
                      };
                      this.currentUser.set(normalizedUser);
                 } else {
@@ -81,7 +83,8 @@ export class AuthService {
                 id: rawUser.id,
                 name: rawUser.name,
                 email: rawUser.email,
-                permissions: permissions
+                permissions: permissions,
+                teams: rawUser.teams || []
              };
              
              localStorage.setItem('user', JSON.stringify(userData));

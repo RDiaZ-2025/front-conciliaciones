@@ -58,6 +58,7 @@ export class AuthController {
 
       // Obtener permisos del usuario
       const permissions = await AuthService.getUserPermissions(req.user.userId);
+      const teams = await AuthService.getUserTeams(req.user.userId);
 
       res.status(200).json({
         success: true,
@@ -66,6 +67,7 @@ export class AuthController {
           name: user.name,
           email: user.email,
           permissions: permissions,
+          teams: teams,
           lastAccess: user.lastAccess
         }
       });

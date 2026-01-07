@@ -32,6 +32,7 @@ export interface LoginResponse {
     email: string;
     permissions: string[];
     role?: string | null;
+    teams?: string[];
   };
   token?: string;
   message?: string;
