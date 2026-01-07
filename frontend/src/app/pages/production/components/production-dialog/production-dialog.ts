@@ -1,5 +1,6 @@
 import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Observable, BehaviorSubject } from 'rxjs';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormArray } from '@angular/forms';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ButtonModule } from 'primeng/button';
@@ -56,16 +57,16 @@ export class ProductionDialogComponent implements OnInit {
   isEditMode = false;
   canEditCore = true;
   isAssignedUser = false;
-  
+
   uploadedFiles: any[] = [];
   selectedFiles: File[] = [];
   existingFiles: UploadedFile[] = [];
-  isUploading = false;
+  isUploading$ = new BehaviorSubject<boolean>(false);
   minDate: Date = new Date();
-  teams: Team[] = [];
-  requestingUsers: User[] = [];
-  assignedUsers: User[] = [];
-  products: Product[] = [];
+  teams$ = new BehaviorSubject<Team[]>([]);
+  requestingUsers$ = new BehaviorSubject<User[]>([]);
+  assignedUsers$ = new BehaviorSubject<User[]>([]);
+  products$ = new BehaviorSubject<Product[]>([]);
   workflowStages = WORKFLOW_STAGES;
 
   items: MenuItem[] = [];
@@ -164,7 +165,7 @@ export class ProductionDialogComponent implements OnInit {
           }
 
           this.form.patchValue(fullData);
-          
+
           this.checkPermissions(fullData);
 
           // Handle FormArray for campaignProducts
@@ -224,7 +225,7 @@ export class ProductionDialogComponent implements OnInit {
   loadProducts() {
     this.productionService.getProducts().subscribe({
       next: (products) => {
-        this.products = products;
+        this.products$.next(products);
       },
       error: (error) => {
         console.error('Error loading products', error);
@@ -268,7 +269,7 @@ export class ProductionDialogComponent implements OnInit {
     this.teamService.getTeams().subscribe({
       next: (response) => {
         if (response.success) {
-          this.teams = response.data;
+          this.teams$.next(response.data);
 
           // Initial load of users if data exists
           const dept = this.form.get('department')?.value;
@@ -286,32 +287,32 @@ export class ProductionDialogComponent implements OnInit {
   }
 
   loadUsersForDepartment(deptName: string) {
-    const team = this.teams.find(t => t.name === deptName);
+    const team = this.teams$.value.find(t => t.name === deptName);
     if (team) {
       this.teamService.getUsersByTeam(team.id).subscribe({
         next: (response) => {
           if (response.success) {
-            this.requestingUsers = response.data;
+            this.requestingUsers$.next(response.data);
           }
         }
       });
     } else {
-      this.requestingUsers = [];
+      this.requestingUsers$.next([]);
     }
   }
 
   loadUsersForAssignedTeam(teamName: string) {
-    const team = this.teams.find(t => t.name === teamName);
+    const team = this.teams$.value.find(t => t.name === teamName);
     if (team) {
       this.teamService.getUsersByTeam(team.id).subscribe({
         next: (response) => {
           if (response.success) {
-            this.assignedUsers = response.data;
+            this.assignedUsers$.next(response.data);
           }
         }
       });
     } else {
-      this.assignedUsers = [];
+      this.assignedUsers$.next([]);
     }
   }
 
@@ -405,7 +406,7 @@ export class ProductionDialogComponent implements OnInit {
     // Assuming permissions array contains strings like 'admin', 'supervisor'
     const isAdmin = user.permissions?.some(p => p.toLowerCase() === 'admin');
     const isSupervisor = user.permissions?.some(p => p.toLowerCase() === 'supervisor');
-    
+
     // Check if current user is the assigned user
     // We compare IDs as strings to be safe
     this.isAssignedUser = String(user.id) === String(data.assignedUserId);
@@ -432,11 +433,11 @@ export class ProductionDialogComponent implements OnInit {
     // Allowed: Comments/Observations, Files (handled separately), Status (Stage), Progress updates
     this.form.get('observations')?.enable();
     this.form.get('stage')?.enable(); // Ensure 'stage' control exists or is added to form
-    
+
     // Enable reassignment fields
     this.form.get('assignedTeam')?.enable();
     this.form.get('assignedUserId')?.enable();
-    
+
     // If there are nested form groups for specific editable sections, enable them here
     // For example, if 'productionInfo' has fields that assigned user can edit:
     const productionInfo = this.form.get('productionInfo') as FormGroup;
@@ -447,7 +448,7 @@ export class ProductionDialogComponent implements OnInit {
   }
 
   save() {
-    if (this.isUploading) {
+    if (this.isUploading$.value) {
       return;
     }
 
@@ -457,7 +458,7 @@ export class ProductionDialogComponent implements OnInit {
       const stageValid = this.form.get('stage')?.valid ?? true;
       const prodInfo = this.form.get('productionInfo') as FormGroup;
       const prodDetailsValid = prodInfo?.get('productionDetails')?.valid ?? true;
-      
+
       if (!stageValid || !prodDetailsValid) {
         isValid = false;
         if (!stageValid) this.form.get('stage')?.markAsDirty();
@@ -473,7 +474,7 @@ export class ProductionDialogComponent implements OnInit {
       return;
     }
 
-    this.isUploading = true;
+    this.isUploading$.next(true);
     const formValue = this.form.getRawValue();
     const payload: Partial<ProductionRequest> = {
       ...this.config.data,
@@ -499,7 +500,7 @@ export class ProductionDialogComponent implements OnInit {
 
       if (!requestId) {
         console.error('Could not determine request ID from response', saved);
-        this.isUploading = false;
+        this.isUploading$.next(false);
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo obtener el ID de la solicitud para subir los archivos' });
         return;
       }
@@ -507,7 +508,7 @@ export class ProductionDialogComponent implements OnInit {
       const folderPath = AzureStorageService.generateProductionRequestFolderPath(requestId);
 
       if (this.selectedFiles.length === 0) {
-        this.isUploading = false;
+        this.isUploading$.next(false);
         const result: Partial<ProductionRequest> = {
           ...saved,
           files: [...this.existingFiles]
@@ -539,19 +540,19 @@ export class ProductionDialogComponent implements OnInit {
         const mergedFiles = [...this.existingFiles, ...newFiles];
         this.productionService.updateProductionRequest(requestId, { files: mergedFiles }).subscribe({
           next: (updated) => {
-            this.isUploading = false;
+            this.isUploading$.next(false);
             this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Solicitud guardada y archivos cargados' });
             this.ref.close({ ...updated, files: mergedFiles });
           },
           error: () => {
-            this.isUploading = false;
+            this.isUploading$.next(false);
             this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'Archivos cargados, pero no se pudieron vincular en la solicitud' });
             this.ref.close({ ...saved, files: mergedFiles });
           }
         });
       }).catch((err) => {
         console.error('Upload error:', err);
-        this.isUploading = false;
+        this.isUploading$.next(false);
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los archivos' });
       });
     };
@@ -560,7 +561,7 @@ export class ProductionDialogComponent implements OnInit {
       this.productionService.updateProductionRequest(this.config.data.id, payload).subscribe({
         next: (saved) => afterPersist(saved),
         error: () => {
-          this.isUploading = false;
+          this.isUploading$.next(false);
           this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar la solicitud' });
         }
       });
@@ -568,7 +569,7 @@ export class ProductionDialogComponent implements OnInit {
       this.productionService.createProductionRequest(payload).subscribe({
         next: (saved) => afterPersist(saved),
         error: () => {
-          this.isUploading = false;
+          this.isUploading$.next(false);
           this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo crear la solicitud' });
         }
       });

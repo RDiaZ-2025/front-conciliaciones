@@ -44,4 +44,8 @@ export class ProductionService {
   moveRequest(id: string, stage: string): Observable<void> {
     return this.http.put<void>(`${this.apiUrl}/${id}/move`, { stage });
   }
+
+  getHistory(id: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/${id}/history`);
+  }
 }

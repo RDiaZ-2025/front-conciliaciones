@@ -92,6 +92,8 @@
                     <div class="flex justify-content-end gap-2 border-top-1 surface-border pt-3 mt-auto">
                         <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" pTooltip="Editar"
                             (click)="openDialog(request)"></p-button>
+                        <p-button icon="pi pi-history" [rounded]="true" [text]="true" severity="help" pTooltip="Historial de Cambios"
+                            (click)="openHistory(request)"></p-button>
                         <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger"
                             pTooltip="Eliminar" (click)="deleteRequest(request.id)"></p-button>
 

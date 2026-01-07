@@ -6,12 +6,13 @@ export * from './CustomerData';
 export * from './CampaignDetail';
 export * from './AudienceData';
 export * from './ProductionInfo';
+export * from './ProductionRequest';
+export * from './ProductionRequestHistory';
 export * from './Product';
 export * from './CampaignProduct';
 
 export { LoadDocumentsOCbyUser } from './LoadDocumentsOCbyUser';
 export { MenuItem } from './MenuItem';
-export { ProductionRequest } from './ProductionRequest';
 export { UserActionLog } from './UserActionLog';
 export { Cover15Minute } from './Cover15Minute';
 export { Team } from './Team';
@@ -34,6 +35,7 @@ import { Team } from './Team';
 import { UserByTeam } from './UserByTeam';
 import { Product } from './Product';
 import { CampaignProduct } from './CampaignProduct';
+import { ProductionRequestHistory } from './ProductionRequestHistory';
 
 export const entities = [
   User,
@@ -47,6 +49,7 @@ export const entities = [
   LoadDocumentsOCbyUser,
   MenuItem,
   ProductionRequest,
+  ProductionRequestHistory,
   UserActionLog,
   Cover15Minute,
   Team,
@@ -79,6 +82,7 @@ export const ModelCategories = {
    */
   Production: {
     ProductionRequest,
+    ProductionRequestHistory,
     CustomerData,
     CampaignDetail,
     AudienceData,

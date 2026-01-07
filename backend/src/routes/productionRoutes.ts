@@ -8,6 +8,7 @@ import {
   deleteProductionRequest,
   getProducts
 } from '../controllers/productionController';
+import { getProductionRequestHistory } from '../controllers/productionRequestHistoryController';
 import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
@@ -22,6 +23,7 @@ router.get('/:id', getProductionRequestById);
 router.post('/', createProductionRequest);
 router.put('/:id', updateProductionRequest);
 router.put('/:id/move', moveProductionRequest);
+router.get('/:id/history', getProductionRequestHistory);
 router.delete('/:id', deleteProductionRequest);
 
 export default router;

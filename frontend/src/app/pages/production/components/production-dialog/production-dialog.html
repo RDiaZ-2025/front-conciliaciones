@@ -1,9 +1,11 @@
 <div class="flex flex-column gap-2 p-fluid p-4">
     <p-steps [model]="items" [(activeIndex)]="currentStep" [readonly]="false" styleClass="mb-5"></p-steps>
 
-    <div *ngIf="!canEditCore && isAssignedUser" class="bg-blue-50 border-round p-3 mb-3 flex align-items-center gap-2 text-blue-700">
+    <div *ngIf="!canEditCore && isAssignedUser"
+        class="bg-blue-50 border-round p-3 mb-3 flex align-items-center gap-2 text-blue-700">
         <i class="pi pi-info-circle text-xl"></i>
-        <span class="font-medium">Modo Restringido: Solo puedes agregar comentarios, archivos, reasignar y actualizar el estado.</span>
+        <span class="font-medium">Modo Restringido: Solo puedes agregar comentarios, archivos, reasignar y actualizar el
+            estado.</span>
     </div>
 
     <form [formGroup]="form" class="flex flex-column gap-2">
@@ -23,8 +25,8 @@
             <div class="formgrid grid">
                 <div class="col-12 md:col-6 mb-2">
                     <p-floatlabel variant="in">
-                        <p-select id="department" formControlName="department" [options]="teams" optionLabel="name"
-                            optionValue="name" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                        <p-select id="department" formControlName="department" [options]="(teams$ | async) ?? []"
+                            optionLabel="name" optionValue="name" [style]="{'width':'100%'}" appendTo="body"></p-select>
                         <label for="department">Area que Solicita</label>
                     </p-floatlabel>
                     <small class="p-error" *ngIf="form.get('department')?.invalid && form.get('department')?.dirty">
@@ -33,8 +35,9 @@
                 </div>
                 <div class="col-12 md:col-6 mb-2">
                     <p-floatlabel variant="in">
-                        <p-select id="contactPerson" formControlName="contactPerson" [options]="requestingUsers"
-                            optionLabel="name" optionValue="name" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                        <p-select id="contactPerson" formControlName="contactPerson"
+                            [options]="(requestingUsers$ | async) ?? []" optionLabel="name" optionValue="name"
+                            [style]="{'width':'100%'}" appendTo="body"></p-select>
                         <label for="contactPerson">Persona que Solicita</label>
                     </p-floatlabel>
                     <small class="p-error"
@@ -47,8 +50,8 @@
             <div class="formgrid grid">
                 <div class="col-12 md:col-6 mb-2">
                     <p-floatlabel variant="in">
-                        <p-select id="assignedTeam" formControlName="assignedTeam" [options]="teams" optionLabel="name"
-                            optionValue="name" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                        <p-select id="assignedTeam" formControlName="assignedTeam" [options]="(teams$ | async) ?? []"
+                            optionLabel="name" optionValue="name" [style]="{'width':'100%'}" appendTo="body"></p-select>
                         <label for="assignedTeam">Area asignada</label>
                     </p-floatlabel>
                     <small class="p-error" *ngIf="form.get('assignedTeam')?.invalid && form.get('assignedTeam')?.dirty">
@@ -57,8 +60,9 @@
                 </div>
                 <div class="col-12 md:col-6 mb-2">
                     <p-floatlabel variant="in">
-                        <p-select id="assignedUser" formControlName="assignedUserId" [options]="assignedUsers"
-                            optionLabel="name" optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                        <p-select id="assignedUser" formControlName="assignedUserId"
+                            [options]="(assignedUsers$ | async) ?? []" optionLabel="name" optionValue="id"
+                            [style]="{'width':'100%'}" appendTo="body"></p-select>
                         <label for="assignedUser">Persona asignada</label>
                     </p-floatlabel>
                     <small class="p-error"
@@ -76,8 +80,7 @@
                             [minDate]="minDate" [showTime]="true" hourFormat="12"></p-datepicker>
                     </ng-container>
                     <input *ngIf="form.get('deliveryDate')?.disabled" pInputText id="deliveryDate"
-                        [value]="form.get('deliveryDate')?.value | date:'yyyy-MM-dd hh:mm a'" class="w-full"
-                        disabled />
+                        [value]="form.get('deliveryDate')?.value | date:'yyyy-MM-dd hh:mm a'" class="w-full" disabled />
                     <label for="deliveryDate">Fecha de entrega</label>
                 </p-floatlabel>
                 <small class="p-error" *ngIf="form.get('deliveryDate')?.invalid && form.get('deliveryDate')?.dirty">
@@ -230,8 +233,9 @@
                         class="flex gap-2 align-items-center">
                         <div class="flex-1">
                             <p-floatlabel variant="in">
-                                <p-select formControlName="productId" [options]="products" optionLabel="name"
-                                    optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                                <p-select formControlName="productId" [options]="(products$ | async) ?? []"
+                                    optionLabel="name" optionValue="id" [style]="{'width':'100%'}"
+                                    appendTo="body"></p-select>
                                 <label>Producto</label>
                             </p-floatlabel>
                         </div>
@@ -384,7 +388,7 @@
             <button *ngIf="currentStep < 4" pButton label="Siguiente" icon="pi pi-arrow-right"
                 (click)="next()"></button>
             <button *ngIf="currentStep === 4" pButton label="Guardar" icon="pi pi-check" (click)="save()"
-                [loading]="isUploading"></button>
+                [loading]="(isUploading$ | async) ?? false"></button>
         </div>
     </div>
 </div>

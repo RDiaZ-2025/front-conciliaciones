@@ -22,6 +22,7 @@ import { ProductionRequest, WORKFLOW_STAGES } from './production.models';
 import { ProductionDialogComponent } from './components/production-dialog/production-dialog';
 import { ProductionDetailDialogComponent } from './components/production-detail-dialog/production-detail-dialog';
 import { AnsDialogComponent } from './components/ans-dialog/ans-dialog';
+import { HistoryDialog } from './components/history-dialog/history-dialog';
 import { AzureStorageService } from '../../services/azure-storage.service';
 import { FilePreviewComponent } from '../../components/file-preview/file-preview';
 import { UploadedFile } from './production.models';
@@ -126,10 +127,10 @@ export class ProductionComponent implements OnInit, OnDestroy {
         queryParamsHandling: 'merge'
       });
     } else {
-      this.messageService.add({ 
-        severity: 'warn', 
-        summary: 'Solicitud no encontrada', 
-        detail: `No se encontró la solicitud "${name}".` 
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Solicitud no encontrada',
+        detail: `No se encontró la solicitud "${name}".`
       });
     }
   }
@@ -239,29 +240,37 @@ export class ProductionComponent implements OnInit, OnDestroy {
   openDialog(request?: ProductionRequest) {
     this.ref = this.dialogService.open(ProductionDialogComponent, {
       header: request ? 'Editar Solicitud' : 'Nueva Solicitud',
-      width: '70%',
+      width: '90%',
       contentStyle: { overflow: 'auto' },
       baseZIndex: 10000,
       maximizable: true,
-      data: request ? { ...request } : {}
+      data: request ? { id: request.id } : {}
     });
 
     if (this.ref) {
       this.ref.onClose.subscribe((result: Partial<ProductionRequest>) => {
         if (result) {
-          // The dialog already handles the save/update. 
-          // We just need to update the local list.
-          
+          // If we have an ID, update the existing request in the list
           if (result.id && this.requests().some(r => r.id === result.id)) {
-             // Update existing in local list
-             this.requests.update(current => current.map(r => r.id === result.id ? (result as ProductionRequest) : r));
+            this.requests.update(current => current.map(r => r.id === result.id ? (result as ProductionRequest) : r));
           } else {
-             // Add new to local list
-             this.requests.update(current => [...current, (result as ProductionRequest)]);
+            // Otherwise add as new
+            this.requests.update(current => [...current, (result as ProductionRequest)]);
           }
         }
       });
     }
+  }
+
+  openHistory(request: ProductionRequest) {
+    this.ref = this.dialogService.open(HistoryDialog, {
+      header: `Historial de Cambios - ${request.name}`,
+      width: '70%',
+      contentStyle: { overflow: 'auto' },
+      baseZIndex: 10000,
+      maximizable: true,
+      data: { id: request.id }
+    });
   }
 
   openDetailDialog(request: ProductionRequest) {
