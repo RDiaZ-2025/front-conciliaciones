@@ -244,7 +244,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
       contentStyle: { overflow: 'auto' },
       baseZIndex: 10000,
       maximizable: true,
-      data: request ? { id: request.id } : {}
+      data: request ? { ...request } : {}
     });
 
     if (this.ref) {

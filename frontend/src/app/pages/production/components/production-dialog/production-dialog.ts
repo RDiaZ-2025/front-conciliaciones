@@ -57,6 +57,7 @@ export class ProductionDialogComponent implements OnInit {
   isEditMode = false;
   canEditCore = true;
   isAssignedUser = false;
+  loadedRequest: ProductionRequest | null = null;
 
   uploadedFiles: any[] = [];
   selectedFiles: File[] = [];
@@ -75,6 +76,16 @@ export class ProductionDialogComponent implements OnInit {
   ngOnInit() {
     this.isEditMode = !!this.config.data?.id;
     const data = this.config.data || {};
+
+    // Initialize files from passed data immediately (fallback if storage fails)
+    if (data.files) {
+      this.existingFiles = [...data.files];
+    }
+
+    // Initialize loadedRequest from passed data to ensure we have base fields immediately
+    if (this.isEditMode && data.id) {
+      this.loadedRequest = data as ProductionRequest;
+    }
 
     // Load files from Azure Storage if in Edit Mode
     if (this.isEditMode && this.config.data.id) {
@@ -181,6 +192,7 @@ export class ProductionDialogComponent implements OnInit {
       this.productionService.getProductionRequestById(this.config.data.id).subscribe({
         next: (response: any) => {
           const fullData = response.data || response;
+          this.loadedRequest = fullData;
 
           // Convert dates
           if (fullData.deliveryDate) fullData.deliveryDate = new Date(fullData.deliveryDate);
@@ -225,10 +237,6 @@ export class ProductionDialogComponent implements OnInit {
       } else if (this.campaignProducts.length === 0) {
         this.addCampaignProduct();
       }
-
-      if (this.isEditMode && data.files) {
-        this.existingFiles = data.files;
-      }
     }
 
     this.setupValueChanges();
@@ -240,6 +248,7 @@ export class ProductionDialogComponent implements OnInit {
 
   addCampaignProduct(data?: any) {
     const productGroup = this.fb.group({
+      id: [data?.id || null],
       productId: [data?.productId || null, Validators.required],
       quantity: [data?.quantity || '', Validators.required]
     });
@@ -507,11 +516,29 @@ export class ProductionDialogComponent implements OnInit {
 
     this.isUploading$.next(true);
     const formValue = this.form.getRawValue();
+
+    // Ensure nested dates are converted to strings if needed
+    const productionInfo = formValue.productionInfo ? { ...formValue.productionInfo } : undefined;
+    if (productionInfo && productionInfo.campaignEmissionDate instanceof Date) {
+      productionInfo.campaignEmissionDate = productionInfo.campaignEmissionDate.toISOString();
+    }
+
     const payload: Partial<ProductionRequest> = {
-      ...this.config.data,
-      ...formValue,
-      deliveryDate: formValue.deliveryDate ? formValue.deliveryDate.toISOString() : undefined
+      ...this.loadedRequest, // Preserve original fields (requestDate, etc.)
+      ...this.config.data,   // Merge passed config (mainly ID)
+      ...formValue,          // Overwrite with form values
+      deliveryDate: formValue.deliveryDate ? formValue.deliveryDate.toISOString() : undefined,
+      productionInfo: productionInfo
     };
+
+    // Clean up campaign products IDs (remove null IDs)
+    if (payload.campaignDetail?.campaignProducts) {
+      payload.campaignDetail.campaignProducts = payload.campaignDetail.campaignProducts.map((p: any) => {
+        const cleanP = { ...p };
+        if (cleanP.id === null || cleanP.id === undefined) delete cleanP.id;
+        return cleanP;
+      });
+    }
 
     const afterPersist = (saved: ProductionRequest | any) => {
       // Handle potential response wrapper { success: true, data: { ... } }
