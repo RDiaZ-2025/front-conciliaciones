@@ -2,8 +2,7 @@
 <p-confirmDialog></p-confirmDialog>
 
 <div class="flex flex-column gap-4 p-4">
-  <app-page-header title="Gestión de Usuarios" subtitle="Gestión avanzada de usuarios y permisos"
-    icon="pi pi-shield">
+  <app-page-header title="Gestión de Usuarios" subtitle="Gestión avanzada de usuarios y permisos" icon="pi pi-shield">
     <p-button label="Nuevo Usuario" icon="pi pi-plus" (onClick)="openUserDialog()"></p-button>
   </app-page-header>
 
@@ -26,12 +25,14 @@
 
     <!-- Table -->
     <p-table #dt [value]="users" [loading]="loading()" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[5, 10, 25]"
-      [globalFilterFields]="['name', 'email']" [filterDelay]="0" styleClass="p-datatable-lg" responsiveLayout="scroll">
+      [globalFilterFields]="['name', 'email', 'teamName']" [filterDelay]="0" styleClass="p-datatable-lg"
+      responsiveLayout="scroll">
 
       <ng-template pTemplate="header">
         <tr>
           <th pSortableColumn="name">Usuario <p-sortIcon field="name"></p-sortIcon></th>
           <th pSortableColumn="email">Email <p-sortIcon field="email"></p-sortIcon></th>
+          <th pSortableColumn="teamName">Equipo <p-sortIcon field="teamName"></p-sortIcon></th>
           <th>Permisos</th>
           <th pSortableColumn="status" class="text-center">Estado <p-sortIcon field="status"></p-sortIcon></th>
           <th class="text-center">Acciones</th>
@@ -49,6 +50,10 @@
             </div>
           </td>
           <td class="text-600">{{ user.email }}</td>
+          <td>
+            <span *ngIf="user.teamName" class="font-medium text-900">{{ user.teamName }}</span>
+            <span *ngIf="!user.teamName" class="text-500 italic text-sm">Sin equipo</span>
+          </td>
           <td>
             <div class="flex flex-wrap gap-2">
               <p-tag *ngFor="let perm of user.permissions" [value]="getPermissionLabel(perm)"
@@ -83,7 +88,7 @@
 
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="5" class="text-center p-4 text-600">
+          <td colspan="6" class="text-center p-4 text-600">
             No se encontraron usuarios que coincidan con la búsqueda.
           </td>
         </tr>

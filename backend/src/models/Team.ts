@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { User } from './User';
 
 /**
  * Team entity representing a team in the system
@@ -23,4 +24,10 @@ export class Team {
    */
   @Column({ name: 'Description', type: 'nvarchar', length: 500, nullable: true })
   description!: string | null;
+
+  /**
+   * One-to-many relationship with User
+   */
+  @OneToMany(() => User, user => user.team)
+  users!: User[];
 }

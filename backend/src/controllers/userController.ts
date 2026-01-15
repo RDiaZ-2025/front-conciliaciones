@@ -203,13 +203,14 @@ export class UserController {
   static async updateUser(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { name, email, password, permissions } = req.body;
+      const { name, email, password, permissions, teamId } = req.body;
 
       const result = await UserService.updateUser(parseInt(id), {
         name,
         email,
         password,
-        permissions
+        permissions,
+        teamId
       });
 
       if (result.success) {

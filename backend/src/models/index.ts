@@ -19,7 +19,6 @@ export { MenuItem } from './MenuItem';
 export { UserActionLog } from './UserActionLog';
 export { Cover15Minute } from './Cover15Minute';
 export { Team } from './Team';
-export { UserByTeam } from './UserByTeam';
 
 import { User } from './User';
 import { Permission } from './Permission';
@@ -35,7 +34,6 @@ import { ProductionRequest } from './ProductionRequest';
 import { UserActionLog } from './UserActionLog';
 import { Cover15Minute } from './Cover15Minute';
 import { Team } from './Team';
-import { UserByTeam } from './UserByTeam';
 import { Product } from './Product';
 import { CampaignProduct } from './CampaignProduct';
 import { ProductionRequestHistory } from './ProductionRequestHistory';
@@ -62,7 +60,6 @@ export const entities = [
   UserActionLog,
   Cover15Minute,
   Team,
-  UserByTeam,
   Product,
   CampaignProduct,
   Objective,
@@ -122,7 +119,6 @@ export const ModelCategories = {
    * Team management models
    */
   Team: {
-    Team,
-    UserByTeam
+    Team
   }
 };

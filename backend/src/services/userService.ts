@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { User, Permission, PermissionByUser } from '../models';
+import { User, Permission, PermissionByUser, Team } from '../models';
 import { AppDataSource } from '../config/typeorm.config';
 
 export interface CreateUserRequest {
@@ -7,6 +7,7 @@ export interface CreateUserRequest {
   email: string;
   password: string;
   permissions?: string[];
+  teamId?: number;
 }
 
 export interface CreateUserResponse {
@@ -16,6 +17,7 @@ export interface CreateUserResponse {
     name: string;
     email: string;
     permissions: string[];
+    teamId?: number;
   };
   message?: string;
 }
@@ -26,6 +28,7 @@ export interface UpdateUserRequest {
   password?: string;
   permissions?: string[];
   status?: number;
+  teamId?: number | null;
 }
 
 export class UserService {
@@ -99,13 +102,20 @@ export class UserService {
         }
       }
 
+      // Asignar equipo si se proporcionó
+      if (userData.teamId) {
+        savedUser.teamId = userData.teamId;
+        await userRepository.save(savedUser);
+      }
+
       return {
         success: true,
         user: {
           id: savedUser.id,
           name: savedUser.name,
           email: savedUser.email,
-          permissions: assignedPermissions
+          permissions: assignedPermissions,
+          teamId: savedUser.teamId || undefined
         },
         message: 'Usuario creado exitosamente'
       };
@@ -126,16 +136,15 @@ export class UserService {
       }
 
       const userRepository = AppDataSource.getRepository(User);
-      const permissionByUserRepository = AppDataSource.getRepository(PermissionByUser);
 
-      // Obtener todos los usuarios con sus permisos en una sola consulta
+      // Obtener todos los usuarios con sus permisos y equipos en una sola consulta
       const users = await userRepository.find({
         order: { name: 'ASC' },
-        relations: ['permissions', 'permissions.permission']
+        relations: ['permissions', 'permissions.permission', 'team']
       });
 
       // Mapear a la respuesta deseada
-      const usersWithPermissions = users.map(user => {
+      const usersWithDetails = users.map(user => {
         const permissions = user.permissions
           ? user.permissions.map(up => up.permission.name)
           : [];
@@ -146,11 +155,13 @@ export class UserService {
           email: user.email,
           lastAccess: user.lastAccess,
           status: user.status,
-          permissions
+          permissions,
+          teamId: user.teamId,
+          teamName: user.team?.name
         };
       });
 
-      return usersWithPermissions;
+      return usersWithDetails;
     } catch (error) {
       console.error('❌ Error getting users:', error);
       throw error;
@@ -169,7 +180,8 @@ export class UserService {
 
       // Buscar el usuario por ID y status activo
       const user = await userRepository.findOne({
-        where: { id: userId, status: 1 }
+        where: { id: userId, status: 1 },
+        relations: ['team']
       });
 
       if (!user) {
@@ -190,7 +202,9 @@ export class UserService {
         email: user.email,
         lastAccess: user.lastAccess,
         status: user.status,
-        permissions: directPermissions
+        permissions: directPermissions,
+        teamId: user.teamId,
+        teamName: user.team?.name
       };
     } catch (error) {
       console.error('❌ Error getting user by ID:', error);
@@ -272,6 +286,13 @@ export class UserService {
         }
       }
 
+      // Actualizar equipo si se proporcionó (aunque sea null)
+      if (updateData.teamId !== undefined) {
+        // Asignar nuevo equipo si no es null
+        user.teamId = updateData.teamId;
+        await userRepository.save(user);
+      }
+
       return {
         success: true,
         message: 'Usuario actualizado exitosamente'
@@ -285,7 +306,6 @@ export class UserService {
     }
   }
 
-  // Cambiar estado de usuario (habilitar/deshabilitar)
   static async toggleUserStatus(userId: number): Promise<{ success: boolean; message?: string; newStatus?: number }> {
     try {
       if (!AppDataSource.isInitialized) {

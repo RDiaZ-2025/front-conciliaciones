@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { PermissionByUser } from './PermissionByUser';
 import { LoadDocumentsOCbyUser } from './LoadDocumentsOCbyUser';
 import { Notification } from './Notification';
+import { Team } from './Team';
 
 /**
  * User entity representing system users
@@ -48,6 +49,12 @@ export class User {
     status!: number;
 
     /**
+     * Foreign key to Team table
+     */
+    @Column({ name: 'TeamId', type: 'int', nullable: true })
+    teamId!: number | null;
+
+    /**
      * Record creation timestamp
      */
     @CreateDateColumn({ name: 'CreatedAt', type: 'datetime' })
@@ -66,6 +73,13 @@ export class User {
         cascade: true
     })
     permissions!: PermissionByUser[];
+
+    /**
+     * Many-to-one relationship with Team
+     */
+    @ManyToOne(() => Team, team => team.users)
+    @JoinColumn({ name: 'TeamId' })
+    team!: Team;
 
     /**
      * One-to-many relationship with document loads

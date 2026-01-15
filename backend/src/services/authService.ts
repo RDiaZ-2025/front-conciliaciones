@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { User, Permission, PermissionByUser, UserByTeam } from '../models';
+import { User, Permission, PermissionByUser } from '../models';
 import { AppDataSource } from '../config/typeorm.config';
 import { LoginRequest, LoginResponse, JWTPayload } from '../types';
 
@@ -47,7 +47,8 @@ export class AuthService {
 
     // Buscar usuario por email
     const user = await userRepository.findOne({
-      where: { email: credentials.email }
+      where: { email: credentials.email },
+      relations: ['team']
     });
 
     if (!user) {
@@ -84,12 +85,7 @@ export class AuthService {
     const permissions = userPermissions.map(up => up.permission.name);
 
     // Obtener equipos del usuario
-    const userByTeamRepository = AppDataSource.getRepository(UserByTeam);
-    const userTeams = await userByTeamRepository.find({
-      where: { userId: user.id },
-      relations: ['team']
-    });
-    const teams = userTeams.map(ut => ut.team.name);
+    const teams = user.team ? [user.team.name] : [];
 
     // Actualizar último acceso
     await userRepository.update(user.id, { lastAccess: new Date() });
@@ -161,12 +157,12 @@ export class AuthService {
       if (!AppDataSource.isInitialized) {
         return [];
       }
-      const userByTeamRepository = AppDataSource.getRepository(UserByTeam);
-      const userTeams = await userByTeamRepository.find({
-        where: { userId: userId },
+      const userRepository = AppDataSource.getRepository(User);
+      const user = await userRepository.findOne({
+        where: { id: userId },
         relations: ['team']
       });
-      return userTeams.map(ut => ut.team.name);
+      return user?.team ? [user.team.name] : [];
     } catch (error) {
       console.error('Error getting user teams:', error);
       return [];

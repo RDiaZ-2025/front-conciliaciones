@@ -26,39 +26,6 @@
           <textarea pInputTextarea id="description" formControlName="description" rows="3" class="w-full" placeholder="Ingrese una descripción (opcional)"></textarea>
         </div>
       </div>
-
-      <div class="field mt-4">
-        <h5 class="mb-3 font-bold">Miembros del Equipo</h5>
-        <p-pickList 
-          [source]="sourceUsers()" 
-          [target]="targetUsers()" 
-          sourceHeader="Usuarios Disponibles" 
-          targetHeader="Miembros del Equipo" 
-          [dragdrop]="true" 
-          [responsive]="true" 
-          [sourceStyle]="{ height: '350px' }" 
-          [targetStyle]="{ height: '350px' }" 
-          filterBy="name,email" 
-          sourceFilterPlaceholder="Buscar por nombre o email" 
-          targetFilterPlaceholder="Buscar por nombre o email"
-          breakpoint="1200px"
-          stripedRows>
-          <ng-template let-user pTemplate="item">
-            <div class="flex align-items-center gap-3">
-              <div class="flex align-items-center justify-content-center bg-primary border-circle w-3rem h-3rem user-icon">
-                <i class="pi pi-user text-xl"></i>
-              </div>
-              <div class="flex flex-column gap-1">
-                <span class="font-bold text-900 user-name">{{ user.name }}</span>
-                <span class="text-sm text-600 flex align-items-center gap-1 user-email">
-                  <i class="pi pi-envelope text-xs"></i>
-                  {{ user.email }}
-                </span>
-              </div>
-            </div>
-          </ng-template>
-        </p-pickList>
-      </div>
     </form>
   </ng-template>
 
