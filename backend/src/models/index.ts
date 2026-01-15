@@ -10,6 +10,7 @@ export * from './ProductionRequest';
 export * from './ProductionRequestHistory';
 export * from './Product';
 export * from './CampaignProduct';
+export * from './Objective';
 
 export { LoadDocumentsOCbyUser } from './LoadDocumentsOCbyUser';
 export { MenuItem } from './MenuItem';
@@ -36,6 +37,7 @@ import { UserByTeam } from './UserByTeam';
 import { Product } from './Product';
 import { CampaignProduct } from './CampaignProduct';
 import { ProductionRequestHistory } from './ProductionRequestHistory';
+import { Objective } from './Objective';
 
 export const entities = [
   User,
@@ -55,7 +57,8 @@ export const entities = [
   Team,
   UserByTeam,
   Product,
-  CampaignProduct
+  CampaignProduct,
+  Objective
 ];
 
 export const ModelCategories = {

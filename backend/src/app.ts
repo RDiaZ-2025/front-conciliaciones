@@ -18,6 +18,7 @@ import permissionRoutes from './routes/permissionRoutes';
 import cover15MinuteRoutes from './routes/cover15MinuteRoutes';
 import storageRoutes from './routes/storageRoutes';
 import notificationRoutes from './routes/notificationRoutes';
+import objectiveRoutes from './routes/objectiveRoutes';
 
 import { actionLogger, skipLogging } from './middleware/actionLogger';
 
@@ -88,6 +89,7 @@ app.use('/api/permissions', permissionRoutes);
 app.use('/api/covers-15-minutes', cover15MinuteRoutes);
 app.use('/api/storage', storageRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/objectives', objectiveRoutes);
 
 // Ruta 404
 app.use('*', (req, res) => {

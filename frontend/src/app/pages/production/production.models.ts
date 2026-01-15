@@ -51,11 +51,17 @@ export interface CampaignProduct {
   product?: Product;
 }
 
+export interface Objective {
+  id: number;
+  name: string;
+}
+
 export interface CampaignDetail {
   budget: string;
   brand?: string;
   productService: string;
-  objective: string;
+  objectiveId?: number;
+  objective?: Objective;
   campaignProducts?: CampaignProduct[];
 }
 

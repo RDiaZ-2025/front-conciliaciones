@@ -78,6 +78,7 @@ export const getProductionRequestById = async (req: Request, res: Response): Pro
         'customerData',
         'audienceData',
         'campaignDetail',
+        'campaignDetail.objective',
         'campaignDetail.campaignProducts',
         'campaignDetail.campaignProducts.product',
         'productionInfo',

@@ -14,7 +14,7 @@ import { SelectModule } from 'primeng/select';
 import { MenuItem, MessageService } from 'primeng/api';
 import { StepsModule } from 'primeng/steps';
 import { CheckboxModule } from 'primeng/checkbox';
-import { ProductionRequest, UploadedFile, Team, CustomerData, AudienceData, CampaignDetail, ProductionInfo, Product, WORKFLOW_STAGES } from '../../production.models';
+import { ProductionRequest, UploadedFile, Team, CustomerData, AudienceData, CampaignDetail, ProductionInfo, Product, WORKFLOW_STAGES, Objective } from '../../production.models';
 import { AzureStorageService } from '../../../../services/azure-storage.service';
 import { TeamService } from '../../../../services/team.service';
 import { User } from '../../../../services/user.service';
@@ -48,6 +48,8 @@ export class ProductionDialogComponent implements OnInit {
   config = inject(DynamicDialogConfig);
   azureService = inject(AzureStorageService);
   messageService = inject(MessageService);
+  
+  campaignObjectives: Objective[] = [];
   teamService = inject(TeamService);
   productionService = inject(ProductionService);
   authService = inject(AuthService);
@@ -76,6 +78,8 @@ export class ProductionDialogComponent implements OnInit {
   ngOnInit() {
     this.isEditMode = !!this.config.data?.id;
     const data = this.config.data || {};
+    
+    this.loadObjectives();
 
     // Initialize files from passed data immediately (fallback if storage fails)
     if (data.files) {
@@ -143,15 +147,15 @@ export class ProductionDialogComponent implements OnInit {
         budget: [data.campaignDetail?.budget || '', Validators.required],
         brand: [data.campaignDetail?.brand || ''],
         productService: [data.campaignDetail?.productService || '', Validators.required],
-        objective: [data.campaignDetail?.objective || '', Validators.required],
+        objectiveId: [data.campaignDetail?.objectiveId || null, Validators.required],
         campaignProducts: this.fb.array([])
       }),
 
-      // Step 5: Production & Formats
+      // Step 5: Production Info
       productionInfo: this.fb.group({
         formatType: [data.productionInfo?.formatType || '', Validators.required],
         rightsTime: [data.productionInfo?.rightsTime || '', Validators.required],
-        campaignEmissionDate: [data.productionInfo?.campaignEmissionDate ? new Date(data.productionInfo.campaignEmissionDate) : null],
+        campaignEmissionDate: [data.productionInfo?.campaignEmissionDate ? new Date(data.productionInfo.campaignEmissionDate) : null, Validators.required],
         communicationTone: [data.productionInfo?.communicationTone || '', Validators.required],
         ownAndExternalMedia: [data.productionInfo?.ownAndExternalMedia || ''],
         tvFormats: [data.productionInfo?.tvFormats || '', Validators.required],
@@ -268,6 +272,15 @@ export class ProductionDialogComponent implements OnInit {
         console.error('Error loading products', error);
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los productos' });
       }
+    });
+  }
+
+  loadObjectives() {
+    this.productionService.getObjectives().subscribe({
+      next: (objectives) => {
+        this.campaignObjectives = objectives;
+      },
+      error: (err) => console.error('Error loading objectives', err)
     });
   }
 

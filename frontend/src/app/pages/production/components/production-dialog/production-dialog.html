@@ -217,7 +217,7 @@
             </p-floatlabel>
 
             <p-floatlabel variant="in">
-                <textarea pTextarea formControlName="objective" rows="4" class="w-full"></textarea>
+                <p-select formControlName="objectiveId" [options]="campaignObjectives" optionLabel="name" optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
                 <label>Objetivo de la Campaña</label>
             </p-floatlabel>
 

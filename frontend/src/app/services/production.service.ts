@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, from, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
-import { ProductionRequest, MOCK_PRODUCTION_REQUESTS, Product } from '../pages/production/production.models';
+import { ProductionRequest, MOCK_PRODUCTION_REQUESTS, Product, Objective } from '../pages/production/production.models';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -11,6 +11,10 @@ import { environment } from '../../environments/environment';
 export class ProductionService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiUrl}/production`;
+
+  getObjectives(): Observable<Objective[]> {
+    return this.http.get<Objective[]>(`${environment.apiUrl}/objectives`);
+  }
 
   getProducts(): Observable<Product[]> {
     return this.http.get<Product[]>(`${this.apiUrl}/products`);
