@@ -5,6 +5,8 @@ export * from './Notification';
 export * from './CustomerData';
 export * from './CampaignDetail';
 export * from './AudienceData';
+export * from './FormatType';
+export * from './RightsDuration';
 export * from './ProductionInfo';
 export * from './ProductionRequest';
 export * from './ProductionRequestHistory';
@@ -41,6 +43,8 @@ import { Objective } from './Objective';
 import { Gender } from './Gender';
 import { AgeRange } from './AgeRange';
 import { SocioeconomicLevel } from './SocioeconomicLevel';
+import { FormatType } from './FormatType';
+import { RightsDuration } from './RightsDuration';
 
 export const entities = [
   User,
@@ -64,7 +68,9 @@ export const entities = [
   Objective,
   Gender,
   AgeRange,
-  SocioeconomicLevel
+  SocioeconomicLevel,
+  FormatType,
+  RightsDuration
 ];
 
 export const ModelCategories = {

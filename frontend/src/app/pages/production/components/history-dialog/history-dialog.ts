@@ -5,6 +5,7 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { ProductionService } from '../../../../services/production.service';
+import { ProductionRequestHistory } from '../../production.models';
 import { BehaviorSubject } from 'rxjs';
 
 @Component({
@@ -20,7 +21,7 @@ import { BehaviorSubject } from 'rxjs';
   `]
 })
 export class HistoryDialog implements OnInit {
-  history$ = new BehaviorSubject<any[]>([]);
+  history$ = new BehaviorSubject<ProductionRequestHistory[]>([]);
   loading$ = new BehaviorSubject<boolean>(true);
 
   constructor(
@@ -32,11 +33,11 @@ export class HistoryDialog implements OnInit {
   ngOnInit() {
     const requestId = this.config.data?.id;
     if (requestId) {
-      this.loadHistory(requestId);
+      this.loadHistory(Number(requestId));
     }
   }
 
-  loadHistory(id: string) {
+  loadHistory(id: number) {
     this.loading$.next(true);
     this.productionService.getHistory(id).subscribe({
       next: (data) => {

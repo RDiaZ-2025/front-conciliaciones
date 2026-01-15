@@ -14,7 +14,7 @@ import { SelectModule } from 'primeng/select';
 import { MenuItem, MessageService } from 'primeng/api';
 import { StepsModule } from 'primeng/steps';
 import { CheckboxModule } from 'primeng/checkbox';
-import { ProductionRequest, UploadedFile, Team, CustomerData, AudienceData, CampaignDetail, ProductionInfo, Product, WORKFLOW_STAGES, Objective, Gender, AgeRange, SocioeconomicLevel } from '../../production.models';
+import { ProductionRequest, UploadedFile, Team, CustomerData, AudienceData, CampaignDetail, ProductionInfo, Product, WORKFLOW_STAGES, Objective, Gender, AgeRange, SocioeconomicLevel, FormatType, RightsDuration } from '../../production.models';
 import { AzureStorageService } from '../../../../services/azure-storage.service';
 import { TeamService } from '../../../../services/team.service';
 import { User } from '../../../../services/user.service';
@@ -53,6 +53,12 @@ export class ProductionDialogComponent implements OnInit {
   genders: Gender[] = [];
   ageRanges: AgeRange[] = [];
   socioeconomicLevels: SocioeconomicLevel[] = [];
+  formatTypes: FormatType[] = [];
+  rightsDurations: RightsDuration[] = [];
+
+  constructor() {
+    // Auto-save setup is handled in setupValueChanges
+  }
   teamService = inject(TeamService);
   productionService = inject(ProductionService);
   authService = inject(AuthService);
@@ -84,6 +90,7 @@ export class ProductionDialogComponent implements OnInit {
     
     this.loadObjectives();
     this.loadAudienceOptions();
+    this.loadProductionOptions();
 
     // Initialize files from passed data immediately (fallback if storage fails)
     if (data.files) {
@@ -157,8 +164,8 @@ export class ProductionDialogComponent implements OnInit {
 
       // Step 5: Production Info
       productionInfo: this.fb.group({
-        formatType: [data.productionInfo?.formatType || '', Validators.required],
-        rightsTime: [data.productionInfo?.rightsTime || '', Validators.required],
+        formatTypeId: [data.productionInfo?.formatTypeId || null, Validators.required],
+        rightsDurationId: [data.productionInfo?.rightsDurationId || null, Validators.required],
         campaignEmissionDate: [data.productionInfo?.campaignEmissionDate ? new Date(data.productionInfo.campaignEmissionDate) : null, Validators.required],
         communicationTone: [data.productionInfo?.communicationTone || '', Validators.required],
         ownAndExternalMedia: [data.productionInfo?.ownAndExternalMedia || ''],
@@ -197,7 +204,7 @@ export class ProductionDialogComponent implements OnInit {
     this.loadProducts();
 
     if (this.isEditMode) {
-      this.productionService.getProductionRequestById(this.config.data.id).subscribe({
+      this.productionService.getProductionRequest(this.config.data.id).subscribe({
         next: (response: any) => {
           const fullData = response.data || response;
           this.loadedRequest = fullData;
@@ -291,6 +298,26 @@ export class ProductionDialogComponent implements OnInit {
     });
   }
 
+  loadProductionOptions() {
+    this.productionService.getFormatTypes().subscribe({
+      next: (data) => {
+        this.formatTypes = data;
+      },
+      error: (error) => {
+        console.error('Error loading format types', error);
+      }
+    });
+
+    this.productionService.getRightsDurations().subscribe({
+      next: (data) => {
+        this.rightsDurations = data;
+      },
+      error: (error) => {
+        console.error('Error loading rights durations', error);
+      }
+    });
+  }
+
   loadAudienceOptions() {
     this.productionService.getGenders().subscribe({
       next: (data) => this.genders = data,
@@ -306,8 +333,8 @@ export class ProductionDialogComponent implements OnInit {
     });
   }
 
-  loadFilesFromStorage(requestId: string) {
-    const folderPath = AzureStorageService.generateProductionRequestFolderPath(requestId);
+  loadFilesFromStorage(requestId: number) {
+    const folderPath = AzureStorageService.generateProductionRequestFolderPath(requestId.toString());
     this.azureService.listFiles(folderPath, 'private').then(blobs => {
       this.existingFiles = blobs.map(blobName => {
         const fileName = blobName.split('/').pop() || blobName;

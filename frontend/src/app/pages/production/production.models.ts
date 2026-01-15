@@ -83,20 +83,49 @@ export interface CampaignDetail {
   campaignProducts?: CampaignProduct[];
 }
 
+export interface FormatType {
+  id: number;
+  name: string;
+}
+
+export interface RightsDuration {
+  id: number;
+  name: string;
+}
+
 export interface ProductionInfo {
-  formatType: string;
-  rightsTime: string;
+  formatTypeId?: number;
+  formatType?: FormatType;
+  rightsDurationId?: number;
+  rightsDuration?: RightsDuration;
+  rightsTime?: string; // Legacy support
   campaignEmissionDate?: string;
   communicationTone: string;
-  ownAndExternalMedia?: string;
-  tvFormats: string;
-  digitalFormats: string;
+  ownAndExternalMedia: string;
+  tvFormats?: string;
+  digitalFormats?: string;
   productionDetails: string;
   additionalComments?: string;
 }
 
+export interface ProductionRequestHistory {
+  id: number;
+  productionRequestId: number;
+  changeField: string;
+  oldValue: string | null;
+  newValue: string | null;
+  changedBy: number;
+  changeType: 'create' | 'update' | 'delete' | 'status_change';
+  createdAt: string;
+  changedByUser?: {
+    id: number;
+    name: string;
+    email: string;
+  };
+}
+
 export interface ProductionRequest {
-  id: string;
+  id: number;
   name: string;
   requestDate: string;
   department: string;
@@ -129,7 +158,7 @@ export const WORKFLOW_STAGES = [
 
 export const MOCK_PRODUCTION_REQUESTS: ProductionRequest[] = [
   {
-    id: '1',
+    id: 1,
     name: 'Campaña Publicitaria Q3',
     requestDate: '2023-07-15T10:30:00Z',
     department: 'Marketing',
@@ -140,7 +169,7 @@ export const MOCK_PRODUCTION_REQUESTS: ProductionRequest[] = [
     stage: 'in_production'
   },
   {
-    id: '2',
+    id: 2,
     name: 'Video Corporativo Anual',
     requestDate: '2023-06-20T14:15:00Z',
     department: 'Comunicación',
@@ -151,7 +180,7 @@ export const MOCK_PRODUCTION_REQUESTS: ProductionRequest[] = [
     stage: 'pre_production'
   },
   {
-    id: '3',
+    id: 3,
     name: 'Spot Televisivo Navidad',
     requestDate: '2023-08-05T09:45:00Z',
     department: 'Ventas',
@@ -162,7 +191,7 @@ export const MOCK_PRODUCTION_REQUESTS: ProductionRequest[] = [
     stage: 'quotation'
   },
   {
-    id: '4',
+    id: 4,
     name: 'Contenido Redes Sociales',
     requestDate: '2023-07-28T11:20:00Z',
     department: 'Marketing Digital',
@@ -172,7 +201,7 @@ export const MOCK_PRODUCTION_REQUESTS: ProductionRequest[] = [
     stage: 'completed'
   },
   {
-    id: '5',
+    id: 5,
     name: 'Documental Proceso Productivo',
     requestDate: '2023-08-10T16:30:00Z',
     department: 'Operaciones',

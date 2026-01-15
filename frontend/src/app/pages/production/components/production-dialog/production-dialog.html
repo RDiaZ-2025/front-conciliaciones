@@ -314,14 +314,14 @@
             <div class="formgrid grid">
                 <div class="col-12 md:col-6">
                     <p-floatlabel variant="in">
-                        <input pInputText formControlName="formatType" class="w-full" />
+                        <p-select formControlName="formatTypeId" [options]="formatTypes" optionLabel="name" optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
                         <label>Tipo de Formato</label>
                     </p-floatlabel>
                 </div>
                 <div class="col-12 md:col-6">
                     <p-floatlabel variant="in">
-                        <input pInputText formControlName="rightsTime" class="w-full" />
-                        <label>Derechos / Tiempo</label>
+                        <p-select formControlName="rightsDurationId" [options]="rightsDurations" optionLabel="name" optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                        <label>Derechos / Duración</label>
                     </p-floatlabel>
                 </div>
             </div>

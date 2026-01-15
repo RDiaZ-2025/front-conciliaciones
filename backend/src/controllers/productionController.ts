@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ProductionRequest, Product, User } from '../models';
+import { ProductionRequest, Product, User, FormatType, RightsDuration } from '../models';
 import { AppDataSource } from '../config/typeorm.config';
 import { NotificationService } from '../services/notificationService';
 import { ProductionRequestHistoryService } from '../services/productionRequestHistoryService';
@@ -7,6 +7,44 @@ import { AuthService } from '../services/authService';
 
 const notificationService = new NotificationService();
 const historyService = new ProductionRequestHistoryService();
+
+export class ProductionController {
+  static async getFormatTypes(req: Request, res: Response): Promise<Response> {
+    try {
+      if (!AppDataSource.isInitialized) {
+        return res.status(503).json({
+          success: false,
+          message: 'Base de datos no disponible'
+        });
+      }
+
+      const formatTypeRepository = AppDataSource.getRepository(FormatType);
+      const formatTypes = await formatTypeRepository.find();
+      return res.json(formatTypes);
+    } catch (error) {
+      console.error('Error fetching format types:', error);
+      return res.status(500).json({ message: 'Error fetching format types', error });
+    }
+  }
+
+  static async getRightsDurations(req: Request, res: Response): Promise<Response> {
+    try {
+      if (!AppDataSource.isInitialized) {
+        return res.status(503).json({
+          success: false,
+          message: 'Base de datos no disponible'
+        });
+      }
+
+      const rightsDurationRepository = AppDataSource.getRepository(RightsDuration);
+      const rightsDurations = await rightsDurationRepository.find();
+      return res.json(rightsDurations);
+    } catch (error) {
+      console.error('Error fetching rights durations:', error);
+      return res.status(500).json({ message: 'Error fetching rights durations', error });
+    }
+  }
+}
 
 // Get all production requests
 export const getAllProductionRequests = async (req: Request, res: Response): Promise<Response | void> => {
@@ -85,6 +123,8 @@ export const getProductionRequestById = async (req: Request, res: Response): Pro
         'campaignDetail.campaignProducts',
         'campaignDetail.campaignProducts.product',
         'productionInfo',
+        'productionInfo.formatType',
+        'productionInfo.rightsDuration',
         'assignedUser'
       ]
     });

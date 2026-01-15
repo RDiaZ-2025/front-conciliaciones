@@ -85,7 +85,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
   // SLA Monitoring
   now = signal<Date>(new Date());
   private intervalId: any;
-  private alertedRequests = new Set<string>(); // Track alerted requests to avoid spam
+  private alertedRequests = new Set<number>(); // Track alerted requests to avoid spam
 
   ngOnInit() {
     this.loadRequests();
@@ -300,7 +300,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
     });
   }
 
-  updateRequest(id: string, request: Partial<ProductionRequest>) {
+  updateRequest(id: number, request: Partial<ProductionRequest>) {
     this.productionService.updateProductionRequest(id, request).subscribe({
       next: (updatedRequest) => {
         this.requests.update(current => current.map(r => r.id === id ? updatedRequest : r));
@@ -312,7 +312,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
     });
   }
 
-  deleteRequest(id: string) {
+  deleteRequest(id: number) {
     this.confirmationService.confirm({
       message: '¿Está seguro de eliminar esta solicitud?',
       header: 'Confirmar Eliminación',

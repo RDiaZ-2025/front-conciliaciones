@@ -1,5 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, ManyToOne } from 'typeorm';
 import { ProductionRequest } from './ProductionRequest';
+import { FormatType } from './FormatType';
+import { RightsDuration } from './RightsDuration';
 
 /**
  * ProductionInfo entity representing production specifics for a production request
@@ -16,11 +18,19 @@ export class ProductionInfo {
     @JoinColumn({ name: 'ProductionRequestId' })
     productionRequest!: ProductionRequest;
 
-    @Column({ name: 'FormatType', type: 'nvarchar', length: 255, nullable: true })
-    formatType!: string;
+    @Column({ name: 'FormatTypeId', type: 'int', nullable: true })
+    formatTypeId!: number | null;
 
-    @Column({ name: 'RightsTime', type: 'nvarchar', length: 255, nullable: true })
-    rightsTime!: string;
+    @ManyToOne(() => FormatType)
+    @JoinColumn({ name: 'FormatTypeId' })
+    formatType!: FormatType;
+
+    @Column({ name: 'RightsDurationId', type: 'int', nullable: true })
+    rightsDurationId!: number | null;
+
+    @ManyToOne(() => RightsDuration)
+    @JoinColumn({ name: 'RightsDurationId' })
+    rightsDuration!: RightsDuration;
 
     @Column({ name: 'CampaignEmissionDate', type: 'datetime', nullable: true })
     campaignEmissionDate!: Date;
