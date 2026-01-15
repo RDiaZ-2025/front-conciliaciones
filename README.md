@@ -85,7 +85,7 @@ npm run dev
 # Run only frontend (http://localhost:5173)
 npm run dev:frontend
 
-# Run only backend (http://localhost:8246)
+# Run only backend (http://localhost:22741)
 npm run dev:backend
 ```
 
@@ -218,7 +218,7 @@ npm run lint
 
 ### Development Environment
 - Frontend available at: http://localhost:5173
-- Backend available at: http://localhost:8246
+- Backend available at: http://localhost:22741
 - Hot reload enabled for both applications
 - Shared dependencies managed at root level
 
@@ -296,7 +296,7 @@ npm run dev
 
 #### Frontend (.env)
 ```env
-VITE_API_URL=http://localhost:8246/api
+VITE_API_URL=http://localhost:22741/api
 ```
 
 #### Backend (.env)
@@ -306,7 +306,7 @@ DB_DATABASE=your-database
 DB_USER=your-username
 DB_PASSWORD=your-password
 JWT_SECRET=your-jwt-secret
-PORT=8246
+PORT=22741
 ```
 
 ## Testing Strategy
@@ -327,7 +327,7 @@ PORT=8246
 
 ### Common Issues
 1. **Dependency Conflicts**: Run `npm run clean` then `npm install`
-2. **Port Conflicts**: Check if ports 5173 or 8246 are in use
+2. **Port Conflicts**: Check if ports 5173 or 22741 are in use
 3. **Database Connection**: Verify SQL Server configuration
 4. **Build Errors**: Check TypeScript types and imports
 5. **Authentication Issues**: Verify JWT secret and token storage

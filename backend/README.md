@@ -162,7 +162,7 @@ DB_ENCRYPT=true
 DB_TRUST_SERVER_CERTIFICATE=true
 
 # Servidor
-PORT=8246
+PORT=22741
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
 

@@ -6,7 +6,7 @@ dotenv.config();
 import app from './app';
 import { AppDataSource } from './config/typeorm.config';
 
-const PORT = process.env.PORT || 8246;
+const PORT = process.env.PORT || 22741;
 
 // Función para iniciar el servidor
 const startServer = async (): Promise<void> => {

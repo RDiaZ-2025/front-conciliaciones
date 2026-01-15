@@ -303,7 +303,7 @@ export class DashboardComponent {
   }
 
   onGoToAdmin() {
-    this.router.navigate(['/admin']);
+    this.router.navigate(['/users']);
   }
 
   toggleCategory(categoryName: string) {

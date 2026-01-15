@@ -128,30 +128,27 @@ export class UserService {
       const userRepository = AppDataSource.getRepository(User);
       const permissionByUserRepository = AppDataSource.getRepository(PermissionByUser);
 
-      // Obtener todos los usuarios ordenados por nombre
+      // Obtener todos los usuarios con sus permisos en una sola consulta
       const users = await userRepository.find({
-        order: { name: 'ASC' }
+        order: { name: 'ASC' },
+        relations: ['permissions', 'permissions.permission']
       });
 
-      // Obtener permisos para cada usuario
-      const usersWithPermissions = [];
-      for (const user of users) {
-        const userPermissions = await permissionByUserRepository.find({
-          where: { userId: user.id },
-          relations: ['permission']
-        });
+      // Mapear a la respuesta deseada
+      const usersWithPermissions = users.map(user => {
+        const permissions = user.permissions
+          ? user.permissions.map(up => up.permission.name)
+          : [];
 
-        const permissions = userPermissions.map(up => up.permission.name);
-
-        usersWithPermissions.push({
+        return {
           id: user.id,
           name: user.name,
           email: user.email,
           lastAccess: user.lastAccess,
           status: user.status,
           permissions
-        });
-      }
+        };
+      });
 
       return usersWithPermissions;
     } catch (error) {
