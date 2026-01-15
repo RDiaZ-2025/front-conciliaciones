@@ -26,11 +26,29 @@ export interface CustomerData {
   serviceData?: boolean;
 }
 
+export interface Gender {
+  id: number;
+  name: string;
+}
+
+export interface AgeRange {
+  id: number;
+  name: string;
+}
+
+export interface SocioeconomicLevel {
+  id: number;
+  name: string;
+}
+
 export interface AudienceData {
-  gender: string;
+  genderId?: number;
+  gender?: Gender;
   geo: string;
-  ageRange: string;
-  socioEconomicLevel: string;
+  ageRangeId?: number;
+  ageRange?: AgeRange;
+  socioEconomicLevelId?: number;
+  socioEconomicLevel?: SocioeconomicLevel;
   interests: string;
   specificDetails: string;
   campaignContext: string;

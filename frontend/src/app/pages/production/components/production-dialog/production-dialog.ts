@@ -14,7 +14,7 @@ import { SelectModule } from 'primeng/select';
 import { MenuItem, MessageService } from 'primeng/api';
 import { StepsModule } from 'primeng/steps';
 import { CheckboxModule } from 'primeng/checkbox';
-import { ProductionRequest, UploadedFile, Team, CustomerData, AudienceData, CampaignDetail, ProductionInfo, Product, WORKFLOW_STAGES, Objective } from '../../production.models';
+import { ProductionRequest, UploadedFile, Team, CustomerData, AudienceData, CampaignDetail, ProductionInfo, Product, WORKFLOW_STAGES, Objective, Gender, AgeRange, SocioeconomicLevel } from '../../production.models';
 import { AzureStorageService } from '../../../../services/azure-storage.service';
 import { TeamService } from '../../../../services/team.service';
 import { User } from '../../../../services/user.service';
@@ -50,6 +50,9 @@ export class ProductionDialogComponent implements OnInit {
   messageService = inject(MessageService);
   
   campaignObjectives: Objective[] = [];
+  genders: Gender[] = [];
+  ageRanges: AgeRange[] = [];
+  socioeconomicLevels: SocioeconomicLevel[] = [];
   teamService = inject(TeamService);
   productionService = inject(ProductionService);
   authService = inject(AuthService);
@@ -80,6 +83,7 @@ export class ProductionDialogComponent implements OnInit {
     const data = this.config.data || {};
     
     this.loadObjectives();
+    this.loadAudienceOptions();
 
     // Initialize files from passed data immediately (fallback if storage fails)
     if (data.files) {
@@ -131,10 +135,10 @@ export class ProductionDialogComponent implements OnInit {
 
       // Step 3: Audience Details
       audienceData: this.fb.group({
-        gender: [data.audienceData?.gender || '', Validators.required],
+        genderId: [data.audienceData?.genderId || null, Validators.required],
         geo: [data.audienceData?.geo || '', Validators.required],
-        ageRange: [data.audienceData?.ageRange || '', Validators.required],
-        socioEconomicLevel: [data.audienceData?.socioEconomicLevel || '', Validators.required],
+        ageRangeId: [data.audienceData?.ageRangeId || null, Validators.required],
+        socioEconomicLevelId: [data.audienceData?.socioEconomicLevelId || null, Validators.required],
         interests: [data.audienceData?.interests || '', Validators.required],
         specificDetails: [data.audienceData?.specificDetails || '', Validators.required],
         campaignContext: [data.audienceData?.campaignContext || '', Validators.required],
@@ -280,7 +284,25 @@ export class ProductionDialogComponent implements OnInit {
       next: (objectives) => {
         this.campaignObjectives = objectives;
       },
-      error: (err) => console.error('Error loading objectives', err)
+      error: (error) => {
+        console.error('Error loading objectives', error);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los objetivos de campaña' });
+      }
+    });
+  }
+
+  loadAudienceOptions() {
+    this.productionService.getGenders().subscribe({
+      next: (data) => this.genders = data,
+      error: (error) => console.error('Error loading genders', error)
+    });
+    this.productionService.getAgeRanges().subscribe({
+      next: (data) => this.ageRanges = data,
+      error: (error) => console.error('Error loading age ranges', error)
+    });
+    this.productionService.getSocioeconomicLevels().subscribe({
+      next: (data) => this.socioeconomicLevels = data,
+      error: (error) => console.error('Error loading socioeconomic levels', error)
     });
   }
 

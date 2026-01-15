@@ -257,7 +257,7 @@
             <div class="formgrid grid">
                 <div class="col-12 md:col-6">
                     <p-floatlabel variant="in">
-                        <input pInputText formControlName="gender" class="w-full" />
+                        <p-select formControlName="genderId" [options]="genders" optionLabel="name" optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
                         <label>Género</label>
                     </p-floatlabel>
                 </div>
@@ -272,13 +272,13 @@
             <div class="formgrid grid">
                 <div class="col-12 md:col-6">
                     <p-floatlabel variant="in">
-                        <input pInputText formControlName="ageRange" class="w-full" />
+                        <p-select formControlName="ageRangeId" [options]="ageRanges" optionLabel="name" optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
                         <label>Rango de Edad</label>
                     </p-floatlabel>
                 </div>
                 <div class="col-12 md:col-6">
                     <p-floatlabel variant="in">
-                        <input pInputText formControlName="socioEconomicLevel" class="w-full" />
+                        <p-select formControlName="socioEconomicLevelId" [options]="socioeconomicLevels" optionLabel="name" optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
                         <label>Nivel Socioeconómico (NSE)</label>
                     </p-floatlabel>
                 </div>

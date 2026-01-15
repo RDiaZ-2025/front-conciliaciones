@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, from, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
-import { ProductionRequest, MOCK_PRODUCTION_REQUESTS, Product, Objective } from '../pages/production/production.models';
+import { ProductionRequest, MOCK_PRODUCTION_REQUESTS, Product, Objective, Gender, AgeRange, SocioeconomicLevel } from '../pages/production/production.models';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -14,6 +14,18 @@ export class ProductionService {
 
   getObjectives(): Observable<Objective[]> {
     return this.http.get<Objective[]>(`${environment.apiUrl}/objectives`);
+  }
+
+  getGenders(): Observable<Gender[]> {
+    return this.http.get<Gender[]>(`${environment.apiUrl}/audience/genders`);
+  }
+
+  getAgeRanges(): Observable<AgeRange[]> {
+    return this.http.get<AgeRange[]>(`${environment.apiUrl}/audience/age-ranges`);
+  }
+
+  getSocioeconomicLevels(): Observable<SocioeconomicLevel[]> {
+    return this.http.get<SocioeconomicLevel[]>(`${environment.apiUrl}/audience/socioeconomic-levels`);
   }
 
   getProducts(): Observable<Product[]> {

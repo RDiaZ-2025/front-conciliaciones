@@ -38,6 +38,9 @@ import { Product } from './Product';
 import { CampaignProduct } from './CampaignProduct';
 import { ProductionRequestHistory } from './ProductionRequestHistory';
 import { Objective } from './Objective';
+import { Gender } from './Gender';
+import { AgeRange } from './AgeRange';
+import { SocioeconomicLevel } from './SocioeconomicLevel';
 
 export const entities = [
   User,
@@ -58,7 +61,10 @@ export const entities = [
   UserByTeam,
   Product,
   CampaignProduct,
-  Objective
+  Objective,
+  Gender,
+  AgeRange,
+  SocioeconomicLevel
 ];
 
 export const ModelCategories = {

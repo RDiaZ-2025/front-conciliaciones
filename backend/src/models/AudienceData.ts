@@ -1,5 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, ManyToOne } from 'typeorm';
 import { ProductionRequest } from './ProductionRequest';
+import { Gender } from './Gender';
+import { AgeRange } from './AgeRange';
+import { SocioeconomicLevel } from './SocioeconomicLevel';
 
 /**
  * AudienceData entity representing audience and context for a production request
@@ -16,17 +19,29 @@ export class AudienceData {
     @JoinColumn({ name: 'ProductionRequestId' })
     productionRequest!: ProductionRequest;
 
-    @Column({ name: 'Gender', type: 'nvarchar', length: 100, nullable: true })
-    gender!: string;
+    @Column({ name: 'GenderId', type: 'int', nullable: true })
+    genderId!: number;
+
+    @ManyToOne(() => Gender)
+    @JoinColumn({ name: 'GenderId' })
+    gender!: Gender;
 
     @Column({ name: 'Geo', type: 'nvarchar', length: 255, nullable: true })
     geo!: string;
 
-    @Column({ name: 'AgeRange', type: 'nvarchar', length: 100, nullable: true })
-    ageRange!: string;
+    @Column({ name: 'AgeRangeId', type: 'int', nullable: true })
+    ageRangeId!: number;
 
-    @Column({ name: 'SocioEconomicLevel', type: 'nvarchar', length: 100, nullable: true })
-    socioEconomicLevel!: string;
+    @ManyToOne(() => AgeRange)
+    @JoinColumn({ name: 'AgeRangeId' })
+    ageRange!: AgeRange;
+
+    @Column({ name: 'SocioEconomicLevelId', type: 'int', nullable: true })
+    socioEconomicLevelId!: number;
+
+    @ManyToOne(() => SocioeconomicLevel)
+    @JoinColumn({ name: 'SocioEconomicLevelId' })
+    socioEconomicLevel!: SocioeconomicLevel;
 
     @Column({ name: 'Interests', type: 'nvarchar', length: 'MAX', nullable: true })
     interests!: string;

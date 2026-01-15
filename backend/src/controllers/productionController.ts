@@ -77,6 +77,9 @@ export const getProductionRequestById = async (req: Request, res: Response): Pro
       relations: [
         'customerData',
         'audienceData',
+        'audienceData.gender',
+        'audienceData.ageRange',
+        'audienceData.socioEconomicLevel',
         'campaignDetail',
         'campaignDetail.objective',
         'campaignDetail.campaignProducts',
