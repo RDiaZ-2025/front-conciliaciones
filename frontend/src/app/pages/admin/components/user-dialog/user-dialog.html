@@ -69,6 +69,15 @@
         </p-floatLabel>
     </div>
 
+    <!-- Boss Field -->
+    <div class="field mt-2">
+        <p-floatLabel variant="in">
+            <p-select id="boss" [options]="users" formControlName="bossId" optionLabel="name" optionValue="id"
+                placeholder="Seleccione un jefe" styleClass="w-full" appendTo="body" [showClear]="true"></p-select>
+            <label for="boss">Jefe</label>
+        </p-floatLabel>
+    </div>
+
     <div class="flex justify-content-end gap-2 mt-4">
         <p-button label="Cancelar" icon="pi pi-times" (onClick)="ref.close()" severity="secondary"></p-button>
         <p-button label="{{ config.data.isEdit ? 'Actualizar' : 'Crear' }}" icon="pi pi-check" (onClick)="onSubmit()"

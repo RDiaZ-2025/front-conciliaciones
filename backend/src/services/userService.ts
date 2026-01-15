@@ -8,6 +8,7 @@ export interface CreateUserRequest {
   password: string;
   permissions?: string[];
   teamId?: number;
+  bossId?: number;
 }
 
 export interface CreateUserResponse {
@@ -18,6 +19,7 @@ export interface CreateUserResponse {
     email: string;
     permissions: string[];
     teamId?: number;
+    bossId?: number;
   };
   message?: string;
 }
@@ -29,6 +31,7 @@ export interface UpdateUserRequest {
   permissions?: string[];
   status?: number;
   teamId?: number | null;
+  bossId?: number | null;
 }
 
 export class UserService {
@@ -105,6 +108,15 @@ export class UserService {
       // Asignar equipo si se proporcionó
       if (userData.teamId) {
         savedUser.teamId = userData.teamId;
+      }
+
+      // Asignar jefe si se proporcionó
+      if (userData.bossId) {
+        savedUser.bossId = userData.bossId;
+      }
+
+      // Guardar nuevamente si hubo cambios de relaciones
+      if (userData.teamId || userData.bossId) {
         await userRepository.save(savedUser);
       }
 
@@ -115,7 +127,8 @@ export class UserService {
           name: savedUser.name,
           email: savedUser.email,
           permissions: assignedPermissions,
-          teamId: savedUser.teamId || undefined
+          teamId: savedUser.teamId || undefined,
+          bossId: savedUser.bossId || undefined
         },
         message: 'Usuario creado exitosamente'
       };
@@ -140,7 +153,7 @@ export class UserService {
       // Obtener todos los usuarios con sus permisos y equipos en una sola consulta
       const users = await userRepository.find({
         order: { name: 'ASC' },
-        relations: ['permissions', 'permissions.permission', 'team']
+        relations: ['permissions', 'permissions.permission', 'team', 'boss']
       });
 
       // Mapear a la respuesta deseada
@@ -157,7 +170,9 @@ export class UserService {
           status: user.status,
           permissions,
           teamId: user.teamId,
-          teamName: user.team?.name
+          teamName: user.team?.name,
+          bossId: user.bossId,
+          bossName: user.boss?.name
         };
       });
 
@@ -181,7 +196,7 @@ export class UserService {
       // Buscar el usuario por ID y status activo
       const user = await userRepository.findOne({
         where: { id: userId, status: 1 },
-        relations: ['team']
+        relations: ['team', 'boss']
       });
 
       if (!user) {
@@ -204,7 +219,9 @@ export class UserService {
         status: user.status,
         permissions: directPermissions,
         teamId: user.teamId,
-        teamName: user.team?.name
+        teamName: user.team?.name,
+        bossId: user.bossId,
+        bossName: user.boss?.name
       };
     } catch (error) {
       console.error('❌ Error getting user by ID:', error);
@@ -290,8 +307,14 @@ export class UserService {
       if (updateData.teamId !== undefined) {
         // Asignar nuevo equipo si no es null
         user.teamId = updateData.teamId;
-        await userRepository.save(user);
       }
+
+      // Actualizar jefe si se proporcionó (aunque sea null)
+      if (updateData.bossId !== undefined) {
+        user.bossId = updateData.bossId;
+      }
+
+      await userRepository.save(user);
 
       return {
         success: true,

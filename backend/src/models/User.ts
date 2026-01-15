@@ -55,6 +55,12 @@ export class User {
     teamId!: number | null;
 
     /**
+     * Foreign key to Boss (User)
+     */
+    @Column({ name: 'BossId', type: 'int', nullable: true })
+    bossId!: number | null;
+
+    /**
      * Record creation timestamp
      */
     @CreateDateColumn({ name: 'CreatedAt', type: 'datetime' })
@@ -80,6 +86,19 @@ export class User {
     @ManyToOne(() => Team, team => team.users)
     @JoinColumn({ name: 'TeamId' })
     team!: Team;
+
+    /**
+     * Many-to-one relationship with Boss
+     */
+    @ManyToOne(() => User, user => user.subordinates)
+    @JoinColumn({ name: 'BossId' })
+    boss!: User;
+
+    /**
+     * One-to-many relationship with Subordinates
+     */
+    @OneToMany(() => User, user => user.boss)
+    subordinates!: User[];
 
     /**
      * One-to-many relationship with document loads

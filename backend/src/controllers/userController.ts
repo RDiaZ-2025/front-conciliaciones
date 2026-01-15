@@ -153,11 +153,13 @@ export class UserController {
 
   static async createUser(req: Request, res: Response): Promise<void> {
     try {
-      const { name, email, password, permissions = [] }: {
+      const { name, email, password, permissions = [], teamId, bossId }: {
         name: string;
         email: string;
         password: string;
         permissions?: string[];
+        teamId?: number;
+        bossId?: number;
       } = req.body;
 
       // Validación básica
@@ -183,7 +185,9 @@ export class UserController {
         name,
         email: email.toLowerCase(),
         password,
-        permissions
+        permissions,
+        teamId,
+        bossId
       });
 
       if (result.success) {
@@ -203,14 +207,15 @@ export class UserController {
   static async updateUser(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { name, email, password, permissions, teamId } = req.body;
+      const { name, email, password, permissions, teamId, bossId } = req.body;
 
       const result = await UserService.updateUser(parseInt(id), {
         name,
         email,
         password,
         permissions,
-        teamId
+        teamId,
+        bossId
       });
 
       if (result.success) {

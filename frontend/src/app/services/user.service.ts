@@ -19,6 +19,8 @@ export interface User {
   status: number;
   teamId?: number;
   teamName?: string;
+  bossId?: number;
+  bossName?: string;
 }
 
 export interface Permission {
@@ -33,6 +35,7 @@ export interface CreateUserDto {
   password?: string;
   permissions: string[];
   teamId?: number;
+  bossId?: number;
 }
 
 export interface UpdateUserDto {
@@ -41,6 +44,7 @@ export interface UpdateUserDto {
   password?: string;
   permissions?: string[];
   teamId?: number | null;
+  bossId?: number | null;
 }
 
 export interface AccessHistoryRecord {
