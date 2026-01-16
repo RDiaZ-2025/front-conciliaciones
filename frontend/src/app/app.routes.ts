@@ -25,6 +25,10 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/production/production').then(m => m.ProductionComponent)
       },
       {
+        path: 'requests-report',
+        loadComponent: () => import('./pages/production/requests-report/requests-report.component').then(m => m.RequestsReportComponent)
+      },
+      {
         path: 'upload',
         loadComponent: () => import('./pages/upload/upload').then(m => m.UploadComponent)
       },

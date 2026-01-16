@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { ProductionController, getAllProductionRequests, getProductionRequestById, createProductionRequest, updateProductionRequest, deleteProductionRequest, getProducts, moveProductionRequest } from '../controllers/productionController';
+import { RequestsReportController } from '../controllers/requestsReportController';
 import { getProductionRequestHistory } from '../controllers/productionRequestHistoryController';
 import { authenticateToken } from '../middleware/auth';
 
@@ -14,6 +15,9 @@ router.use(authenticateToken);
 
 // Product routes
 router.get('/products', getProducts);
+
+// Dashboard Stats
+router.get('/dashboard-stats', RequestsReportController.getDashboardStats);
 
 // Production Request routes
 router.get('/', getAllProductionRequests);
