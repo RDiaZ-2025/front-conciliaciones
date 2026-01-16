@@ -54,7 +54,7 @@ export class RequestsReportComponent implements OnInit {
         {
           label: 'Carga de Trabajo',
           backgroundColor: data.workload.map(w => w.status === 'overloaded' ? '#EF4444' : w.status === 'underutilized' ? '#F59E0B' : '#22C55E'),
-          data: data.workload.map(w => w.percentage)
+          data: data.workload.map(w => w.count)
         }
       ]
     };
@@ -94,14 +94,12 @@ export class RequestsReportComponent implements OnInit {
       scales: {
         x: {
           ticks: {
-            color: textColorSecondary,
-            callback: (value: number) => value + '%'
+            color: textColorSecondary
           },
           grid: {
             color: surfaceBorder,
             drawBorder: false
-          },
-          max: 120
+          }
         },
         y: {
           ticks: {

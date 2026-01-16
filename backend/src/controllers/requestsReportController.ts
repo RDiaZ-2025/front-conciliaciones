@@ -19,6 +19,7 @@ export class RequestsReportController {
       threeDaysFromNow.setDate(now.getDate() + 3);
 
       // 1. Basic Counts
+      const total = await requestRepo.count();
       const totalActive = await requestRepo.count({
         where: {
           stage: Not(In(['completed', 'cancelled']))
@@ -57,6 +58,12 @@ export class RequestsReportController {
 
       // 3. Workload by User (Bar Chart)
       // Get all active requests and group by assignedUserId
+      // First, get ALL users to ensure we display everyone
+      const allUsers = await userRepo.find({
+        where: { status: 1 } // Only active users
+      });
+
+      // Get counts for active requests
       const workloadRaw = await requestRepo
         .createQueryBuilder('pr')
         .select('pr.assignedUserId', 'userId')
@@ -66,16 +73,18 @@ export class RequestsReportController {
         .groupBy('pr.assignedUserId')
         .getRawMany();
 
-      // Fetch user names
-      const userIds = workloadRaw.map(w => w.userId);
-      let users: User[] = [];
-      if (userIds.length > 0) {
-        users = await userRepo.findBy({ id: In(userIds) });
-      }
+      // Create a map for quick lookup
+      const workloadMap = new Map<number, number>();
+      workloadRaw.forEach(w => {
+        workloadMap.set(w.userId, parseInt(w.count));
+      });
 
-      const workload = workloadRaw.map(w => {
-        const user = users.find(u => u.id === w.userId);
-        const count = parseInt(w.count);
+      // Filter users who have at least one request OR belong to the 'Producción' team if applicable.
+      // Based on requirement "Requests per User", we should prioritize accuracy.
+      
+      const workload = allUsers.map(user => {
+        const count = workloadMap.get(user.id) || 0;
+        
         // Simple logic for status: > 5 overloaded, < 2 underutilized, else normal
         let status: 'normal' | 'overloaded' | 'underutilized' = 'normal';
         if (count > 5) status = 'overloaded';
@@ -85,12 +94,14 @@ export class RequestsReportController {
         const percentage = Math.min(count * 10, 100);
 
         return {
-          userName: user ? user.name : 'Unknown',
+          userName: user.name,
           count: count,
           percentage: percentage,
           status: status
         };
-      });
+      })
+      .filter(w => w.count > 0) // Only show users with active requests to keep chart clean
+      .sort((a, b) => b.count - a.count);
 
       // 4. Recent Tasks (Table)
       const recentTasksRaw = await requestRepo.find({
@@ -118,6 +129,7 @@ export class RequestsReportController {
       });
 
       return res.json({
+        total,
         active: totalActive,
         completed,
         atRisk,

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { ProductionController, getAllProductionRequests, getProductionRequestById, createProductionRequest, updateProductionRequest, deleteProductionRequest, getProducts, moveProductionRequest } from '../controllers/productionController';
 import { RequestsReportController } from '../controllers/requestsReportController';
 import { getProductionRequestHistory } from '../controllers/productionRequestHistoryController';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, requirePermission } from '../middleware/auth';
 
 const router = Router();
 
@@ -17,7 +17,7 @@ router.use(authenticateToken);
 router.get('/products', getProducts);
 
 // Dashboard Stats
-router.get('/dashboard-stats', RequestsReportController.getDashboardStats);
+router.get('/dashboard-stats', requirePermission('production_management'), RequestsReportController.getDashboardStats);
 
 // Production Request routes
 router.get('/', getAllProductionRequests);
