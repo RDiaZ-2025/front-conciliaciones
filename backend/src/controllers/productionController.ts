@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ProductionRequest, Product, User, FormatType, RightsDuration } from '../models';
+import { ProductionRequest, Product, User, FormatType, RightsDuration, Team } from '../models';
 import { AppDataSource } from '../config/typeorm.config';
 import { NotificationService } from '../services/notificationService';
 import { ProductionRequestHistoryService } from '../services/productionRequestHistoryService';
@@ -161,18 +161,18 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
     if (req.user?.userId) {
       const userRepository = AppDataSource.getRepository(User);
       const currentUser = await userRepository.findOne({ where: { id: req.user.userId } });
-      
+
       if (currentUser) {
         // Enforce contactPerson matches authenticated user
         contactPerson = currentUser.name;
-        
+
         // Enforce Department matches one of the user's teams
         const userTeams = await AuthService.getUserTeams(currentUser.id);
         if (userTeams.length > 0) {
-           if (!userTeams.includes(department)) {
-               // If provided department is invalid, default to the first team
-               department = userTeams[0];
-           }
+          if (!userTeams.includes(department)) {
+            // If provided department is invalid, default to the first team
+            department = userTeams[0];
+          }
         }
       }
     }
@@ -180,6 +180,26 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
     // Validate required fields
     if (!name || !department || !contactPerson || !assignedTeam) {
       return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Logic to assign random user if assignedTeam is present
+    if (assignedTeam && !assignedUserId) {
+      try {
+        const teamRepository = AppDataSource.getRepository(Team);
+        const team = await teamRepository.findOne({ where: { name: assignedTeam } });
+
+        if (team) {
+          const userRepository = AppDataSource.getRepository(User);
+          const users = await userRepository.find({ where: { teamId: team.id } });
+
+          if (users && users.length > 0) {
+            const randomIndex = Math.floor(Math.random() * users.length);
+            assignedUserId = users[randomIndex].id;
+          }
+        }
+      } catch (error) {
+        console.error("Error assigning random user:", error);
+      }
     }
 
     if (!AppDataSource.isInitialized) {

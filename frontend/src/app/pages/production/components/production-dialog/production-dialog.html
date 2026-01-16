@@ -22,33 +22,10 @@
                 </small>
             </div>
 
-            <div class="formgrid grid">
-                <div class="col-12 md:col-6 mb-2">
-                    <p-floatlabel variant="in">
-                        <p-select id="department" formControlName="department" [options]="(teams$ | async) ?? []"
-                            optionLabel="name" optionValue="name" [style]="{'width':'100%'}" appendTo="body"></p-select>
-                        <label for="department">Area que Solicita</label>
-                    </p-floatlabel>
-                    <small class="p-error" *ngIf="form.get('department')?.invalid && form.get('department')?.dirty">
-                        Departamento es requerido
-                    </small>
-                </div>
-                <div class="col-12 md:col-6 mb-2">
-                    <p-floatlabel variant="in">
-                        <p-select id="contactPerson" formControlName="contactPerson"
-                            [options]="(requestingUsers$ | async) ?? []" optionLabel="name" optionValue="name"
-                            [style]="{'width':'100%'}" appendTo="body"></p-select>
-                        <label for="contactPerson">Persona que Solicita</label>
-                    </p-floatlabel>
-                    <small class="p-error"
-                        *ngIf="form.get('contactPerson')?.invalid && form.get('contactPerson')?.dirty">
-                        Contacto es requerido
-                    </small>
-                </div>
-            </div>
+
 
             <div class="formgrid grid">
-                <div class="col-12 md:col-6 mb-2">
+                <div class="col-12 md:col-12 mb-2">
                     <p-floatlabel variant="in">
                         <p-select id="assignedTeam" formControlName="assignedTeam" [options]="(teams$ | async) ?? []"
                             optionLabel="name" optionValue="name" [style]="{'width':'100%'}" appendTo="body"></p-select>
@@ -56,18 +33,6 @@
                     </p-floatlabel>
                     <small class="p-error" *ngIf="form.get('assignedTeam')?.invalid && form.get('assignedTeam')?.dirty">
                         Equipo es requerido
-                    </small>
-                </div>
-                <div class="col-12 md:col-6 mb-2">
-                    <p-floatlabel variant="in">
-                        <p-select id="assignedUser" formControlName="assignedUserId"
-                            [options]="(assignedUsers$ | async) ?? []" optionLabel="name" optionValue="id"
-                            [style]="{'width':'100%'}" appendTo="body"></p-select>
-                        <label for="assignedUser">Persona asignada</label>
-                    </p-floatlabel>
-                    <small class="p-error"
-                        *ngIf="form.get('assignedUserId')?.invalid && form.get('assignedUserId')?.dirty">
-                        Usuario asignado es requerido
                     </small>
                 </div>
             </div>
@@ -217,7 +182,8 @@
             </p-floatlabel>
 
             <p-floatlabel variant="in">
-                <p-select formControlName="objectiveId" [options]="campaignObjectives" optionLabel="name" optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                <p-select formControlName="objectiveId" [options]="campaignObjectives" optionLabel="name"
+                    optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
                 <label>Objetivo de la Campaña</label>
             </p-floatlabel>
 
@@ -257,7 +223,8 @@
             <div class="formgrid grid">
                 <div class="col-12 md:col-6">
                     <p-floatlabel variant="in">
-                        <p-select formControlName="genderId" [options]="genders" optionLabel="name" optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                        <p-select formControlName="genderId" [options]="genders" optionLabel="name" optionValue="id"
+                            [style]="{'width':'100%'}" appendTo="body"></p-select>
                         <label>Género</label>
                     </p-floatlabel>
                 </div>
@@ -272,13 +239,15 @@
             <div class="formgrid grid">
                 <div class="col-12 md:col-6">
                     <p-floatlabel variant="in">
-                        <p-select formControlName="ageRangeId" [options]="ageRanges" optionLabel="name" optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                        <p-select formControlName="ageRangeId" [options]="ageRanges" optionLabel="name" optionValue="id"
+                            [style]="{'width':'100%'}" appendTo="body"></p-select>
                         <label>Rango de Edad</label>
                     </p-floatlabel>
                 </div>
                 <div class="col-12 md:col-6">
                     <p-floatlabel variant="in">
-                        <p-select formControlName="socioEconomicLevelId" [options]="socioeconomicLevels" optionLabel="name" optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                        <p-select formControlName="socioEconomicLevelId" [options]="socioeconomicLevels"
+                            optionLabel="name" optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
                         <label>Nivel Socioeconómico (NSE)</label>
                     </p-floatlabel>
                 </div>
@@ -314,13 +283,15 @@
             <div class="formgrid grid">
                 <div class="col-12 md:col-6">
                     <p-floatlabel variant="in">
-                        <p-select formControlName="formatTypeId" [options]="formatTypes" optionLabel="name" optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                        <p-select formControlName="formatTypeId" [options]="formatTypes" optionLabel="name"
+                            optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
                         <label>Tipo de Formato</label>
                     </p-floatlabel>
                 </div>
                 <div class="col-12 md:col-6">
                     <p-floatlabel variant="in">
-                        <p-select formControlName="rightsDurationId" [options]="rightsDurations" optionLabel="name" optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                        <p-select formControlName="rightsDurationId" [options]="rightsDurations" optionLabel="name"
+                            optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
                         <label>Derechos / Duración</label>
                     </p-floatlabel>
                 </div>

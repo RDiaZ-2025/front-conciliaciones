@@ -48,7 +48,7 @@ export class ProductionDialogComponent implements OnInit {
   config = inject(DynamicDialogConfig);
   azureService = inject(AzureStorageService);
   messageService = inject(MessageService);
-  
+
   campaignObjectives: Objective[] = [];
   genders: Gender[] = [];
   ageRanges: AgeRange[] = [];
@@ -87,7 +87,7 @@ export class ProductionDialogComponent implements OnInit {
   ngOnInit() {
     this.isEditMode = !!this.config.data?.id;
     const data = this.config.data || {};
-    
+
     this.loadObjectives();
     this.loadAudienceOptions();
     this.loadProductionOptions();
@@ -121,7 +121,7 @@ export class ProductionDialogComponent implements OnInit {
       department: [data.department || '', Validators.required],
       contactPerson: [data.contactPerson || '', Validators.required],
       assignedTeam: [data.assignedTeam || '', Validators.required],
-      assignedUserId: [data.assignedUserId || null, Validators.required],
+      assignedUserId: [data.assignedUserId || null],
       deliveryDate: [data.deliveryDate ? new Date(data.deliveryDate) : null, Validators.required],
       observations: [data.observations || ''],
       stage: [data.stage || 'request', Validators.required],
@@ -179,26 +179,25 @@ export class ProductionDialogComponent implements OnInit {
     this.loadTeams();
 
     // Auto-fill for new requests
-    this.teams$.subscribe(teams => {
-      if (teams.length > 0 && !this.isEditMode && !this.isAssignedUser) {
-        const currentUser = this.authService.currentUser();
-        if (currentUser) {
-          // Set Contact Person (Read-only)
-          this.form.patchValue({ contactPerson: currentUser.name });
-          this.form.get('contactPerson')?.disable();
+    if (!this.isEditMode && !this.isAssignedUser) {
+      const currentUser = this.authService.currentUser();
+      if (currentUser) {
+        // Set Contact Person (Read-only)
+        this.form.patchValue({ contactPerson: currentUser.name });
+        this.form.get('contactPerson')?.disable();
 
-          // Set Department (Read-only)
-          const userTeams = (currentUser as any).teams as string[];
-          if (userTeams && userTeams.length > 0) {
-            const matchingTeam = teams.find(t => userTeams.includes(t.name));
-            if (matchingTeam) {
-              this.form.patchValue({ department: matchingTeam.name });
-              this.form.get('department')?.disable();
-              this.loadUsersForDepartment(matchingTeam.name);
-            }
-          }
+        // Set Department (Read-only)
+        const userTeams = (currentUser as any).teams as string[];
+        if (userTeams && userTeams.length > 0) {
+          const teamName = userTeams[0];
+          this.form.patchValue({ department: teamName });
+          this.form.get('department')?.disable();
         }
       }
+    }
+
+    this.teams$.subscribe(teams => {
+      // Teams loaded
     });
 
     this.loadProducts();
@@ -360,7 +359,7 @@ export class ProductionDialogComponent implements OnInit {
     });
 
     this.form.get('assignedTeam')?.valueChanges.subscribe(teamName => {
-      this.loadUsersForAssignedTeam(teamName);
+      // Team changed
     });
   }
 
@@ -460,7 +459,7 @@ export class ProductionDialogComponent implements OnInit {
       switch (this.currentStep) {
         case 0:
           // Validate main form fields (excluding nested groups)
-          const mainControls = ['name', 'department', 'contactPerson', 'assignedTeam', 'assignedUserId', 'deliveryDate', 'stage'];
+          const mainControls = ['name', 'department', 'contactPerson', 'assignedTeam', 'deliveryDate', 'stage'];
           isValid = mainControls.every(key => {
             const control = this.form.get(key);
             return control?.valid || control?.disabled;
