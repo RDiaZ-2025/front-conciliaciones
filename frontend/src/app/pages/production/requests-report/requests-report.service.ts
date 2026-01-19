@@ -21,6 +21,7 @@ export interface DashboardStats {
     inProgress: number;
     completed: number;
     pending: number;
+    cancelled: number;
   };
   recentTasks: {
     task: string;

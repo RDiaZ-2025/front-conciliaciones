@@ -61,16 +61,17 @@ export class RequestsReportComponent implements OnInit {
 
     // Execution Status Chart (Pie/Doughnut)
     this.executionChartData = {
-      labels: ['En Curso', 'Completado', 'Pendiente'],
+      labels: ['En Curso', 'Completado', 'Pendiente', 'Cancelado'],
       datasets: [
         {
           data: [
             data.executionStatus.inProgress, 
             data.executionStatus.completed, 
-            data.executionStatus.pending
+            data.executionStatus.pending,
+            data.executionStatus.cancelled
           ],
-          backgroundColor: ['#3B82F6', '#22C55E', '#9CA3AF'],
-          hoverBackgroundColor: ['#2563EB', '#16A34A', '#6B7280']
+          backgroundColor: ['#3B82F6', '#22C55E', '#F59E0B', '#9CA3AF'],
+          hoverBackgroundColor: ['#2563EB', '#16A34A', '#D97706', '#6B7280']
         }
       ]
     };

@@ -52,9 +52,10 @@ export class RequestsReportController {
 
       // 2. Execution Status (Pie Chart)
       // Group by stage roughly
-      const inProgressCount = await requestRepo.count({ where: { stage: 'in_progress' } });
-      const pendingCount = await requestRepo.count({ where: { stage: 'request' } }); // Assuming 'request' is pending
+      const inProgressCount = await requestRepo.count({ where: { stage: In(['in_progress', 'in_edit']) } });
+      const pendingCount = await requestRepo.count({ where: { stage: In(['request', 'quotation']) } });
       const completedCount = completed; // Already fetched
+      const cancelledCount = cancelled; // Already fetched
 
       // 3. Workload by User (Bar Chart)
       // Get all active requests and group by assignedUserId
@@ -115,15 +116,28 @@ export class RequestsReportController {
 
       const recentTasks = recentTasksRaw.map(task => {
         let statusDisplay = task.stage;
+        
+        // Translate stages
+        const translations: {[key: string]: string} = {
+            'request': 'Solicitud',
+            'quotation': 'Cotización',
+            'in_edit': 'En Edición',
+            'in_progress': 'En Curso',
+            'completed': 'Completada',
+            'cancelled': 'Cancelada'
+        };
+        
+        statusDisplay = translations[statusDisplay] || statusDisplay;
+
         if (task.isOverdue()) statusDisplay = 'ATRASADA';
         else if (task.deliveryDate && task.deliveryDate <= threeDaysFromNow && task.deliveryDate >= now) statusDisplay = 'En Riesgo';
         
         return {
           task: task.name,
-          responsible: task.assignedUser ? task.assignedUser.name : 'Unassigned',
-          account: task.department || 'All Accounts', // Using department as Account proxy
+          responsible: task.assignedUser ? task.assignedUser.name : 'Sin Asignar',
+          account: task.department || 'General', 
           status: statusDisplay.toUpperCase(),
-          deadline: task.deliveryDate ? task.deliveryDate.toISOString().split('T')[0] : 'No Date',
+          deadline: task.deliveryDate ? task.deliveryDate.toISOString().split('T')[0] : 'Sin Fecha',
           avatar: null // Placeholder
         };
       });
@@ -139,7 +153,8 @@ export class RequestsReportController {
         executionStatus: {
           inProgress: inProgressCount,
           completed: completedCount,
-          pending: pendingCount
+          pending: pendingCount,
+          cancelled: cancelledCount
         },
         recentTasks
       });
