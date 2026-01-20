@@ -43,6 +43,7 @@ import { AgeRange } from './AgeRange';
 import { SocioeconomicLevel } from './SocioeconomicLevel';
 import { FormatType } from './FormatType';
 import { RightsDuration } from './RightsDuration';
+import { Status } from './Status';
 
 export const entities = [
   User,
@@ -67,7 +68,8 @@ export const entities = [
   AgeRange,
   SocioeconomicLevel,
   FormatType,
-  RightsDuration
+  RightsDuration,
+  Status
 ];
 
 export const ModelCategories = {

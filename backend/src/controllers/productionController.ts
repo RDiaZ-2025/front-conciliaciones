@@ -59,20 +59,34 @@ export const getAllProductionRequests = async (req: Request, res: Response): Pro
     // Filter by assigned user or creator (via requesterEmail)
     const userId = req.user?.userId;
     const userEmail = req.user?.email;
+    const hasManagementPermission = req.user?.permissions?.includes('production_management');
 
     const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
-    const productionRequests = await productionRequestRepository.find({
-      where: [
-        { assignedUserId: userId },
-        { customerData: { requesterEmail: userEmail } }
-      ],
-      order: { requestDate: 'DESC' },
-      relations: ['customerData', 'assignedUser'] // Include relations to support filtering and display
-    });
+    
+    // Use QueryBuilder for better handling of OR conditions with relations
+    const query = productionRequestRepository.createQueryBuilder('request')
+      .leftJoinAndSelect('request.customerData', 'customerData')
+      .leftJoinAndSelect('request.assignedUser', 'assignedUser')
+      .orderBy('request.requestDate', 'DESC');
+
+    // If user doesn't have management permission, filter by assignment or ownership
+    if (!hasManagementPermission) {
+      query.where(
+        '(request.assignedUserId = :userId OR customerData.requesterEmail = :userEmail)', 
+        { userId, userEmail }
+      );
+    }
+
+    const productionRequests = await query.getMany();
 
     return res.status(200).json(productionRequests);
   } catch (error) {
     console.error('Error fetching production requests:', error);
+    // @ts-ignore
+    if (error.code) console.error('Error code:', error.code);
+    // @ts-ignore
+    if (error.message) console.error('Error message:', error.message);
+    
     return res.status(500).json({ message: 'Error fetching production requests', error });
   }
 };
@@ -151,6 +165,7 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       assignedUserId,
       deliveryDate,
       observations,
+      statusId,
       customerData,
       audienceData,
       campaignDetail,
@@ -221,6 +236,7 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
       observations,
       stage: 'request', // Initial stage
+      statusId,
       customerData,
       audienceData,
       campaignDetail,
@@ -275,6 +291,7 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
       assignedUserId,
       deliveryDate,
       observations,
+      statusId,
       stage,
       customerData,
       audienceData,
@@ -283,7 +300,7 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
     } = req.body;
 
     // Validate required fields
-    if (!name || !department || !contactPerson || !assignedTeam || !stage) {
+    if (!name || !department || !contactPerson || !assignedTeam) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
@@ -338,7 +355,8 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
     existingRequest.assignedUserId = assignedUserId;
     existingRequest.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
     existingRequest.observations = observations;
-    existingRequest.stage = stage;
+    if (stage) existingRequest.stage = stage;
+    if (statusId) existingRequest.statusId = statusId;
 
     // Update relations
     if (customerData) existingRequest.customerData = { ...existingRequest.customerData, ...customerData };

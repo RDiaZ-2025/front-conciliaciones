@@ -20,6 +20,7 @@ import storageRoutes from './routes/storageRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import objectiveRoutes from './routes/objectiveRoutes';
 import audienceRoutes from './routes/audienceRoutes';
+import statusRoutes from './routes/statusRoutes';
 
 import { actionLogger, skipLogging } from './middleware/actionLogger';
 
@@ -92,6 +93,7 @@ app.use('/api/storage', storageRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/objectives', objectiveRoutes);
 app.use('/api/audience', audienceRoutes);
+app.use('/api/statuses', statusRoutes);
 
 // Ruta 404
 app.use('*', (req, res) => {

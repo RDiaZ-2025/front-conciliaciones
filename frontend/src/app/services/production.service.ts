@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { ProductionRequest, Objective, Gender, AgeRange, SocioeconomicLevel, FormatType, RightsDuration, Product, ProductionRequestHistory } from '../pages/production/production.models';
+import { ProductionRequest, Objective, Gender, AgeRange, SocioeconomicLevel, FormatType, RightsDuration, Product, ProductionRequestHistory, Status } from '../pages/production/production.models';
 
 @Injectable({
   providedIn: 'root'
@@ -12,7 +12,7 @@ export class ProductionService {
   private apiUrl = `${environment.apiUrl}/production`; // Updated to match likely route mount point
   private objectiveUrl = `${environment.apiUrl}/objectives`;
   private audienceUrl = `${environment.apiUrl}/audience`;
-  private productionOptionsUrl = `${environment.apiUrl}/production-options`;
+  private statusUrl = `${environment.apiUrl}/statuses`;
 
   getProductionRequests(): Observable<ProductionRequest[]> {
     return this.http.get<ProductionRequest[]>(this.apiUrl);
@@ -76,5 +76,9 @@ export class ProductionService {
 
   getRightsDurations(): Observable<RightsDuration[]> {
     return this.http.get<RightsDuration[]>(`${this.apiUrl}/rights-durations`);
+  }
+
+  getStatuses(): Observable<Status[]> {
+    return this.http.get<Status[]>(this.statusUrl);
   }
 }

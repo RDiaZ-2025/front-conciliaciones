@@ -14,7 +14,7 @@ import { SelectModule } from 'primeng/select';
 import { MenuItem, MessageService } from 'primeng/api';
 import { StepsModule } from 'primeng/steps';
 import { CheckboxModule } from 'primeng/checkbox';
-import { ProductionRequest, UploadedFile, Team, CustomerData, AudienceData, CampaignDetail, ProductionInfo, Product, WORKFLOW_STAGES, Objective, Gender, AgeRange, SocioeconomicLevel, FormatType, RightsDuration } from '../../production.models';
+import { ProductionRequest, UploadedFile, Team, CustomerData, AudienceData, CampaignDetail, ProductionInfo, Product, Objective, Gender, AgeRange, SocioeconomicLevel, FormatType, RightsDuration, Status } from '../../production.models';
 import { AzureStorageService } from '../../../../services/azure-storage.service';
 import { TeamService } from '../../../../services/team.service';
 import { User } from '../../../../services/user.service';
@@ -79,8 +79,8 @@ export class ProductionDialogComponent implements OnInit {
   requestingUsers$ = new BehaviorSubject<User[]>([]);
   assignedUsers$ = new BehaviorSubject<User[]>([]);
   products$ = new BehaviorSubject<Product[]>([]);
-  workflowStages = WORKFLOW_STAGES;
-
+  workflowStages: { id: string | number, label: string }[] = [];
+  
   items: MenuItem[] = [];
   currentStep: number = 0;
 
@@ -91,6 +91,7 @@ export class ProductionDialogComponent implements OnInit {
     this.loadObjectives();
     this.loadAudienceOptions();
     this.loadProductionOptions();
+    this.loadStatuses();
 
     // Initialize files from passed data immediately (fallback if storage fails)
     if (data.files) {
@@ -124,7 +125,7 @@ export class ProductionDialogComponent implements OnInit {
       assignedUserId: [data.assignedUserId || null],
       deliveryDate: [data.deliveryDate ? new Date(data.deliveryDate) : null, Validators.required],
       observations: [data.observations || ''],
-      stage: [data.stage || 'request', Validators.required],
+      statusId: [data.statusId || null, Validators.required],
 
       // Step 2: Customer Information
       customerData: this.fb.group({
@@ -332,6 +333,39 @@ export class ProductionDialogComponent implements OnInit {
     });
   }
 
+  loadStatuses() {
+    this.productionService.getStatuses().subscribe({
+      next: (statuses) => {
+        // Filter statuses as requested: Solicitud, En Progreso (mapped to En producción), Completado (mapped to Completado y entregado)
+        // Or user said "The dropdown should only display these statuses: Solicitud, En Progreso, Completado"
+        // And "The selected status must be saved using the status ID (foreign key)"
+        // I need to map "En Progreso" to a real DB status.
+        // DB statuses: request(1), quotation(2), material_adjustment(3), pre_production(4), in_production(5), in_editing(6), delivered_approval(7), client_approved(8), completed(9)
+        // I will map:
+        // "Solicitud" -> 'request' (Id 1)
+        // "En Progreso" -> 'in_production' (Id 5) - assuming this is the closest match
+        // "Completado" -> 'completed' (Id 9)
+        
+        const allowedCodes = ['request', 'in_production', 'completed'];
+        this.workflowStages = statuses
+          .filter(s => allowedCodes.includes(s.code))
+          .map(s => {
+            let label = s.name;
+            if (s.code === 'in_production') label = 'En Progreso';
+            if (s.code === 'completed') label = 'Completado';
+            return {
+              id: s.id,
+              label: label
+            };
+          });
+      },
+      error: (error) => {
+        console.error('Error loading statuses', error);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los estados' });
+      }
+    });
+  }
+
   loadFilesFromStorage(requestId: number) {
     const folderPath = AzureStorageService.generateProductionRequestFolderPath(requestId.toString());
     this.azureService.listFiles(folderPath, 'private').then(blobs => {
@@ -438,10 +472,10 @@ export class ProductionDialogComponent implements OnInit {
     if (!this.canEditCore && this.isAssignedUser) {
       switch (this.currentStep) {
         case 0:
-          // Validate stage (required)
-          const stageControl = this.form.get('stage');
-          isValid = stageControl?.valid ?? true;
-          if (!isValid) stageControl?.markAsDirty();
+          // Validate statusId (required)
+          const statusControl = this.form.get('statusId');
+          isValid = statusControl?.valid ?? true;
+          if (!isValid) statusControl?.markAsDirty();
           break;
         case 1: // Customer Data - fully disabled
         case 2: // Campaign Detail - fully disabled
@@ -459,7 +493,7 @@ export class ProductionDialogComponent implements OnInit {
       switch (this.currentStep) {
         case 0:
           // Validate main form fields (excluding nested groups)
-          const mainControls = ['name', 'department', 'contactPerson', 'assignedTeam', 'deliveryDate', 'stage'];
+          const mainControls = ['name', 'department', 'contactPerson', 'assignedTeam', 'deliveryDate', 'statusId'];
           isValid = mainControls.every(key => {
             const control = this.form.get(key);
             return control?.valid || control?.disabled;
@@ -533,7 +567,7 @@ export class ProductionDialogComponent implements OnInit {
     // Enable specific controls for Assigned User
     // Allowed: Comments/Observations, Files (handled separately), Status (Stage), Progress updates
     this.form.get('observations')?.enable();
-    this.form.get('stage')?.enable(); // Ensure 'stage' control exists or is added to form
+    this.form.get('statusId')?.enable(); // Ensure 'statusId' control exists or is added to form
 
     // Enable reassignment fields
     this.form.get('assignedTeam')?.enable();
@@ -556,13 +590,13 @@ export class ProductionDialogComponent implements OnInit {
     let isValid = true;
     if (!this.canEditCore && this.isAssignedUser) {
       // Restricted mode validation: only check fields enabled for assigned user
-      const stageValid = this.form.get('stage')?.valid ?? true;
+      const statusValid = this.form.get('statusId')?.valid ?? true;
       const prodInfo = this.form.get('productionInfo') as FormGroup;
       const prodDetailsValid = prodInfo?.get('productionDetails')?.valid ?? true;
 
-      if (!stageValid || !prodDetailsValid) {
+      if (!statusValid || !prodDetailsValid) {
         isValid = false;
-        if (!stageValid) this.form.get('stage')?.markAsDirty();
+        if (!statusValid) this.form.get('statusId')?.markAsDirty();
         if (!prodDetailsValid) prodInfo?.get('productionDetails')?.markAsDirty();
       }
     } else {

@@ -4,6 +4,7 @@ import { CustomerData } from './CustomerData';
 import { CampaignDetail } from './CampaignDetail';
 import { AudienceData } from './AudienceData';
 import { ProductionInfo } from './ProductionInfo';
+import { Status } from './Status';
 
 /**
  * ProductionRequest entity representing production request management
@@ -37,6 +38,13 @@ export class ProductionRequest {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'AssignedUserId' })
   assignedUser!: User;
+
+  @Column({ name: 'StatusId', type: 'int', nullable: true })
+  statusId!: number | null;
+
+  @ManyToOne(() => Status)
+  @JoinColumn({ name: 'StatusId' })
+  status!: Status;
 
   @OneToOne(() => CustomerData, customerData => customerData.productionRequest, { cascade: true })
   customerData!: CustomerData;

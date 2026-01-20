@@ -124,6 +124,13 @@ export interface ProductionRequestHistory {
   };
 }
 
+export interface Status {
+  id: number;
+  name: string;
+  code: string;
+  order: number;
+}
+
 export interface ProductionRequest {
   id: number;
   name: string;
@@ -135,6 +142,8 @@ export interface ProductionRequest {
   deliveryDate?: string;
   observations?: string;
   stage: string;
+  statusId?: number;
+  status?: Status;
   files?: UploadedFile[];
   
   // New stepper data
