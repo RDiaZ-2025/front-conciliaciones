@@ -119,7 +119,7 @@ export class ProductionDialogComponent implements OnInit {
       assignedUserId: [data.assignedUserId || null],
       deliveryDate: [data.deliveryDate ? new Date(data.deliveryDate) : null, Validators.required],
       observations: [data.observations || ''],
-      statusId: [data.statusId || 'request', Validators.required],
+      statusId: [data.statusId || null, Validators.required],
 
       // Step 2: Customer Information
       customerData: this.fb.group({
@@ -338,6 +338,15 @@ export class ProductionDialogComponent implements OnInit {
               label: label
             };
           });
+
+          if (!this.form.get('statusId')?.value) {
+            const requestStatus = statuses.find(s => s.code === 'request');
+            if (requestStatus) {
+              console.log('Setting default status to:', requestStatus);
+              this.form.patchValue({ statusId: requestStatus.id });
+              this.cd.detectChanges();
+            }
+          }
       },
       error: (error) => {
         console.error('Error loading statuses', error);
@@ -359,6 +368,7 @@ export class ProductionDialogComponent implements OnInit {
           uploadDate: new Date().toISOString()
         };
       });
+      this.cd.detectChanges();
     }).catch(err => {
       console.error('Error loading files from storage:', err);
     });
@@ -590,7 +600,10 @@ export class ProductionDialogComponent implements OnInit {
     };
 
     if (fullPayload.campaignDetail?.campaignProducts) {
-      fullPayload.campaignDetail.campaignProducts = fullPayload.campaignDetail.campaignProducts.map((p: any) => {
+      // Filter out invalid products (missing productId)
+      const validProducts = fullPayload.campaignDetail.campaignProducts.filter((p: any) => p.productId !== null && p.productId !== undefined);
+      
+      fullPayload.campaignDetail.campaignProducts = validProducts.map((p: any) => {
         const cleanP = { ...p };
         if (cleanP.id === null || cleanP.id === undefined) delete cleanP.id;
         return cleanP;
@@ -636,6 +649,7 @@ export class ProductionDialogComponent implements OnInit {
         } else {
           this.currentStep++;
           this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Progreso guardado correctamente' });
+          this.cd.detectChanges();
         }
         return;
       }
@@ -673,6 +687,7 @@ export class ProductionDialogComponent implements OnInit {
             } else {
               this.currentStep++;
               this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Progreso guardado y archivos subidos' });
+              this.cd.detectChanges();
             }
           },
           error: () => {
@@ -682,6 +697,7 @@ export class ProductionDialogComponent implements OnInit {
               this.ref.close({ ...saved, files: mergedFiles });
             } else {
               this.currentStep++;
+              this.cd.detectChanges();
             }
           }
         });

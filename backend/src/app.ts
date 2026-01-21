@@ -53,8 +53,8 @@ app.use(compression()); // Compresión
 app.use(morgan('combined')); // Logging
 // app.use(limiter); // Rate limiting (temporalmente deshabilitado)
 app.use(cookieParser()); // Cookies
-app.use(express.json({ limit: '10mb' })); // JSON parser
-app.use(express.urlencoded({ extended: true, limit: '10mb' })); // URL encoded
+app.use(express.json({ limit: '256mb' })); // JSON parser
+app.use(express.urlencoded({ extended: true, limit: '256mb' })); // URL encoded
 
 // Middleware de logging de acciones de usuario
 app.use(actionLogger);
