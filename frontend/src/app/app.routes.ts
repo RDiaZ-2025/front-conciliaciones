@@ -45,6 +45,10 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/menus/menus').then(m => m.MenusComponent)
       },
       {
+        path: 'permissions',
+        loadComponent: () => import('./pages/permissions/permissions.component').then(m => m.PermissionsComponent)
+      },
+      {
         path: 'teams',
         loadComponent: () => import('./pages/teams/teams').then(m => m.TeamsComponent)
       },

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { ProductionController, getAllProductionRequests, getProductionRequestById, createProductionRequest, updateProductionRequest, deleteProductionRequest, getProducts, moveProductionRequest } from '../controllers/productionController';
+import { ProductionController, getAllProductionRequests, getProductionRequestById, createProductionRequest, updateProductionRequest, deleteProductionRequest, getProducts, moveProductionRequest, updateStepGeneral, updateStepCustomer, updateStepCampaign, updateStepAudience, updateStepProduction } from '../controllers/productionController';
 import { RequestsReportController } from '../controllers/requestsReportController';
 import { getProductionRequestHistory } from '../controllers/productionRequestHistoryController';
 import { authenticateToken, requirePermission } from '../middleware/auth';
@@ -25,6 +25,11 @@ router.get('/:id', getProductionRequestById);
 router.get('/:id/history', getProductionRequestHistory);
 router.post('/', createProductionRequest);
 router.put('/:id', updateProductionRequest);
+router.put('/:id/general', updateStepGeneral);
+router.put('/:id/customer', updateStepCustomer);
+router.put('/:id/campaign', updateStepCampaign);
+router.put('/:id/audience', updateStepAudience);
+router.put('/:id/production', updateStepProduction);
 router.put('/:id/move', moveProductionRequest);
 router.delete('/:id', deleteProductionRequest);
 

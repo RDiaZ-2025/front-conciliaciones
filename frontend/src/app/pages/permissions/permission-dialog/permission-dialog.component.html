@@ -1,0 +1,32 @@
+<p-dialog [visible]="visible" (visibleChange)="visibleChange.emit($event)"
+  [header]="item ? 'Editar Permiso' : 'Nuevo Permiso'" [modal]="true" [style]="{width: '450px'}"
+  [breakpoints]="{'960px': '75vw', '640px': '95vw'}">
+
+  <form [formGroup]="form" class="formgrid grid pt-4">
+    <div class="field col-12">
+      <p-floatlabel variant="in">
+        <input pInputText id="name" formControlName="name" autocomplete="off" class="w-full" autofocus />
+        <label for="name">Nombre</label>
+      </p-floatlabel>
+      <small class="p-error block mt-1"
+        *ngIf="form.get('name')?.invalid && (form.get('name')?.dirty || form.get('name')?.touched)">
+        El nombre es requerido.
+      </small>
+    </div>
+
+    <div class="field col-12">
+      <p-floatlabel variant="in">
+        <textarea pTextarea id="description" formControlName="description" rows="3" autoResize="autoResize"
+          class="w-full"></textarea>
+        <label for="description">Descripción</label>
+      </p-floatlabel>
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <button pButton label="Cancelar" icon="pi pi-times" class="p-button-text"
+      (click)="visibleChange.emit(false)"></button>
+    <button pButton label="Guardar" icon="pi pi-check" class="p-button-text" (click)="onSubmit()"
+      [loading]="saving"></button>
+  </ng-template>
+</p-dialog>

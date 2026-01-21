@@ -474,3 +474,183 @@ export const deleteProductionRequest = async (req: Request, res: Response): Prom
     return res.status(500).json({ message: 'Error deleting production request', error });
   }
 };
+
+// Update General Info (Step 0)
+export const updateStepGeneral = async (req: Request, res: Response): Promise<Response | void> => {
+  try {
+    const { id } = req.params;
+    const {
+      name,
+      department,
+      contactPerson,
+      assignedTeam,
+      assignedUserId,
+      deliveryDate,
+      observations,
+      statusId
+    } = req.body;
+
+    if (!AppDataSource.isInitialized) {
+      return res.status(503).json({ success: false, message: 'Base de datos no disponible' });
+    }
+
+    const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
+    const existingRequest = await productionRequestRepository.findOne({ where: { id: parseInt(id) } });
+
+    if (!existingRequest) {
+      return res.status(404).json({ message: 'Production request not found' });
+    }
+
+    // Log differences
+    if (req.user?.userId) {
+      await historyService.logDifferences(
+        existingRequest,
+        { name, department, contactPerson, assignedTeam, assignedUserId, deliveryDate: deliveryDate ? new Date(deliveryDate) : null, observations },
+        req.user.userId
+      );
+    }
+
+    existingRequest.name = name;
+    existingRequest.department = department;
+    existingRequest.contactPerson = contactPerson;
+    existingRequest.assignedTeam = assignedTeam;
+    existingRequest.assignedUserId = assignedUserId;
+    existingRequest.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
+    existingRequest.observations = observations;
+    if (statusId) existingRequest.statusId = statusId;
+
+    const updatedRequest = await productionRequestRepository.save(existingRequest);
+    return res.status(200).json(updatedRequest);
+  } catch (error) {
+    console.error('Error updating general info:', error);
+    return res.status(500).json({ message: 'Error updating general info', error });
+  }
+};
+
+// Update Customer Data (Step 1)
+export const updateStepCustomer = async (req: Request, res: Response): Promise<Response | void> => {
+  try {
+    const { id } = req.params;
+    const { customerData } = req.body;
+
+    if (!AppDataSource.isInitialized) {
+      return res.status(503).json({ success: false, message: 'Base de datos no disponible' });
+    }
+
+    const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
+    const existingRequest = await productionRequestRepository.findOne({ 
+      where: { id: parseInt(id) },
+      relations: ['customerData']
+    });
+
+    if (!existingRequest) {
+      return res.status(404).json({ message: 'Production request not found' });
+    }
+
+    if (customerData) {
+      existingRequest.customerData = { ...existingRequest.customerData, ...customerData };
+      await productionRequestRepository.save(existingRequest);
+    }
+
+    return res.status(200).json(existingRequest);
+  } catch (error) {
+    console.error('Error updating customer data:', error);
+    return res.status(500).json({ message: 'Error updating customer data', error });
+  }
+};
+
+// Update Campaign Data (Step 2)
+export const updateStepCampaign = async (req: Request, res: Response): Promise<Response | void> => {
+  try {
+    const { id } = req.params;
+    const { campaignDetail } = req.body;
+
+    if (!AppDataSource.isInitialized) {
+      return res.status(503).json({ success: false, message: 'Base de datos no disponible' });
+    }
+
+    const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
+    const existingRequest = await productionRequestRepository.findOne({ 
+      where: { id: parseInt(id) },
+      relations: ['campaignDetail', 'campaignDetail.campaignProducts']
+    });
+
+    if (!existingRequest) {
+      return res.status(404).json({ message: 'Production request not found' });
+    }
+
+    if (campaignDetail) {
+      existingRequest.campaignDetail = { ...existingRequest.campaignDetail, ...campaignDetail };
+      await productionRequestRepository.save(existingRequest);
+    }
+
+    return res.status(200).json(existingRequest);
+  } catch (error) {
+    console.error('Error updating campaign data:', error);
+    return res.status(500).json({ message: 'Error updating campaign data', error });
+  }
+};
+
+// Update Audience Data (Step 3)
+export const updateStepAudience = async (req: Request, res: Response): Promise<Response | void> => {
+  try {
+    const { id } = req.params;
+    const { audienceData } = req.body;
+
+    if (!AppDataSource.isInitialized) {
+      return res.status(503).json({ success: false, message: 'Base de datos no disponible' });
+    }
+
+    const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
+    const existingRequest = await productionRequestRepository.findOne({ 
+      where: { id: parseInt(id) },
+      relations: ['audienceData']
+    });
+
+    if (!existingRequest) {
+      return res.status(404).json({ message: 'Production request not found' });
+    }
+
+    if (audienceData) {
+      existingRequest.audienceData = { ...existingRequest.audienceData, ...audienceData };
+      await productionRequestRepository.save(existingRequest);
+    }
+
+    return res.status(200).json(existingRequest);
+  } catch (error) {
+    console.error('Error updating audience data:', error);
+    return res.status(500).json({ message: 'Error updating audience data', error });
+  }
+};
+
+// Update Production Info (Step 4)
+export const updateStepProduction = async (req: Request, res: Response): Promise<Response | void> => {
+  try {
+    const { id } = req.params;
+    const { productionInfo } = req.body;
+
+    if (!AppDataSource.isInitialized) {
+      return res.status(503).json({ success: false, message: 'Base de datos no disponible' });
+    }
+
+    const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
+    const existingRequest = await productionRequestRepository.findOne({ 
+      where: { id: parseInt(id) },
+      relations: ['productionInfo']
+    });
+
+    if (!existingRequest) {
+      return res.status(404).json({ message: 'Production request not found' });
+    }
+
+    if (productionInfo) {
+      existingRequest.productionInfo = { ...existingRequest.productionInfo, ...productionInfo };
+      await productionRequestRepository.save(existingRequest);
+    }
+
+    return res.status(200).json(existingRequest);
+  } catch (error) {
+    console.error('Error updating production info:', error);
+    return res.status(500).json({ message: 'Error updating production info', error });
+  }
+};

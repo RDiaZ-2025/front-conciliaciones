@@ -226,10 +226,6 @@ export class ProductionDialogComponent implements OnInit {
           }
 
           if (fullData.files) {
-            // Merge with storage files if they exist, or just use what's in the DB if you prefer.
-            // But since the user requested "load from storage", let's prioritize the storage call we made in ngOnInit
-            // or merge them. For now, let's trust the storage call above.
-            // If DB has metadata we might want to use it, but the storage is the source of truth for "what exists".
             if (this.existingFiles.length === 0) {
               this.existingFiles = fullData.files;
             }
@@ -330,16 +326,6 @@ export class ProductionDialogComponent implements OnInit {
   loadStatuses() {
     this.productionService.getStatuses().subscribe({
       next: (statuses) => {
-        // Filter statuses as requested: Solicitud, En Progreso (mapped to En producción), Completado (mapped to Completado y entregado)
-        // Or user said "The dropdown should only display these statuses: Solicitud, En Progreso, Completado"
-        // And "The selected status must be saved using the status ID (foreign key)"
-        // I need to map "En Progreso" to a real DB status.
-        // DB statuses: request(1), quotation(2), material_adjustment(3), pre_production(4), in_production(5), in_editing(6), delivered_approval(7), client_approved(8), completed(9)
-        // I will map:
-        // "Solicitud" -> 'request' (Id 1)
-        // "En Progreso" -> 'in_production' (Id 5) - assuming this is the closest match
-        // "Completado" -> 'completed' (Id 9)
-
         const allowedCodes = ['request', 'in_production', 'completed'];
         this.workflowStages = statuses
           .filter(s => allowedCodes.includes(s.code))
@@ -365,17 +351,14 @@ export class ProductionDialogComponent implements OnInit {
     this.azureService.listFiles(folderPath, 'private').then(blobs => {
       this.existingFiles = blobs.map(blobName => {
         const fileName = blobName.split('/').pop() || blobName;
-        // Basic mapping since listFiles returns strings
         return {
           id: blobName,
           name: fileName,
-          size: 0, // Size not available from simple list
-          type: 'application/octet-stream', // Type unknown without metadata
+          size: 0,
+          type: 'application/octet-stream',
           uploadDate: new Date().toISOString()
         };
       });
-      // Optionally fetch full details if needed
-      // this.azureService.getFilesDetails(folderPath, 'private').then(files => this.existingFiles = files);
     }).catch(err => {
       console.error('Error loading files from storage:', err);
     });
@@ -396,11 +379,8 @@ export class ProductionDialogComponent implements OnInit {
       next: (response) => {
         if (response.success) {
           this.teams$.next(response.data);
-
-          // Initial load of users if data exists
           const dept = this.form.get('department')?.value;
           if (dept) this.loadUsersForDepartment(dept);
-
           const team = this.form.get('assignedTeam')?.value;
           if (team) this.loadUsersForAssignedTeam(team);
         }
@@ -461,32 +441,27 @@ export class ProductionDialogComponent implements OnInit {
   next() {
     let isValid = false;
 
-    // If restricted mode (Assigned User), we assume core fields are valid (or we can't change them anyway)
-    // We only need to validate what we can edit.
     if (!this.canEditCore && this.isAssignedUser) {
       switch (this.currentStep) {
         case 0:
-          // Validate statusId (required)
           const statusControl = this.form.get('statusId');
           isValid = statusControl?.valid ?? true;
           if (!isValid) statusControl?.markAsDirty();
           break;
-        case 1: // Customer Data - fully disabled
-        case 2: // Campaign Detail - fully disabled
-        case 3: // Audience Data - fully disabled
+        case 1:
+        case 2:
+        case 3:
           isValid = true;
           break;
-        case 4: // Production Info - partially enabled
+        case 4:
           const prodInfo = this.form.get('productionInfo') as FormGroup;
           isValid = prodInfo.valid;
           if (!isValid) prodInfo.markAllAsTouched();
           break;
       }
     } else {
-      // Normal validation for full edit mode
       switch (this.currentStep) {
         case 0:
-          // Validate main form fields (excluding nested groups)
           const mainControls = ['name', 'department', 'contactPerson', 'assignedTeam', 'deliveryDate', 'statusId'];
           isValid = mainControls.every(key => {
             const control = this.form.get(key);
@@ -511,11 +486,16 @@ export class ProductionDialogComponent implements OnInit {
           isValid = audienceGroup.valid;
           if (!isValid) audienceGroup.markAllAsTouched();
           break;
+        case 4:
+          const prodInfo = this.form.get('productionInfo') as FormGroup;
+          isValid = prodInfo.valid;
+          if (!isValid) prodInfo.markAllAsTouched();
+          break;
       }
     }
 
     if (isValid) {
-      this.currentStep++;
+      this.saveData(false);
     } else {
       this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'Por favor complete todos los campos requeridos' });
     }
@@ -531,13 +511,9 @@ export class ProductionDialogComponent implements OnInit {
     const user = this.authService.currentUser();
     if (!user) return;
 
-    // Check permissions based on user role and assignment
-    // Assuming permissions array contains strings like 'admin', 'supervisor'
     const isAdmin = user.permissions?.some(p => p.toLowerCase() === 'admin');
     const isSupervisor = user.permissions?.some(p => p.toLowerCase() === 'supervisor');
 
-    // Check if current user is the assigned user
-    // We compare IDs as strings to be safe
     this.isAssignedUser = String(user.id) === String(data.assignedUserId);
 
     if (isAdmin || isSupervisor) {
@@ -547,7 +523,6 @@ export class ProductionDialogComponent implements OnInit {
       this.canEditCore = false;
       this.applyRestrictedMode();
     } else {
-      // Viewer or other role - readonly
       this.canEditCore = false;
       this.form.disable();
     }
@@ -555,20 +530,12 @@ export class ProductionDialogComponent implements OnInit {
   }
 
   applyRestrictedMode() {
-    // Disable all controls first
     this.form.disable();
-
-    // Enable specific controls for Assigned User
-    // Allowed: Comments/Observations, Files (handled separately), Status (Stage), Progress updates
     this.form.get('observations')?.enable();
-    this.form.get('statusId')?.enable(); // Ensure 'statusId' control exists or is added to form
-
-    // Enable reassignment fields
+    this.form.get('statusId')?.enable();
     this.form.get('assignedTeam')?.enable();
     this.form.get('assignedUserId')?.enable();
 
-    // If there are nested form groups for specific editable sections, enable them here
-    // For example, if 'productionInfo' has fields that assigned user can edit:
     const productionInfo = this.form.get('productionInfo') as FormGroup;
     if (productionInfo) {
       productionInfo.get('productionDetails')?.enable();
@@ -576,25 +543,28 @@ export class ProductionDialogComponent implements OnInit {
     }
   }
 
-  save() {
+  saveData(closeOnComplete: boolean = false) {
     if (this.isUploading$.value) {
       return;
     }
 
     let isValid = true;
-    if (!this.canEditCore && this.isAssignedUser) {
-      // Restricted mode validation: only check fields enabled for assigned user
-      const statusValid = this.form.get('statusId')?.valid ?? true;
-      const prodInfo = this.form.get('productionInfo') as FormGroup;
-      const prodDetailsValid = prodInfo?.get('productionDetails')?.valid ?? true;
+    if (closeOnComplete) {
+      if (!this.canEditCore && this.isAssignedUser) {
+        const statusValid = this.form.get('statusId')?.valid ?? true;
+        const prodInfo = this.form.get('productionInfo') as FormGroup;
+        const prodDetailsValid = prodInfo?.get('productionDetails')?.valid ?? true;
 
-      if (!statusValid || !prodDetailsValid) {
-        isValid = false;
-        if (!statusValid) this.form.get('statusId')?.markAsDirty();
-        if (!prodDetailsValid) prodInfo?.get('productionDetails')?.markAsDirty();
+        if (!statusValid || !prodDetailsValid) {
+          isValid = false;
+          if (!statusValid) this.form.get('statusId')?.markAsDirty();
+          if (!prodDetailsValid) prodInfo?.get('productionDetails')?.markAsDirty();
+        }
+      } else {
+        isValid = this.form.valid;
       }
     } else {
-      isValid = this.form.valid;
+      isValid = true;
     }
 
     if (!isValid) {
@@ -606,23 +576,21 @@ export class ProductionDialogComponent implements OnInit {
     this.isUploading$.next(true);
     const formValue = this.form.getRawValue();
 
-    // Ensure nested dates are converted to strings if needed
     const productionInfo = formValue.productionInfo ? { ...formValue.productionInfo } : undefined;
     if (productionInfo && productionInfo.campaignEmissionDate instanceof Date) {
       productionInfo.campaignEmissionDate = productionInfo.campaignEmissionDate.toISOString();
     }
 
-    const payload: Partial<ProductionRequest> = {
-      ...this.loadedRequest, // Preserve original fields (requestDate, etc.)
-      ...this.config.data,   // Merge passed config (mainly ID)
-      ...formValue,          // Overwrite with form values
+    const fullPayload: Partial<ProductionRequest> = {
+      ...this.loadedRequest,
+      ...this.config.data,
+      ...formValue,
       deliveryDate: formValue.deliveryDate ? formValue.deliveryDate.toISOString() : undefined,
       productionInfo: productionInfo
     };
 
-    // Clean up campaign products IDs (remove null IDs)
-    if (payload.campaignDetail?.campaignProducts) {
-      payload.campaignDetail.campaignProducts = payload.campaignDetail.campaignProducts.map((p: any) => {
+    if (fullPayload.campaignDetail?.campaignProducts) {
+      fullPayload.campaignDetail.campaignProducts = fullPayload.campaignDetail.campaignProducts.map((p: any) => {
         const cleanP = { ...p };
         if (cleanP.id === null || cleanP.id === undefined) delete cleanP.id;
         return cleanP;
@@ -630,10 +598,7 @@ export class ProductionDialogComponent implements OnInit {
     }
 
     const afterPersist = (saved: ProductionRequest | any) => {
-      // Handle potential response wrapper { success: true, data: { ... } }
       const actualData = saved.data || saved;
-
-      // Log for debugging
       console.log('Production request saved/updated:', saved);
 
       const requestId =
@@ -652,6 +617,12 @@ export class ProductionDialogComponent implements OnInit {
         return;
       }
 
+      if (!this.isEditMode) {
+        this.isEditMode = true;
+        this.config.data.id = requestId;
+        this.loadedRequest = actualData;
+      }
+
       const folderPath = AzureStorageService.generateProductionRequestFolderPath(requestId);
 
       if (this.selectedFiles.length === 0) {
@@ -660,7 +631,12 @@ export class ProductionDialogComponent implements OnInit {
           ...saved,
           files: [...this.existingFiles]
         };
-        this.ref.close(result);
+        if (closeOnComplete) {
+          this.ref.close(result);
+        } else {
+          this.currentStep++;
+          this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Progreso guardado correctamente' });
+        }
         return;
       }
 
@@ -685,16 +661,28 @@ export class ProductionDialogComponent implements OnInit {
         }));
 
         const mergedFiles = [...this.existingFiles, ...newFiles];
+        this.existingFiles = mergedFiles;
+        this.selectedFiles = [];
+
         this.productionService.updateProductionRequest(requestId, { files: mergedFiles }).subscribe({
           next: (updated) => {
             this.isUploading$.next(false);
-            this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Solicitud guardada y archivos cargados' });
-            this.ref.close({ ...updated, files: mergedFiles });
+            if (closeOnComplete) {
+              this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Solicitud guardada y archivos cargados' });
+              this.ref.close({ ...updated, files: mergedFiles });
+            } else {
+              this.currentStep++;
+              this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Progreso guardado y archivos subidos' });
+            }
           },
           error: () => {
             this.isUploading$.next(false);
             this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'Archivos cargados, pero no se pudieron vincular en la solicitud' });
-            this.ref.close({ ...saved, files: mergedFiles });
+            if (closeOnComplete) {
+              this.ref.close({ ...saved, files: mergedFiles });
+            } else {
+              this.currentStep++;
+            }
           }
         });
       }).catch((err) => {
@@ -704,23 +692,58 @@ export class ProductionDialogComponent implements OnInit {
       });
     };
 
+    let request$: Observable<ProductionRequest>;
+
     if (this.isEditMode && this.config.data?.id) {
-      this.productionService.updateProductionRequest(this.config.data.id, payload).subscribe({
-        next: (saved) => afterPersist(saved),
-        error: () => {
-          this.isUploading$.next(false);
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar la solicitud' });
-        }
-      });
+      const requestId = this.config.data.id;
+      switch (this.currentStep) {
+        case 0: // General
+          const generalData = {
+            name: formValue.name,
+            department: formValue.department,
+            contactPerson: formValue.contactPerson,
+            assignedTeam: formValue.assignedTeam,
+            assignedUserId: formValue.assignedUserId,
+            deliveryDate: formValue.deliveryDate ? formValue.deliveryDate.toISOString() : null,
+            observations: formValue.observations,
+            statusId: formValue.statusId
+          };
+          request$ = this.productionService.updateStepGeneral(requestId, generalData);
+          break;
+        case 1: // Customer
+          request$ = this.productionService.updateStepCustomer(requestId, formValue.customerData);
+          break;
+        case 2: // Campaign
+          const campaignDetail = { ...formValue.campaignDetail };
+          if (campaignDetail.campaignProducts) {
+            campaignDetail.campaignProducts = campaignDetail.campaignProducts.map((p: any) => {
+              const cleanP = { ...p };
+              if (cleanP.id === null || cleanP.id === undefined) delete cleanP.id;
+              return cleanP;
+            });
+          }
+          request$ = this.productionService.updateStepCampaign(requestId, campaignDetail);
+          break;
+        case 3: // Audience
+          request$ = this.productionService.updateStepAudience(requestId, formValue.audienceData);
+          break;
+        case 4: // Production
+          request$ = this.productionService.updateStepProduction(requestId, productionInfo);
+          break;
+        default:
+          request$ = this.productionService.updateProductionRequest(requestId, fullPayload);
+      }
     } else {
-      this.productionService.createProductionRequest(payload).subscribe({
-        next: (saved) => afterPersist(saved),
-        error: () => {
-          this.isUploading$.next(false);
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo crear la solicitud' });
-        }
-      });
+      request$ = this.productionService.createProductionRequest(fullPayload);
     }
+
+    request$.subscribe({
+      next: (saved) => afterPersist(saved),
+      error: () => {
+        this.isUploading$.next(false);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar la solicitud' });
+      }
+    });
   }
 
   async downloadFile(file: UploadedFile) {

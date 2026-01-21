@@ -35,6 +35,26 @@ export class ProductionService {
     return this.http.put<ProductionRequest>(`${this.apiUrl}/${id}`, request);
   }
 
+  updateStepGeneral(id: number, request: Partial<ProductionRequest>): Observable<ProductionRequest> {
+    return this.http.put<ProductionRequest>(`${this.apiUrl}/${id}/general`, request);
+  }
+
+  updateStepCustomer(id: number, data: any): Observable<ProductionRequest> {
+    return this.http.put<ProductionRequest>(`${this.apiUrl}/${id}/customer`, { customerData: data });
+  }
+
+  updateStepCampaign(id: number, data: any): Observable<ProductionRequest> {
+    return this.http.put<ProductionRequest>(`${this.apiUrl}/${id}/campaign`, { campaignDetail: data });
+  }
+
+  updateStepAudience(id: number, data: any): Observable<ProductionRequest> {
+    return this.http.put<ProductionRequest>(`${this.apiUrl}/${id}/audience`, { audienceData: data });
+  }
+
+  updateStepProduction(id: number, data: any): Observable<ProductionRequest> {
+    return this.http.put<ProductionRequest>(`${this.apiUrl}/${id}/production`, { productionInfo: data });
+  }
+
   deleteProductionRequest(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }

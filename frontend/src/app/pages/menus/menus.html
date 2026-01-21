@@ -3,7 +3,6 @@
         <p-button label="Nuevo Ítem" icon="pi pi-plus" (onClick)="openNew()"></p-button>
         <p-button icon="pi pi-refresh" [text]="true" [rounded]="true" (onClick)="loadMenuItems()"></p-button>
     </app-page-header>
-    <app-session-info></app-session-info>
     <p-toast></p-toast>
     <div class="card p-4 surface-card border-round shadow-2 overflow-x-auto">
         <p-treeTable [value]="menuItems()" [loading]="loading()" styleClass="p-treetable-sm"

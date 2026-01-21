@@ -1,23 +1,11 @@
 import { Request, Response } from 'express';
-import { Permission } from '../models';
-import { AppDataSource } from '../config/typeorm.config';
+import { PermissionService } from '../services/permissionService';
+
+const permissionService = new PermissionService();
 
 export const getAllPermissions = async (req: Request, res: Response): Promise<void> => {
   try {
-    if (!AppDataSource.isInitialized) {
-      res.status(503).json({
-        success: false,
-        message: 'Base de datos no disponible'
-      });
-      return;
-    }
-
-    const permissionRepository = AppDataSource.getRepository(Permission);
-    
-    const permissions = await permissionRepository.find({
-      order: { name: 'ASC' }
-    });
-
+    const permissions = await permissionService.getAllPermissions();
     res.json({
       success: true,
       data: permissions
@@ -27,6 +15,77 @@ export const getAllPermissions = async (req: Request, res: Response): Promise<vo
     res.status(500).json({
       success: false,
       message: 'Error fetching permissions',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+export const createPermission = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const permission = await permissionService.createPermission(req.body);
+    res.status(201).json({
+      success: true,
+      data: permission
+    });
+  } catch (error) {
+    console.error('Error creating permission:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating permission',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+export const updatePermission = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id);
+    const permission = await permissionService.updatePermission(id, req.body);
+    
+    if (!permission) {
+      res.status(404).json({
+        success: false,
+        message: 'Permission not found'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: permission
+    });
+  } catch (error) {
+    console.error('Error updating permission:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating permission',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+export const deletePermission = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id);
+    const success = await permissionService.deletePermission(id);
+    
+    if (!success) {
+      res.status(404).json({
+        success: false,
+        message: 'Permission not found'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Permission deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting permission:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting permission',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }

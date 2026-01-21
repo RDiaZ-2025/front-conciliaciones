@@ -41,9 +41,9 @@
         <div class="flex gap-2">
             <button *ngIf="currentStep > 0" pButton label="Atrás" icon="pi pi-arrow-left" class="p-button-outlined"
                 (click)="prev()"></button>
-            <button *ngIf="currentStep < 4" pButton label="Siguiente" icon="pi pi-arrow-right"
+            <button *ngIf="currentStep < 4" pButton label="Guardar y Continuar" icon="pi pi-arrow-right"
                 (click)="next()"></button>
-            <button *ngIf="currentStep === 4" pButton label="Guardar" icon="pi pi-check" (click)="save()"
+            <button *ngIf="currentStep === 4" pButton label="Guardar" icon="pi pi-check" (click)="saveData(true)"
                 [loading]="(isUploading$ | async) ?? false"></button>
         </div>
     </div>
