@@ -1,0 +1,69 @@
+<div [formGroup]="form" class="flex flex-column gap-3">
+    <div formGroupName="productionInfo" class="flex flex-column gap-3">
+        <div class="formgrid grid">
+            <div class="col-12 md:col-6">
+                <p-floatlabel variant="in">
+                    <p-select formControlName="formatTypeId" [options]="formatTypes" optionLabel="name" optionValue="id"
+                        [style]="{'width':'100%'}" appendTo="body"></p-select>
+                    <label>Tipo de Formato</label>
+                </p-floatlabel>
+            </div>
+            <div class="col-12 md:col-6">
+                <p-floatlabel variant="in">
+                    <p-select formControlName="rightsDurationId" [options]="rightsDurations" optionLabel="name"
+                        optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                    <label>Derechos / Duración</label>
+                </p-floatlabel>
+            </div>
+        </div>
+
+        <div class="mb-2">
+            <p-floatlabel variant="in">
+                <ng-container *ngIf="!form.get('productionInfo.campaignEmissionDate')?.disabled">
+                    <p-datepicker formControlName="campaignEmissionDate" dateFormat="yy-mm-dd" [showIcon]="true"
+                        appendTo="body" styleClass="w-full" inputStyleClass="w-full" [showTime]="true"
+                        hourFormat="12"></p-datepicker>
+                </ng-container>
+                <input *ngIf="form.get('productionInfo.campaignEmissionDate')?.disabled" pInputText
+                    [value]="form.get('productionInfo.campaignEmissionDate')?.value | date:'yyyy-MM-dd hh:mm a'"
+                    class="w-full" disabled />
+                <label>Fecha de Emisión de Campaña</label>
+            </p-floatlabel>
+        </div>
+
+        <p-floatlabel variant="in">
+            <input pInputText formControlName="communicationTone" class="w-full" />
+            <label>Tono de Comunicación</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="in">
+            <textarea pTextarea formControlName="ownAndExternalMedia" rows="2" class="w-full"></textarea>
+            <label>Medios Propios y Externos</label>
+        </p-floatlabel>
+
+        <div class="formgrid grid">
+            <div class="col-12 md:col-6">
+                <p-floatlabel variant="in">
+                    <textarea pTextarea formControlName="tvFormats" rows="2" class="w-full"></textarea>
+                    <label>Formatos TV</label>
+                </p-floatlabel>
+            </div>
+            <div class="col-12 md:col-6">
+                <p-floatlabel variant="in">
+                    <textarea pTextarea formControlName="digitalFormats" rows="2" class="w-full"></textarea>
+                    <label>Formatos Digitales</label>
+                </p-floatlabel>
+            </div>
+        </div>
+
+        <p-floatlabel variant="in">
+            <textarea pTextarea formControlName="productionDetails" rows="3" class="w-full"></textarea>
+            <label>Detalles de Producción</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="in">
+            <textarea pTextarea formControlName="additionalComments" rows="3" class="w-full"></textarea>
+            <label>Comentarios Adicionales</label>
+        </p-floatlabel>
+    </div>
+</div>

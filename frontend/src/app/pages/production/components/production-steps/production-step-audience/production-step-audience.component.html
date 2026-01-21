@@ -1,0 +1,60 @@
+<div [formGroup]="form" class="flex flex-column gap-3">
+    <div formGroupName="audienceData" class="flex flex-column gap-3">
+        <div class="formgrid grid">
+            <div class="col-12 md:col-6">
+                <p-floatlabel variant="in">
+                    <p-select formControlName="genderId" [options]="genders" optionLabel="name" optionValue="id"
+                        [style]="{'width':'100%'}" appendTo="body"></p-select>
+                    <label>Género</label>
+                </p-floatlabel>
+            </div>
+            <div class="col-12 md:col-6">
+                <p-floatlabel variant="in">
+                    <input pInputText formControlName="geo" class="w-full" />
+                    <label>Geo (Ubicación)</label>
+                </p-floatlabel>
+            </div>
+        </div>
+
+        <div class="formgrid grid">
+            <div class="col-12 md:col-6">
+                <p-floatlabel variant="in">
+                    <p-select formControlName="ageRangeId" [options]="ageRanges" optionLabel="name" optionValue="id"
+                        [style]="{'width':'100%'}" appendTo="body"></p-select>
+                    <label>Rango de Edad</label>
+                </p-floatlabel>
+            </div>
+            <div class="col-12 md:col-6">
+                <p-floatlabel variant="in">
+                    <p-select formControlName="socioEconomicLevelId" [options]="socioeconomicLevels" optionLabel="name"
+                        optionValue="id" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                    <label>Nivel Socioeconómico (NSE)</label>
+                </p-floatlabel>
+            </div>
+        </div>
+
+        <p-floatlabel variant="in">
+            <textarea pTextarea formControlName="interests" rows="2" class="w-full"></textarea>
+            <label>Intereses</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="in">
+            <textarea pTextarea formControlName="specificDetails" rows="2" class="w-full"></textarea>
+            <label>Detalles Específicos</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="in">
+            <textarea pTextarea formControlName="campaignContext" rows="2" class="w-full"></textarea>
+            <label>Contexto de la Campaña</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="in">
+            <textarea pTextarea formControlName="campaignConcept" rows="2" class="w-full"></textarea>
+            <label>Concepto de la Campaña</label>
+        </p-floatlabel>
+        <p-floatlabel variant="in">
+            <textarea pTextarea formControlName="assets" rows="2" class="w-full"></textarea>
+            <label>Activos</label>
+        </p-floatlabel>
+    </div>
+</div>

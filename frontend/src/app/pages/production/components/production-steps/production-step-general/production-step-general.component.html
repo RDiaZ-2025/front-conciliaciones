@@ -1,0 +1,73 @@
+<div [formGroup]="form" class="flex flex-column gap-3">
+    <div>
+        <p-floatlabel variant="in">
+            <input pInputText id="name" formControlName="name" class="w-full" autocomplete="off"
+                placeholder="Incluya cliente, campaña mes y año" />
+            <label for="name">Nombre de la solicitud</label>
+        </p-floatlabel>
+        <small class="p-error" *ngIf="form.get('name')?.invalid && form.get('name')?.dirty">
+            Nombre es requerido
+        </small>
+    </div>
+
+    <div class="formgrid grid">
+        <div class="col-12 md:col-12 mb-2">
+            <p-floatlabel variant="in">
+                <p-select id="assignedTeam" formControlName="assignedTeam" [options]="teams" optionLabel="name"
+                    optionValue="name" [style]="{'width':'100%'}" appendTo="body"></p-select>
+                <label for="assignedTeam">Area asignada</label>
+            </p-floatlabel>
+            <small class="p-error" *ngIf="form.get('assignedTeam')?.invalid && form.get('assignedTeam')?.dirty">
+                Equipo es requerido
+            </small>
+        </div>
+    </div>
+
+    <div class="mb-2">
+        <p-floatlabel variant="in">
+            <ng-container *ngIf="!form.get('deliveryDate')?.disabled">
+                <p-datepicker id="deliveryDate" formControlName="deliveryDate" dateFormat="yy-mm-dd" [showIcon]="true"
+                    appendTo="body" styleClass="w-full" inputStyleClass="w-full" [minDate]="minDate" [showTime]="true"
+                    hourFormat="12"></p-datepicker>
+            </ng-container>
+            <input *ngIf="form.get('deliveryDate')?.disabled" pInputText id="deliveryDate"
+                [value]="form.get('deliveryDate')?.value | date:'yyyy-MM-dd hh:mm a'" class="w-full" disabled />
+            <label for="deliveryDate">Fecha de entrega</label>
+        </p-floatlabel>
+        <small class="p-error" *ngIf="form.get('deliveryDate')?.invalid && form.get('deliveryDate')?.dirty">
+            Fecha es requerida
+        </small>
+    </div>
+
+    <div>
+        <p-floatlabel variant="in">
+            <textarea pTextarea id="observations" formControlName="observations" rows="3" autoResize="autoResize"
+                class="w-full"></textarea>
+            <label for="observations">Observaciones</label>
+        </p-floatlabel>
+    </div>
+
+    <div>
+        <label class="font-bold mb-2 block">Archivos adjuntos</label>
+        <p-fileUpload mode="advanced" name="demo[]" [customUpload]="true" [showUploadButton]="false"
+            [showCancelButton]="true" (onSelect)="onFileSelect($event)" (onRemove)="onFileRemove($event)"
+            (onClear)="onFileClear()" [multiple]="true" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
+            [maxFileSize]="10000000" chooseLabel="Seleccionar" cancelLabel="Cancelar" [disabled]="disabledFileUpload">
+        </p-fileUpload>
+
+        <div *ngIf="existingFiles.length > 0" class="mt-3">
+            <div *ngFor="let file of existingFiles"
+                class="flex align-items-center justify-content-between p-2 border-round mb-2">
+                <div class="flex align-items-center gap-2 cursor-pointer hover:surface-100 p-1 border-round transition-colors"
+                    (click)="downloadFile(file)" pTooltip="Descargar" tooltipPosition="top">
+                    <i class="pi pi-file text-primary"></i>
+                    <span class="text-sm font-medium">{{file.name}}</span>
+                    <i class="pi pi-download text-xs text-600"></i>
+                </div>
+                <button *ngIf="canRemoveFiles" pButton icon="pi pi-times"
+                    class="p-button-text p-button-danger p-button-sm p-0 w-2rem h-2rem" (click)="removeFile(file)"
+                    pTooltip="Eliminar" tooltipPosition="left"></button>
+            </div>
+        </div>
+    </div>
+</div>

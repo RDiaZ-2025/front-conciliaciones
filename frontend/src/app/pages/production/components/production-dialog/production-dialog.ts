@@ -4,22 +4,19 @@ import { Observable, BehaviorSubject } from 'rxjs';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormArray } from '@angular/forms';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { FloatLabelModule } from 'primeng/floatlabel';
-import { TextareaModule } from 'primeng/textarea';
-import { DatePickerModule } from 'primeng/datepicker';
-import { FileUploadModule } from 'primeng/fileupload';
-import { ToastModule } from 'primeng/toast';
-import { SelectModule } from 'primeng/select';
 import { MenuItem, MessageService } from 'primeng/api';
 import { StepsModule } from 'primeng/steps';
-import { CheckboxModule } from 'primeng/checkbox';
 import { ProductionRequest, UploadedFile, Team, CustomerData, AudienceData, CampaignDetail, ProductionInfo, Product, Objective, Gender, AgeRange, SocioeconomicLevel, FormatType, RightsDuration, Status } from '../../production.models';
 import { AzureStorageService } from '../../../../services/azure-storage.service';
 import { TeamService } from '../../../../services/team.service';
 import { User } from '../../../../services/user.service';
 import { ProductionService } from '../../../../services/production.service';
 import { AuthService } from '../../../../services/auth.service';
+import { ProductionStepGeneralComponent } from '../production-steps/production-step-general/production-step-general.component';
+import { ProductionStepCustomerComponent } from '../production-steps/production-step-customer/production-step-customer.component';
+import { ProductionStepCampaignComponent } from '../production-steps/production-step-campaign/production-step-campaign.component';
+import { ProductionStepAudienceComponent } from '../production-steps/production-step-audience/production-step-audience.component';
+import { ProductionStepProductionComponent } from '../production-steps/production-step-production/production-step-production.component';
 
 @Component({
   selector: 'app-production-dialog',
@@ -28,15 +25,12 @@ import { AuthService } from '../../../../services/auth.service';
     CommonModule,
     ReactiveFormsModule,
     ButtonModule,
-    InputTextModule,
-    FloatLabelModule,
-    TextareaModule,
-    DatePickerModule,
-    FileUploadModule,
-    ToastModule,
-    SelectModule,
     StepsModule,
-    CheckboxModule
+    ProductionStepGeneralComponent,
+    ProductionStepCustomerComponent,
+    ProductionStepCampaignComponent,
+    ProductionStepAudienceComponent,
+    ProductionStepProductionComponent
   ],
   providers: [MessageService],
   templateUrl: './production-dialog.html',
@@ -80,7 +74,7 @@ export class ProductionDialogComponent implements OnInit {
   assignedUsers$ = new BehaviorSubject<User[]>([]);
   products$ = new BehaviorSubject<Product[]>([]);
   workflowStages: { id: string | number, label: string }[] = [];
-  
+
   items: MenuItem[] = [];
   currentStep: number = 0;
 
@@ -125,7 +119,7 @@ export class ProductionDialogComponent implements OnInit {
       assignedUserId: [data.assignedUserId || null],
       deliveryDate: [data.deliveryDate ? new Date(data.deliveryDate) : null, Validators.required],
       observations: [data.observations || ''],
-      statusId: [data.statusId || null, Validators.required],
+      statusId: [data.statusId || 'request', Validators.required],
 
       // Step 2: Customer Information
       customerData: this.fb.group({
@@ -345,7 +339,7 @@ export class ProductionDialogComponent implements OnInit {
         // "Solicitud" -> 'request' (Id 1)
         // "En Progreso" -> 'in_production' (Id 5) - assuming this is the closest match
         // "Completado" -> 'completed' (Id 9)
-        
+
         const allowedCodes = ['request', 'in_production', 'completed'];
         this.workflowStages = statuses
           .filter(s => allowedCodes.includes(s.code))
