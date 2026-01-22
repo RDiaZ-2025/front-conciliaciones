@@ -4,6 +4,7 @@ import { AppDataSource } from '../config/typeorm.config';
 import { NotificationService } from '../services/notificationService';
 import { ProductionRequestHistoryService } from '../services/productionRequestHistoryService';
 import { AuthService } from '../services/authService';
+import { Not, In } from 'typeorm';
 
 const notificationService = new NotificationService();
 const historyService = new ProductionRequestHistoryService();
@@ -70,10 +71,20 @@ export const getAllProductionRequests = async (req: Request, res: Response): Pro
       .orderBy('request.requestDate', 'DESC');
 
     // If user doesn't have management permission, filter by assignment or ownership
-    if (!hasManagementPermission) {
+    // UPDATE: The requirement is strictly that the dashboard must display requests based on the assigned user.
+    // The creator must not see the request unless they are the assigned user.
+    // Managers can see all ONLY if they explicitly request it (e.g. via view=all), otherwise default to assigned tasks.
+    
+    let filterByAssignedUser = true;
+
+    if (hasManagementPermission && req.query.view === 'all') {
+      filterByAssignedUser = false;
+    }
+
+    if (filterByAssignedUser) {
       query.where(
-        '(request.assignedUserId = :userId OR customerData.requesterEmail = :userEmail)', 
-        { userId, userEmail }
+        'request.assignedUserId = :userId', 
+        { userId }
       );
     }
 
@@ -197,7 +208,9 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    // Logic to assign random user if assignedTeam is present
+    // Smart Workload Distribution Engine
+    // Logic to assign user if assignedTeam is present and no user is manually assigned
+    let assignmentMethod = 'Manual';
     if (assignedTeam && !assignedUserId) {
       try {
         const teamRepository = AppDataSource.getRepository(Team);
@@ -205,15 +218,43 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
 
         if (team) {
           const userRepository = AppDataSource.getRepository(User);
-          const users = await userRepository.find({ where: { teamId: team.id } });
+          // Find users in the team who are active (status 1)
+          const users = await userRepository.find({ where: { teamId: team.id, status: 1 } });
 
           if (users && users.length > 0) {
-            const randomIndex = Math.floor(Math.random() * users.length);
-            assignedUserId = users[randomIndex].id;
+            const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
+            
+            // Calculate workload for each user
+            // Workload: Number of active requests (not completed or cancelled)
+            const userWorkloads = await Promise.all(users.map(async (user) => {
+              const activeRequestsCount = await productionRequestRepository.count({
+                where: {
+                  assignedUserId: user.id,
+                  stage: Not(In(['completed', 'cancelled']))
+                }
+              });
+              return { user, count: activeRequestsCount };
+            }));
+
+            // Sort by workload (ascending)
+            userWorkloads.sort((a, b) => a.count - b.count);
+
+            // Find users with the minimum workload
+            const minWorkload = userWorkloads[0].count;
+            const candidates = userWorkloads.filter(uw => uw.count === minWorkload);
+
+            // Random selection among candidates (Tie-breaking)
+            const randomIndex = Math.floor(Math.random() * candidates.length);
+            const selectedCandidate = candidates[randomIndex];
+            
+            assignedUserId = selectedCandidate.user.id;
+            assignmentMethod = 'Smart Workload Distribution';
+            
+            console.log(`Smart Assignment: Assigned to ${selectedCandidate.user.name} (ID: ${assignedUserId}) with ${selectedCandidate.count} active requests.`);
           }
         }
       } catch (error) {
-        console.error("Error assigning random user:", error);
+        console.error("Error in Smart Workload Distribution:", error);
       }
     }
 
@@ -255,6 +296,18 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
         req.user.userId,
         'create'
       );
+
+      // Audit assignment info
+      if (assignmentMethod === 'Smart Workload Distribution' && assignedUserId) {
+         await historyService.logChange(
+          savedRequest.id,
+          'AssignmentMethod',
+          null,
+          `Smart Workload Distribution: Auto-assigned to user ID ${assignedUserId} based on workload`,
+          req.user.userId,
+          'update'
+        );
+      }
     }
 
     // Send notification to assigned user
