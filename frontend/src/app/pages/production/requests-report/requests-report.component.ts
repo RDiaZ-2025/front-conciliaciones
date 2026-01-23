@@ -4,7 +4,9 @@ import { CardModule } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
+import { SkeletonModule } from 'primeng/skeleton';
 import { AvatarModule } from 'primeng/avatar';
+import { TooltipModule } from 'primeng/tooltip';
 import { PageHeaderComponent } from '../../../components/shared/page-header/page-header';
 import { RequestsReportService, DashboardStats } from './requests-report.service';
 
@@ -18,19 +20,21 @@ import { RequestsReportService, DashboardStats } from './requests-report.service
     TableModule,
     ButtonModule,
     AvatarModule,
-    PageHeaderComponent
+    PageHeaderComponent,
+    SkeletonModule,
+    TooltipModule
   ],
   templateUrl: './requests-report.component.html',
   styleUrl: './requests-report.component.scss'
 })
 export class RequestsReportComponent implements OnInit {
   private service = inject(RequestsReportService);
-  
+
   stats = signal<DashboardStats | null>(null);
-  
+
   workloadChartData: any;
   workloadChartOptions: any;
-  
+
   executionChartData: any;
   executionChartOptions: any;
 
@@ -61,17 +65,16 @@ export class RequestsReportComponent implements OnInit {
 
     // Execution Status Chart (Pie/Doughnut)
     this.executionChartData = {
-      labels: ['En Curso', 'Completado', 'Pendiente', 'Cancelado'],
+      labels: ['Pendiente', 'En Curso', 'Completado'],
       datasets: [
         {
           data: [
-            data.executionStatus.inProgress, 
-            data.executionStatus.completed, 
             data.executionStatus.pending,
-            data.executionStatus.cancelled
+            data.executionStatus.inProgress,
+            data.executionStatus.completed
           ],
-          backgroundColor: ['#3B82F6', '#22C55E', '#F59E0B', '#9CA3AF'],
-          hoverBackgroundColor: ['#2563EB', '#16A34A', '#D97706', '#6B7280']
+          backgroundColor: ['#F59E0B', '#3B82F6', '#22C55E'],
+          hoverBackgroundColor: ['#D97706', '#2563EB', '#16A34A']
         }
       ]
     };
@@ -116,6 +119,12 @@ export class RequestsReportComponent implements OnInit {
 
     this.executionChartOptions = {
       cutout: '60%',
+      layout: {
+        padding: {
+          top: 0,
+          bottom: 0
+        }
+      },
       plugins: {
         legend: {
           labels: {

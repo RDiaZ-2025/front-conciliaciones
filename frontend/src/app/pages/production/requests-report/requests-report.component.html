@@ -1,141 +1,246 @@
 <div class="flex flex-column gap-4 p-4 fadein animation-duration-300 w-full max-w-7xl mx-auto">
-    
-    <app-page-header title="Informe de Solicitudes" subtitle="Seguimiento de tareas y carga de trabajo" 
+
+    <app-page-header title="Informe de Solicitudes" subtitle="Seguimiento de tareas y carga de trabajo"
         icon="pi pi-chart-line"></app-page-header>
 
     @if (stats(); as data) {
-        <!-- Stats Cards -->
-        <div class="grid">
-            <div class="col-12 md:col-6 lg:col">
-                <div class="surface-card shadow-2 p-3 border-round border-left-3 border-cyan-500">
-                    <div class="flex justify-content-between mb-3">
-                        <div>
-                            <span class="block text-500 font-medium mb-3">Total Solicitudes</span>
-                            <div class="text-900 font-medium text-xl">{{data.total}}</div>
+    <!-- Stats Cards -->
+    <div class="grid">
+        <div class="col-12 md:col-6 lg:col">
+            <div class="surface-card shadow-2 p-3 border-round border-left-3 border-cyan-500">
+                <div class="flex justify-content-between mb-3">
+                    <div>
+                        <div class="flex align-items-center gap-2 mb-3">
+                            <span class="block text-500 font-medium">Total Solicitudes</span>
+                            <i class="pi pi-info-circle text-500 cursor-pointer"
+                                pTooltip="Total de solicitudes asignadas al equipo." tooltipPosition="top"></i>
                         </div>
-                        <div class="flex align-items-center justify-content-center bg-cyan-100 border-round" style="width:2.5rem;height:2.5rem">
-                            <i class="pi pi-list text-cyan-500 text-xl"></i>
-                        </div>
+                        <div class="text-900 font-medium text-xl">{{data.total}}</div>
                     </div>
-                </div>
-            </div>
-            <div class="col-12 md:col-6 lg:col">
-                <div class="surface-card shadow-2 p-3 border-round border-left-3 border-blue-500">
-                    <div class="flex justify-content-between mb-3">
-                        <div>
-                            <span class="block text-500 font-medium mb-3">Activas</span>
-                            <div class="text-900 font-medium text-xl">{{data.active}}</div>
-                        </div>
-                        <div class="flex align-items-center justify-content-center bg-blue-100 border-round" style="width:2.5rem;height:2.5rem">
-                            <i class="pi pi-check-circle text-blue-500 text-xl"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 md:col-6 lg:col">
-                <div class="surface-card shadow-2 p-3 border-round border-left-3 border-green-500">
-                    <div class="flex justify-content-between mb-3">
-                        <div>
-                            <span class="block text-500 font-medium mb-3">Completadas</span>
-                            <div class="text-900 font-medium text-xl">{{data.completed}}</div>
-                        </div>
-                        <div class="flex align-items-center justify-content-center bg-green-100 border-round" style="width:2.5rem;height:2.5rem">
-                            <i class="pi pi-check text-green-500 text-xl"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 md:col-6 lg:col">
-                <div class="surface-card shadow-2 p-3 border-round border-left-3 border-orange-500">
-                    <div class="flex justify-content-between mb-3">
-                        <div>
-                            <span class="block text-500 font-medium mb-3">En Riesgo</span>
-                            <div class="text-900 font-medium text-xl">{{data.atRisk}}</div>
-                        </div>
-                        <div class="flex align-items-center justify-content-center bg-orange-100 border-round" style="width:2.5rem;height:2.5rem">
-                            <i class="pi pi-exclamation-triangle text-orange-500 text-xl"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 md:col-6 lg:col">
-                <div class="surface-card shadow-2 p-3 border-round border-left-3 border-red-500">
-                    <div class="flex justify-content-between mb-3">
-                        <div>
-                            <span class="block text-500 font-medium mb-3">Atrasadas</span>
-                            <div class="text-900 font-medium text-xl">{{data.overdue}}</div>
-                        </div>
-                        <div class="flex align-items-center justify-content-center bg-red-100 border-round" style="width:2.5rem;height:2.5rem">
-                            <i class="pi pi-clock text-red-500 text-xl"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 md:col-6 lg:col">
-                <div class="surface-card shadow-2 p-3 border-round border-left-3 border-gray-500">
-                    <div class="flex justify-content-between mb-3">
-                        <div>
-                            <span class="block text-500 font-medium mb-3">Canceladas</span>
-                            <div class="text-900 font-medium text-xl">{{data.cancelled}}</div>
-                        </div>
-                        <div class="flex align-items-center justify-content-center bg-gray-100 border-round" style="width:2.5rem;height:2.5rem">
-                            <i class="pi pi-times-circle text-gray-500 text-xl"></i>
-                        </div>
+                    <div class="flex align-items-center justify-content-center bg-cyan-100 border-round"
+                        style="width:2.5rem;height:2.5rem">
+                        <i class="pi pi-list text-cyan-500 text-xl"></i>
                     </div>
                 </div>
             </div>
         </div>
+        <div class="col-12 md:col-6 lg:col">
+            <div class="surface-card shadow-2 p-3 border-round border-left-3 border-blue-500">
+                <div class="flex justify-content-between mb-3">
+                    <div>
+                        <div class="flex align-items-center gap-2 mb-3">
+                            <span class="block text-500 font-medium">Activas</span>
+                            <i class="pi pi-info-circle text-500 cursor-pointer"
+                                pTooltip="Solicitudes en proceso (no completadas ni canceladas)."
+                                tooltipPosition="top"></i>
+                        </div>
+                        <div class="text-900 font-medium text-xl">{{data.active}}</div>
+                    </div>
+                    <div class="flex align-items-center justify-content-center bg-blue-100 border-round"
+                        style="width:2.5rem;height:2.5rem">
+                        <i class="pi pi-check-circle text-blue-500 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 md:col-6 lg:col">
+            <div class="surface-card shadow-2 p-3 border-round border-left-3 border-green-500">
+                <div class="flex justify-content-between mb-3">
+                    <div>
+                        <div class="flex align-items-center gap-2 mb-3">
+                            <span class="block text-500 font-medium">Completadas</span>
+                            <i class="pi pi-info-circle text-500 cursor-pointer"
+                                pTooltip="Solicitudes finalizadas exitosamente." tooltipPosition="top"></i>
+                        </div>
+                        <div class="text-900 font-medium text-xl">{{data.completed}}</div>
+                    </div>
+                    <div class="flex align-items-center justify-content-center bg-green-100 border-round"
+                        style="width:2.5rem;height:2.5rem">
+                        <i class="pi pi-check text-green-500 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 md:col-6 lg:col">
+            <div class="surface-card shadow-2 p-3 border-round border-left-3 border-orange-500">
+                <div class="flex justify-content-between mb-3">
+                    <div>
+                        <div class="flex align-items-center gap-2 mb-3">
+                            <span class="block text-500 font-medium">En Riesgo</span>
+                            <i class="pi pi-info-circle text-500 cursor-pointer"
+                                pTooltip="Solicitudes que vencen en los próximos 3 días." tooltipPosition="top"></i>
+                        </div>
+                        <div class="text-900 font-medium text-xl">{{data.atRisk}}</div>
+                    </div>
+                    <div class="flex align-items-center justify-content-center bg-orange-100 border-round"
+                        style="width:2.5rem;height:2.5rem">
+                        <i class="pi pi-exclamation-triangle text-orange-500 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 md:col-6 lg:col">
+            <div class="surface-card shadow-2 p-3 border-round border-left-3 border-red-500">
+                <div class="flex justify-content-between mb-3">
+                    <div>
+                        <div class="flex align-items-center gap-2 mb-3">
+                            <span class="block text-500 font-medium">Atrasadas</span>
+                            <i class="pi pi-info-circle text-500 cursor-pointer"
+                                pTooltip="Solicitudes que han excedido su fecha de entrega." tooltipPosition="top"></i>
+                        </div>
+                        <div class="text-900 font-medium text-xl">{{data.overdue}}</div>
+                    </div>
+                    <div class="flex align-items-center justify-content-center bg-red-100 border-round"
+                        style="width:2.5rem;height:2.5rem">
+                        <i class="pi pi-clock text-red-500 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 md:col-6 lg:col">
+            <div class="surface-card shadow-2 p-3 border-round border-left-3 border-gray-500">
+                <div class="flex justify-content-between mb-3">
+                    <div>
+                        <div class="flex align-items-center gap-2 mb-3">
+                            <span class="block text-500 font-medium">Canceladas</span>
+                            <i class="pi pi-info-circle text-500 cursor-pointer"
+                                pTooltip="Solicitudes que han sido canceladas." tooltipPosition="top"></i>
+                        </div>
+                        <div class="text-900 font-medium text-xl">{{data.cancelled}}</div>
+                    </div>
+                    <div class="flex align-items-center justify-content-center bg-gray-100 border-round"
+                        style="width:2.5rem;height:2.5rem">
+                        <i class="pi pi-times-circle text-gray-500 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        <!-- Charts -->
-        <div class="grid">
-            <div class="col-12 lg:col-8">
-                <div class="surface-card shadow-2 border-round p-4 h-full">
-                    <h5 class="text-xl font-bold mb-4">Carga de Trabajo del Equipo</h5>
-                    <p-chart type="bar" [data]="workloadChartData" [options]="workloadChartOptions" height="300px"></p-chart>
+    <!-- Charts -->
+    <div class="grid">
+        <div class="col-12 lg:col-8">
+            <div class="surface-card shadow-2 border-round p-4 h-full">
+                <div class="flex justify-content-between align-items-center mb-1">
+                    <h5 class="text-xl font-bold m-0">Carga de Trabajo del Equipo</h5>
+                    <button pButton icon="pi pi-info-circle"
+                        class="p-button-rounded p-button-text p-button-secondary p-button-sm"
+                        pTooltip="Muestra la cantidad de solicitudes asignadas a cada miembro del equipo. Entre más alto el valor, más carga laboral está asignada a ese usuario."
+                        tooltipPosition="left"></button>
                 </div>
+                <p-chart type="bar" [data]="workloadChartData" [options]="workloadChartOptions"
+                    height="300px"></p-chart>
             </div>
-            <div class="col-12 lg:col-4">
-                <div class="surface-card shadow-2 border-round p-4 h-full">
-                    <h5 class="text-xl font-bold mb-4">Estado de Ejecución</h5>
-                    <div class="flex justify-content-center">
-                        <p-chart type="doughnut" [data]="executionChartData" [options]="executionChartOptions" height="300px"></p-chart>
-                    </div>
+        </div>
+        <div class="col-12 lg:col-4">
+            <div class="surface-card shadow-2 border-round p-4 h-full">
+                <div class="flex justify-content-between align-items-center mb-1">
+                    <h5 class="text-xl font-bold m-0">Estado de Ejecución</h5>
+                    <button pButton icon="pi pi-info-circle"
+                        class="p-button-rounded p-button-text p-button-secondary p-button-sm" pTooltip="Muestra la distribución de las solicitudes según su estado actual. 
+                        - Pendiente: Solicitudes que no han iniciado operación
+                        - En curso: Solicitudes que están en proceso de ser completadas
+                        - Completadas: Solicitudes que han sido finalizadas con éxito" tooltipPosition="left"></button>
+                </div>
+                <div class="flex justify-content-center">
+                    <p-chart type="doughnut" [data]="executionChartData" [options]="executionChartOptions"
+                        height="300px"></p-chart>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Details Table -->
-        <div class="surface-card shadow-2 border-round p-4">
-            <h5 class="text-xl font-bold mb-4">Detalle de Tareas</h5>
-            <p-table [value]="data.recentTasks" [rows]="5" [paginator]="true" responsiveLayout="scroll">
-                <ng-template pTemplate="header">
-                    <tr>
-                        <th>Tarea</th>
-                        <th>Responsable</th>
-                        <th>Cuenta</th>
-                        <th>Estado</th>
-                        <th>Fecha Límite</th>
-                    </tr>
-                </ng-template>
-                <ng-template pTemplate="body" let-task>
-                    <tr>
-                        <td>{{task.task}}</td>
-                        <td>
-                            <div class="flex align-items-center gap-2">
-                                <p-avatar [image]="task.avatar" shape="circle" *ngIf="task.avatar" [label]="task.responsible.charAt(0)"></p-avatar>
-                                <span>{{task.responsible}}</span>
-                            </div>
-                        </td>
-                        <td>{{task.account}}</td>
-                        <td>
-                            <span class="p-badge" [class]="'status-' + getStatusSeverity(task.status)">
-                                {{task.status}}
-                            </span>
-                        </td>
-                        <td>{{task.deadline}}</td>
-                    </tr>
-                </ng-template>
-            </p-table>
+    <!-- Details Table -->
+    <div class="surface-card shadow-2 border-round p-4">
+        <h5 class="text-xl font-bold m-0">Detalle de Tareas</h5>
+        <p-table [value]="data.recentTasks" [rows]="5" [paginator]="true" responsiveLayout="scroll">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>Tarea</th>
+                    <th>Responsable</th>
+                    <th>Cuenta</th>
+                    <th>Estado</th>
+                    <th>Fecha Límite</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-task>
+                <tr>
+                    <td>{{task.task}}</td>
+                    <td>
+                        <div class="flex align-items-center gap-2">
+                            <p-avatar [image]="task.avatar" shape="circle" *ngIf="task.avatar"
+                                [label]="task.responsible.charAt(0)"></p-avatar>
+                            <span>{{task.responsible}}</span>
+                        </div>
+                    </td>
+                    <td>{{task.account}}</td>
+                    <td>
+                        <span class="p-badge" [class]="'status-' + getStatusSeverity(task.status)">
+                            {{task.status}}
+                        </span>
+                    </td>
+                    <td>{{task.deadline}}</td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+    } @else {
+    <!-- Skeleton Loading -->
+    <div class="grid">
+        @for (item of [1,2,3,4,5,6]; track item) {
+        <div class="col-12 md:col-6 lg:col">
+            <div class="surface-card shadow-2 p-3 border-round">
+                <div class="flex justify-content-between mb-3">
+                    <div>
+                        <p-skeleton width="6rem" styleClass="mb-2"></p-skeleton>
+                        <p-skeleton width="3rem" height="1.5rem"></p-skeleton>
+                    </div>
+                    <p-skeleton shape="circle" size="2.5rem"></p-skeleton>
+                </div>
+            </div>
         </div>
+        }
+    </div>
+
+    <div class="grid">
+        <div class="col-12 lg:col-8">
+            <div class="surface-card shadow-2 border-round p-4 h-full">
+                <p-skeleton width="15rem" styleClass="mb-4"></p-skeleton>
+                <p-skeleton height="300px"></p-skeleton>
+            </div>
+        </div>
+        <div class="col-12 lg:col-4">
+            <div class="surface-card shadow-2 border-round p-4 h-full">
+                <p-skeleton width="10rem" styleClass="mb-4"></p-skeleton>
+                <div class="flex justify-content-center">
+                    <p-skeleton shape="circle" size="300px"></p-skeleton>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="surface-card shadow-2 border-round p-4">
+        <p-skeleton width="10rem" styleClass="mb-4"></p-skeleton>
+        <p-table [value]="[1,2,3,4,5]" [rows]="5">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th><p-skeleton width="8rem"></p-skeleton></th>
+                    <th><p-skeleton width="8rem"></p-skeleton></th>
+                    <th><p-skeleton width="8rem"></p-skeleton></th>
+                    <th><p-skeleton width="8rem"></p-skeleton></th>
+                    <th><p-skeleton width="8rem"></p-skeleton></th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body">
+                <tr>
+                    <td><p-skeleton></p-skeleton></td>
+                    <td><p-skeleton></p-skeleton></td>
+                    <td><p-skeleton></p-skeleton></td>
+                    <td><p-skeleton></p-skeleton></td>
+                    <td><p-skeleton></p-skeleton></td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
     }
 </div>

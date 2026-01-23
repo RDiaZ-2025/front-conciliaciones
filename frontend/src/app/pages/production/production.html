@@ -15,6 +15,11 @@
     </app-page-header>
 
     <div class="grid" *ngIf="!showHistorical()">
+        <div class="col-12 text-center p-5" *ngIf="activeRequests().length === 0">
+            <i class="pi pi-inbox text-5xl text-400 mb-3"></i>
+            <h3 class="text-700 m-0">No hay solicitudes activas</h3>
+            <p class="text-500">Crea una nueva solicitud para comenzar.</p>
+        </div>
         <div *ngFor="let request of activeRequests()" class="col-12 md:col-6 lg:col-4 xl:col-3">
             <p-card [style]="{ height: '100%', display: 'flex', flexDirection: 'column' }"
                 styleClass="flex flex-column h-full shadow-2 hover:shadow-6 transition-duration-200">

@@ -21,14 +21,6 @@
         </small>
     </div>
 
-    <div>
-        <p-floatlabel variant="in">
-            <input pInputText id="contactPerson" formControlName="contactPerson" class="w-full" autocomplete="off" />
-            <label for="contactPerson">Solicitante</label>
-        </p-floatlabel>
-    </div>
-
-
     <div class="mb-2">
         <p-floatlabel variant="in">
             <ng-container *ngIf="!form.get('deliveryDate')?.disabled">
@@ -42,17 +34,6 @@
         </p-floatlabel>
         <small class="p-error" *ngIf="form.get('deliveryDate')?.invalid && form.get('deliveryDate')?.dirty">
             Fecha es requerida
-        </small>
-    </div>
-
-    <div>
-        <p-floatlabel variant="in">
-            <p-select formControlName="statusId" [options]="statuses" optionLabel="label" optionValue="id"
-                styleClass="w-full" appendTo="body" placeholder="Seleccione un estado" />
-            <label for="statusId">Estado</label>
-        </p-floatlabel>
-        <small class="p-error" *ngIf="form.get('statusId')?.invalid && form.get('statusId')?.dirty">
-            Estado es requerido
         </small>
     </div>
 

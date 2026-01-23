@@ -341,14 +341,14 @@ export class ProductionDialogComponent implements OnInit {
             };
           });
 
-          if (!this.form.get('statusId')?.value) {
-            const requestStatus = statuses.find(s => s.code === 'request');
-            if (requestStatus) {
-              console.log('Setting default status to:', requestStatus);
-              this.form.patchValue({ statusId: requestStatus.id });
-              this.cd.detectChanges();
-            }
+        if (!this.form.get('statusId')?.value) {
+          const requestStatus = statuses.find(s => s.code === 'request');
+          if (requestStatus) {
+            console.log('Setting default status to:', requestStatus);
+            this.form.patchValue({ statusId: requestStatus.id });
+            this.cd.detectChanges();
           }
+        }
       },
       error: (error) => {
         console.error('Error loading statuses', error);
@@ -434,7 +434,7 @@ export class ProductionDialogComponent implements OnInit {
     } else {
       switch (this.currentStep) {
         case 0:
-          const mainControls = ['name', 'department', 'contactPerson', 'deliveryDate', 'statusId'];
+          const mainControls = ['name', 'department', 'deliveryDate'];
           isValid = mainControls.every(key => {
             const control = this.form.get(key);
             return control?.valid || control?.disabled;
@@ -548,6 +548,11 @@ export class ProductionDialogComponent implements OnInit {
     this.isUploading$.next(true);
     const formValue = this.form.getRawValue();
 
+    // Ensure statusId is set for new requests
+    if (!this.isEditMode && !formValue.statusId) {
+      formValue.statusId = 'request';
+    }
+
     const productionInfo = formValue.productionInfo ? { ...formValue.productionInfo } : undefined;
     if (productionInfo && productionInfo.campaignEmissionDate instanceof Date) {
       productionInfo.campaignEmissionDate = productionInfo.campaignEmissionDate.toISOString();
@@ -564,7 +569,7 @@ export class ProductionDialogComponent implements OnInit {
     if (fullPayload.campaignDetail?.campaignProducts) {
       // Filter out invalid products (missing productId)
       const validProducts = fullPayload.campaignDetail.campaignProducts.filter((p: any) => p.productId !== null && p.productId !== undefined);
-      
+
       fullPayload.campaignDetail.campaignProducts = validProducts.map((p: any) => {
         const cleanP = { ...p };
         if (cleanP.id === null || cleanP.id === undefined) delete cleanP.id;
@@ -607,6 +612,7 @@ export class ProductionDialogComponent implements OnInit {
           files: [...this.existingFiles]
         };
         if (closeOnComplete) {
+          this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Solicitud guardada correctamente' });
           this.ref.close(result);
         } else {
           this.currentStep++;
@@ -679,8 +685,8 @@ export class ProductionDialogComponent implements OnInit {
           const generalData = {
             name: formValue.name,
             department: formValue.department,
-      contactPerson: formValue.contactPerson,
-      assignedUserId: formValue.assignedUserId,
+            contactPerson: formValue.contactPerson,
+            assignedUserId: formValue.assignedUserId,
             deliveryDate: formValue.deliveryDate ? formValue.deliveryDate.toISOString() : null,
             observations: formValue.observations,
             statusId: formValue.statusId
