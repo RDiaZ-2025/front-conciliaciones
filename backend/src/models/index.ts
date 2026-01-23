@@ -13,6 +13,7 @@ export * from './ProductionRequestHistory';
 export * from './Product';
 export * from './CampaignProduct';
 export * from './Objective';
+export * from './Status';
 
 export { LoadDocumentsOCbyUser } from './LoadDocumentsOCbyUser';
 export { MenuItem } from './MenuItem';

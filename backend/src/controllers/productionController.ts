@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ProductionRequest, Product, User, FormatType, RightsDuration, Team } from '../models';
+import { ProductionRequest, Product, User, FormatType, RightsDuration, Team, Status } from '../models';
 import { AppDataSource } from '../config/typeorm.config';
 import { NotificationService } from '../services/notificationService';
 import { ProductionRequestHistoryService } from '../services/productionRequestHistoryService';
@@ -22,15 +22,18 @@ const performSmartAssignment = async (department: string): Promise<{ assignedUse
 
       if (users && users.length > 0) {
         const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
-        
+
         // Calculate workload for each user
         // Workload: Number of active requests (not completed or cancelled)
         const userWorkloads = await Promise.all(users.map(async (user) => {
           const activeRequestsCount = await productionRequestRepository.count({
             where: {
               assignedUserId: user.id,
-              stage: Not(In(['completed', 'cancelled']))
-            }
+              status: {
+                code: Not(In(['completed', 'cancelled']))
+              }
+            },
+            relations: ['status']
           });
           return { user, count: activeRequestsCount };
         }));
@@ -45,9 +48,9 @@ const performSmartAssignment = async (department: string): Promise<{ assignedUse
         // Random selection among candidates (Tie-breaking)
         const randomIndex = Math.floor(Math.random() * candidates.length);
         const selectedCandidate = candidates[randomIndex];
-        
+
         console.log(`Smart Assignment: Assigned to ${selectedCandidate.user.name} (ID: ${selectedCandidate.user.id}) with ${selectedCandidate.count} active requests.`);
-        
+
         return {
           assignedUserId: selectedCandidate.user.id,
           userName: selectedCandidate.user.name,
@@ -115,18 +118,19 @@ export const getAllProductionRequests = async (req: Request, res: Response): Pro
     const hasManagementPermission = req.user?.permissions?.includes('production_management');
 
     const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
-    
+
     // Use QueryBuilder for better handling of OR conditions with relations
     const query = productionRequestRepository.createQueryBuilder('request')
       .leftJoinAndSelect('request.customerData', 'customerData')
       .leftJoinAndSelect('request.assignedUser', 'assignedUser')
+      .leftJoinAndSelect('request.status', 'status')
       .orderBy('request.requestDate', 'DESC');
 
     // If user doesn't have management permission, filter by assignment or ownership
     // UPDATE: The requirement is strictly that the dashboard must display requests based on the assigned user.
     // The creator must not see the request unless they are the assigned user.
     // Managers can see all ONLY if they explicitly request it (e.g. via view=all), otherwise default to assigned tasks.
-    
+
     let filterByAssignedUser = true;
 
     if (hasManagementPermission && req.query.view === 'all') {
@@ -135,7 +139,7 @@ export const getAllProductionRequests = async (req: Request, res: Response): Pro
 
     if (filterByAssignedUser) {
       query.where(
-        'request.assignedUserId = :userId', 
+        'request.assignedUserId = :userId',
         { userId }
       );
     }
@@ -149,7 +153,7 @@ export const getAllProductionRequests = async (req: Request, res: Response): Pro
     if (error.code) console.error('Error code:', error.code);
     // @ts-ignore
     if (error.message) console.error('Error message:', error.message);
-    
+
     return res.status(500).json({ message: 'Error fetching production requests', error });
   }
 };
@@ -190,6 +194,7 @@ export const getProductionRequestById = async (req: Request, res: Response): Pro
     const productionRequest = await productionRequestRepository.findOne({
       where: { id: parseInt(id) },
       relations: [
+        'status',
         'customerData',
         'audienceData',
         'audienceData.gender',
@@ -279,6 +284,15 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
 
     const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
 
+    // Set default status if not provided
+    if (!statusId) {
+      const statusRepository = AppDataSource.getRepository(Status);
+      const defaultStatus = await statusRepository.findOne({ where: { code: 'request' } });
+      if (defaultStatus) {
+        statusId = defaultStatus.id;
+      }
+    }
+
     const newProductionRequest = productionRequestRepository.create({
       name,
       requestDate: new Date(),
@@ -287,7 +301,6 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       assignedUserId,
       deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
       observations,
-      stage: 'request', // Initial stage
       statusId,
       customerData,
       audienceData,
@@ -310,7 +323,7 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
 
       // Audit assignment info
       if (assignmentMethod === 'Smart Workload Distribution' && assignedUserId) {
-         await historyService.logChange(
+        await historyService.logChange(
           savedRequest.id,
           'AssignmentMethod',
           null,
@@ -355,7 +368,6 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
       deliveryDate,
       observations,
       statusId,
-      stage,
       customerData,
       audienceData,
       campaignDetail,
@@ -394,7 +406,7 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
 
     // Smart Workload Distribution for Updates
     let assignmentMethod = 'Manual';
-    
+
     // Check if department has changed
     const departmentChanged = department && existingRequest.department !== department;
 
@@ -420,7 +432,7 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
           assignedUserId,
           deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
           observations,
-          stage
+          statusId
         },
         req.user.userId
       );
@@ -433,7 +445,6 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
     existingRequest.assignedUserId = assignedUserId;
     existingRequest.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
     existingRequest.observations = observations;
-    if (stage) existingRequest.stage = stage;
     if (statusId) existingRequest.statusId = statusId;
 
     // Update relations
@@ -452,7 +463,7 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
 
     // Audit assignment info if auto-assigned
     if (req.user?.userId && assignmentMethod === 'Smart Workload Distribution' && assignedUserId) {
-       await historyService.logChange(
+      await historyService.logChange(
         updatedRequest.id,
         'AssignmentMethod',
         null,
@@ -500,31 +511,56 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
     }
 
     const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
+    const statusRepository = AppDataSource.getRepository(Status);
+
+    // Find new status
+    const newStatus = await statusRepository.findOne({ where: { code: stage } });
+    if (!newStatus) {
+      return res.status(400).json({ message: 'Invalid status code' });
+    }
 
     // Check if request exists
     const existingRequest = await productionRequestRepository.findOne({
-      where: { id: parseInt(id) }
+      where: { id: parseInt(id) },
+      relations: ['status']
     });
 
     if (!existingRequest) {
       return res.status(404).json({ message: 'Production request not found' });
     }
 
+    const oldStatusCode = existingRequest.status?.code || 'unknown';
+
     // Log stage change
-    if (req.user?.userId && existingRequest.stage !== stage) {
+    if (req.user?.userId && oldStatusCode !== stage) {
       await historyService.logChange(
         existingRequest.id,
         'stage',
-        existingRequest.stage,
+        oldStatusCode,
         stage,
         req.user.userId,
         'status_change'
       );
     }
 
-    // Update the stage
-    existingRequest.stage = stage;
+    // Update the stage (status)
+    existingRequest.status = newStatus;
+    existingRequest.statusId = newStatus.id;
     const updatedRequest = await productionRequestRepository.save(existingRequest);
+
+    // Send notification to assigned user
+    if (existingRequest.assignedUserId) {
+      try {
+        await notificationService.createNotification(
+          existingRequest.assignedUserId,
+          'Cambio de Etapa',
+          `La solicitud "${existingRequest.name}" ha cambiado a la etapa: ${stage}`,
+          'info'
+        );
+      } catch (notifError) {
+        console.error('Error sending notification:', notifError);
+      }
+    }
 
     return res.status(200).json(updatedRequest);
   } catch (error) {
@@ -625,10 +661,10 @@ export const updateStepGeneral = async (req: Request, res: Response): Promise<Re
     if (statusId) existingRequest.statusId = statusId;
 
     const updatedRequest = await productionRequestRepository.save(existingRequest);
-    
+
     // Audit assignment info if auto-assigned
     if (req.user?.userId && assignmentMethod === 'Smart Workload Distribution' && assignedUserId) {
-       await historyService.logChange(
+      await historyService.logChange(
         updatedRequest.id,
         'AssignmentMethod',
         null,
@@ -637,7 +673,7 @@ export const updateStepGeneral = async (req: Request, res: Response): Promise<Re
         'update'
       );
     }
-    
+
     return res.status(200).json(updatedRequest);
   } catch (error) {
     console.error('Error updating general info:', error);
@@ -656,7 +692,7 @@ export const updateStepCustomer = async (req: Request, res: Response): Promise<R
     }
 
     const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
-    const existingRequest = await productionRequestRepository.findOne({ 
+    const existingRequest = await productionRequestRepository.findOne({
       where: { id: parseInt(id) },
       relations: ['customerData']
     });
@@ -688,7 +724,7 @@ export const updateStepCampaign = async (req: Request, res: Response): Promise<R
     }
 
     const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
-    const existingRequest = await productionRequestRepository.findOne({ 
+    const existingRequest = await productionRequestRepository.findOne({
       where: { id: parseInt(id) },
       relations: ['campaignDetail', 'campaignDetail.campaignProducts']
     });
@@ -720,7 +756,7 @@ export const updateStepAudience = async (req: Request, res: Response): Promise<R
     }
 
     const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
-    const existingRequest = await productionRequestRepository.findOne({ 
+    const existingRequest = await productionRequestRepository.findOne({
       where: { id: parseInt(id) },
       relations: ['audienceData']
     });
@@ -752,7 +788,7 @@ export const updateStepProduction = async (req: Request, res: Response): Promise
     }
 
     const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
-    const existingRequest = await productionRequestRepository.findOne({ 
+    const existingRequest = await productionRequestRepository.findOne({
       where: { id: parseInt(id) },
       relations: ['productionInfo']
     });

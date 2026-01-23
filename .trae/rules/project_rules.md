@@ -13,6 +13,7 @@
 `./pages/{page}/{page}.component.{html|css|ts}` -> page html/css/ts
 `./pages/{page}/{child}/{child}.component.{html|css|ts}` -> child html/css/ts
 
+- All changes over the models must be reflected in the database creating a migration and running it
 ### Use PrimeNG Components
 Use the Tailwind classes for styles, prioritizing dark and light themes
 Use Lucide icons for Standalone components

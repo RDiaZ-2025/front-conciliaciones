@@ -12,7 +12,6 @@ import { Status } from './Status';
  */
 @Entity('ProductionRequests')
 @Index('IX_ProductionRequests_RequestDate', ['requestDate'])
-@Index('IX_ProductionRequests_Stage', ['stage'])
 export class ProductionRequest {
   @PrimaryGeneratedColumn({ name: 'Id' })
   id!: number;
@@ -61,27 +60,24 @@ export class ProductionRequest {
   @Column({ name: 'Observations', type: 'nvarchar', length: 'MAX', nullable: true })
   observations!: string | null;
 
-  @Column({ name: 'Stage', type: 'nvarchar', length: 50, nullable: false, default: 'request' })
-  stage!: string;
-
   isInRequestStage(): boolean {
-    return this.stage === 'request';
+    return (this.status?.code ?? '').toLowerCase() === 'request';
   }
 
   isInProgress(): boolean {
-    return this.stage === 'in_progress';
+    return (this.status?.code ?? '').toLowerCase() === 'in_progress';
   }
 
   isUnderReview(): boolean {
-    return this.stage === 'review';
+    return (this.status?.code ?? '').toLowerCase() === 'review';
   }
 
   isCompleted(): boolean {
-    return this.stage === 'completed';
+    return (this.status?.code ?? '').toLowerCase() === 'completed';
   }
 
   isCancelled(): boolean {
-    return this.stage === 'cancelled';
+    return (this.status?.code ?? '').toLowerCase() === 'cancelled';
   }
 
   isOverdue(): boolean {
@@ -102,7 +98,8 @@ export class ProductionRequest {
   }
 
   getStageDisplay(): string {
-    switch (this.stage) {
+    const code = (this.status?.code ?? '').toLowerCase();
+    switch (code) {
       case 'request':
         return 'Solicitud';
       case 'in_progress':
@@ -144,23 +141,5 @@ export class ProductionRequest {
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - this.requestDate.getTime());
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  }
-
-  advanceStage(): void {
-    switch (this.stage) {
-      case 'request':
-        this.stage = 'in_progress';
-        break;
-      case 'in_progress':
-        this.stage = 'review';
-        break;
-      case 'review':
-        this.stage = 'completed';
-        break;
-    }
-  }
-
-  cancel(): void {
-    this.stage = 'cancelled';
   }
 }

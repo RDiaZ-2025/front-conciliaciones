@@ -54,45 +54,77 @@ export class RequestsReportController {
       const totalActive = await requestRepo.count({
         where: {
           ...whereClause,
-          stage: Not(In(['completed', 'cancelled']))
-        }
+          status: {
+            code: Not(In(['completed', 'cancelled']))
+          }
+        },
+        relations: ['status']
       });
 
       const completed = await requestRepo.count({
         where: {
           ...whereClause,
-          stage: 'completed'
-        }
+          status: {
+            code: 'completed'
+          }
+        },
+        relations: ['status']
       });
 
       const cancelled = await requestRepo.count({
         where: {
           ...whereClause,
-          stage: 'cancelled'
-        }
+          status: {
+            code: 'cancelled'
+          }
+        },
+        relations: ['status']
       });
 
       // Overdue: Active AND deliveryDate < now
       const overdue = await requestRepo.count({
         where: {
           ...whereClause,
-          stage: Not(In(['completed', 'cancelled'])),
+          status: {
+            code: Not(In(['completed', 'cancelled']))
+          },
           deliveryDate: LessThan(now)
-        }
+        },
+        relations: ['status']
       });
 
       // At Risk: Active AND deliveryDate between now and now + 3 days
       const atRisk = await requestRepo.count({
         where: {
           ...whereClause,
-          stage: Not(In(['completed', 'cancelled'])),
+          status: {
+            code: Not(In(['completed', 'cancelled']))
+          },
           deliveryDate: Between(now, threeDaysFromNow)
-        }
+        },
+        relations: ['status']
       });
 
       // 2. Execution Status (Pie Chart)
-      const inProgressCount = await requestRepo.count({ where: { ...whereClause, stage: In(['in_progress', 'in_edit']) } });
-      const pendingCount = await requestRepo.count({ where: { ...whereClause, stage: In(['request', 'quotation']) } });
+      const inProgressCount = await requestRepo.count({
+        where: {
+          ...whereClause,
+          status: {
+            code: In(['in_progress', 'in_edit'])
+          }
+        },
+        relations: ['status']
+      });
+
+      const pendingCount = await requestRepo.count({
+        where: {
+          ...whereClause,
+          status: {
+            code: In(['request', 'quotation'])
+          }
+        },
+        relations: ['status']
+      });
       const completedCount = completed;
       const cancelledCount = cancelled;
 
@@ -109,9 +141,10 @@ export class RequestsReportController {
       // Get counts for active requests
       const workloadRaw = await requestRepo
         .createQueryBuilder('pr')
+        .leftJoin('pr.status', 'status')
         .select('pr.assignedUserId', 'userId')
         .addSelect('COUNT(pr.id)', 'count')
-        .where('pr.stage NOT IN (:...statuses)', { statuses: ['completed', 'cancelled'] })
+        .where('status.code NOT IN (:...statuses)', { statuses: ['completed', 'cancelled'] })
         .andWhere('pr.assignedUserId IN (:...ids)', { ids: subordinateIds.length > 0 ? subordinateIds : [-1] })
         .groupBy('pr.assignedUserId')
         .getRawMany();
@@ -150,15 +183,17 @@ export class RequestsReportController {
       const recentTasksRaw = await requestRepo.find({
         where: {
           ...whereClause,
-          stage: Not(In(['completed', 'cancelled']))
+          status: {
+            code: Not(In(['completed', 'cancelled']))
+          }
         },
-        relations: ['assignedUser'],
+        relations: ['assignedUser', 'status'],
         order: { deliveryDate: 'ASC' }, // Earliest deadline first
         take: 5
       });
 
       const recentTasks = recentTasksRaw.map(task => {
-        let statusDisplay = task.stage;
+        let statusDisplay = task.status?.code || 'unknown';
 
         // Translate stages
         const translations: { [key: string]: string } = {

@@ -57,7 +57,7 @@ export class RequestsReportComponent implements OnInit {
       datasets: [
         {
           label: 'Carga de Trabajo',
-          backgroundColor: data.workload.map(w => w.status === 'overloaded' ? '#EF4444' : w.status === 'underutilized' ? '#F59E0B' : '#22C55E'),
+          backgroundColor: data.workload.map(w => w.status === 'overloaded' ? '#EF4444' : w.status === 'underutilized' ? '#22C55E' : '#F59E0B'),
           data: data.workload.map(w => w.count)
         }
       ]
