@@ -18,6 +18,7 @@ import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
 import { ProductionService } from '../../services/production.service';
+import { AuthService } from '../../services/auth.service';
 import { ProductionRequest, WORKFLOW_STAGES } from './production.models';
 import { ProductionDialogComponent } from './components/production-dialog/production-dialog';
 import { ProductionDetailDialogComponent } from './components/production-detail-dialog/production-detail-dialog';
@@ -237,14 +238,20 @@ export class ProductionComponent implements OnInit, OnDestroy {
   }
 
 
+  authService = inject(AuthService);
+
   openDialog(request?: ProductionRequest) {
     this.ref = this.dialogService.open(ProductionDialogComponent, {
       header: request ? 'Editar Solicitud' : 'Nueva Solicitud',
-      width: '90%',
+      width: '70%',
       contentStyle: { overflow: 'auto' },
       baseZIndex: 10000,
       maximizable: true,
-      data: request ? { ...request } : {}
+      breakpoints: {
+        '960px': '75vw',
+        '640px': '90vw'
+      },
+      data: request ? { id: request.id } : {}
     });
 
     if (this.ref) {
@@ -254,8 +261,19 @@ export class ProductionComponent implements OnInit, OnDestroy {
           if (result.id && this.requests().some(r => r.id === result.id)) {
             this.requests.update(current => current.map(r => r.id === result.id ? (result as ProductionRequest) : r));
           } else {
-            // Otherwise add as new
-            this.requests.update(current => [...current, (result as ProductionRequest)]);
+            // Otherwise add as new ONLY if it is assigned to the current user
+            const newRequest = result as ProductionRequest;
+            const currentUser = this.authService.currentUser();
+            
+            // Check if the request is assigned to the current user
+            // If assignedUserId matches current user's ID, add it.
+            // Note: We cast IDs to string/number safely for comparison
+            if (currentUser && newRequest.assignedUserId && String(newRequest.assignedUserId) === String(currentUser.id)) {
+               this.requests.update(current => [...current, newRequest]);
+            } else {
+               // If not assigned to us, we don't show it (it's hidden from dashboard)
+               console.log('Request created but not assigned to current user. Hiding from dashboard.');
+            }
           }
         }
       });

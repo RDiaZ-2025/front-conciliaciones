@@ -10,6 +10,7 @@ import { FileUploadModule } from 'primeng/fileupload';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { Team, UploadedFile } from '../../../production.models';
+import { User } from '../../../../../services/user.service';
 
 @Component({
   selector: 'app-production-step-general',
@@ -31,6 +32,7 @@ import { Team, UploadedFile } from '../../../production.models';
 export class ProductionStepGeneralComponent {
   @Input() form!: FormGroup;
   @Input() teams: Team[] = [];
+  @Input() statuses: { id: string | number, label: string }[] = [];
   @Input() minDate: Date = new Date();
   @Input() existingFiles: UploadedFile[] = [];
   @Input() disabledFileUpload = false;

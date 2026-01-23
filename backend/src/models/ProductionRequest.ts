@@ -29,9 +29,6 @@ export class ProductionRequest {
   @Column({ name: 'ContactPerson', type: 'nvarchar', length: 255, nullable: false })
   contactPerson!: string;
 
-  @Column({ name: 'AssignedTeam', type: 'nvarchar', length: 255, nullable: false })
-  assignedTeam!: string;
-
   @Column({ name: 'AssignedUserId', type: 'int', nullable: true })
   assignedUserId!: number | null;
 

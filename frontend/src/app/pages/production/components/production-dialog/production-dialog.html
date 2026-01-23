@@ -10,6 +10,7 @@
 
     <form [formGroup]="form" class="flex flex-column gap-2">
         <app-production-step-general *ngIf="currentStep === 0" [form]="form" [teams]="(teams$ | async) ?? []"
+            [statuses]="workflowStages"
             [minDate]="minDate" [existingFiles]="existingFiles" [disabledFileUpload]="!canEditCore && !isAssignedUser"
             [canRemoveFiles]="canEditCore || isAssignedUser" (fileSelect)="onFileSelect($event)"
             (fileRemove)="onFileRemove($event)" (fileClear)="onFileClear()" (fileDownload)="downloadFile($event)"

@@ -88,7 +88,13 @@ export class AzureStorageService {
       });
 
       return client;
-    } catch (error) {
+    } catch (error: any) {
+      // Handle missing configuration gracefully
+      if (error.status === 500 && error.error?.message?.includes('Azure Storage configuration missing')) {
+        console.warn(`Azure Storage not configured: ${error.error.message}`);
+        throw new Error('Azure Storage not configured');
+      }
+      
       console.error(`Error initializing Azure Storage client for container ${containerName}:`, error);
       throw error;
     }
@@ -127,8 +133,10 @@ export class AzureStorageService {
         fileName,
         url: blockBlobClient.url,
       };
-    } catch (error) {
-      console.error('Error uploading file:', error);
+    } catch (error: any) {
+      if (error.message !== 'Azure Storage not configured') {
+        console.error('Error uploading file:', error);
+      }
       return {
         success: false,
         fileName: file.name,
@@ -279,7 +287,10 @@ export class AzureStorageService {
       }
 
       return blobs;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === 'Azure Storage not configured') {
+        return [];
+      }
       console.error('Error listing files:', error);
       throw error;
     }
@@ -331,7 +342,10 @@ export class AzureStorageService {
       }
 
       return files;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === 'Azure Storage not configured') {
+        return [];
+      }
       console.error('Error getting files details:', error);
       throw error;
     }

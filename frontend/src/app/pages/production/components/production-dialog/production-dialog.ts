@@ -70,7 +70,6 @@ export class ProductionDialogComponent implements OnInit {
   isUploading$ = new BehaviorSubject<boolean>(false);
   minDate: Date = new Date();
   teams$ = new BehaviorSubject<Team[]>([]);
-  requestingUsers$ = new BehaviorSubject<User[]>([]);
   assignedUsers$ = new BehaviorSubject<User[]>([]);
   products$ = new BehaviorSubject<Product[]>([]);
   workflowStages: { id: string | number, label: string }[] = [];
@@ -115,7 +114,6 @@ export class ProductionDialogComponent implements OnInit {
       name: [data.name || '', Validators.required],
       department: [data.department || '', Validators.required],
       contactPerson: [data.contactPerson || '', Validators.required],
-      assignedTeam: [data.assignedTeam || '', Validators.required],
       assignedUserId: [data.assignedUserId || null],
       deliveryDate: [data.deliveryDate ? new Date(data.deliveryDate) : null, Validators.required],
       observations: [data.observations || ''],
@@ -181,12 +179,11 @@ export class ProductionDialogComponent implements OnInit {
         this.form.patchValue({ contactPerson: currentUser.name });
         this.form.get('contactPerson')?.disable();
 
-        // Set Department (Read-only)
+        // Set Department (Team) - Auto-select user's team but allow changing
         const userTeams = (currentUser as any).teams as string[];
         if (userTeams && userTeams.length > 0) {
           const teamName = userTeams[0];
           this.form.patchValue({ department: teamName });
-          this.form.get('department')?.disable();
         }
       }
     }
@@ -212,7 +209,8 @@ export class ProductionDialogComponent implements OnInit {
           this.form.patchValue(fullData);
 
           // Disable read-only fields (AC5)
-          this.form.get('department')?.disable();
+          // Department should be editable for reassignment
+          // this.form.get('department')?.disable();
           this.form.get('contactPerson')?.disable();
 
           this.checkPermissions(fullData);
@@ -227,7 +225,11 @@ export class ProductionDialogComponent implements OnInit {
 
           if (fullData.files) {
             if (this.existingFiles.length === 0) {
-              this.existingFiles = fullData.files;
+              // Wrap in setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
+              setTimeout(() => {
+                this.existingFiles = fullData.files;
+                this.cd.detectChanges();
+              });
             }
           }
         },
@@ -375,13 +377,7 @@ export class ProductionDialogComponent implements OnInit {
   }
 
   setupValueChanges() {
-    this.form.get('department')?.valueChanges.subscribe(deptName => {
-      this.loadUsersForDepartment(deptName);
-    });
-
-    this.form.get('assignedTeam')?.valueChanges.subscribe(teamName => {
-      // Team changed
-    });
+    // No specific value changes logic needed for now
   }
 
   loadTeams() {
@@ -389,10 +385,6 @@ export class ProductionDialogComponent implements OnInit {
       next: (response) => {
         if (response.success) {
           this.teams$.next(response.data);
-          const dept = this.form.get('department')?.value;
-          if (dept) this.loadUsersForDepartment(dept);
-          const team = this.form.get('assignedTeam')?.value;
-          if (team) this.loadUsersForAssignedTeam(team);
         }
       },
       error: (error) => {
@@ -400,36 +392,6 @@ export class ProductionDialogComponent implements OnInit {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los equipos' });
       }
     });
-  }
-
-  loadUsersForDepartment(deptName: string) {
-    const team = this.teams$.value.find(t => t.name === deptName);
-    if (team) {
-      this.teamService.getUsersByTeam(team.id).subscribe({
-        next: (response) => {
-          if (response.success) {
-            this.requestingUsers$.next(response.data);
-          }
-        }
-      });
-    } else {
-      this.requestingUsers$.next([]);
-    }
-  }
-
-  loadUsersForAssignedTeam(teamName: string) {
-    const team = this.teams$.value.find(t => t.name === teamName);
-    if (team) {
-      this.teamService.getUsersByTeam(team.id).subscribe({
-        next: (response) => {
-          if (response.success) {
-            this.assignedUsers$.next(response.data);
-          }
-        }
-      });
-    } else {
-      this.assignedUsers$.next([]);
-    }
   }
 
   onFileSelect(event: any) {
@@ -472,7 +434,7 @@ export class ProductionDialogComponent implements OnInit {
     } else {
       switch (this.currentStep) {
         case 0:
-          const mainControls = ['name', 'department', 'contactPerson', 'assignedTeam', 'deliveryDate', 'statusId'];
+          const mainControls = ['name', 'department', 'contactPerson', 'deliveryDate', 'statusId'];
           isValid = mainControls.every(key => {
             const control = this.form.get(key);
             return control?.valid || control?.disabled;
@@ -543,7 +505,7 @@ export class ProductionDialogComponent implements OnInit {
     this.form.disable();
     this.form.get('observations')?.enable();
     this.form.get('statusId')?.enable();
-    this.form.get('assignedTeam')?.enable();
+    this.form.get('department')?.enable(); // Allow reassignment
     this.form.get('assignedUserId')?.enable();
 
     const productionInfo = this.form.get('productionInfo') as FormGroup;
@@ -717,9 +679,8 @@ export class ProductionDialogComponent implements OnInit {
           const generalData = {
             name: formValue.name,
             department: formValue.department,
-            contactPerson: formValue.contactPerson,
-            assignedTeam: formValue.assignedTeam,
-            assignedUserId: formValue.assignedUserId,
+      contactPerson: formValue.contactPerson,
+      assignedUserId: formValue.assignedUserId,
             deliveryDate: formValue.deliveryDate ? formValue.deliveryDate.toISOString() : null,
             observations: formValue.observations,
             statusId: formValue.statusId

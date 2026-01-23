@@ -10,18 +10,24 @@
         </small>
     </div>
 
-    <div class="formgrid grid">
-        <div class="col-12 md:col-12 mb-2">
-            <p-floatlabel variant="in">
-                <p-select id="assignedTeam" formControlName="assignedTeam" [options]="teams" optionLabel="name"
-                    optionValue="name" [style]="{'width':'100%'}" appendTo="body"></p-select>
-                <label for="assignedTeam">Area asignada</label>
-            </p-floatlabel>
-            <small class="p-error" *ngIf="form.get('assignedTeam')?.invalid && form.get('assignedTeam')?.dirty">
-                Equipo es requerido
-            </small>
-        </div>
+    <div>
+        <p-floatlabel variant="in">
+            <p-select formControlName="department" [options]="teams" optionLabel="name" optionValue="name"
+                styleClass="w-full" appendTo="body" placeholder="Seleccione un equipo" [showClear]="true" />
+            <label for="department">Equipo Asignado</label>
+        </p-floatlabel>
+        <small class="p-error" *ngIf="form.get('department')?.invalid && form.get('department')?.dirty">
+            Equipo es requerido
+        </small>
     </div>
+
+    <div>
+        <p-floatlabel variant="in">
+            <input pInputText id="contactPerson" formControlName="contactPerson" class="w-full" autocomplete="off" />
+            <label for="contactPerson">Solicitante</label>
+        </p-floatlabel>
+    </div>
+
 
     <div class="mb-2">
         <p-floatlabel variant="in">
@@ -36,6 +42,17 @@
         </p-floatlabel>
         <small class="p-error" *ngIf="form.get('deliveryDate')?.invalid && form.get('deliveryDate')?.dirty">
             Fecha es requerida
+        </small>
+    </div>
+
+    <div>
+        <p-floatlabel variant="in">
+            <p-select formControlName="statusId" [options]="statuses" optionLabel="label" optionValue="id"
+                styleClass="w-full" appendTo="body" placeholder="Seleccione un estado" />
+            <label for="statusId">Estado</label>
+        </p-floatlabel>
+        <small class="p-error" *ngIf="form.get('statusId')?.invalid && form.get('statusId')?.dirty">
+            Estado es requerido
         </small>
     </div>
 

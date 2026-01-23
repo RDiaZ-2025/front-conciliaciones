@@ -5,7 +5,6 @@ CREATE TABLE IF NOT EXISTS production_requests (
   requestDate TEXT NOT NULL,
   department TEXT NOT NULL,
   contactPerson TEXT NOT NULL,
-  assignedTeam TEXT NOT NULL,
   deliveryDate TEXT,
   observations TEXT,
   stage TEXT NOT NULL DEFAULT 'request'

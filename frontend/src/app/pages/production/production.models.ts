@@ -137,7 +137,6 @@ export interface ProductionRequest {
   requestDate: string;
   department: string;
   contactPerson: string;
-  assignedTeam: string;
   assignedUserId?: number;
   deliveryDate?: string;
   observations?: string;
@@ -172,7 +171,6 @@ export const MOCK_PRODUCTION_REQUESTS: ProductionRequest[] = [
     requestDate: '2023-07-15T10:30:00Z',
     department: 'Marketing',
     contactPerson: 'Ana Martínez',
-    assignedTeam: 'Equipo Creativo A',
     deliveryDate: '2023-08-30',
     observations: 'Necesitamos enfocarnos en el nuevo producto estrella',
     stage: 'in_production'
@@ -183,7 +181,6 @@ export const MOCK_PRODUCTION_REQUESTS: ProductionRequest[] = [
     requestDate: '2023-06-20T14:15:00Z',
     department: 'Comunicación',
     contactPerson: 'Carlos Rodríguez',
-    assignedTeam: 'Equipo Audiovisual',
     deliveryDate: '2023-09-15',
     observations: 'Debe incluir testimonios de los directivos',
     stage: 'pre_production'
@@ -194,7 +191,6 @@ export const MOCK_PRODUCTION_REQUESTS: ProductionRequest[] = [
     requestDate: '2023-08-05T09:45:00Z',
     department: 'Ventas',
     contactPerson: 'Laura Sánchez',
-    assignedTeam: 'Equipo Creativo B',
     deliveryDate: '2023-11-20',
     observations: 'Formato de 30 segundos para prime time',
     stage: 'quotation'
@@ -205,7 +201,6 @@ export const MOCK_PRODUCTION_REQUESTS: ProductionRequest[] = [
     requestDate: '2023-07-28T11:20:00Z',
     department: 'Marketing Digital',
     contactPerson: 'Miguel Torres',
-    assignedTeam: 'Equipo Social Media',
     deliveryDate: '2023-08-15',
     stage: 'completed'
   },
@@ -215,7 +210,6 @@ export const MOCK_PRODUCTION_REQUESTS: ProductionRequest[] = [
     requestDate: '2023-08-10T16:30:00Z',
     department: 'Operaciones',
     contactPerson: 'Patricia Gómez',
-    assignedTeam: 'Equipo Documental',
     deliveryDate: '2023-10-30',
     observations: 'Necesitamos acceso a todas las plantas de producción',
     stage: 'request'

@@ -9,6 +9,58 @@ import { Not, In } from 'typeorm';
 const notificationService = new NotificationService();
 const historyService = new ProductionRequestHistoryService();
 
+// Helper function for Smart Workload Distribution
+const performSmartAssignment = async (department: string): Promise<{ assignedUserId: number, userName: string, activeRequestsCount: number } | null> => {
+  try {
+    const teamRepository = AppDataSource.getRepository(Team);
+    const team = await teamRepository.findOne({ where: { name: department } });
+
+    if (team) {
+      const userRepository = AppDataSource.getRepository(User);
+      // Find users in the team who are active (status 1)
+      const users = await userRepository.find({ where: { teamId: team.id, status: 1 } });
+
+      if (users && users.length > 0) {
+        const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
+        
+        // Calculate workload for each user
+        // Workload: Number of active requests (not completed or cancelled)
+        const userWorkloads = await Promise.all(users.map(async (user) => {
+          const activeRequestsCount = await productionRequestRepository.count({
+            where: {
+              assignedUserId: user.id,
+              stage: Not(In(['completed', 'cancelled']))
+            }
+          });
+          return { user, count: activeRequestsCount };
+        }));
+
+        // Sort by workload (ascending)
+        userWorkloads.sort((a, b) => a.count - b.count);
+
+        // Find users with the minimum workload
+        const minWorkload = userWorkloads[0].count;
+        const candidates = userWorkloads.filter(uw => uw.count === minWorkload);
+
+        // Random selection among candidates (Tie-breaking)
+        const randomIndex = Math.floor(Math.random() * candidates.length);
+        const selectedCandidate = candidates[randomIndex];
+        
+        console.log(`Smart Assignment: Assigned to ${selectedCandidate.user.name} (ID: ${selectedCandidate.user.id}) with ${selectedCandidate.count} active requests.`);
+        
+        return {
+          assignedUserId: selectedCandidate.user.id,
+          userName: selectedCandidate.user.name,
+          activeRequestsCount: selectedCandidate.count
+        };
+      }
+    }
+  } catch (error) {
+    console.error("Error in Smart Workload Distribution:", error);
+  }
+  return null;
+};
+
 export class ProductionController {
   static async getFormatTypes(req: Request, res: Response): Promise<Response> {
     try {
@@ -172,7 +224,6 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       name,
       department,
       contactPerson,
-      assignedTeam,
       assignedUserId,
       deliveryDate,
       observations,
@@ -204,57 +255,18 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
     }
 
     // Validate required fields
-    if (!name || !department || !contactPerson || !assignedTeam) {
+    if (!name || !department || !contactPerson) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
     // Smart Workload Distribution Engine
-    // Logic to assign user if assignedTeam is present and no user is manually assigned
+    // Logic to assign user if department (team) is present and no user is manually assigned
     let assignmentMethod = 'Manual';
-    if (assignedTeam && !assignedUserId) {
-      try {
-        const teamRepository = AppDataSource.getRepository(Team);
-        const team = await teamRepository.findOne({ where: { name: assignedTeam } });
-
-        if (team) {
-          const userRepository = AppDataSource.getRepository(User);
-          // Find users in the team who are active (status 1)
-          const users = await userRepository.find({ where: { teamId: team.id, status: 1 } });
-
-          if (users && users.length > 0) {
-            const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
-            
-            // Calculate workload for each user
-            // Workload: Number of active requests (not completed or cancelled)
-            const userWorkloads = await Promise.all(users.map(async (user) => {
-              const activeRequestsCount = await productionRequestRepository.count({
-                where: {
-                  assignedUserId: user.id,
-                  stage: Not(In(['completed', 'cancelled']))
-                }
-              });
-              return { user, count: activeRequestsCount };
-            }));
-
-            // Sort by workload (ascending)
-            userWorkloads.sort((a, b) => a.count - b.count);
-
-            // Find users with the minimum workload
-            const minWorkload = userWorkloads[0].count;
-            const candidates = userWorkloads.filter(uw => uw.count === minWorkload);
-
-            // Random selection among candidates (Tie-breaking)
-            const randomIndex = Math.floor(Math.random() * candidates.length);
-            const selectedCandidate = candidates[randomIndex];
-            
-            assignedUserId = selectedCandidate.user.id;
-            assignmentMethod = 'Smart Workload Distribution';
-            
-            console.log(`Smart Assignment: Assigned to ${selectedCandidate.user.name} (ID: ${assignedUserId}) with ${selectedCandidate.count} active requests.`);
-          }
-        }
-      } catch (error) {
-        console.error("Error in Smart Workload Distribution:", error);
+    if (department && !assignedUserId) {
+      const assignment = await performSmartAssignment(department);
+      if (assignment) {
+        assignedUserId = assignment.assignedUserId;
+        assignmentMethod = 'Smart Workload Distribution';
       }
     }
 
@@ -272,7 +284,6 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       requestDate: new Date(),
       department,
       contactPerson,
-      assignedTeam,
       assignedUserId,
       deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
       observations,
@@ -336,11 +347,10 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
 export const updateProductionRequest = async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const { id } = req.params;
-    const {
+    let {
       name,
       department,
       contactPerson,
-      assignedTeam,
       assignedUserId,
       deliveryDate,
       observations,
@@ -353,7 +363,7 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
     } = req.body;
 
     // Validate required fields
-    if (!name || !department || !contactPerson || !assignedTeam) {
+    if (!name || !department || !contactPerson) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
@@ -382,6 +392,23 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
       return res.status(404).json({ message: 'Production request not found' });
     }
 
+    // Smart Workload Distribution for Updates
+    let assignmentMethod = 'Manual';
+    
+    // Check if department has changed
+    const departmentChanged = department && existingRequest.department !== department;
+
+    // Trigger Smart Assignment if:
+    // 1. Department has changed (FORCE REASSIGNMENT to a user in the new department)
+    // 2. OR Department exists but no user is currently assigned (and none provided in body)
+    if (departmentChanged || (department && !assignedUserId && !existingRequest.assignedUserId)) {
+      const assignment = await performSmartAssignment(department);
+      if (assignment) {
+        assignedUserId = assignment.assignedUserId;
+        assignmentMethod = 'Smart Workload Distribution';
+      }
+    }
+
     // Log changes before saving if user is authenticated
     if (req.user?.userId) {
       await historyService.logDifferences(
@@ -390,7 +417,6 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
           name,
           department,
           contactPerson,
-          assignedTeam,
           assignedUserId,
           deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
           observations,
@@ -404,7 +430,6 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
     existingRequest.name = name;
     existingRequest.department = department;
     existingRequest.contactPerson = contactPerson;
-    existingRequest.assignedTeam = assignedTeam;
     existingRequest.assignedUserId = assignedUserId;
     existingRequest.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
     existingRequest.observations = observations;
@@ -424,6 +449,18 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
     }
 
     const updatedRequest = await productionRequestRepository.save(existingRequest);
+
+    // Audit assignment info if auto-assigned
+    if (req.user?.userId && assignmentMethod === 'Smart Workload Distribution' && assignedUserId) {
+       await historyService.logChange(
+        updatedRequest.id,
+        'AssignmentMethod',
+        null,
+        `Smart Workload Distribution: Auto-assigned to user ID ${assignedUserId} based on workload`,
+        req.user.userId,
+        'update'
+      );
+    }
 
     return res.status(200).json(updatedRequest);
   } catch (error) {
@@ -532,11 +569,10 @@ export const deleteProductionRequest = async (req: Request, res: Response): Prom
 export const updateStepGeneral = async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const { id } = req.params;
-    const {
+    let {
       name,
       department,
       contactPerson,
-      assignedTeam,
       assignedUserId,
       deliveryDate,
       observations,
@@ -554,11 +590,28 @@ export const updateStepGeneral = async (req: Request, res: Response): Promise<Re
       return res.status(404).json({ message: 'Production request not found' });
     }
 
+    // Smart Workload Distribution for Updates
+    let assignmentMethod = 'Manual';
+
+    // Check if department has changed
+    const departmentChanged = department && existingRequest.department !== department;
+
+    // Trigger Smart Assignment if:
+    // 1. Department has changed (FORCE REASSIGNMENT to a user in the new department)
+    // 2. OR Department exists but no user is currently assigned (and none provided in body)
+    if (departmentChanged || (department && !assignedUserId && !existingRequest.assignedUserId)) {
+      const assignment = await performSmartAssignment(department);
+      if (assignment) {
+        assignedUserId = assignment.assignedUserId;
+        assignmentMethod = 'Smart Workload Distribution';
+      }
+    }
+
     // Log differences
     if (req.user?.userId) {
       await historyService.logDifferences(
         existingRequest,
-        { name, department, contactPerson, assignedTeam, assignedUserId, deliveryDate: deliveryDate ? new Date(deliveryDate) : null, observations },
+        { name, department, contactPerson, assignedUserId, deliveryDate: deliveryDate ? new Date(deliveryDate) : null, observations },
         req.user.userId
       );
     }
@@ -566,13 +619,25 @@ export const updateStepGeneral = async (req: Request, res: Response): Promise<Re
     existingRequest.name = name;
     existingRequest.department = department;
     existingRequest.contactPerson = contactPerson;
-    existingRequest.assignedTeam = assignedTeam;
     existingRequest.assignedUserId = assignedUserId;
     existingRequest.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
     existingRequest.observations = observations;
     if (statusId) existingRequest.statusId = statusId;
 
     const updatedRequest = await productionRequestRepository.save(existingRequest);
+    
+    // Audit assignment info if auto-assigned
+    if (req.user?.userId && assignmentMethod === 'Smart Workload Distribution' && assignedUserId) {
+       await historyService.logChange(
+        updatedRequest.id,
+        'AssignmentMethod',
+        null,
+        `Smart Workload Distribution: Auto-assigned to user ID ${assignedUserId} based on workload`,
+        req.user.userId,
+        'update'
+      );
+    }
+    
     return res.status(200).json(updatedRequest);
   } catch (error) {
     console.error('Error updating general info:', error);

@@ -12,7 +12,6 @@ BEGIN
         requestDate DATETIME NOT NULL,
         department NVARCHAR(255) NOT NULL,
         contactPerson NVARCHAR(255) NOT NULL,
-        assignedTeam NVARCHAR(255) NOT NULL,
         deliveryDate DATETIME NULL,
         observations NVARCHAR(MAX) NULL,
         stage NVARCHAR(50) NOT NULL DEFAULT 'request'
