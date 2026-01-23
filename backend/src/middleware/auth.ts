@@ -23,18 +23,26 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     return;
   }
 
-  const decoded = await AuthService.verifyToken(token);
+  try {
+    const decoded = await AuthService.verifyToken(token);
 
-  if (!decoded) {
+    if (!decoded) {
+      res.status(403).json({
+        success: false,
+        message: 'Token inválido o expirado'
+      });
+      return;
+    }
+
+    req.user = decoded;
+    next();
+  } catch (error) {
     res.status(403).json({
       success: false,
       message: 'Token inválido o expirado'
     });
     return;
   }
-
-  req.user = decoded;
-  next();
 };
 
 export const optionalAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -42,9 +50,14 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
   const token = authHeader && authHeader.split(' ')[1];
 
   if (token) {
-    const decoded = await AuthService.verifyToken(token);
-    if (decoded) {
-      req.user = decoded;
+    try {
+      const decoded = await AuthService.verifyToken(token);
+      if (decoded) {
+        req.user = decoded;
+      }
+    } catch (error) {
+      // Si el token es inválido en optionalAuth, simplemente continuamos sin usuario autenticado
+      console.warn('Token inválido en optionalAuth:', error);
     }
   }
 
