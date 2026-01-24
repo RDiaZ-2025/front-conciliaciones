@@ -159,7 +159,6 @@ export class ProductionDialogComponent implements OnInit {
       productionInfo: this.fb.group({
         formatTypeId: [data.productionInfo?.formatTypeId || null, Validators.required],
         rightsDurationId: [data.productionInfo?.rightsDurationId || null, Validators.required],
-        campaignEmissionDate: [data.productionInfo?.campaignEmissionDate ? new Date(data.productionInfo.campaignEmissionDate) : null, Validators.required],
         communicationTone: [data.productionInfo?.communicationTone || '', Validators.required],
         ownAndExternalMedia: [data.productionInfo?.ownAndExternalMedia || ''],
         tvFormats: [data.productionInfo?.tvFormats || '', Validators.required],

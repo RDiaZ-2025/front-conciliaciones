@@ -17,20 +17,6 @@
             </div>
         </div>
 
-        <div class="mb-2">
-            <p-floatlabel variant="in">
-                <ng-container *ngIf="!form.get('productionInfo.campaignEmissionDate')?.disabled">
-                    <p-datepicker formControlName="campaignEmissionDate" dateFormat="yy-mm-dd" [showIcon]="true"
-                        appendTo="body" styleClass="w-full" inputStyleClass="w-full" [showTime]="true"
-                        hourFormat="12"></p-datepicker>
-                </ng-container>
-                <input *ngIf="form.get('productionInfo.campaignEmissionDate')?.disabled" pInputText
-                    [value]="form.get('productionInfo.campaignEmissionDate')?.value | date:'yyyy-MM-dd hh:mm a'"
-                    class="w-full" disabled />
-                <label>Fecha de Emisión de Campaña</label>
-            </p-floatlabel>
-        </div>
-
         <p-floatlabel variant="in">
             <input pInputText formControlName="communicationTone" class="w-full" />
             <label>Tono de Comunicación</label>
