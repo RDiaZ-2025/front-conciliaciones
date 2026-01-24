@@ -12,7 +12,6 @@ import { RadioButtonModule } from 'primeng/radiobutton';
 import { CheckboxModule } from 'primeng/checkbox';
 import { MessageService, SharedModule } from 'primeng/api';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
-import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
 import { UploadService } from './upload.service';
 import { AuthService } from '../../services/auth.service';
 import { SafeUrlPipe } from '../../pipes/safe-url.pipe';
@@ -33,8 +32,7 @@ import { SafeUrlPipe } from '../../pipes/safe-url.pipe';
     CheckboxModule,
     SharedModule,
     SafeUrlPipe,
-    PageHeaderComponent,
-    SessionInfoComponent
+    PageHeaderComponent
   ],
   providers: [MessageService],
   templateUrl: './upload.html',
