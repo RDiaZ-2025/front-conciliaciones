@@ -1,14 +1,21 @@
+
 import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MessageService } from 'primeng/api';
+import { Router } from '@angular/router';
+import { MessageService, MenuItem } from 'primeng/api';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
 import { BreadcrumbModule } from 'primeng/breadcrumb';
-import { MenuItem } from 'primeng/api';
+import { InputTextModule } from 'primeng/inputtext';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { TooltipModule } from 'primeng/tooltip';
 import { AzureStorageService } from '../../services/azure-storage.service';
+import { AuthService } from '../../services/auth.service';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
+import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
 
 interface FileItem {
   id: string;
@@ -30,7 +37,12 @@ interface FileItem {
     ButtonModule,
     ToastModule,
     BreadcrumbModule,
-    PageHeaderComponent
+    InputTextModule,
+    IconFieldModule,
+    InputIconModule,
+    TooltipModule,
+    PageHeaderComponent,
+    SessionInfoComponent
   ],
   providers: [MessageService],
   templateUrl: './commercial.component.html',
@@ -42,6 +54,7 @@ export class CommercialComponent implements OnInit {
 
   // Configuration
   private readonly CONTAINER_NAME = 'autoconsumoshared';
+  // Use the path exactly as seen in Azure, but be careful with slashes
   private readonly ROOT_PATH = 'Comercial/Repositorio Comercial';
 
   // State
@@ -49,6 +62,8 @@ export class CommercialComponent implements OnInit {
   loading = signal<boolean>(false);
   currentPath = signal<string>(this.ROOT_PATH);
   breadcrumbItems = signal<MenuItem[]>([]);
+  searchValue = signal<string>('');
+
   homeItem: MenuItem = { icon: 'pi pi-home', command: () => this.navigateToRoot() };
 
   ngOnInit() {
@@ -66,24 +81,10 @@ export class CommercialComponent implements OnInit {
     this.loading.set(true);
     try {
       const path = this.currentPath();
-      // Azure listBlobsFlat lists everything recursively by default if we don't handle it carefully.
-      // However, AzureStorageService.getFilesDetails uses listBlobsFlat. 
-      // It returns all files. We need to process them to show a folder structure if we want to mimic a file explorer.
-      // OR we can rely on a different method if we want "virtual folders".
-      
-      // Since the existing service `getFilesDetails` lists all blobs recursively (flat), 
-      // we might need to filter them client-side or improve the service.
-      // But `listBlobsFlat` takes a prefix.
-      
-      // To simulate folders, we need to:
-      // 1. Get all blobs starting with `path`.
-      // 2. Identify direct children and "folders" (prefixes).
-      
-      // Let's use `getFilesDetails` and filter client-side for now as it's the easiest given existing service.
-      // A better approach for large datasets is using `listBlobsByHierarchy` but the service doesn't expose it.
-      // We will assume the service returns all files with the prefix.
+      console.log('Loading files for path:', path);
       
       const allFiles = await this.azureService.getFilesDetails(path, this.CONTAINER_NAME);
+      console.log('Raw files from Azure:', allFiles);
       
       // Process files to extract folders and direct files
       const items: FileItem[] = [];
@@ -96,7 +97,7 @@ export class CommercialComponent implements OnInit {
         // Remove the current path prefix
         const relativePath = file.id.startsWith(normalizedPath) 
           ? file.id.substring(normalizedPath.length) 
-          : file.id; // Should verify if this happens
+          : file.id; 
           
         if (!relativePath) continue;
 
@@ -118,11 +119,23 @@ export class CommercialComponent implements OnInit {
             });
           }
         } else {
-          // It's a file in the current directory
-          items.push({
-            ...file,
-            isFolder: false
-          });
+          // It's a file or a direct folder (from Share)
+          const isDirectory = file.type === 'directory';
+          
+          if (isDirectory) {
+             if (!folders.has(file.name)) {
+                folders.add(file.name);
+                items.push({
+                  ...file,
+                  isFolder: true
+                });
+             }
+          } else {
+              items.push({
+                ...file,
+                isFolder: false
+              });
+          }
         }
       }
       
@@ -147,9 +160,7 @@ export class CommercialComponent implements OnInit {
       this.updateBreadcrumb();
       this.loadFiles();
     } else {
-      // Preview or download? 
-      // For now, let's just download/open
-      window.open(item.url, '_blank');
+       // Optional: Preview logic could go here
     }
   }
   
@@ -165,8 +176,9 @@ export class CommercialComponent implements OnInit {
     const items: MenuItem[] = [];
     let current = this.ROOT_PATH;
     
+    // Always add Root (Repositorio Comercial)
     items.push({ 
-        label: 'Inicio', 
+        label: 'Repositorio Comercial', 
         command: () => {
             this.currentPath.set(this.ROOT_PATH);
             this.updateBreadcrumb();

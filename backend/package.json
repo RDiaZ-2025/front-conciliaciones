@@ -22,7 +22,14 @@
     "db:status": "npm run migrate status",
     "db:rollback": "npm run migrate revert"
   },
-  "keywords": ["api", "backend", "conciliaciones"],
+  "keywords": [
+    "api",
+    "backend",
+    "conciliaciones"
+  ],
   "author": "VOC Team",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@azure/storage-file-share": "^12.30.0"
+  }
 }

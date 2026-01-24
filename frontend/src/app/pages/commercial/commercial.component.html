@@ -1,59 +1,86 @@
-<app-page-header 
-    title="Comercial" 
-    subtitle="Repositorio de documentación comercial y onboarding"
-    icon="pi pi-briefcase">
-</app-page-header>
 
-<div class="card">
+<div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
+    <app-page-header 
+        title="Comercial" 
+        subtitle="Repositorio de documentación comercial y onboarding"
+        icon="pi pi-briefcase">
+    </app-page-header>
+    
+    <app-session-info></app-session-info>
     <p-toast></p-toast>
     
-    <div class="mb-4">
-        <p-breadcrumb [model]="breadcrumbItems()" [home]="homeItem"></p-breadcrumb>
-    </div>
+    <div class="card p-4 surface-card border-round shadow-2">
+        <div class="mb-4">
+            <p-breadcrumb [model]="breadcrumbItems()" [home]="homeItem"></p-breadcrumb>
+        </div>
 
-    <p-table [value]="files()" [loading]="loading()" [rowHover]="true" styleClass="p-datatable-sm">
-        <ng-template pTemplate="header">
-            <tr>
-                <th style="width: 3rem"></th>
-                <th>Nombre</th>
-                <th style="width: 150px">Tamaño</th>
-                <th style="width: 200px">Fecha</th>
-                <th style="width: 100px">Acciones</th>
-            </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-file>
-            <tr class="cursor-pointer hover:surface-hover" (click)="onItemClick(file)">
-                <td>
-                    <i [class]="getFileIcon(file.type)" style="font-size: 1.5rem"></i>
-                </td>
-                <td>
-                    <span class="font-medium">{{ file.name }}</span>
-                </td>
-                <td>{{ formatSize(file.size) }}</td>
-                <td>{{ file.uploadDate | date:'medium' }}</td>
-                <td>
-                    <div class="flex gap-2">
-                        <button *ngIf="!file.isFolder" 
-                                pButton 
-                                icon="pi pi-download" 
-                                class="p-button-text p-button-rounded p-button-sm"
-                                (click)="downloadFile(file, $event)"
-                                pTooltip="Descargar"
-                                tooltipPosition="left">
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        </ng-template>
-        <ng-template pTemplate="emptymessage">
-            <tr>
-                <td colspan="5" class="text-center p-4">
-                    <div class="flex flex-column align-items-center gap-2">
-                        <i class="pi pi-folder-open text-400" style="font-size: 2rem"></i>
-                        <span class="text-500">No hay archivos en esta carpeta</span>
-                    </div>
-                </td>
-            </tr>
-        </ng-template>
-    </p-table>
+        <p-table #dt [value]="files()" [loading]="loading()" [rowHover]="true" 
+            [paginator]="true" [rows]="10"
+            [globalFilterFields]="['name']"
+            currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} archivos"
+            [showCurrentPageReport]="true"
+            styleClass="p-datatable-sm">
+            
+            <ng-template pTemplate="caption">
+                <div class="flex align-items-center justify-content-between">
+                    <span class="p-input-icon-left">
+                        <p-iconField iconPosition="left">
+                            <p-inputIcon styleClass="pi pi-search" />
+                            <input pInputText type="text"
+                                (input)="dt.filterGlobal($any($event.target).value, 'contains')"
+                                placeholder="Buscar archivo..." />
+                        </p-iconField>
+                    </span>
+                    <p-button icon="pi pi-refresh" [rounded]="true" [text]="true" (onClick)="loadFiles()"
+                        pTooltip="Recargar"></p-button>
+                </div>
+            </ng-template>
+
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width: 3rem"></th>
+                    <th pSortableColumn="name">Nombre <p-sortIcon field="name"></p-sortIcon></th>
+                    <th pSortableColumn="size" style="width: 150px">Tamaño <p-sortIcon field="size"></p-sortIcon></th>
+                    <th pSortableColumn="uploadDate" style="width: 200px">Fecha <p-sortIcon field="uploadDate"></p-sortIcon></th>
+                    <th style="width: 100px">Acciones</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-file>
+                <tr class="cursor-pointer hover:surface-hover" (click)="onItemClick(file)">
+                    <td>
+                        <i [class]="getFileIcon(file.type)" style="font-size: 1.5rem"></i>
+                    </td>
+                    <td>
+                        <span class="font-medium">{{ file.name }}</span>
+                    </td>
+                    <td>{{ formatSize(file.size) }}</td>
+                    <td>{{ file.isFolder ? '-' : (file.uploadDate | date:'medium') }}</td>
+                    <td>
+                        <div class="flex gap-2">
+                            <button *ngIf="!file.isFolder" 
+                                    pButton 
+                                    icon="pi pi-download" 
+                                    class="p-button-text p-button-rounded p-button-sm"
+                                    (click)="downloadFile(file, $event)"
+                                    pTooltip="Descargar"
+                                    tooltipPosition="left">
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="5" class="text-center p-4">
+                        <div class="flex flex-column align-items-center gap-2">
+                            <i class="pi pi-folder-open text-400" style="font-size: 2rem"></i>
+                            <span class="text-500">No hay archivos en esta carpeta</span>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
 </div>
