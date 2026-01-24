@@ -5,7 +5,7 @@ export class StorageController {
   static async generateSasToken(req: Request, res: Response) {
     try {
       // Get container from query or env
-      const allowedContainers = ['private', 'public'];
+      const allowedContainers = ['private', 'public', 'autoconsumoshared'];
       let containerName = req.query.container as string;
 
       if (!containerName || !allowedContainers.includes(containerName)) {

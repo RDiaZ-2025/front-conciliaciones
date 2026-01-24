@@ -65,6 +65,10 @@ export const routes: Routes = [
         path: 'dashboard',
         loadComponent: () => import('./pages/dashboard/dashboard').then(m => m.DashboardComponent)
       },
+      {
+        path: 'commercial/onboarding',
+        loadComponent: () => import('./pages/commercial/commercial.component').then(m => m.CommercialComponent)
+      },
     ]
   },
 

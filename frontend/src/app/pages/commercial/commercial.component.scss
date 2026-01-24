@@ -1,0 +1,12 @@
+:host {
+    display: block;
+    width: 100%;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.hover\:surface-hover:hover {
+    background-color: var(--surface-hover);
+}
