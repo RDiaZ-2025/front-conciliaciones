@@ -15,7 +15,6 @@ import { TooltipModule } from 'primeng/tooltip';
 import { AzureStorageService } from '../../services/azure-storage.service';
 import { AuthService } from '../../services/auth.service';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
-import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
 
 interface FileItem {
   id: string;
@@ -41,8 +40,7 @@ interface FileItem {
     IconFieldModule,
     InputIconModule,
     TooltipModule,
-    PageHeaderComponent,
-    SessionInfoComponent
+    PageHeaderComponent
   ],
   providers: [MessageService],
   templateUrl: './commercial.component.html',
@@ -160,7 +158,8 @@ export class CommercialComponent implements OnInit {
       this.updateBreadcrumb();
       this.loadFiles();
     } else {
-       // Optional: Preview logic could go here
+       // Download file on click since actions column is removed
+       this.azureService.downloadSingleFile(item.id, item.name, this.CONTAINER_NAME);
     }
   }
   

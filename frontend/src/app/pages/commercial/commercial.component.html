@@ -6,7 +6,6 @@
         icon="pi pi-briefcase">
     </app-page-header>
     
-    <app-session-info></app-session-info>
     <p-toast></p-toast>
     
     <div class="card p-4 surface-card border-round shadow-2">
@@ -40,9 +39,6 @@
                 <tr>
                     <th style="width: 3rem"></th>
                     <th pSortableColumn="name">Nombre <p-sortIcon field="name"></p-sortIcon></th>
-                    <th pSortableColumn="size" style="width: 150px">Tamaño <p-sortIcon field="size"></p-sortIcon></th>
-                    <th pSortableColumn="uploadDate" style="width: 200px">Fecha <p-sortIcon field="uploadDate"></p-sortIcon></th>
-                    <th style="width: 100px">Acciones</th>
                 </tr>
             </ng-template>
 
@@ -53,20 +49,6 @@
                     </td>
                     <td>
                         <span class="font-medium">{{ file.name }}</span>
-                    </td>
-                    <td>{{ formatSize(file.size) }}</td>
-                    <td>{{ file.isFolder ? '-' : (file.uploadDate | date:'medium') }}</td>
-                    <td>
-                        <div class="flex gap-2">
-                            <button *ngIf="!file.isFolder" 
-                                    pButton 
-                                    icon="pi pi-download" 
-                                    class="p-button-text p-button-rounded p-button-sm"
-                                    (click)="downloadFile(file, $event)"
-                                    pTooltip="Descargar"
-                                    tooltipPosition="left">
-                            </button>
-                        </div>
                     </td>
                 </tr>
             </ng-template>
