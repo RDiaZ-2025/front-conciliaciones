@@ -6,8 +6,6 @@
     <p-button label="Nuevo Equipo" icon="pi pi-plus" (onClick)="openNew()"></p-button>
   </app-page-header>
 
-  <app-session-info></app-session-info>
-
   <div class="card">
     <p-table [value]="teams()" [loading]="loading()" [paginator]="true" [rows]="10" styleClass="p-datatable-sm">
       <ng-template pTemplate="header">

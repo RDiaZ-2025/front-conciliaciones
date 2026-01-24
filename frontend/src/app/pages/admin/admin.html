@@ -3,26 +3,15 @@
 
 <div class="flex flex-column gap-4 p-4">
   <app-page-header title="Gestión de Usuarios" subtitle="Gestión avanzada de usuarios y permisos" icon="pi pi-shield">
+    <p-iconField iconPosition="left">
+      <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+      <input pInputText type="text" [formControl]="searchControl" placeholder="Buscar usuario..."
+        class="w-full sm:w-20rem" />
+    </p-iconField>
     <p-button label="Nuevo Usuario" icon="pi pi-plus" (onClick)="openUserDialog()"></p-button>
   </app-page-header>
 
-  <app-session-info></app-session-info>
-
   <div class="card border-round-2xl shadow-1 surface-card overflow-hidden">
-    <p-toolbar styleClass="border-none border-bottom-1 surface-border p-4 bg-transparent">
-      <div class="p-toolbar-group-start flex flex-column align-items-start">
-        <h2 class="m-0 text-2xl font-medium mb-1">Gestión de Usuarios</h2>
-        <p class="m-0 text-600">Administra usuarios y sus permisos del sistema</p>
-      </div>
-      <div class="p-toolbar-group-end gap-3 flex-wrap">
-        <p-iconField iconPosition="left">
-          <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
-          <input pInputText type="text" [formControl]="searchControl" placeholder="Buscar usuario..."
-            class="w-full sm:w-20rem" />
-        </p-iconField>
-      </div>
-    </p-toolbar>
-
     <!-- Table -->
     <p-table #dt [value]="users" [loading]="loading()" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[5, 10, 25]"
       [globalFilterFields]="['name', 'email', 'teamName']" [filterDelay]="0" styleClass="p-datatable-lg"

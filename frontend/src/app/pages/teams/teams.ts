@@ -7,7 +7,6 @@ import { TooltipModule } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
-import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
 import { TeamDialogComponent } from './team-dialog/team-dialog';
 import { TeamService } from '../../services/team.service';
 import { Team } from '../production/production.models';
@@ -23,7 +22,6 @@ import { Team } from '../production/production.models';
     TooltipModule,
     ConfirmDialogModule,
     PageHeaderComponent,
-    SessionInfoComponent,
     TeamDialogComponent
   ],
   providers: [MessageService, ConfirmationService],

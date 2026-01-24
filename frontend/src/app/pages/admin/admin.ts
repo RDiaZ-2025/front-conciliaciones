@@ -7,7 +7,6 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { Table, TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { ToolbarModule } from 'primeng/toolbar';
 import { CardModule } from 'primeng/card';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -24,7 +23,6 @@ import { UserDialogComponent } from './components/user-dialog/user-dialog';
 import { HistoryDialogComponent } from './components/history-dialog/history-dialog';
 import { AccessHistoryRecord } from '../../services/user.service';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
-import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
 
 @Component({
   selector: 'app-admin',
@@ -35,7 +33,6 @@ import { SessionInfoComponent } from '../../components/shared/session-info/sessi
     TableModule,
     ButtonModule,
     InputTextModule,
-    ToolbarModule,
     CardModule,
     ToastModule,
     ConfirmDialogModule,
@@ -43,8 +40,7 @@ import { SessionInfoComponent } from '../../components/shared/session-info/sessi
     IconFieldModule,
     InputIconModule,
     TooltipModule,
-    PageHeaderComponent,
-    SessionInfoComponent
+    PageHeaderComponent
   ],
   providers: [DialogService, MessageService, ConfirmationService],
   templateUrl: './admin.html',
