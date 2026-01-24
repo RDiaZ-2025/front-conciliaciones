@@ -47,7 +47,7 @@
             </ng-template>
 
             <ng-template pTemplate="body" let-file>
-                <tr class="cursor-pointer hover:surface-hover" (click)="onItemClick(file)">
+                <tr class="cursor-pointer" (click)="onItemClick(file)">
                     <td>
                         <i [class]="getFileIcon(file.type)" style="font-size: 1.5rem"></i>
                     </td>
