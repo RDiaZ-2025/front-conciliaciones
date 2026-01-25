@@ -25,6 +25,10 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/production/production').then(m => m.ProductionComponent)
       },
       {
+        path: 'campaign-scheduling',
+        loadComponent: () => import('./pages/production/campaign-scheduling/campaign-scheduling.component').then(m => m.CampaignSchedulingComponent)
+      },
+      {
         path: 'requests-report',
         loadComponent: () => import('./pages/production/requests-report/requests-report.component').then(m => m.RequestsReportComponent)
       },
