@@ -14,6 +14,7 @@ export * from './Product';
 export * from './CampaignProduct';
 export * from './Objective';
 export * from './Status';
+export * from './Campaign';
 
 export { LoadDocumentsOCbyUser } from './LoadDocumentsOCbyUser';
 export { MenuItem } from './MenuItem';
@@ -46,6 +47,8 @@ import { FormatType } from './FormatType';
 import { RightsDuration } from './RightsDuration';
 import { Status } from './Status';
 
+import { Campaign } from './Campaign';
+
 export const entities = [
   User,
   Permission,
@@ -64,6 +67,7 @@ export const entities = [
   Team,
   Product,
   CampaignProduct,
+  Campaign,
   Objective,
   Gender,
   AgeRange,
@@ -101,7 +105,8 @@ export const ModelCategories = {
     CustomerData,
     CampaignDetail,
     AudienceData,
-    ProductionInfo
+    ProductionInfo,
+    Campaign
   },
 
   /**
