@@ -5,7 +5,6 @@ import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
 import { MessageService, TreeNode } from 'primeng/api';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
-import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
 import { MenuDialogComponent } from './menu-dialog/menu-dialog';
 import { MenusService } from './menus.service';
 import { PermissionService, Permission } from '../../services/permission.service';
@@ -20,7 +19,6 @@ import { MenuItem, MenuFormData } from './menus.models';
     ButtonModule,
     ToastModule,
     PageHeaderComponent,
-    SessionInfoComponent,
     MenuDialogComponent
   ],
   providers: [MessageService],
@@ -49,21 +47,21 @@ export class MenusComponent implements OnInit {
 
   loadData() {
     this.loading.set(true);
-    
+
     // Load permissions first, then menus
     this.permissionService.getAllPermissions().subscribe({
-        next: (response) => {
-            if (response.success) {
-                this.permissions.set(response.data);
-                this.updatePermissionOptions(response.data);
-            }
-            this.loadMenuItems();
-        },
-        error: (err) => {
-            console.error('Error loading permissions:', err);
-            // Still try to load menus even if permissions fail
-            this.loadMenuItems();
+      next: (response) => {
+        if (response.success) {
+          this.permissions.set(response.data);
+          this.updatePermissionOptions(response.data);
         }
+        this.loadMenuItems();
+      },
+      error: (err) => {
+        console.error('Error loading permissions:', err);
+        // Still try to load menus even if permissions fail
+        this.loadMenuItems();
+      }
     });
   }
 
@@ -85,8 +83,8 @@ export class MenusComponent implements OnInit {
 
   updatePermissionOptions(permissions: Permission[]) {
     const options = permissions.map(p => ({
-        label: p.name,
-        value: p.id
+      label: p.name,
+      value: p.id
     }));
     this.permissionOptions.set(options);
   }

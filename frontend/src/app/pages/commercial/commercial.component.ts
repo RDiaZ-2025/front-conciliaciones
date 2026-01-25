@@ -1,5 +1,5 @@
 
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, OnInit, signal, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -62,11 +62,23 @@ export class CommercialComponent implements OnInit {
   breadcrumbItems = signal<MenuItem[]>([]);
   searchValue = signal<string>('');
 
+  filteredFiles = computed(() => {
+    const term = this.searchValue().toLowerCase();
+    const currentFiles = this.files();
+    if (!term) return currentFiles;
+    return currentFiles.filter(f => f.name.toLowerCase().includes(term));
+  });
+
   homeItem: MenuItem = { icon: 'pi pi-home', command: () => this.navigateToRoot() };
 
   ngOnInit() {
     this.updateBreadcrumb();
     this.loadFiles();
+  }
+
+  onSearch(event: Event) {
+    const target = event.target as HTMLInputElement;
+    this.searchValue.set(target.value);
   }
 
   navigateToRoot() {
@@ -80,27 +92,27 @@ export class CommercialComponent implements OnInit {
     try {
       const path = this.currentPath();
       console.log('Loading files for path:', path);
-      
+
       const allFiles = await this.azureService.getFilesDetails(path, this.CONTAINER_NAME);
       console.log('Raw files from Azure:', allFiles);
-      
+
       // Process files to extract folders and direct files
       const items: FileItem[] = [];
       const folders = new Set<string>();
-      
+
       // Normalize path to ensure trailing slash for replacement
       const normalizedPath = path.endsWith('/') ? path : `${path}/`;
-      
+
       for (const file of allFiles) {
         // Remove the current path prefix
-        const relativePath = file.id.startsWith(normalizedPath) 
-          ? file.id.substring(normalizedPath.length) 
-          : file.id; 
-          
+        const relativePath = file.id.startsWith(normalizedPath)
+          ? file.id.substring(normalizedPath.length)
+          : file.id;
+
         if (!relativePath) continue;
 
         const parts = relativePath.split('/');
-        
+
         if (parts.length > 1) {
           // It's in a subfolder
           const folderName = parts[0];
@@ -119,24 +131,24 @@ export class CommercialComponent implements OnInit {
         } else {
           // It's a file or a direct folder (from Share)
           const isDirectory = file.type === 'directory';
-          
+
           if (isDirectory) {
-             if (!folders.has(file.name)) {
-                folders.add(file.name);
-                items.push({
-                  ...file,
-                  isFolder: true
-                });
-             }
-          } else {
+            if (!folders.has(file.name)) {
+              folders.add(file.name);
               items.push({
                 ...file,
-                isFolder: false
+                isFolder: true
               });
+            }
+          } else {
+            items.push({
+              ...file,
+              isFolder: false
+            });
           }
         }
       }
-      
+
       this.files.set(items.sort((a, b) => {
         // Folders first
         if (a.isFolder && !b.isFolder) return -1;
@@ -158,11 +170,11 @@ export class CommercialComponent implements OnInit {
       this.updateBreadcrumb();
       this.loadFiles();
     } else {
-       // Download file on click since actions column is removed
-       this.azureService.downloadSingleFile(item.id, item.name, this.CONTAINER_NAME);
+      // Download file on click since actions column is removed
+      this.azureService.downloadSingleFile(item.id, item.name, this.CONTAINER_NAME);
     }
   }
-  
+
   downloadFile(item: FileItem, event: Event) {
     event.stopPropagation();
     this.azureService.downloadSingleFile(item.id, item.name, this.CONTAINER_NAME);
@@ -171,18 +183,18 @@ export class CommercialComponent implements OnInit {
   updateBreadcrumb() {
     const relative = this.currentPath().substring(this.ROOT_PATH.length);
     const parts = relative.split('/').filter(p => p);
-    
+
     const items: MenuItem[] = [];
     let current = this.ROOT_PATH;
-    
+
     // Always add Root (Repositorio Comercial)
-    items.push({ 
-        label: 'Repositorio Comercial', 
-        command: () => {
-            this.currentPath.set(this.ROOT_PATH);
-            this.updateBreadcrumb();
-            this.loadFiles();
-        }
+    items.push({
+      label: 'Repositorio Comercial',
+      command: () => {
+        this.currentPath.set(this.ROOT_PATH);
+        this.updateBreadcrumb();
+        this.loadFiles();
+      }
     });
 
     for (const part of parts) {
@@ -197,16 +209,22 @@ export class CommercialComponent implements OnInit {
         }
       });
     }
-    
+
     this.breadcrumbItems.set(items);
   }
 
-  getFileIcon(type: string): string {
-    if (type === 'folder') return 'pi pi-folder text-yellow-500';
-    if (type.includes('pdf')) return 'pi pi-file-pdf text-red-500';
-    if (type.includes('excel') || type.includes('sheet')) return 'pi pi-file-excel text-green-500';
-    if (type.includes('word') || type.includes('document')) return 'pi pi-file-word text-blue-500';
-    if (type.includes('image')) return 'pi pi-image text-purple-500';
+  getFileIcon(file: FileItem): string {
+    const name = file.name.toLowerCase();
+    const type = file.type.toLowerCase();
+
+    if (name.endsWith('.mp4') || name.endsWith('.mov') || name.endsWith('.avi') || type.includes('video')) {
+      return 'pi pi-video text-orange-500';
+    }
+    if (type.includes('pdf') || name.endsWith('.pdf')) return 'pi pi-file-pdf text-red-500';
+    if (type.includes('excel') || type.includes('sheet') || name.endsWith('.xlsx') || name.endsWith('.xls')) return 'pi pi-file-excel text-green-500';
+    if (type.includes('word') || type.includes('document') || name.endsWith('.docx') || name.endsWith('.doc')) return 'pi pi-file-word text-blue-500';
+    if (type.includes('image') || name.endsWith('.jpg') || name.endsWith('.png') || name.endsWith('.jpeg')) return 'pi pi-image text-purple-500';
+    if (type.includes('presentation') || name.endsWith('.pptx') || name.endsWith('.ppt')) return 'pi pi-file text-orange-500';
     return 'pi pi-file text-gray-500';
   }
 

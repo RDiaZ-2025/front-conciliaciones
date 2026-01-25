@@ -52,7 +52,7 @@ export class ProductionRequestHistoryService {
     changedBy: number
   ): Promise<void> {
     const fieldsToCheck: (keyof ProductionRequest)[] = [
-      'name', 'department', 'contactPerson', 
+      'name', 'department', 'contactPerson',
       'assignedUserId', 'deliveryDate', 'observations', 'statusId'
     ];
 
@@ -82,11 +82,11 @@ export class ProductionRequestHistoryService {
       return val1.getTime() !== val2.getTime();
     }
     if (val1 instanceof Date && typeof val2 === 'string') {
-        return val1.getTime() !== new Date(val2).getTime();
+      return val1.getTime() !== new Date(val2).getTime();
     }
     // Handle null/undefined equality
     if ((val1 === null || val1 === undefined) && (val2 === null || val2 === undefined)) {
-        return false;
+      return false;
     }
     return val1 != val2;
   }
