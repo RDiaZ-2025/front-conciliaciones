@@ -8,10 +8,11 @@
     </app-page-header>
 
     <div class="grid">
-        <div class="col-12">
+        <div class="col-12 col-custom-70">
             <p-card styleClass="shadow-2">
                 <ng-template pTemplate="header">
-                    <div class="p-3 border-bottom-1 surface-border flex justify-content-between align-items-center bg-bluegray-50 border-round-top">
+                    <div
+                        class="p-3 border-bottom-1 surface-border flex justify-content-between align-items-center bg-bluegray-50 border-round-top">
                         <span class="font-bold text-lg text-900">Creación de Campaña</span>
                         <span *ngIf="isLocked()" class="text-red-500 font-bold flex align-items-center gap-2">
                             <i class="pi pi-lock"></i> CERRADA - Fuera de Horario
@@ -22,8 +23,8 @@
                     </div>
                 </ng-template>
 
-                <form [formGroup]="campaignForm" (ngSubmit)="onSubmit()" class="flex flex-column gap-4 pt-3">
-                    
+                <form [formGroup]="campaignForm" (ngSubmit)="onSubmit()" class="flex flex-column gap-2 pt-3">
+
                     <!-- Top Row -->
                     <div class="formgrid grid">
                         <div class="field col-12 md:col-4">
@@ -31,17 +32,20 @@
                                 <input pInputText id="name" formControlName="name" class="w-full" />
                                 <label for="name">Nombre de la Campaña</label>
                             </p-floatlabel>
-                            <small class="text-red-500" *ngIf="campaignForm.get('name')?.invalid && campaignForm.get('name')?.touched">
+                            <small class="text-red-500"
+                                *ngIf="campaignForm.get('name')?.invalid && campaignForm.get('name')?.touched">
                                 Nombre es requerido
                             </small>
                         </div>
                         <div class="field col-12 md:col-4">
                             <p-floatlabel variant="in">
-                                <p-select formControlName="area" [options]="teams()" optionLabel="name" optionValue="id" 
-                                    styleClass="w-full" appendTo="body" [showClear]="true" placeholder="Seleccione Área"></p-select>
+                                <p-select formControlName="area" [options]="teams()" optionLabel="name" optionValue="id"
+                                    styleClass="w-full" appendTo="body" [showClear]="true"
+                                    placeholder="Seleccione Área"></p-select>
                                 <label>Área Asignada</label>
                             </p-floatlabel>
-                            <small class="text-red-500" *ngIf="campaignForm.get('area')?.invalid && campaignForm.get('area')?.touched">
+                            <small class="text-red-500"
+                                *ngIf="campaignForm.get('area')?.invalid && campaignForm.get('area')?.touched">
                                 Área es requerida
                             </small>
                         </div>
@@ -56,14 +60,16 @@
                     <!-- Copy Section -->
                     <div class="field">
                         <p-floatlabel variant="in">
-                            <textarea pTextarea formControlName="copy" rows="4" class="w-full" [maxlength]="260"></textarea>
+                            <textarea pTextarea formControlName="copy" rows="4" class="w-full"
+                                [maxlength]="260"></textarea>
                             <label>Copy (Contenido)</label>
                         </p-floatlabel>
                         <div class="flex justify-content-between mt-1">
                             <small class="text-red-500" *ngIf="campaignForm.get('copy')?.errors?.['specialChars']">
                                 No se permiten caracteres especiales.
                             </small>
-                            <small class="text-red-500" *ngIf="campaignForm.get('copy')?.errors?.['required'] && campaignForm.get('copy')?.touched">
+                            <small class="text-red-500"
+                                *ngIf="campaignForm.get('copy')?.errors?.['required'] && campaignForm.get('copy')?.touched">
                                 El contenido es requerido.
                             </small>
                             <small class="ml-auto text-600 font-mono">
@@ -74,15 +80,16 @@
 
                     <!-- URL Section -->
                     <div class="field">
-                        <div class="p-inputgroup">
-                            <p-floatlabel variant="in" class="w-full">
+                        <div class="p-inputgroup flex w-full">
+                            <p-floatlabel variant="in" class="flex-1">
                                 <input pInputText formControlName="url" class="w-full" />
                                 <label>URL de Destino</label>
                             </p-floatlabel>
-                            <button type="button" pButton label="Validar Link" icon="pi pi-external-link" 
-                                class="p-button-outlined" (click)="validateUrl()"></button>
+                            <button type="button" pButton label="Validar Link" icon="pi pi-external-link"
+                                class="p-button-outlined flex-none" (click)="validateUrl()"></button>
                         </div>
-                        <small class="text-red-500" *ngIf="campaignForm.get('url')?.errors?.['invalidUrl'] && campaignForm.get('url')?.touched">
+                        <small class="text-red-500"
+                            *ngIf="campaignForm.get('url')?.errors?.['invalidUrl'] && campaignForm.get('url')?.touched">
                             La URL no es válida.
                         </small>
                     </div>
@@ -91,16 +98,19 @@
                     <div class="formgrid grid">
                         <div class="field col-12 md:col-6">
                             <p-floatlabel variant="in">
-                                <p-datepicker formControlName="startDate" [showIcon]="true" appendTo="body" styleClass="w-full" inputStyleClass="w-full"></p-datepicker>
+                                <p-datepicker formControlName="startDate" [showIcon]="true" appendTo="body"
+                                    styleClass="w-full" inputStyleClass="w-full"></p-datepicker>
                                 <label>Fecha de Inicio</label>
                             </p-floatlabel>
                         </div>
                         <div class="field col-12 md:col-6">
                             <p-floatlabel variant="in">
-                                <p-datepicker formControlName="endDate" [showIcon]="true" appendTo="body" styleClass="w-full" inputStyleClass="w-full"></p-datepicker>
+                                <p-datepicker formControlName="endDate" [showIcon]="true" appendTo="body"
+                                    styleClass="w-full" inputStyleClass="w-full"></p-datepicker>
                                 <label>Fecha de Fin</label>
                             </p-floatlabel>
-                            <small class="text-red-500" *ngIf="campaignForm.errors?.['dateRange'] && campaignForm.get('endDate')?.touched">
+                            <small class="text-red-500"
+                                *ngIf="campaignForm.errors?.['dateRange'] && campaignForm.get('endDate')?.touched">
                                 La fecha de fin debe ser posterior a la fecha de inicio.
                             </small>
                         </div>
@@ -110,10 +120,11 @@
                     <div class="field border-1 surface-border border-round p-3">
                         <div class="flex justify-content-between align-items-center mb-3">
                             <label class="font-bold text-900">Distribución de Impactos</label>
-                            <button type="button" pButton icon="pi pi-plus" label="Agregar Fecha" 
-                                class="p-button-sm p-button-outlined" (click)="addImpactRow()" [disabled]="isLocked()"></button>
+                            <button type="button" pButton icon="pi pi-plus" label="Agregar Fecha"
+                                class="p-button-sm p-button-outlined" (click)="addImpactRow()"
+                                [disabled]="isLocked()"></button>
                         </div>
-                        
+
                         <p-table [value]="impacts.controls" styleClass="p-datatable-sm">
                             <ng-template pTemplate="header">
                                 <tr>
@@ -125,27 +136,31 @@
                             <ng-template pTemplate="body" let-control let-i="rowIndex">
                                 <tr [formGroup]="$any(control)">
                                     <td>
-                                        <p-datepicker formControlName="date" appendTo="body" [showIcon]="false" styleClass="w-full" inputStyleClass="w-full p-inputtext-sm"></p-datepicker>
+                                        <p-datepicker formControlName="date" appendTo="body" [showIcon]="false"
+                                            styleClass="w-full" inputStyleClass="w-full p-inputtext-sm"></p-datepicker>
                                     </td>
                                     <td>
-                                        <input pInputText type="number" formControlName="quantity" class="w-full p-inputtext-sm" placeholder="Cantidad" />
+                                        <input pInputText type="number" formControlName="quantity"
+                                            class="w-full p-inputtext-sm" placeholder="Cantidad" />
                                     </td>
                                     <td>
-                                        <button type="button" pButton icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm"
+                                        <button type="button" pButton icon="pi pi-trash"
+                                            class="p-button-text p-button-danger p-button-sm"
                                             (click)="removeImpactRow(i)" [disabled]="isLocked()"></button>
                                     </td>
                                 </tr>
                             </ng-template>
                             <ng-template pTemplate="emptymessage">
                                 <tr>
-                                    <td colspan="3" class="text-center p-3 text-500">No hay impactos definidos. Agregue una fecha.</td>
+                                    <td colspan="3" class="text-center p-3 text-500">No hay impactos definidos. Agregue
+                                        una fecha.</td>
                                 </tr>
                             </ng-template>
                         </p-table>
                     </div>
 
                     <div class="flex justify-content-end">
-                        <button pButton type="submit" label="Programar Campaña" icon="pi pi-check" 
+                        <button pButton type="submit" label="Programar Campaña" icon="pi pi-check"
                             [disabled]="campaignForm.invalid || isLocked()"></button>
                     </div>
                 </form>
@@ -153,7 +168,7 @@
         </div>
 
         <!-- Traceability -->
-        <div class="col-12">
+        <div class="col-12 col-custom-30">
             <p-card styleClass="shadow-2" header="Trazabilidad de Ejecución">
                 <p-table [value]="traceabilityData()" [rows]="5" [paginator]="true" styleClass="p-datatable-sm">
                     <ng-template pTemplate="header">

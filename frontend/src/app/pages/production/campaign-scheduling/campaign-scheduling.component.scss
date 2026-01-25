@@ -1,3 +1,15 @@
 :host {
     display: block;
 }
+
+@media screen and (min-width: 992px) {
+    .col-custom-70 {
+        flex: 0 0 70%;
+        max-width: 70%;
+    }
+    
+    .col-custom-30 {
+        flex: 0 0 30%;
+        max-width: 30%;
+    }
+}
