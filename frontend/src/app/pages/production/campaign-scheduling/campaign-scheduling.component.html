@@ -180,7 +180,7 @@
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-log>
-                        <tr>
+                        <tr style="cursor: pointer" (click)="viewDetails(log.data)" pTooltip="Ver detalles" tooltipPosition="top">
                             <td>{{ log.date | date:'dd/MM/yyyy HH:mm:ss' }}</td>
                             <td>{{ log.user }}</td>
                             <td>{{ log.details }}</td>
@@ -192,3 +192,67 @@
         </div>
     </div>
 </div>
+
+<p-dialog [visible]="detailsVisible()" (visibleChange)="detailsVisible.set($event)" [header]="'Detalles de la Campaña'" [modal]="true" [style]="{width: '50vw'}" [draggable]="false" [resizable]="false">
+    <div *ngIf="selectedCampaign() as campaign" class="flex flex-column gap-3">
+        <div class="grid">
+            <div class="col-12 md:col-6">
+                <span class="text-500 block mb-1 text-sm">Nombre de la Campaña</span>
+                <span class="font-medium text-lg">{{campaign.name}}</span>
+            </div>
+            <div class="col-12 md:col-6">
+                <span class="text-500 block mb-1 text-sm">Área Asignada</span>
+                <span class="font-medium text-lg">{{campaign.team?.name || campaign.teamId}}</span>
+            </div>
+            <div class="col-12 md:col-6">
+                <span class="text-500 block mb-1 text-sm">Slot de Ejecución</span>
+                <span class="font-medium">{{campaign.slot}}</span>
+            </div>
+             <div class="col-12 md:col-6">
+                <span class="text-500 block mb-1 text-sm">URL de Destino</span>
+                <a [href]="campaign.url" target="_blank" class="text-primary font-medium hover:underline flex align-items-center gap-1">
+                    {{campaign.url}} <i class="pi pi-external-link text-xs"></i>
+                </a>
+            </div>
+            <div class="col-12 md:col-6">
+                <span class="text-500 block mb-1 text-sm">Fecha de Inicio</span>
+                <span class="font-medium"><i class="pi pi-calendar mr-2 text-primary"></i>{{campaign.startDate | date:'dd/MM/yyyy'}}</span>
+            </div>
+            <div class="col-12 md:col-6">
+                <span class="text-500 block mb-1 text-sm">Fecha de Fin</span>
+                <span class="font-medium"><i class="pi pi-calendar mr-2 text-primary"></i>{{campaign.endDate | date:'dd/MM/yyyy'}}</span>
+            </div>
+        </div>
+
+        <div>
+            <span class="text-500 block mb-2 text-sm">Copy (Contenido)</span>
+            <div class="p-3 surface-50 border-1 surface-border border-round font-italic text-700" style="white-space: pre-wrap;">{{campaign.copy}}</div>
+        </div>
+
+        <div>
+             <span class="text-500 block mb-2 text-sm">Distribución de Impactos</span>
+             <p-table [value]="campaign.impacts" styleClass="p-datatable-sm p-datatable-gridlines">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th class="bg-primary-50">Fecha</th>
+                        <th class="bg-primary-50">Cantidad</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-impact>
+                    <tr>
+                        <td>{{impact.date | date:'dd/MM/yyyy'}}</td>
+                        <td class="font-bold">{{impact.quantity | number}}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="2" class="text-center p-3 text-500">No hay impactos registrados.</td>
+                    </tr>
+                </ng-template>
+             </p-table>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cerrar" icon="pi pi-times" (click)="detailsVisible.set(false)" [text]="true" severity="secondary"></p-button>
+    </ng-template>
+</p-dialog>

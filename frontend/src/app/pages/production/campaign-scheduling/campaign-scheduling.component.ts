@@ -12,6 +12,7 @@ import { TableModule } from 'primeng/table';
 import { ToastModule } from 'primeng/toast';
 import { MessageModule } from 'primeng/message';
 import { TagModule } from 'primeng/tag';
+import { DialogModule } from 'primeng/dialog';
 import { MessageService } from 'primeng/api';
 import { PageHeaderComponent } from '../../../components/shared/page-header/page-header';
 import { TeamService } from '../../../services/team.service';
@@ -35,6 +36,7 @@ import { Team } from '../production.models';
     ToastModule,
     MessageModule,
     TagModule,
+    DialogModule,
     PageHeaderComponent
   ],
   providers: [MessageService],
@@ -60,6 +62,8 @@ export class CampaignSchedulingComponent implements OnInit, OnDestroy {
 
   // Traceability Data
   traceabilityData = signal<any[]>([]);
+  selectedCampaign = signal<Campaign | null>(null);
+  detailsVisible = signal<boolean>(false);
 
   ngOnInit() {
     this.initForm();
@@ -260,13 +264,19 @@ export class CampaignSchedulingComponent implements OnInit, OnDestroy {
                     date: c.createdAt,
                     user: c.creator?.name || 'Sistema',
                     details: `Campaña "${c.name}" creada`,
-                    status: 'Programada'
+                    status: 'Programada',
+                    data: c
                 }));
                 this.traceabilityData.set(mapped);
             }
         },
         error: (err) => console.error('Error loading history', err)
     });
+  }
+
+  viewDetails(campaign: Campaign) {
+      this.selectedCampaign.set(campaign);
+      this.detailsVisible.set(true);
   }
   
   getSlotBadgeSeverity(slotLabel: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" | undefined {
