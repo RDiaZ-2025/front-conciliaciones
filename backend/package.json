@@ -28,8 +28,5 @@
     "conciliaciones"
   ],
   "author": "VOC Team",
-  "license": "UNLICENSED",
-  "dependencies": {
-    "@azure/storage-file-share": "^12.30.0"
-  }
+  "license": "UNLICENSED"
 }
