@@ -5,7 +5,7 @@
         <div class="flex gap-2">
             <p-button *ngIf="!showHistorical()" label="Reglas SLA" icon="pi pi-info-circle" [outlined]="true"
                 (click)="slaRulesVisible.set(true)"></p-button>
-            <p-button *ngIf="!showHistorical()" label="Histórico" icon="pi pi-history" [outlined]="true"
+            <p-button *ngIf="!showHistorical() && canViewHistory()" label="Histórico" icon="pi pi-history" [outlined]="true"
                 (click)="showHistorical.set(true)"></p-button>
             <p-button *ngIf="showHistorical()" label="Volver al Tablero" icon="pi pi-arrow-left" [outlined]="true"
                 (click)="showHistorical.set(false)"></p-button>

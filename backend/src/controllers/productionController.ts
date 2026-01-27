@@ -131,6 +131,14 @@ export const getAllProductionRequests = async (req: Request, res: Response): Pro
     // The creator must not see the request unless they are the assigned user.
     // Managers can see all ONLY if they explicitly request it (e.g. via view=all), otherwise default to assigned tasks.
 
+    // NEW REQUIREMENT: 
+    // - Production history (completed requests) should only be visible to 'head of area' (production_management/admin).
+    // - Standard collaborators should NOT see closed requests.
+    // - This implies that if a standard user requests 'all' or 'assigned', they should NOT see completed tasks in history view?
+    //   Actually, the frontend splits them into 'active' and 'historical'. 
+    //   The frontend already hides the 'Historical' button for standard users.
+    //   But we must enforce it in backend too.
+
     let filterByAssignedUser = true;
 
     if (hasManagementPermission && req.query.view === 'all') {
@@ -142,6 +150,13 @@ export const getAllProductionRequests = async (req: Request, res: Response): Pro
         'request.assignedUserId = :userId',
         { userId }
       );
+    }
+
+    // ENFORCE: Standard users cannot see 'completed' or 'cancelled' requests (which are historical)
+    // even if they were assigned to them, if the requirement is "Collaborators with standard permissions should not have access to this section"
+    // "That means all closed requests must be visible to all area heads, but not to regular collaborators."
+    if (!hasManagementPermission) {
+       query.andWhere('status.code NOT IN (:...closedStatuses)', { closedStatuses: ['completed', 'cancelled'] });
     }
 
     const productionRequests = await query.getMany();

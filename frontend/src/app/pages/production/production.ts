@@ -80,6 +80,15 @@ export class ProductionComponent implements OnInit, OnDestroy {
   // Computed lists
   activeRequests = computed(() => this.requests().filter(r => r.stage !== 'completed'));
   historicalRequests = computed(() => this.requests().filter(r => r.stage === 'completed'));
+  
+  canViewHistory = computed(() => {
+    const user = this.authService.currentUser();
+    // Allow if user has 'production_management' permission (Area Head/Supervisor)
+    // Or if user is an admin
+    return user?.permissions?.some(p => 
+      ['production_management', 'admin_panel'].includes(p.toLowerCase())
+    ) ?? false;
+  });
 
   ref: DynamicDialogRef | undefined | null;
 
@@ -146,7 +155,12 @@ export class ProductionComponent implements OnInit, OnDestroy {
     this.loading.set(true);
     this.productionService.getProductionRequests().subscribe({
       next: (data) => {
-        this.requests.set(data);
+        // Map status.code to stage property required by frontend logic
+        const mappedData = data.map(req => ({
+          ...req,
+          stage: req.status?.code || req.stage || 'request'
+        }));
+        this.requests.set(mappedData);
         this.loading.set(false);
         this.checkSLAAlerts(); // Check initially after loading
       },
@@ -257,24 +271,8 @@ export class ProductionComponent implements OnInit, OnDestroy {
     if (this.ref) {
       this.ref.onClose.subscribe((result: Partial<ProductionRequest>) => {
         if (result) {
-          // If we have an ID, update the existing request in the list
-          if (result.id && this.requests().some(r => r.id === result.id)) {
-            this.requests.update(current => current.map(r => r.id === result.id ? (result as ProductionRequest) : r));
-          } else {
-            // Otherwise add as new ONLY if it is assigned to the current user
-            const newRequest = result as ProductionRequest;
-            const currentUser = this.authService.currentUser();
-            
-            // Check if the request is assigned to the current user
-            // If assignedUserId matches current user's ID, add it.
-            // Note: We cast IDs to string/number safely for comparison
-            if (currentUser && newRequest.assignedUserId && String(newRequest.assignedUserId) === String(currentUser.id)) {
-               this.requests.update(current => [...current, newRequest]);
-            } else {
-               // If not assigned to us, we don't show it (it's hidden from dashboard)
-               console.log('Request created but not assigned to current user. Hiding from dashboard.');
-            }
-          }
+          // Reload requests to ensure we have the latest data and correct status mapping
+          this.loadRequests();
         }
       });
     }
