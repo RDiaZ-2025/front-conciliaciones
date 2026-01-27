@@ -188,8 +188,7 @@ export class RequestsReportController {
           }
         },
         relations: ['assignedUser', 'status'],
-        order: { deliveryDate: 'ASC' }, // Earliest deadline first
-        take: 5
+        order: { deliveryDate: 'ASC' } // Earliest deadline first
       });
 
       const recentTasks = recentTasksRaw.map(task => {
