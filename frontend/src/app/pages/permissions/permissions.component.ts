@@ -6,6 +6,8 @@ import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
 import { ToolbarModule } from 'primeng/toolbar';
 import { InputTextModule } from 'primeng/inputtext';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
@@ -23,6 +25,8 @@ import { Permission, PermissionFormData } from './permissions.models';
     ToastModule,
     ToolbarModule,
     InputTextModule,
+    IconFieldModule,
+    InputIconModule,
     ConfirmDialogModule,
     PageHeaderComponent,
     PermissionDialogComponent

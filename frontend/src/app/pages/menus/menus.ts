@@ -105,7 +105,7 @@ export class MenusComponent implements OnInit {
 
   updateParentOptions(items: MenuItem[]) {
     const options: { label: string, value: number | null }[] = [
-      { label: 'Ninguno (Raíz)', value: null }
+      { label: 'Ninguno (Raíz)', value: 0 }
     ];
 
     // Only show items that are roots (no parentId)

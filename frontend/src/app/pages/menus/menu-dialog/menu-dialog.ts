@@ -66,7 +66,7 @@ export class MenuDialogComponent implements OnChanges {
         label: this.item.label,
         icon: this.item.icon || '',
         route: this.item.route || '',
-        parentId: this.item.parentId || null,
+        parentId: this.item.parentId || 0,
         displayOrder: this.item.displayOrder,
         isActive: this.item.isActive,
         permissionId: this.item.permissionId || null
@@ -76,7 +76,7 @@ export class MenuDialogComponent implements OnChanges {
         label: '',
         icon: '',
         route: '',
-        parentId: null,
+        parentId: 0,
         displayOrder: 0,
         isActive: true,
         permissionId: null
@@ -86,7 +86,11 @@ export class MenuDialogComponent implements OnChanges {
 
   onSubmit() {
     if (this.form.valid) {
-      this.save.emit(this.form.value);
+      const formValue = { ...this.form.value };
+      if (formValue.parentId === 0) {
+        formValue.parentId = null;
+      }
+      this.save.emit(formValue);
     } else {
       Object.keys(this.form.controls).forEach(key => {
         const control = this.form.get(key);
