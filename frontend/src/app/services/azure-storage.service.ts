@@ -209,11 +209,17 @@ export class AzureStorageService {
   /**
    * Upload a single blob with a specific name
    */
-  async uploadBlob(file: Blob | File, blobName: string, containerName: string = 'private'): Promise<boolean> {
+  async uploadBlob(file: Blob | File, blobName: string, containerName: string = 'private', options?: { blobHTTPHeaders?: any }): Promise<boolean> {
     try {
       const containerClient = await this.getContainerClient(containerName);
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-      await blockBlobClient.uploadData(file);
+      
+      const uploadOptions: any = {};
+      if (options?.blobHTTPHeaders) {
+        uploadOptions.blobHTTPHeaders = options.blobHTTPHeaders;
+      }
+
+      await blockBlobClient.uploadData(file, uploadOptions);
       return true;
     } catch (error) {
       console.error('Error uploading blob:', error);

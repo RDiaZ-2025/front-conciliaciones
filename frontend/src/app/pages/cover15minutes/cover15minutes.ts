@@ -122,11 +122,18 @@ export class Cover15MinutesComponent implements OnInit {
       const randomName = `15minutes/${crypto.randomUUID()}.jpg`;
       const fixedName = `15minutes/cover.jpg`;
 
+      const uploadOptions = {
+        blobHTTPHeaders: {
+          blobContentType: file.type,
+          blobContentDisposition: 'inline'
+        }
+      };
+
       // 1. Upload with random name (for history)
-      await this.azureService.uploadBlob(file, randomName, 'public');
+      await this.azureService.uploadBlob(file, randomName, 'public', uploadOptions);
 
       // 2. Upload with fixed name (for current cover)
-      await this.azureService.uploadBlob(file, fixedName, 'public');
+      await this.azureService.uploadBlob(file, fixedName, 'public', uploadOptions);
 
       // 3. Save to DB
       // Get signed URL to extract the base URL
