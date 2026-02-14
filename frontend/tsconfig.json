@@ -3,6 +3,7 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
+    "baseUrl": "./",
     "strict": true,
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
@@ -24,10 +25,16 @@
   "files": [],
   "references": [
     {
-      "path": "./tsconfig.app.json"
+      "path": "./voc/tsconfig.app.json"
     },
     {
-      "path": "./tsconfig.spec.json"
+      "path": "./voc/tsconfig.spec.json"
+    },
+    {
+      "path": "./noc/tsconfig.app.json"
+    },
+    {
+      "path": "./noc/tsconfig.spec.json"
     }
   ]
 }
