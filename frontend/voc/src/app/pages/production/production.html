@@ -90,8 +90,8 @@
 
                 <ng-template pTemplate="footer">
                     <div class="flex justify-content-end gap-2 border-top-1 surface-border pt-3 mt-auto">
-                        <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" pTooltip="Editar"
-                            (click)="openDialog(request)"></p-button>
+                        <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="info" pTooltip="Ver Detalles"
+                            (click)="openDialog(request, true)"></p-button>
                         <p-button icon="pi pi-history" [rounded]="true" [text]="true" severity="help" pTooltip="Historial de Cambios"
                             (click)="openHistory(request)"></p-button>
                         <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger"
@@ -134,4 +134,13 @@
     </app-file-preview>
 
     <app-ans-dialog [(visible)]="slaRulesVisible"></app-ans-dialog>
+
+    <p-dialog [(visible)]="campaignTypeSelectionVisible" header="Seleccione Tipo de Campaña" [modal]="true" [style]="{width: '400px'}">
+        <div class="flex flex-column gap-3 pt-2">
+            <p class="m-0 text-500">Por favor seleccione el tipo de campaña para continuar:</p>
+            <p-button label="Mobile" icon="pi pi-mobile" styleClass="w-full p-button-outlined" (click)="selectCampaignType('val_materiales_mobile')"></p-button>
+            <p-button label="Programática" icon="pi pi-code" styleClass="w-full p-button-outlined" (click)="selectCampaignType('val_materiales_programatica')"></p-button>
+            <p-button label="Red+" icon="pi pi-share-alt" styleClass="w-full p-button-outlined" (click)="selectCampaignType('val_materiales_red_plus')"></p-button>
+        </div>
+    </p-dialog>
 </div>

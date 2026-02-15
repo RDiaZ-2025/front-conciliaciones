@@ -97,6 +97,10 @@ export class ProductionComponent implements OnInit, OnDestroy {
   private intervalId: any;
   private alertedRequests = new Set<number>(); // Track alerted requests to avoid spam
 
+  // Local Logic State
+  campaignTypeSelectionVisible = signal<boolean>(false);
+  currentRequestProcessing: ProductionRequest | null = null;
+
   ngOnInit() {
     this.loadRequests();
 
@@ -155,10 +159,10 @@ export class ProductionComponent implements OnInit, OnDestroy {
     this.loading.set(true);
     this.productionService.getProductionRequests().subscribe({
       next: (data) => {
-        // Map status.code to stage property required by frontend logic
+        // Map status.code or status string to stage property required by frontend logic
         const mappedData = data.map(req => ({
           ...req,
-          stage: req.status?.code || req.stage || 'request'
+          stage: (typeof req.status === 'string' ? req.status : req.status?.code) || req.stage || 'request'
         }));
         this.requests.set(mappedData);
         this.loading.set(false);
@@ -254,9 +258,9 @@ export class ProductionComponent implements OnInit, OnDestroy {
 
   authService = inject(AuthService);
 
-  openDialog(request?: ProductionRequest) {
+  openDialog(request?: ProductionRequest, readonly: boolean = false) {
     this.ref = this.dialogService.open(ProductionDialogComponent, {
-      header: request ? 'Editar Solicitud' : 'Nueva Solicitud',
+      header: request ? (readonly ? 'Detalles de Solicitud' : 'Editar Solicitud') : 'Nueva Solicitud',
       width: '70%',
       contentStyle: { overflow: 'auto' },
       baseZIndex: 10000,
@@ -265,7 +269,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
         '960px': '75vw',
         '640px': '90vw'
       },
-      data: request ? { id: request.id } : {}
+      data: request ? { id: request.id, readonly } : {}
     });
 
     if (this.ref) {
@@ -348,19 +352,108 @@ export class ProductionComponent implements OnInit, OnDestroy {
   }
 
   moveRequest(request: ProductionRequest) {
-    const currentIndex = this.workflowStages.findIndex(s => s.id === request.stage);
-    if (currentIndex < this.workflowStages.length - 1) {
-      const nextStage = this.workflowStages[currentIndex + 1];
-      this.productionService.moveRequest(request.id, nextStage.id).subscribe({
-        next: () => {
-          this.requests.update(current => current.map(r => r.id === request.id ? { ...r, stage: nextStage.id } : r));
-          this.messageService.add({ severity: 'success', summary: 'Success', detail: `Moved to ${nextStage.label}` });
-        },
-        error: () => {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to move request' });
+    const currentStage = request.stage;
+    let nextStageId = '';
+
+    // Budget cleaning helper
+    const getBudget = (req: ProductionRequest): number => {
+      const budgetStr = String(req.campaignDetail?.budget || '0');
+      const cleanBudget = budgetStr.replace(/[^0-9]/g, '');
+      return parseFloat(cleanBudget);
+    };
+
+    switch (currentStage) {
+      case 'request':
+        // Skip quotation, go directly to in_sell or get_data based on budget
+        const budget = getBudget(request);
+        if (budget >= 50000000) {
+          nextStageId = 'get_data';
+        } else {
+          nextStageId = 'in_sell';
         }
-      });
+        break;
+
+      case 'quotation':
+        // Legacy path, just in case
+        const budgetQ = getBudget(request);
+        if (budgetQ >= 50000000) {
+          nextStageId = 'get_data';
+        } else {
+          nextStageId = 'in_sell';
+        }
+        break;
+
+      case 'get_data': // formerly obtener_datos
+        nextStageId = 'in_sell';
+        break;
+
+      case 'in_sell': // formerly venta
+        this.confirmationService.confirm({
+          message: '¿La campaña se vendió exitosamente?',
+          header: 'Confirmar Venta',
+          icon: 'pi pi-question-circle',
+          acceptLabel: 'Sí, vendida',
+          rejectLabel: 'No, no vendida',
+          accept: () => {
+             this.currentRequestProcessing = request;
+             this.campaignTypeSelectionVisible.set(true);
+          },
+          reject: () => {
+             this.performMove(request, 'completed'); // Or cancel/close?
+          }
+        });
+        return;
+
+      case 'val_materiales_mobile':
+      case 'val_materiales_programatica':
+      case 'val_materiales_red_plus':
+        nextStageId = 'gestion_operativa';
+        break;
+
+      case 'gestion_operativa':
+        nextStageId = 'cierre';
+        break;
+
+      case 'cierre':
+        nextStageId = 'completed';
+        break;
+
+      case 'completed':
+        return;
+
+      default:
+        // Fallback for any other stage
+        const currentIndex = this.workflowStages.findIndex(s => s.id === request.stage);
+        if (currentIndex !== -1 && currentIndex < this.workflowStages.length - 1) {
+          nextStageId = String(this.workflowStages[currentIndex + 1].id);
+        }
+        break;
     }
+
+    if (nextStageId) {
+      this.performMove(request, nextStageId);
+    }
+  }
+
+  selectCampaignType(stageId: string) {
+     if (this.currentRequestProcessing) {
+        this.performMove(this.currentRequestProcessing, stageId);
+        this.campaignTypeSelectionVisible.set(false);
+        this.currentRequestProcessing = null;
+     }
+  }
+
+  performMove(request: ProductionRequest, nextStageId: string) {
+    this.productionService.moveRequest(request.id, nextStageId).subscribe({
+      next: () => {
+        const nextStageLabel = this.getStageLabel(nextStageId);
+        this.requests.update(current => current.map(r => r.id === request.id ? { ...r, stage: nextStageId } : r));
+        this.messageService.add({ severity: 'success', summary: 'Success', detail: `Moved to ${nextStageLabel}` });
+      },
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to move request' });
+      }
+    });
   }
 
   getStageLabel(stageId: string): string {
@@ -371,7 +464,14 @@ export class ProductionComponent implements OnInit, OnDestroy {
   getStageSeverity(stageId: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' | undefined {
     switch (stageId) {
       case 'completed': return 'success';
-      case 'in_production': return 'info';
+      case 'cierre': return 'success';
+      case 'gestion_operativa': return 'contrast';
+      case 'val_materiales_mobile': 
+      case 'val_materiales_programatica':
+      case 'val_materiales_red_plus':
+        return 'secondary';
+      case 'venta': return 'info';
+      case 'obtener_datos': return 'danger';
       case 'quotation': return 'warn';
       case 'request': return 'secondary';
       default: return 'info';

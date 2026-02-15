@@ -142,9 +142,9 @@ export interface ProductionRequest {
   observations?: string;
   stage: string;
   statusId?: number;
-  status?: Status;
+  status?: Status | string;
   files?: UploadedFile[];
-  
+
   // New stepper data
   customerData?: CustomerData;
   audienceData?: AudienceData;
@@ -153,15 +153,16 @@ export interface ProductionRequest {
 }
 
 export const WORKFLOW_STAGES = [
-  { id: 'request', label: 'Solicitud' },
+  { id: 'request', label: 'Inicio' },
   { id: 'quotation', label: 'Cotización' },
-  { id: 'material_adjustment', label: 'Ajuste de Material' },
-  { id: 'pre_production', label: 'Pre-producción' },
-  { id: 'in_production', label: 'En producción' },
-  { id: 'in_editing', label: 'En edición' },
-  { id: 'delivered_approval', label: 'Entregado para aprobación' },
-  { id: 'client_approved', label: 'Aprobado por cliente' },
-  { id: 'completed', label: 'Completado y entregado' }
+  { id: 'get_data', label: 'Obtener Datos' },
+  { id: 'in_sell', label: 'Venta' },
+  { id: 'val_materiales_mobile', label: 'Val. Materiales Mobile' },
+  { id: 'val_materiales_programatica', label: 'Val. Materiales Programática' },
+  { id: 'val_materiales_red_plus', label: 'Val. Materiales Red+' },
+  { id: 'gestion_operativa', label: 'Gestión Operativa' },
+  { id: 'cierre', label: 'Cierre' },
+  { id: 'completed', label: 'Completado' } // Keep for backward compatibility if needed
 ];
 
 export const MOCK_PRODUCTION_REQUESTS: ProductionRequest[] = [

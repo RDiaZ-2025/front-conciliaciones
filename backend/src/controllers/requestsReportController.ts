@@ -101,29 +101,22 @@ export class RequestsReportController {
             code: Not(In(['completed', 'cancelled']))
           },
           deliveryDate: Between(now, threeDaysFromNow)
-        },
-        relations: ['status']
+        }
       });
 
       // 2. Execution Status (Pie Chart)
       const inProgressCount = await requestRepo.count({
         where: {
           ...whereClause,
-          status: {
-            code: In(['in_progress', 'in_edit'])
-          }
-        },
-        relations: ['status']
+          status: In(['in_progress', 'in_edit'])
+        }
       });
 
       const pendingCount = await requestRepo.count({
         where: {
           ...whereClause,
-          status: {
-            code: In(['request', 'quotation'])
-          }
-        },
-        relations: ['status']
+          status: In(['request', 'quotation'])
+        }
       });
       const completedCount = completed;
       const cancelledCount = cancelled;
@@ -141,10 +134,9 @@ export class RequestsReportController {
       // Get counts for active requests
       const workloadRaw = await requestRepo
         .createQueryBuilder('pr')
-        .leftJoin('pr.status', 'status')
         .select('pr.assignedUserId', 'userId')
         .addSelect('COUNT(pr.id)', 'count')
-        .where('status.code NOT IN (:...statuses)', { statuses: ['completed', 'cancelled'] })
+        .where('pr.status NOT IN (:...statuses)', { statuses: ['completed', 'cancelled'] })
         .andWhere('pr.assignedUserId IN (:...ids)', { ids: subordinateIds.length > 0 ? subordinateIds : [-1] })
         .groupBy('pr.assignedUserId')
         .getRawMany();
@@ -183,16 +175,14 @@ export class RequestsReportController {
       const recentTasksRaw = await requestRepo.find({
         where: {
           ...whereClause,
-          status: {
-            code: Not(In(['completed', 'cancelled']))
-          }
+          status: Not(In(['completed', 'cancelled']))
         },
-        relations: ['assignedUser', 'status'],
+        relations: ['assignedUser'],
         order: { deliveryDate: 'ASC' } // Earliest deadline first
       });
 
       const recentTasks = recentTasksRaw.map(task => {
-        let statusDisplay = task.status?.code || 'unknown';
+        let statusDisplay = task.status || 'unknown';
 
         // Translate stages
         const translations: { [key: string]: string } = {

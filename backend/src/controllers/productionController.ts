@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ProductionRequest, Product, User, FormatType, RightsDuration, Team, Status } from '../models';
+import { ProductionRequest, Product, User, FormatType, RightsDuration, Team } from '../models';
 import { AppDataSource } from '../config/typeorm.config';
 import { NotificationService } from '../services/notificationService';
 import { ProductionRequestHistoryService } from '../services/productionRequestHistoryService';
@@ -29,11 +29,8 @@ const performSmartAssignment = async (department: string): Promise<{ assignedUse
           const activeRequestsCount = await productionRequestRepository.count({
             where: {
               assignedUserId: user.id,
-              status: {
-                code: Not(In(['completed', 'cancelled']))
-              }
-            },
-            relations: ['status']
+              status: Not(In(['completed', 'cancelled']))
+            }
           });
           return { user, count: activeRequestsCount };
         }));
@@ -123,7 +120,6 @@ export const getAllProductionRequests = async (req: Request, res: Response): Pro
     const query = productionRequestRepository.createQueryBuilder('request')
       .leftJoinAndSelect('request.customerData', 'customerData')
       .leftJoinAndSelect('request.assignedUser', 'assignedUser')
-      .leftJoinAndSelect('request.status', 'status')
       .orderBy('request.requestDate', 'DESC');
 
     // If user doesn't have management permission, filter by assignment or ownership
@@ -156,7 +152,7 @@ export const getAllProductionRequests = async (req: Request, res: Response): Pro
     // even if they were assigned to them, if the requirement is "Collaborators with standard permissions should not have access to this section"
     // "That means all closed requests must be visible to all area heads, but not to regular collaborators."
     if (!hasManagementPermission) {
-       query.andWhere('status.code NOT IN (:...closedStatuses)', { closedStatuses: ['completed', 'cancelled'] });
+      query.andWhere('request.status NOT IN (:...closedStatuses)', { closedStatuses: ['completed', 'cancelled'] });
     }
 
     const productionRequests = await query.getMany();
@@ -209,7 +205,6 @@ export const getProductionRequestById = async (req: Request, res: Response): Pro
     const productionRequest = await productionRequestRepository.findOne({
       where: { id: parseInt(id) },
       relations: [
-        'status',
         'customerData',
         'audienceData',
         'audienceData.gender',
@@ -247,7 +242,8 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       assignedUserId,
       deliveryDate,
       observations,
-      statusId,
+      status,
+      stage,
       customerData,
       audienceData,
       campaignDetail,
@@ -299,12 +295,21 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
 
     const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
 
-    // Set default status if not provided
-    if (!statusId) {
-      const statusRepository = AppDataSource.getRepository(Status);
-      const defaultStatus = await statusRepository.findOne({ where: { code: 'request' } });
-      if (defaultStatus) {
-        statusId = defaultStatus.id;
+    // Set default status based on budget logic
+    let finalStatus = status || stage || 'request';
+
+    if (campaignDetail && campaignDetail.budget) {
+      // Remove non-numeric characters to handle formats like "50.000.000" or "$ 50,000,000"
+      const budgetStr = String(campaignDetail.budget).replace(/[^0-9]/g, '');
+      const budgetValue = parseInt(budgetStr);
+
+      if (!isNaN(budgetValue)) {
+        // Threshold: 50,000,000
+        if (budgetValue < 50000000) {
+          finalStatus = 'in_sell';
+        } else {
+          finalStatus = 'get_data';
+        }
       }
     }
 
@@ -316,7 +321,7 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       assignedUserId,
       deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
       observations,
-      statusId,
+      status: finalStatus,
       customerData,
       audienceData,
       campaignDetail,
@@ -382,7 +387,8 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
       assignedUserId,
       deliveryDate,
       observations,
-      statusId,
+      status,
+      stage,
       customerData,
       audienceData,
       campaignDetail,
@@ -447,7 +453,7 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
           assignedUserId,
           deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
           observations,
-          statusId
+          status: status || stage || existingRequest.status
         },
         req.user.userId
       );
@@ -460,7 +466,10 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
     existingRequest.assignedUserId = assignedUserId;
     existingRequest.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
     existingRequest.observations = observations;
-    if (statusId) existingRequest.statusId = statusId;
+
+    if (status || stage) {
+      existingRequest.status = status || stage;
+    }
 
     // Update relations
     if (customerData) existingRequest.customerData = { ...existingRequest.customerData, ...customerData };
@@ -504,6 +513,8 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
     // Validate stage
     const validStages = [
       'request',
+      'in_sell',
+      'get_data',
       'quotation',
       'material_adjustment',
       'pre_production',
@@ -526,25 +537,17 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
     }
 
     const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
-    const statusRepository = AppDataSource.getRepository(Status);
-
-    // Find new status
-    const newStatus = await statusRepository.findOne({ where: { code: stage } });
-    if (!newStatus) {
-      return res.status(400).json({ message: 'Invalid status code' });
-    }
 
     // Check if request exists
     const existingRequest = await productionRequestRepository.findOne({
-      where: { id: parseInt(id) },
-      relations: ['status']
+      where: { id: parseInt(id) }
     });
 
     if (!existingRequest) {
       return res.status(404).json({ message: 'Production request not found' });
     }
 
-    const oldStatusCode = existingRequest.status?.code || 'unknown';
+    const oldStatusCode = existingRequest.status || 'unknown';
 
     // Log stage change
     if (req.user?.userId && oldStatusCode !== stage) {
@@ -559,8 +562,7 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
     }
 
     // Update the stage (status)
-    existingRequest.status = newStatus;
-    existingRequest.statusId = newStatus.id;
+    existingRequest.status = stage;
     const updatedRequest = await productionRequestRepository.save(existingRequest);
 
     // Send notification to assigned user
@@ -627,7 +629,8 @@ export const updateStepGeneral = async (req: Request, res: Response): Promise<Re
       assignedUserId,
       deliveryDate,
       observations,
-      statusId
+      status,
+      stage
     } = req.body;
 
     if (!AppDataSource.isInitialized) {
@@ -662,7 +665,7 @@ export const updateStepGeneral = async (req: Request, res: Response): Promise<Re
     if (req.user?.userId) {
       await historyService.logDifferences(
         existingRequest,
-        { name, department, contactPerson, assignedUserId, deliveryDate: deliveryDate ? new Date(deliveryDate) : null, observations },
+        { name, department, contactPerson, assignedUserId, deliveryDate: deliveryDate ? new Date(deliveryDate) : null, observations, status: status || stage || existingRequest.status },
         req.user.userId
       );
     }
@@ -673,7 +676,10 @@ export const updateStepGeneral = async (req: Request, res: Response): Promise<Re
     existingRequest.assignedUserId = assignedUserId;
     existingRequest.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
     existingRequest.observations = observations;
-    if (statusId) existingRequest.statusId = statusId;
+
+    if (status || stage) {
+      existingRequest.status = status || stage;
+    }
 
     const updatedRequest = await productionRequestRepository.save(existingRequest);
 
@@ -732,7 +738,7 @@ export const updateStepCustomer = async (req: Request, res: Response): Promise<R
 export const updateStepCampaign = async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const { id } = req.params;
-    const { campaignDetail } = req.body;
+    const { campaignDetail, status } = req.body;
 
     if (!AppDataSource.isInitialized) {
       return res.status(503).json({ success: false, message: 'Base de datos no disponible' });
@@ -750,8 +756,13 @@ export const updateStepCampaign = async (req: Request, res: Response): Promise<R
 
     if (campaignDetail) {
       existingRequest.campaignDetail = { ...existingRequest.campaignDetail, ...campaignDetail };
-      await productionRequestRepository.save(existingRequest);
     }
+
+    if (status) {
+      existingRequest.status = status;
+    }
+
+    await productionRequestRepository.save(existingRequest);
 
     return res.status(200).json(existingRequest);
   } catch (error) {

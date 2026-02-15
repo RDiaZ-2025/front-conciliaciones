@@ -6,7 +6,7 @@ import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ButtonModule } from 'primeng/button';
 import { MenuItem, MessageService } from 'primeng/api';
 import { StepsModule } from 'primeng/steps';
-import { ProductionRequest, UploadedFile, Team, CustomerData, AudienceData, CampaignDetail, ProductionInfo, Product, Objective, Gender, AgeRange, SocioeconomicLevel, FormatType, RightsDuration, Status } from '../../production.models';
+import { ProductionRequest, UploadedFile, Team, CustomerData, AudienceData, CampaignDetail, ProductionInfo, Product, Objective, Gender, AgeRange, SocioeconomicLevel, FormatType, RightsDuration, Status, WORKFLOW_STAGES } from '../../production.models';
 import { AzureStorageService } from '../../../../services/azure-storage.service';
 import { TeamService } from '../../../../services/team.service';
 import { User } from '../../../../services/user.service';
@@ -60,6 +60,7 @@ export class ProductionDialogComponent implements OnInit {
 
   form!: FormGroup;
   isEditMode = false;
+  isReadonly = false;
   canEditCore = true;
   isAssignedUser = false;
   loadedRequest: ProductionRequest | null = null;
@@ -79,6 +80,7 @@ export class ProductionDialogComponent implements OnInit {
 
   ngOnInit() {
     this.isEditMode = !!this.config.data?.id;
+    this.isReadonly = !!this.config.data?.readonly;
     const data = this.config.data || {};
 
     this.loadObjectives();
@@ -117,7 +119,7 @@ export class ProductionDialogComponent implements OnInit {
       assignedUserId: [data.assignedUserId || null],
       deliveryDate: [data.deliveryDate ? new Date(data.deliveryDate) : null, Validators.required],
       observations: [data.observations || ''],
-      statusId: [data.statusId || null, Validators.required],
+      status: [data.status || 'request', Validators.required],
 
       // Step 2: Customer Information
       customerData: this.fb.group({
@@ -198,6 +200,10 @@ export class ProductionDialogComponent implements OnInit {
         next: (response: any) => {
           const fullData = response.data || response;
           this.loadedRequest = fullData;
+
+          if (this.isReadonly) {
+            this.form.disable();
+          }
 
           // Convert dates
           if (fullData.deliveryDate) fullData.deliveryDate = new Date(fullData.deliveryDate);
@@ -325,35 +331,7 @@ export class ProductionDialogComponent implements OnInit {
   }
 
   loadStatuses() {
-    this.productionService.getStatuses().subscribe({
-      next: (statuses) => {
-        const allowedCodes = ['request', 'in_production', 'completed'];
-        this.workflowStages = statuses
-          .filter(s => allowedCodes.includes(s.code))
-          .map(s => {
-            let label = s.name;
-            if (s.code === 'in_production') label = 'En Progreso';
-            if (s.code === 'completed') label = 'Completado';
-            return {
-              id: s.id,
-              label: label
-            };
-          });
-
-        if (!this.form.get('statusId')?.value) {
-          const requestStatus = statuses.find(s => s.code === 'request');
-          if (requestStatus) {
-            console.log('Setting default status to:', requestStatus);
-            this.form.patchValue({ statusId: requestStatus.id });
-            this.cd.detectChanges();
-          }
-        }
-      },
-      error: (error) => {
-        console.error('Error loading statuses', error);
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los estados' });
-      }
-    });
+    this.workflowStages = WORKFLOW_STAGES;
   }
 
   loadFilesFromStorage(requestId: number) {
@@ -479,6 +457,12 @@ export class ProductionDialogComponent implements OnInit {
   }
 
   checkPermissions(data: ProductionRequest) {
+    if (this.isReadonly) {
+      this.canEditCore = false;
+      this.form.disable();
+      return;
+    }
+
     const user = this.authService.currentUser();
     if (!user) return;
 
@@ -503,7 +487,7 @@ export class ProductionDialogComponent implements OnInit {
   applyRestrictedMode() {
     this.form.disable();
     this.form.get('observations')?.enable();
-    this.form.get('statusId')?.enable();
+    this.form.get('status')?.enable();
     this.form.get('department')?.enable(); // Allow reassignment
     this.form.get('assignedUserId')?.enable();
 
@@ -522,13 +506,13 @@ export class ProductionDialogComponent implements OnInit {
     let isValid = true;
     if (closeOnComplete) {
       if (!this.canEditCore && this.isAssignedUser) {
-        const statusValid = this.form.get('statusId')?.valid ?? true;
+        const statusValid = this.form.get('status')?.valid ?? true;
         const prodInfo = this.form.get('productionInfo') as FormGroup;
         const prodDetailsValid = prodInfo?.get('productionDetails')?.valid ?? true;
 
         if (!statusValid || !prodDetailsValid) {
           isValid = false;
-          if (!statusValid) this.form.get('statusId')?.markAsDirty();
+          if (!statusValid) this.form.get('status')?.markAsDirty();
           if (!prodDetailsValid) prodInfo?.get('productionDetails')?.markAsDirty();
         }
       } else {
@@ -547,9 +531,41 @@ export class ProductionDialogComponent implements OnInit {
     this.isUploading$.next(true);
     const formValue = this.form.getRawValue();
 
-    // Ensure statusId is set for new requests
-    if (!this.isEditMode && !formValue.statusId) {
-      formValue.statusId = 'request';
+    let forcedStage: string | undefined;
+
+    // Ensure status is set for new requests based on Budget logic
+    if (!this.isEditMode) {
+      // First creation (Step 0 -> 1)
+      // User requirement: Status must be "quotation"
+      const targetStageCode = 'quotation';
+
+      forcedStage = targetStageCode;
+      formValue.status = targetStageCode;
+      console.log('Setting initial status to quotation');
+    } else if (this.currentStep === 2) {
+      // Saving Campaign Step (Step 2 -> 3)
+      // User requirement: Update based on budget
+      const budgetStr = formValue.campaignDetail?.budget || '0';
+      const cleanBudget = String(budgetStr).replace(/[^0-9]/g, '');
+      const budget = parseFloat(cleanBudget);
+
+      let targetStageCode = 'in_sell';
+      if (budget >= 50000000) {
+        targetStageCode = 'get_data';
+      }
+
+      // Only apply if we are in an early stage (or if explicitly creating/updating early info)
+      const currentStatus = this.loadedRequest?.status || formValue.status;
+      const earlyStages = ['request', 'quotation', 'inicio', 'in_sell', 'get_data'];
+
+      if (!currentStatus || earlyStages.includes(currentStatus)) {
+        forcedStage = targetStageCode;
+        formValue.status = targetStageCode;
+        console.log(`Updating status to '${targetStageCode}' based on budget: ${budget}`);
+      }
+    } else if (!formValue.status) {
+      // If edit mode but status missing, default to 'request'
+      formValue.status = 'request';
     }
 
     const productionInfo = formValue.productionInfo ? { ...formValue.productionInfo } : undefined;
@@ -564,6 +580,12 @@ export class ProductionDialogComponent implements OnInit {
       deliveryDate: formValue.deliveryDate ? formValue.deliveryDate.toISOString() : undefined,
       productionInfo: productionInfo
     };
+
+    // Explicitly set stage if calculated locally, to ensure backend gets the intent
+    // even if the statusId maps to 'request' (fallback) or if backend logic relies on stage string
+    if (forcedStage) {
+      fullPayload.stage = forcedStage;
+    }
 
     if (fullPayload.campaignDetail?.campaignProducts) {
       // Filter out invalid products (missing productId)
@@ -704,7 +726,7 @@ export class ProductionDialogComponent implements OnInit {
               return cleanP;
             });
           }
-          request$ = this.productionService.updateStepCampaign(requestId, campaignDetail);
+          request$ = this.productionService.updateStepCampaign(requestId, campaignDetail, formValue.status);
           break;
         case 3: // Audience
           request$ = this.productionService.updateStepAudience(requestId, formValue.audienceData);

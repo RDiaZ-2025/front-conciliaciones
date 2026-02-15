@@ -4,7 +4,6 @@ import { CustomerData } from './CustomerData';
 import { CampaignDetail } from './CampaignDetail';
 import { AudienceData } from './AudienceData';
 import { ProductionInfo } from './ProductionInfo';
-import { Status } from './Status';
 
 /**
  * ProductionRequest entity representing production request management
@@ -35,12 +34,8 @@ export class ProductionRequest {
   @JoinColumn({ name: 'AssignedUserId' })
   assignedUser!: User;
 
-  @Column({ name: 'StatusId', type: 'int', nullable: true })
-  statusId!: number | null;
-
-  @ManyToOne(() => Status)
-  @JoinColumn({ name: 'StatusId' })
-  status!: Status;
+  @Column({ name: 'Status', type: 'nvarchar', length: 50, nullable: false })
+  status!: string;
 
   @OneToOne(() => CustomerData, customerData => customerData.productionRequest, { cascade: true })
   customerData!: CustomerData;
@@ -61,23 +56,23 @@ export class ProductionRequest {
   observations!: string | null;
 
   isInRequestStage(): boolean {
-    return (this.status?.code ?? '').toLowerCase() === 'request';
+    return (this.status ?? '').toLowerCase() === 'request';
   }
 
   isInProgress(): boolean {
-    return (this.status?.code ?? '').toLowerCase() === 'in_progress';
+    return (this.status ?? '').toLowerCase() === 'in_progress';
   }
 
   isUnderReview(): boolean {
-    return (this.status?.code ?? '').toLowerCase() === 'review';
+    return (this.status ?? '').toLowerCase() === 'review';
   }
 
   isCompleted(): boolean {
-    return (this.status?.code ?? '').toLowerCase() === 'completed';
+    return (this.status ?? '').toLowerCase() === 'completed';
   }
 
   isCancelled(): boolean {
-    return (this.status?.code ?? '').toLowerCase() === 'cancelled';
+    return (this.status ?? '').toLowerCase() === 'cancelled';
   }
 
   isOverdue(): boolean {
@@ -98,10 +93,14 @@ export class ProductionRequest {
   }
 
   getStageDisplay(): string {
-    const code = (this.status?.code ?? '').toLowerCase();
+    const code = (this.status ?? '').toLowerCase();
     switch (code) {
       case 'request':
         return 'Solicitud';
+      case 'in_sell':
+        return 'En Venta';
+      case 'get_data':
+        return 'Obtener Datos';
       case 'in_progress':
         return 'En Progreso';
       case 'review':

@@ -13,7 +13,6 @@ export * from './ProductionRequestHistory';
 export * from './Product';
 export * from './CampaignProduct';
 export * from './Objective';
-export * from './Status';
 export * from './Campaign';
 
 export { LoadDocumentsOCbyUser } from './LoadDocumentsOCbyUser';
@@ -45,7 +44,6 @@ import { AgeRange } from './AgeRange';
 import { SocioeconomicLevel } from './SocioeconomicLevel';
 import { FormatType } from './FormatType';
 import { RightsDuration } from './RightsDuration';
-import { Status } from './Status';
 
 import { Campaign } from './Campaign';
 
@@ -73,8 +71,7 @@ export const entities = [
   AgeRange,
   SocioeconomicLevel,
   FormatType,
-  RightsDuration,
-  Status
+  RightsDuration
 ];
 
 export const ModelCategories = {
