@@ -238,7 +238,6 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
     let {
       name,
       department,
-      contactPerson,
       assignedUserId,
       deliveryDate,
       observations,
@@ -250,14 +249,15 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       productionInfo
     } = req.body;
 
+    let userCreatorId: number | null = null;
+
     // Validate that requesting user/area matches authenticated user
     if (req.user?.userId) {
       const userRepository = AppDataSource.getRepository(User);
       const currentUser = await userRepository.findOne({ where: { id: req.user.userId } });
 
       if (currentUser) {
-        // Enforce contactPerson matches authenticated user
-        contactPerson = currentUser.name;
+        userCreatorId = currentUser.id;
 
         // Enforce Department matches one of the user's teams
         const userTeams = await AuthService.getUserTeams(currentUser.id);
@@ -271,7 +271,7 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
     }
 
     // Validate required fields
-    if (!name || !department || !contactPerson) {
+    if (!name || !department) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
@@ -308,7 +308,7 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
         if (budgetValue < 50000000) {
           finalStatus = 'in_sell';
         } else {
-          finalStatus = 'get_data';
+          finalStatus = 'create_proposal';
         }
       }
     }
@@ -317,7 +317,7 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       name,
       requestDate: new Date(),
       department,
-      contactPerson,
+      userCreatorId,
       assignedUserId,
       deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
       observations,
@@ -383,7 +383,6 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
     let {
       name,
       department,
-      contactPerson,
       assignedUserId,
       deliveryDate,
       observations,
@@ -396,7 +395,7 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
     } = req.body;
 
     // Validate required fields
-    if (!name || !department || !contactPerson) {
+    if (!name || !department) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
@@ -449,7 +448,6 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
         {
           name,
           department,
-          contactPerson,
           assignedUserId,
           deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
           observations,
@@ -462,7 +460,6 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
     // Update the request
     existingRequest.name = name;
     existingRequest.department = department;
-    existingRequest.contactPerson = contactPerson;
     existingRequest.assignedUserId = assignedUserId;
     existingRequest.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
     existingRequest.observations = observations;
@@ -514,6 +511,7 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
     const validStages = [
       'request',
       'in_sell',
+      'create_proposal',
       'get_data',
       'quotation',
       'material_adjustment',
@@ -548,6 +546,83 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
     }
 
     const oldStatusCode = existingRequest.status || 'unknown';
+
+    // Auto-assignment logic for create_proposal -> get_data transition
+    if (oldStatusCode === 'create_proposal' && stage === 'get_data') {
+      try {
+        const teamRepository = AppDataSource.getRepository(Team);
+        const userRepository = AppDataSource.getRepository(User);
+
+        // Find "Data" Team (ID 5)
+        const dataTeam = await teamRepository.findOne({ where: { id: 5 } });
+
+        if (dataTeam) {
+          // Update department to Data team name
+          existingRequest.department = dataTeam.name;
+
+          // Find active users in "Data" team
+          const teamUsers = await userRepository.find({ where: { teamId: 5, status: 1 } });
+
+          if (teamUsers.length > 0) {
+            // Select random user
+            const randomUser = teamUsers[Math.floor(Math.random() * teamUsers.length)];
+            existingRequest.assignedUserId = randomUser.id;
+
+            // Log auto-assignment
+            if (req.user?.userId) {
+              await historyService.logChange(
+                existingRequest.id,
+                'AutoAssignment',
+                null,
+                `Stage transition to 'get_data': Auto-assigned to Data Team user ${randomUser.name} (${randomUser.id})`,
+                req.user.userId,
+                'update'
+              );
+            }
+          }
+        }
+      } catch (assignError) {
+        console.error('Error in auto-assignment during stage transition:', assignError);
+        // Continue with stage change even if assignment fails, but log it
+      }
+    }
+
+    // Auto-assignment logic for get_data -> in_sell transition (Return to Creator)
+    if (oldStatusCode === 'get_data' && stage === 'in_sell') {
+      try {
+        if (existingRequest.userCreatorId) {
+          const userRepository = AppDataSource.getRepository(User);
+          const creator = await userRepository.findOne({ 
+            where: { id: existingRequest.userCreatorId },
+            relations: ['team']
+          });
+
+          if (creator) {
+            // Reassign to creator
+            existingRequest.assignedUserId = creator.id;
+            
+            // Restore department if creator has a team
+            if (creator.team) {
+              existingRequest.department = creator.team.name;
+            }
+
+            // Log re-assignment
+            if (req.user?.userId) {
+              await historyService.logChange(
+                existingRequest.id,
+                'AutoAssignment',
+                null,
+                `Stage transition to 'in_sell': Returned to creator ${creator.name} (${creator.id})`,
+                req.user.userId,
+                'update'
+              );
+            }
+          }
+        }
+      } catch (assignError) {
+        console.error('Error in auto-assignment (return to creator) during stage transition:', assignError);
+      }
+    }
 
     // Log stage change
     if (req.user?.userId && oldStatusCode !== stage) {
@@ -625,7 +700,6 @@ export const updateStepGeneral = async (req: Request, res: Response): Promise<Re
     let {
       name,
       department,
-      contactPerson,
       assignedUserId,
       deliveryDate,
       observations,
@@ -665,14 +739,13 @@ export const updateStepGeneral = async (req: Request, res: Response): Promise<Re
     if (req.user?.userId) {
       await historyService.logDifferences(
         existingRequest,
-        { name, department, contactPerson, assignedUserId, deliveryDate: deliveryDate ? new Date(deliveryDate) : null, observations, status: status || stage || existingRequest.status },
+        { name, department, assignedUserId, deliveryDate: deliveryDate ? new Date(deliveryDate) : null, observations, status: status || stage || existingRequest.status },
         req.user.userId
       );
     }
 
     existingRequest.name = name;
     existingRequest.department = department;
-    existingRequest.contactPerson = contactPerson;
     existingRequest.assignedUserId = assignedUserId;
     existingRequest.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
     existingRequest.observations = observations;
@@ -754,12 +827,56 @@ export const updateStepCampaign = async (req: Request, res: Response): Promise<R
       return res.status(404).json({ message: 'Production request not found' });
     }
 
-    if (campaignDetail) {
-      existingRequest.campaignDetail = { ...existingRequest.campaignDetail, ...campaignDetail };
-    }
-
     if (status) {
       existingRequest.status = status;
+    }
+
+    if (campaignDetail) {
+      existingRequest.campaignDetail = { ...existingRequest.campaignDetail, ...campaignDetail };
+
+      // Logic for high budget reassignment (> 50,000,000)
+      if (campaignDetail.budget) {
+        const budgetStr = String(campaignDetail.budget).replace(/[^0-9]/g, '');
+        const budgetValue = parseInt(budgetStr);
+
+        // Check if budget is higher than 50 million
+         if (!isNaN(budgetValue) && budgetValue >= 50000000) {
+            // 1. Change status to 'create_proposal'
+            existingRequest.status = 'create_proposal';
+            
+            // Only perform reassignment if the department is not already 'Estrategia'
+            // This prevents re-shuffling the user every time the campaign is saved with a high budget
+            if (existingRequest.department !== 'Estrategia') {
+                // 2. Change Team to "Estrategia" (Team ID 3)
+                existingRequest.department = 'Estrategia';
+     
+                // 3. Assign a random person from Team "Estrategia" (Team ID 3)
+                try {
+                  const userRepository = AppDataSource.getRepository(User);
+                  // Find active users (status = 1) in Team 3
+                  const strategyUsers = await userRepository.find({ where: { teamId: 3, status: 1 } });
+                  
+                  if (strategyUsers.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * strategyUsers.length);
+                    const selectedUser = strategyUsers[randomIndex];
+                    
+                    // Assign the selected user
+                    existingRequest.assignedUserId = selectedUser.id;
+                    
+                    // Send notification to the new assigned user
+                    await notificationService.createNotification(
+                       selectedUser.id,
+                       'Nueva Solicitud Asignada (Presupuesto Alto)',
+                       `Se te ha asignado la solicitud "${existingRequest.name}" debido a su alto presupuesto (> 50M).`,
+                       'info'
+                    );
+                  }
+                } catch (assignError) {
+                  console.error('Error auto-assigning Strategy user:', assignError);
+                }
+            }
+         }
+      }
     }
 
     await productionRequestRepository.save(existingRequest);

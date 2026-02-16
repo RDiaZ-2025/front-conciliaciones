@@ -43,7 +43,7 @@
             <button *ngIf="currentStep > 0" pButton label="Atrás" icon="pi pi-arrow-left" class="p-button-outlined"
                 (click)="prev()"></button>
             <button *ngIf="currentStep < 4" pButton label="Guardar y Continuar" icon="pi pi-arrow-right"
-                (click)="next()"></button>
+                (click)="next()" [loading]="(isUploading$ | async) ?? false"></button>
             <button *ngIf="currentStep === 4" pButton label="Guardar" icon="pi pi-check" (click)="saveData(true)"
                 [loading]="(isUploading$ | async) ?? false"></button>
         </div>

@@ -22,11 +22,13 @@ import { AuthService } from '../../services/auth.service';
 import { ProductionRequest, WORKFLOW_STAGES } from './production.models';
 import { ProductionDialogComponent } from './components/production-dialog/production-dialog';
 import { ProductionDetailDialogComponent } from './components/production-detail-dialog/production-detail-dialog';
+import { StageTransitionUploadDialogComponent } from './components/stage-transition-upload-dialog/stage-transition-upload-dialog.component';
 import { AnsDialogComponent } from './components/ans-dialog/ans-dialog';
 import { HistoryDialog } from './components/history-dialog/history-dialog';
 import { AzureStorageService } from '../../services/azure-storage.service';
 import { FilePreviewComponent } from '../../components/file-preview/file-preview';
 import { UploadedFile } from './production.models';
+import { InSellActionDialogComponent } from './components/in-sell-action-dialog/in-sell-action-dialog.component';
 
 @Component({
   selector: 'app-production',
@@ -80,12 +82,12 @@ export class ProductionComponent implements OnInit, OnDestroy {
   // Computed lists
   activeRequests = computed(() => this.requests().filter(r => r.stage !== 'completed'));
   historicalRequests = computed(() => this.requests().filter(r => r.stage === 'completed'));
-  
+
   canViewHistory = computed(() => {
     const user = this.authService.currentUser();
     // Allow if user has 'production_management' permission (Area Head/Supervisor)
     // Or if user is an admin
-    return user?.permissions?.some(p => 
+    return user?.permissions?.some(p =>
       ['production_management', 'admin_panel'].includes(p.toLowerCase())
     ) ?? false;
   });
@@ -308,6 +310,25 @@ export class ProductionComponent implements OnInit, OnDestroy {
     });
   }
 
+  openStageTransitionUploadDialog(request: ProductionRequest, targetStage: string) {
+    this.ref = this.dialogService.open(StageTransitionUploadDialogComponent, {
+      header: 'Carga de Documentos',
+      width: '50vw',
+      contentStyle: { overflow: 'auto' },
+      baseZIndex: 10000,
+      maximizable: true,
+      data: { request }
+    });
+
+    if (this.ref) {
+      this.ref.onClose.subscribe((result: any) => {
+        if (result && result.success) {
+          this.performMove(request, targetStage);
+        }
+      });
+    }
+  }
+
   createRequest(request: Partial<ProductionRequest>) {
     this.productionService.createProductionRequest(request).subscribe({
       next: (newRequest) => {
@@ -367,7 +388,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
         // Skip quotation, go directly to in_sell or get_data based on budget
         const budget = getBudget(request);
         if (budget >= 50000000) {
-          nextStageId = 'get_data';
+          nextStageId = 'create_proposal';
         } else {
           nextStageId = 'in_sell';
         }
@@ -377,31 +398,42 @@ export class ProductionComponent implements OnInit, OnDestroy {
         // Legacy path, just in case
         const budgetQ = getBudget(request);
         if (budgetQ >= 50000000) {
-          nextStageId = 'get_data';
+          nextStageId = 'create_proposal';
         } else {
           nextStageId = 'in_sell';
         }
         break;
 
+      case 'create_proposal':
+        this.openStageTransitionUploadDialog(request, 'get_data');
+        return;
+
       case 'get_data': // formerly obtener_datos
-        nextStageId = 'in_sell';
-        break;
+        this.openStageTransitionUploadDialog(request, 'in_sell');
+        return;
+
 
       case 'in_sell': // formerly venta
-        this.confirmationService.confirm({
-          message: '¿La campaña se vendió exitosamente?',
+        this.ref = this.dialogService.open(InSellActionDialogComponent, {
           header: 'Confirmar Venta',
-          icon: 'pi pi-question-circle',
-          acceptLabel: 'Sí, vendida',
-          rejectLabel: 'No, no vendida',
-          accept: () => {
-             this.currentRequestProcessing = request;
-             this.campaignTypeSelectionVisible.set(true);
-          },
-          reject: () => {
-             this.performMove(request, 'completed'); // Or cancel/close?
-          }
+          width: '400px',
+          contentStyle: { "overflow": "auto" },
+          baseZIndex: 10000
         });
+
+        if (this.ref) {
+          this.ref.onClose.subscribe((result: any) => {
+            if (result && result.action) {
+              if (result.action === 'sold') {
+                this.currentRequestProcessing = request;
+                this.campaignTypeSelectionVisible.set(true);
+              } else if (result.action === 'not_sold') {
+                this.performMove(request, 'completed');
+              }
+              // 'cancel' or other results do nothing
+            }
+          });
+        }
         return;
 
       case 'val_materiales_mobile':
@@ -436,18 +468,18 @@ export class ProductionComponent implements OnInit, OnDestroy {
   }
 
   selectCampaignType(stageId: string) {
-     if (this.currentRequestProcessing) {
-        this.performMove(this.currentRequestProcessing, stageId);
-        this.campaignTypeSelectionVisible.set(false);
-        this.currentRequestProcessing = null;
-     }
+    if (this.currentRequestProcessing) {
+      this.performMove(this.currentRequestProcessing, stageId);
+      this.campaignTypeSelectionVisible.set(false);
+      this.currentRequestProcessing = null;
+    }
   }
 
   performMove(request: ProductionRequest, nextStageId: string) {
     this.productionService.moveRequest(request.id, nextStageId).subscribe({
-      next: () => {
+      next: (updatedRequest) => {
         const nextStageLabel = this.getStageLabel(nextStageId);
-        this.requests.update(current => current.map(r => r.id === request.id ? { ...r, stage: nextStageId } : r));
+        this.requests.update(current => current.map(r => r.id === request.id ? updatedRequest : r));
         this.messageService.add({ severity: 'success', summary: 'Success', detail: `Moved to ${nextStageLabel}` });
       },
       error: () => {
@@ -466,12 +498,13 @@ export class ProductionComponent implements OnInit, OnDestroy {
       case 'completed': return 'success';
       case 'cierre': return 'success';
       case 'gestion_operativa': return 'contrast';
-      case 'val_materiales_mobile': 
+      case 'val_materiales_mobile':
       case 'val_materiales_programatica':
       case 'val_materiales_red_plus':
         return 'secondary';
       case 'venta': return 'info';
       case 'obtener_datos': return 'danger';
+      case 'create_proposal': return 'warn';
       case 'quotation': return 'warn';
       case 'request': return 'secondary';
       default: return 'info';

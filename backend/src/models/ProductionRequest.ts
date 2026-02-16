@@ -24,8 +24,12 @@ export class ProductionRequest {
   @Column({ name: 'Department', type: 'nvarchar', length: 255, nullable: false })
   department!: string;
 
-  @Column({ name: 'ContactPerson', type: 'nvarchar', length: 255, nullable: false })
-  contactPerson!: string;
+  @Column({ name: 'UserCreatorId', type: 'int', nullable: true })
+  userCreatorId!: number | null;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'UserCreatorId' })
+  userCreator!: User;
 
   @Column({ name: 'AssignedUserId', type: 'int', nullable: true })
   assignedUserId!: number | null;

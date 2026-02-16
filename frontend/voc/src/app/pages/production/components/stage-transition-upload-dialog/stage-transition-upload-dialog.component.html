@@ -1,0 +1,47 @@
+<p-confirmDialog [style]="{width: '50vw'}"></p-confirmDialog>
+<div class="flex flex-column gap-4 p-4">
+    <div class="text-color-secondary mb-3">
+        Para avanzar a la siguiente etapa, es necesario cargar al menos un (1) documento de soporte.
+    </div>
+
+    <div>
+        <label class="font-bold mb-2 block">Archivos adjuntos</label>
+        <p-fileUpload #fileUpload mode="advanced" name="demo[]" [customUpload]="true" [showUploadButton]="true"
+            [showCancelButton]="true" (onSelect)="onFileSelect($event)" (onRemove)="onFileRemove($event)"
+            (uploadHandler)="uploadFiles($event)" (onClear)="onFileClear()" [multiple]="true"
+            accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" [maxFileSize]="10000000" chooseLabel="Seleccionar"
+            cancelLabel="Cancelar" uploadLabel="Cargar">
+        </p-fileUpload>
+
+        <div *ngIf="existingFiles.length > 0" class="mt-3">
+            <div class="font-medium mb-2">Archivos existentes:</div>
+            <div *ngFor="let file of existingFiles"
+                class="flex align-items-center justify-content-between p-2 border-1 surface-border border-round mb-2 hover:surface-50">
+                <div class="flex align-items-center gap-2">
+                    <i class="pi pi-file text-primary"></i>
+                    <span class="text-sm font-medium">{{file.name}}</span>
+                </div>
+                <div class="flex gap-2">
+                    <button pButton icon="pi pi-download"
+                        class="p-button-text p-button-secondary p-button-sm p-0 w-2rem h-2rem"
+                        (click)="downloadFile(file)" pTooltip="Descargar" tooltipPosition="top"></button>
+                    <!-- Usually we don't allow deleting files in this transition unless specified, but let's keep it safe (read-only for existing) or allow delete? 
+                         User said "allow to the user upload different files... show a list... allow upload more". 
+                         It doesn't explicitly say delete. I'll omit delete for existing files to be safe, or maybe allow it? 
+                         Let's stick to upload for now. -->
+                </div>
+            </div>
+        </div>
+
+        <div *ngIf="existingFiles.length === 0 && selectedFiles.length === 0"
+            class="text-center p-4 surface-50 border-round text-500">
+            No hay archivos cargados.
+        </div>
+    </div>
+
+    <div class="flex justify-content-end gap-2 mt-4">
+        <button pButton label="Cancelar" class="p-button-text" (click)="cancel()"></button>
+        <button pButton label="Avanzar" icon="pi pi-check" (click)="advance()"
+            [disabled]="existingFiles.length === 0"></button>
+    </div>
+</div>

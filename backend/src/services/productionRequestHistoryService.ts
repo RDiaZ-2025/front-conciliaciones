@@ -52,7 +52,7 @@ export class ProductionRequestHistoryService {
     changedBy: number
   ): Promise<void> {
     const fieldsToCheck: (keyof ProductionRequest)[] = [
-      'name', 'department', 'contactPerson',
+      'name', 'department',
       'assignedUserId', 'deliveryDate', 'observations', 'status'
     ];
 

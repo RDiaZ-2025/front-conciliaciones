@@ -1,0 +1,18 @@
+<div class="flex flex-column gap-3 p-3">
+    <div class="text-center mb-3">
+        <i class="pi pi-question-circle text-5xl text-primary mb-3"></i>
+        <div class="font-bold text-xl mb-2">Confirmar Venta</div>
+        <div class="text-color-secondary">¿La campaña se vendió exitosamente?</div>
+    </div>
+
+    <div class="flex flex-column gap-2">
+        <button pButton label="Sí, vendida" icon="pi pi-check" class="p-button-success action-button"
+            (click)="close('sold')"></button>
+
+        <button pButton label="No, no vendida" icon="pi pi-times" class="p-button-danger action-button"
+            (click)="close('not_sold')"></button>
+
+        <button pButton label="Cancelar" icon="pi pi-ban" class="p-button-secondary p-button-text action-button mt-2"
+            (click)="close('cancel')"></button>
+    </div>
+</div>

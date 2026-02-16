@@ -37,6 +37,7 @@ export class ProductionDetailDialogComponent {
     switch (stageId) {
       case 'completed': return 'success';
       case 'in_production': return 'info';
+      case 'create_proposal': return 'warn';
       case 'quotation': return 'warn';
       case 'request': return 'secondary';
       default: return 'info';

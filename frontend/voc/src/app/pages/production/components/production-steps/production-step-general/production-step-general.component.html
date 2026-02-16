@@ -10,16 +10,6 @@
         </small>
     </div>
 
-    <div>
-        <p-floatlabel variant="in">
-            <p-select formControlName="department" [options]="teams" optionLabel="name" optionValue="name"
-                styleClass="w-full" appendTo="body" placeholder="Seleccione un equipo" [showClear]="true" />
-            <label for="department">Equipo Asignado</label>
-        </p-floatlabel>
-        <small class="p-error" *ngIf="form.get('department')?.invalid && form.get('department')?.dirty">
-            Equipo es requerido
-        </small>
-    </div>
 
     <div class="mb-2">
         <p-floatlabel variant="in">

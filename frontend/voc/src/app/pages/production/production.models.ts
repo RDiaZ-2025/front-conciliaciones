@@ -136,7 +136,7 @@ export interface ProductionRequest {
   name: string;
   requestDate: string;
   department: string;
-  contactPerson: string;
+  userCreatorId?: number;
   assignedUserId?: number;
   deliveryDate?: string;
   observations?: string;
@@ -155,6 +155,7 @@ export interface ProductionRequest {
 export const WORKFLOW_STAGES = [
   { id: 'request', label: 'Inicio' },
   { id: 'quotation', label: 'Cotización' },
+  { id: 'create_proposal', label: 'Crear Propuesta' },
   { id: 'get_data', label: 'Obtener Datos' },
   { id: 'in_sell', label: 'Venta' },
   { id: 'val_materiales_mobile', label: 'Val. Materiales Mobile' },
@@ -163,56 +164,4 @@ export const WORKFLOW_STAGES = [
   { id: 'gestion_operativa', label: 'Gestión Operativa' },
   { id: 'cierre', label: 'Cierre' },
   { id: 'completed', label: 'Completado' } // Keep for backward compatibility if needed
-];
-
-export const MOCK_PRODUCTION_REQUESTS: ProductionRequest[] = [
-  {
-    id: 1,
-    name: 'Campaña Publicitaria Q3',
-    requestDate: '2023-07-15T10:30:00Z',
-    department: 'Marketing',
-    contactPerson: 'Ana Martínez',
-    deliveryDate: '2023-08-30',
-    observations: 'Necesitamos enfocarnos en el nuevo producto estrella',
-    stage: 'in_production'
-  },
-  {
-    id: 2,
-    name: 'Video Corporativo Anual',
-    requestDate: '2023-06-20T14:15:00Z',
-    department: 'Comunicación',
-    contactPerson: 'Carlos Rodríguez',
-    deliveryDate: '2023-09-15',
-    observations: 'Debe incluir testimonios de los directivos',
-    stage: 'pre_production'
-  },
-  {
-    id: 3,
-    name: 'Spot Televisivo Navidad',
-    requestDate: '2023-08-05T09:45:00Z',
-    department: 'Ventas',
-    contactPerson: 'Laura Sánchez',
-    deliveryDate: '2023-11-20',
-    observations: 'Formato de 30 segundos para prime time',
-    stage: 'quotation'
-  },
-  {
-    id: 4,
-    name: 'Contenido Redes Sociales',
-    requestDate: '2023-07-28T11:20:00Z',
-    department: 'Marketing Digital',
-    contactPerson: 'Miguel Torres',
-    deliveryDate: '2023-08-15',
-    stage: 'completed'
-  },
-  {
-    id: 5,
-    name: 'Documental Proceso Productivo',
-    requestDate: '2023-08-10T16:30:00Z',
-    department: 'Operaciones',
-    contactPerson: 'Patricia Gómez',
-    deliveryDate: '2023-10-30',
-    observations: 'Necesitamos acceso a todas las plantas de producción',
-    stage: 'request'
-  }
 ];

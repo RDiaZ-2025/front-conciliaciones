@@ -115,7 +115,6 @@ export class ProductionDialogComponent implements OnInit {
       // Step 1: General Request
       name: [data.name || '', Validators.required],
       department: [data.department || '', Validators.required],
-      contactPerson: [data.contactPerson || '', Validators.required],
       assignedUserId: [data.assignedUserId || null],
       deliveryDate: [data.deliveryDate ? new Date(data.deliveryDate) : null, Validators.required],
       observations: [data.observations || ''],
@@ -173,18 +172,22 @@ export class ProductionDialogComponent implements OnInit {
     this.loadTeams();
 
     // Auto-fill for new requests
-    if (!this.isEditMode && !this.isAssignedUser) {
+    if (!this.isEditMode) {
       const currentUser = this.authService.currentUser();
       if (currentUser) {
-        // Set Contact Person (Read-only)
-        this.form.patchValue({ contactPerson: currentUser.name });
-        this.form.get('contactPerson')?.disable();
+        // Set Assigned User (User Creator)
+        if (currentUser.id) {
+           this.form.patchValue({ assignedUserId: currentUser.id });
+        }
 
-        // Set Department (Team) - Auto-select user's team but allow changing
+        // Set Department (Team) - Auto-select user's team and make it read-only
+        // Requirement: Always use current user's team for new requests
         const userTeams = (currentUser as any).teams as string[];
         if (userTeams && userTeams.length > 0) {
           const teamName = userTeams[0];
           this.form.patchValue({ department: teamName });
+          // We disable it since it's not selectable in UI anymore, but value is preserved in getRawValue()
+          this.form.get('department')?.disable();
         }
       }
     }
@@ -216,7 +219,6 @@ export class ProductionDialogComponent implements OnInit {
           // Disable read-only fields (AC5)
           // Department should be editable for reassignment
           // this.form.get('department')?.disable();
-          this.form.get('contactPerson')?.disable();
 
           this.checkPermissions(fullData);
 
@@ -551,12 +553,12 @@ export class ProductionDialogComponent implements OnInit {
 
       let targetStageCode = 'in_sell';
       if (budget >= 50000000) {
-        targetStageCode = 'get_data';
+        targetStageCode = 'create_proposal';
       }
 
       // Only apply if we are in an early stage (or if explicitly creating/updating early info)
       const currentStatus = this.loadedRequest?.status || formValue.status;
-      const earlyStages = ['request', 'quotation', 'inicio', 'in_sell', 'get_data'];
+      const earlyStages = ['request', 'quotation', 'inicio', 'in_sell', 'get_data', 'create_proposal'];
 
       if (!currentStatus || earlyStages.includes(currentStatus)) {
         forcedStage = targetStageCode;
