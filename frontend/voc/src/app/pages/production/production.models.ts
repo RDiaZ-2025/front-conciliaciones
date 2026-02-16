@@ -158,6 +158,7 @@ export const WORKFLOW_STAGES = [
   { id: 'create_proposal', label: 'Crear Propuesta' },
   { id: 'get_data', label: 'Obtener Datos' },
   { id: 'in_sell', label: 'Venta' },
+  { id: 'material_preparation', label: 'Preparación de Materiales' },
   { id: 'val_materiales_mobile', label: 'Val. Materiales Mobile' },
   { id: 'val_materiales_programatica', label: 'Val. Materiales Programática' },
   { id: 'val_materiales_red_plus', label: 'Val. Materiales Red+' },

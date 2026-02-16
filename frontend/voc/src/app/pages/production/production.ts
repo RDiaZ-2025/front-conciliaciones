@@ -372,6 +372,17 @@ export class ProductionComponent implements OnInit, OnDestroy {
     });
   }
 
+  openMaterialPreparation(request: ProductionRequest) {
+    this.confirmationService.confirm({
+      message: '¿Confirmar que se ha completado la Preparación de Materiales?',
+      header: 'Preparación de Materiales',
+      icon: 'pi pi-check-circle',
+      accept: () => {
+        this.performMove(request, 'gestion_operativa');
+      }
+    });
+  }
+
   moveRequest(request: ProductionRequest) {
     const currentStage = request.stage;
     let nextStageId = '';
@@ -425,8 +436,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
           this.ref.onClose.subscribe((result: any) => {
             if (result && result.action) {
               if (result.action === 'sold') {
-                this.currentRequestProcessing = request;
-                this.campaignTypeSelectionVisible.set(true);
+                this.performMove(request, 'material_preparation');
               } else if (result.action === 'not_sold') {
                 this.performMove(request, 'completed');
               }
@@ -434,6 +444,10 @@ export class ProductionComponent implements OnInit, OnDestroy {
             }
           });
         }
+        return;
+
+      case 'material_preparation':
+        this.openMaterialPreparation(request);
         return;
 
       case 'val_materiales_mobile':
@@ -502,6 +516,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
       case 'val_materiales_programatica':
       case 'val_materiales_red_plus':
         return 'secondary';
+      case 'material_preparation': return 'warn';
       case 'venta': return 'info';
       case 'obtener_datos': return 'danger';
       case 'create_proposal': return 'warn';

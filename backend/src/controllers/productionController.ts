@@ -520,7 +520,8 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
       'in_editing',
       'delivered_approval',
       'client_approved',
-      'completed'
+      'completed',
+      'material_preparation'
     ];
 
     if (!stage || !validStages.includes(stage)) {
@@ -546,6 +547,51 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
     }
 
     const oldStatusCode = existingRequest.status || 'unknown';
+
+    // Auto-assignment logic for in_sell -> material_preparation transition
+    if (oldStatusCode === 'in_sell' && stage === 'material_preparation') {
+      try {
+        const teamRepository = AppDataSource.getRepository(Team);
+        const userRepository = AppDataSource.getRepository(User);
+
+        // Find "Operations" Team (Try 'Operaciones' or 'Operations' or 'Gestión Operativa')
+        let operationsTeam = await teamRepository.findOne({ where: { name: 'Operaciones' } });
+        if (!operationsTeam) {
+             operationsTeam = await teamRepository.findOne({ where: { name: 'Operations' } });
+        }
+        if (!operationsTeam) {
+             operationsTeam = await teamRepository.findOne({ where: { name: 'Gestión Operativa' } });
+        }
+
+        if (operationsTeam) {
+          // Update department
+          existingRequest.department = operationsTeam.name;
+
+          // Find active users in "Operations" team
+          const teamUsers = await userRepository.find({ where: { teamId: operationsTeam.id, status: 1 } });
+
+          if (teamUsers.length > 0) {
+            // Select random user
+            const randomUser = teamUsers[Math.floor(Math.random() * teamUsers.length)];
+            existingRequest.assignedUserId = randomUser.id;
+
+            // Log auto-assignment
+            if (req.user?.userId) {
+              await historyService.logChange(
+                existingRequest.id,
+                'AutoAssignment',
+                null,
+                `Stage transition to 'material_preparation': Auto-assigned to Operations Team user ${randomUser.name} (${randomUser.id})`,
+                req.user.userId,
+                'update'
+              );
+            }
+          }
+        }
+      } catch (assignError) {
+        console.error('Error in auto-assignment during stage transition to material_preparation:', assignError);
+      }
+    }
 
     // Auto-assignment logic for create_proposal -> get_data transition
     if (oldStatusCode === 'create_proposal' && stage === 'get_data') {
