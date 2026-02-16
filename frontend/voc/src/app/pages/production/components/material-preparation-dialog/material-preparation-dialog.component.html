@@ -1,0 +1,428 @@
+<div class="flex flex-column gap-3 p-3" style="max-height: 80vh; overflow-y: auto;">
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    
+    <div class="field">
+      <label for="solutionType" class="font-bold block mb-2">
+        Tipo de Solución
+        <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+           pTooltip="Seleccione el tipo de solución de campaña para la que está preparando material. (Obligatorio)" 
+           tooltipPosition="top"
+           tabindex="0"
+           aria-label="Información sobre Tipo de Solución"></i>
+      </label>
+      <p-select 
+        id="solutionType" 
+        [options]="solutions" 
+        formControlName="solutionType" 
+        placeholder="Seleccione una solución" 
+        [style]="{'width':'100%'}"
+        appendTo="body">
+      </p-select>
+      <small *ngIf="form.get('solutionType')?.invalid && form.get('solutionType')?.touched" class="p-error block">El tipo de solución es obligatorio.</small>
+    </div>
+
+    <!-- SMS Fields -->
+    <div *ngIf="selectedSolution() === 'SMS'" class="fadein animation-duration-300">
+      <div class="field">
+        <label for="sms_clientName" class="font-bold block mb-2">
+          Cliente/Nombre de Marca
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Debe ser solo mayúsculas (ej. MIMARCA). Sin minúsculas ni caracteres especiales. (Obligatorio)" 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre Cliente/Nombre de Marca"></i>
+        </label>
+        <input pInputText id="sms_clientName" formControlName="sms_clientName" class="w-full" placeholder="MIMARCA"/>
+        <small class="block text-500">Debe ser mayúsculas.</small>
+        <small *ngIf="form.get('sms_clientName')?.invalid && form.get('sms_clientName')?.touched" class="p-error block">Obligatorio, solo mayúsculas.</small>
+      </div>
+      <div class="field">
+        <label for="sms_messageText" class="font-bold block mb-2">
+          Texto del Mensaje
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Máx 160 caracteres. Sin acentos, 'ñ', ni signos de apertura (¡¿). (Obligatorio)" 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre Texto del Mensaje"></i>
+        </label>
+        <textarea pTextarea id="sms_messageText" formControlName="sms_messageText" class="w-full" rows="3" [autoResize]="true"></textarea>
+        <small class="block text-500">Máx 160 caracteres. Sin acentos, sin 'ñ', sin signos de apertura.</small>
+        <small *ngIf="form.get('sms_messageText')?.invalid && form.get('sms_messageText')?.touched" class="p-error block">Formato inválido o demasiado largo.</small>
+      </div>
+      <div class="field">
+        <label for="sms_destinationUrl" class="font-bold block mb-2">
+          URL de Destino
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Debe ser una URL válida comenzando con http:// o https://. (Obligatorio)" 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre URL de Destino"></i>
+        </label>
+        <input pInputText id="sms_destinationUrl" formControlName="sms_destinationUrl" class="w-full" placeholder="https://ejemplo.com"/>
+        <small *ngIf="form.get('sms_destinationUrl')?.invalid && form.get('sms_destinationUrl')?.touched" class="p-error block">URL válida requerida.</small>
+      </div>
+    </div>
+
+    <!-- RCS Fields -->
+    <div *ngIf="selectedSolution() === 'RCS'" class="fadein animation-duration-300">
+      <div class="field">
+        <label for="rcs_agentData" class="font-bold block mb-2">
+          Datos de Creación de Agente Google
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Proporcione los datos necesarios para la creación del Agente de Google. (Obligatorio)" 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre Datos de Creación de Agente Google"></i>
+        </label>
+        <textarea pTextarea id="rcs_agentData" formControlName="rcs_agentData" class="w-full" rows="3"></textarea>
+      </div>
+      <div class="field">
+        <label for="rcs_messageText" class="font-bold block mb-2">
+          Texto del Mensaje
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Máx 350 caracteres permitidos. (Opcional)" 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre Texto del Mensaje"></i>
+        </label>
+        <textarea pTextarea id="rcs_messageText" formControlName="rcs_messageText" class="w-full" rows="3"></textarea>
+        <small class="block text-500">Máx 350 caracteres.</small>
+        <small *ngIf="form.get('rcs_messageText')?.invalid && form.get('rcs_messageText')?.touched" class="p-error block">Máx 350 caracteres permitidos.</small>
+      </div>
+      <div class="field">
+        <label for="rcs_redirectUrl" class="font-bold block mb-2">
+          URL de Redirección
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Debe ser una URL válida comenzando con http:// o https://. (Obligatorio)" 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre URL de Redirección"></i>
+        </label>
+        <input pInputText id="rcs_redirectUrl" formControlName="rcs_redirectUrl" class="w-full"/>
+        <small *ngIf="form.get('rcs_redirectUrl')?.invalid && form.get('rcs_redirectUrl')?.touched" class="p-error block">URL válida requerida.</small>
+      </div>
+    </div>
+
+    <!-- SAT PUSH Fields -->
+    <div *ngIf="selectedSolution() === 'SAT_PUSH'" class="fadein animation-duration-300">
+      <div class="field">
+        <label for="sat_messageText" class="font-bold block mb-2">
+          Texto del Mensaje
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Máx 160 caracteres. Debe comenzar con 'Publicidad de [NOMBRECLIENTE]'. (Obligatorio)" 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre Texto del Mensaje"></i>
+        </label>
+        <textarea pTextarea id="sat_messageText" formControlName="sat_messageText" class="w-full" rows="3"></textarea>
+        <small class="block text-500">Debe comenzar con "Publicidad de CLIENTNAME". Máx 160 caracteres.</small>
+        <small *ngIf="form.get('sat_messageText')?.invalid && form.get('sat_messageText')?.touched" class="p-error block">Formato inválido o demasiado largo.</small>
+      </div>
+      <div class="field">
+        <label for="sat_url" class="font-bold block mb-2">
+          URL
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Debe ser una URL válida comenzando con http:// o https://. (Obligatorio)" 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre URL"></i>
+        </label>
+        <input pInputText id="sat_url" formControlName="sat_url" class="w-full"/>
+        <small *ngIf="form.get('sat_url')?.invalid && form.get('sat_url')?.touched" class="p-error block">URL válida requerida.</small>
+      </div>
+      <div class="field">
+        <label for="sat_phoneNumber" class="font-bold block mb-2">
+          Número de Teléfono
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Ingrese un número de teléfono válido de 10 dígitos. (Obligatorio)" 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre Número de Teléfono"></i>
+        </label>
+        <input pInputText id="sat_phoneNumber" formControlName="sat_phoneNumber" class="w-full"/>
+        <small *ngIf="form.get('sat_phoneNumber')?.invalid && form.get('sat_phoneNumber')?.touched" class="p-error block">Se requiere un número de 10 dígitos.</small>
+      </div>
+    </div>
+
+    <!-- PUSH MULTIMEDIA Fields -->
+    <div *ngIf="selectedSolution() === 'PUSH_MULTIMEDIA'" class="fadein animation-duration-300">
+      <div class="field">
+        <label for="push_textLine1" class="font-bold block mb-2">
+          Línea de Texto 1
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Máx 25 caracteres. Debe comenzar con 'Publicidad De:'. (Obligatorio)" 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre Línea de Texto 1"></i>
+        </label>
+        <input pInputText id="push_textLine1" formControlName="push_textLine1" class="w-full"/>
+        <small class="block text-500">Debe comenzar con "Publicidad De:". Máx 25 caracteres.</small>
+        <small *ngIf="form.get('push_textLine1')?.invalid && form.get('push_textLine1')?.touched" class="p-error block">Formato inválido o demasiado largo.</small>
+      </div>
+      <div class="field">
+        <label for="push_textLine2" class="font-bold block mb-2">
+          Línea de Texto 2
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Máx 35 caracteres. (Opcional)" 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre Línea de Texto 2"></i>
+        </label>
+        <input pInputText id="push_textLine2" formControlName="push_textLine2" class="w-full"/>
+        <small class="block text-500">Máx 35 caracteres.</small>
+        <small *ngIf="form.get('push_textLine2')?.invalid && form.get('push_textLine2')?.touched" class="p-error block">Máx 35 caracteres permitidos.</small>
+      </div>
+      <div class="field">
+        <label for="push_url" class="font-bold block mb-2">
+          URL
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Debe ser una URL válida comenzando con http:// o https://. (Obligatorio)" 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre URL"></i>
+        </label>
+        <input pInputText id="push_url" formControlName="push_url" class="w-full"/>
+        <small *ngIf="form.get('push_url')?.invalid && form.get('push_url')?.touched" class="p-error block">URL válida requerida.</small>
+      </div>
+      <div class="field">
+        <label for="push_utm" class="font-bold block mb-2">
+          UTM (Opcional)
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Ingrese parámetros UTM para seguimiento (opcional)." 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre UTM"></i>
+        </label>
+        <input pInputText id="push_utm" formControlName="push_utm" class="w-full"/>
+      </div>
+    </div>
+
+    <!-- VIRTUAL PRELOADS -->
+    <div *ngIf="selectedSolution() === 'VIRTUAL_PRELOADS'" class="fadein animation-duration-300">
+      <div class="field">
+        <label for="vp_appName" class="font-bold block mb-2">
+          Nombre de la App
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Ingrese el nombre de la aplicación. (Obligatorio)" 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre Nombre de la App"></i>
+        </label>
+        <input pInputText id="vp_appName" formControlName="vp_appName" class="w-full"/>
+        <small *ngIf="form.get('vp_appName')?.invalid && form.get('vp_appName')?.touched" class="p-error block">El Nombre de la App es obligatorio.</small>
+      </div>
+      <div class="field">
+        <label for="vp_clientName" class="font-bold block mb-2">
+          Nombre del Cliente
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Ingrese el nombre del cliente. (Obligatorio)" 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre Nombre del Cliente"></i>
+        </label>
+        <input pInputText id="vp_clientName" formControlName="vp_clientName" class="w-full"/>
+        <small *ngIf="form.get('vp_clientName')?.invalid && form.get('vp_clientName')?.touched" class="p-error block">El Nombre del Cliente es obligatorio.</small>
+      </div>
+      <div class="field">
+        <label for="vp_playStoreUrl" class="font-bold block mb-2">
+          URL de Play Store
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Debe ser una URL de Play Store válida comenzando con http:// o https://. (Obligatorio)" 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre URL de Play Store"></i>
+        </label>
+        <input pInputText id="vp_playStoreUrl" formControlName="vp_playStoreUrl" class="w-full"/>
+        <small *ngIf="form.get('vp_playStoreUrl')?.invalid && form.get('vp_playStoreUrl')?.touched" class="p-error block">URL de Play Store válida requerida.</small>
+      </div>
+      <div class="field">
+        <label for="vp_notificationText" class="font-bold block mb-2">
+          Texto de Notificación
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Máx 50 caracteres permitidos para el texto de notificación. (Opcional)" 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre Texto de Notificación"></i>
+        </label>
+        <input pInputText id="vp_notificationText" formControlName="vp_notificationText" class="w-full"/>
+        <small class="block text-500">Máx 50 caracteres.</small>
+        <small *ngIf="form.get('vp_notificationText')?.invalid && form.get('vp_notificationText')?.touched" class="p-error block">Máx 50 caracteres permitidos.</small>
+      </div>
+    </div>
+    
+    <!-- PRE-RECORDED CALL -->
+    <div *ngIf="selectedSolution() === 'PRE_RECORDED_CALL'" class="fadein animation-duration-300">
+      <div class="field">
+        <label for="call_smsText" class="font-bold block mb-2">
+          Texto SMS
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Máx 200 caracteres permitidos para el texto SMS. (Opcional)" 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre Texto SMS"></i>
+        </label>
+        <textarea pTextarea id="call_smsText" formControlName="call_smsText" class="w-full" rows="3"></textarea>
+        <small class="block text-500">Máx 200 caracteres.</small>
+        <small *ngIf="form.get('call_smsText')?.invalid && form.get('call_smsText')?.touched" class="p-error block">Máx 200 caracteres permitidos.</small>
+      </div>
+    </div>
+
+    <!-- WHATSAPP BUSINESS Fields -->
+    <div *ngIf="selectedSolution() === 'WHATSAPP_BUSINESS'" class="fadein animation-duration-300">
+      <div class="field">
+        <label for="wa_fbMessengerId" class="font-bold block mb-2">
+          ID de Facebook Messenger
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Ingrese el ID de Facebook Messenger. (Obligatorio)" 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre ID de Facebook Messenger"></i>
+        </label>
+        <input pInputText id="wa_fbMessengerId" formControlName="wa_fbMessengerId" class="w-full"/>
+        <small *ngIf="form.get('wa_fbMessengerId')?.invalid && form.get('wa_fbMessengerId')?.touched" class="p-error block">El ID es obligatorio.</small>
+      </div>
+    </div>
+
+    <!-- EMAIL MARKETING -->
+    <div *ngIf="selectedSolution() === 'EMAIL_MARKETING'" class="fadein animation-duration-300">
+        <div class="field">
+            <label for="email_colors" class="font-bold block mb-2">
+              Colores de Marca
+              <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                 pTooltip="Colores Hex requeridos (ej. #FFFFFF). Separe múltiples colores con comas. (Obligatorio)" 
+                 tooltipPosition="top"
+                 tabindex="0"
+                 aria-label="Información sobre Colores de Marca"></i>
+            </label>
+            <input pInputText id="email_colors" formControlName="email_colors" class="w-full" placeholder="#FFFFFF, #000000"/>
+            <small *ngIf="form.get('email_colors')?.invalid && form.get('email_colors')?.touched" class="p-error block">Colores Hex requeridos (ej. #FFF000).</small>
+        </div>
+        <div class="field">
+            <label for="email_fonts" class="font-bold block mb-2">
+              Fuentes
+              <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                 pTooltip="Especifique las fuentes a usar en el correo. (Obligatorio)" 
+                 tooltipPosition="top"
+                 tabindex="0"
+                 aria-label="Información sobre Fuentes"></i>
+            </label>
+            <input pInputText id="email_fonts" formControlName="email_fonts" class="w-full"/>
+            <small *ngIf="form.get('email_fonts')?.invalid && form.get('email_fonts')?.touched" class="p-error block">Las fuentes son obligatorias.</small>
+        </div>
+        <div class="field">
+            <label for="email_ctas" class="font-bold block mb-2">
+              CTAs (Llamados a la acción)
+              <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                 pTooltip="Ingrese texto/enlaces de Llamado a la Acción. (Obligatorio)" 
+                 tooltipPosition="top"
+                 tabindex="0"
+                 aria-label="Información sobre CTAs"></i>
+            </label>
+            <textarea pTextarea id="email_ctas" formControlName="email_ctas" class="w-full" rows="3"></textarea>
+            <small *ngIf="form.get('email_ctas')?.invalid && form.get('email_ctas')?.touched" class="p-error block">Los CTAs son obligatorios.</small>
+        </div>
+        <div class="field">
+            <label for="email_socialLinks" class="font-bold block mb-2">
+              Enlaces de Redes Sociales
+              <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                 pTooltip="Proporcione enlaces a perfiles de redes sociales. (Obligatorio)" 
+                 tooltipPosition="top"
+                 tabindex="0"
+                 aria-label="Información sobre Enlaces de Redes Sociales"></i>
+            </label>
+            <textarea pTextarea id="email_socialLinks" formControlName="email_socialLinks" class="w-full" rows="2"></textarea>
+            <small *ngIf="form.get('email_socialLinks')?.invalid && form.get('email_socialLinks')?.touched" class="p-error block">Los Enlaces de Redes Sociales son obligatorios.</small>
+        </div>
+        <div class="field">
+            <label for="email_footerData" class="font-bold block mb-2">
+              Datos del Pie de Página
+              <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                 pTooltip="Información para incluir en el pie de página del correo. (Obligatorio)" 
+                 tooltipPosition="top"
+                 tabindex="0"
+                 aria-label="Información sobre Datos del Pie de Página"></i>
+            </label>
+            <textarea pTextarea id="email_footerData" formControlName="email_footerData" class="w-full" rows="2"></textarea>
+            <small *ngIf="form.get('email_footerData')?.invalid && form.get('email_footerData')?.touched" class="p-error block">Los Datos del Pie de Página son obligatorios.</small>
+        </div>
+        <div class="field">
+            <label for="email_dnsConfig" class="font-bold block mb-2">
+              Configuración DNS
+              <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                 pTooltip="Ingrese detalles de configuración DNS. (Obligatorio)" 
+                 tooltipPosition="top"
+                 tabindex="0"
+                 aria-label="Información sobre Configuración DNS"></i>
+            </label>
+            <textarea pTextarea id="email_dnsConfig" formControlName="email_dnsConfig" class="w-full" rows="2"></textarea>
+            <small *ngIf="form.get('email_dnsConfig')?.invalid && form.get('email_dnsConfig')?.touched" class="p-error block">La Configuración DNS es obligatoria.</small>
+        </div>
+        <div class="field">
+            <label for="email_trackingUrls" class="font-bold block mb-2">
+              URLs de Seguimiento
+              <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                 pTooltip="Ingrese URLs para seguimiento. (Obligatorio)" 
+                 tooltipPosition="top"
+                 tabindex="0"
+                 aria-label="Información sobre URLs de Seguimiento"></i>
+            </label>
+            <textarea pTextarea id="email_trackingUrls" formControlName="email_trackingUrls" class="w-full" rows="2"></textarea>
+            <small *ngIf="form.get('email_trackingUrls')?.invalid && form.get('email_trackingUrls')?.touched" class="p-error block">Las URLs de Seguimiento son obligatorias.</small>
+        </div>
+    </div>
+
+    <!-- DATA REWARDS -->
+    <div *ngIf="selectedSolution() === 'DATA_REWARDS'" class="fadein animation-duration-300">
+        <p class="mb-2">Por favor suba el video o los recursos requeridos a continuación.</p>
+    </div>
+
+    <!-- Common Upload Area -->
+    <div class="field mt-4" *ngIf="selectedSolution()">
+        <label class="font-bold block mb-2">
+          Cargas Multimedia (Imágenes, Videos, etc.)
+          <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+             pTooltip="Suba los recursos requeridos. Los formatos y límites de tamaño varían según el tipo de solución. (Obligatorio para soluciones específicas)" 
+             tooltipPosition="top"
+             tabindex="0"
+             aria-label="Información sobre Cargas Multimedia"></i>
+        </label>
+        <p-fileupload 
+            mode="advanced" 
+            name="files[]" 
+            [multiple]="true" 
+            [accept]="fileAccept()" 
+            [maxFileSize]="maxFileSize()" 
+            [customUpload]="true"
+            (uploadHandler)="onUpload($event)"
+            [auto]="true"
+            chooseLabel="Seleccionar Archivos">
+        </p-fileupload>
+        <small class="block text-500">Consulte las reglas específicas de la solución para los requisitos de archivo.</small>
+        
+        <!-- Display uploaded files list -->
+        <div *ngIf="uploadedFiles.length > 0" class="mt-2">
+            <ul class="list-none p-0 m-0">
+                <li *ngFor="let file of uploadedFiles" class="flex align-items-center gap-2 mb-1">
+                    <i class="pi pi-check-circle text-green-500"></i>
+                    <span>{{ file.name }}</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="flex justify-content-end gap-2 mt-4 align-items-center">
+      <small *ngIf="!isFormValid() && fileRequirementMessage()" class="p-error mr-2">{{ fileRequirementMessage() }}</small>
+      <p-button label="Cancelar" icon="pi pi-times" styleClass="p-button-text" (click)="cancel()"></p-button>
+      <p-button label="Guardar Borrador" icon="pi pi-save" styleClass="p-button-secondary p-button-outlined" (click)="saveDraft()"></p-button>
+      <p-button 
+        label="Enviar" 
+        icon="pi pi-check" 
+        (click)="submit()" 
+        [disabled]="isUploading() || !isFormValid()"
+        [pTooltip]="!isFormValid() ? 'Por favor complete todos los campos y cargas requeridos' : ''"
+        tooltipPosition="top">
+      </p-button>
+    </div>
+
+  </form>
+</div>

@@ -29,6 +29,7 @@ import { AzureStorageService } from '../../services/azure-storage.service';
 import { FilePreviewComponent } from '../../components/file-preview/file-preview';
 import { UploadedFile } from './production.models';
 import { InSellActionDialogComponent } from './components/in-sell-action-dialog/in-sell-action-dialog.component';
+import { MaterialPreparationDialogComponent } from './components/material-preparation-dialog/material-preparation-dialog.component';
 
 @Component({
   selector: 'app-production',
@@ -373,14 +374,37 @@ export class ProductionComponent implements OnInit, OnDestroy {
   }
 
   openMaterialPreparation(request: ProductionRequest) {
-    this.confirmationService.confirm({
-      message: '¿Confirmar que se ha completado la Preparación de Materiales?',
+    this.ref = this.dialogService.open(MaterialPreparationDialogComponent, {
       header: 'Preparación de Materiales',
-      icon: 'pi pi-check-circle',
-      accept: () => {
-        this.performMove(request, 'gestion_operativa');
-      }
+      width: '600px',
+      contentStyle: { "overflow": "auto" },
+      baseZIndex: 10000,
+      data: { request }
     });
+
+    if (this.ref) {
+      this.ref.onClose.subscribe((result: any) => {
+        if (result) {
+          // Save material data first
+          this.productionService.saveMaterialData(request.id, result).subscribe({
+            next: () => {
+              if (result.status === 'COMPLETED') {
+                 this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Material data submitted' });
+                 // Move request only if completed
+                 this.performMove(request, 'gestion_operativa');
+              } else {
+                 this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Material data draft saved' });
+                 this.loadRequests();
+              }
+            },
+            error: (err) => {
+              console.error('Error saving material data:', err);
+              this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save material data' });
+            }
+          });
+        }
+      });
+    }
   }
 
   moveRequest(request: ProductionRequest) {

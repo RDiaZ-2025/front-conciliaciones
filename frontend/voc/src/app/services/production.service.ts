@@ -67,6 +67,10 @@ export class ProductionService {
     return this.http.put<ProductionRequest>(`${this.apiUrl}/${id}/move`, { stage });
   }
 
+  saveMaterialData(id: number, data: any): Observable<ProductionRequest> {
+    return this.http.put<ProductionRequest>(`${this.apiUrl}/${id}/material-data`, { materialData: data });
+  }
+
   getProducts(): Observable<Product[]> {
     return this.http.get<Product[]>(`${this.apiUrl}/products`);
   }

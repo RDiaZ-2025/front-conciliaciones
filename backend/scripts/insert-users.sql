@@ -114,6 +114,37 @@ BEGIN
     PRINT 'Usuario adminpanel@test.com ya existe';
 END
 
+-- Operations Team Users
+IF NOT EXISTS (SELECT * FROM USERS WHERE Email = 'ops1@test.com')
+BEGIN
+    INSERT INTO USERS (Name, Email, PasswordHash, Status) 
+    VALUES ('Operador 1', 'ops1@test.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/VcSAg/9qK', 1);
+    
+    DECLARE @Ops1UserId int = SCOPE_IDENTITY();
+    
+    -- Asignar permisos de production_management
+    INSERT INTO PERMISSIONS_BY_USER (UserId, PermissionId)
+    SELECT @Ops1UserId, Id FROM PERMISSIONS 
+    WHERE Name = 'production_management';
+    
+    PRINT 'Usuario ops1@test.com creado exitosamente';
+END
+
+IF NOT EXISTS (SELECT * FROM USERS WHERE Email = 'ops2@test.com')
+BEGIN
+    INSERT INTO USERS (Name, Email, PasswordHash, Status) 
+    VALUES ('Operador 2', 'ops2@test.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/VcSAg/9qK', 1);
+    
+    DECLARE @Ops2UserId int = SCOPE_IDENTITY();
+    
+    -- Asignar permisos de production_management
+    INSERT INTO PERMISSIONS_BY_USER (UserId, PermissionId)
+    SELECT @Ops2UserId, Id FROM PERMISSIONS 
+    WHERE Name = 'production_management';
+    
+    PRINT 'Usuario ops2@test.com creado exitosamente';
+END
+
 PRINT 'Inserción de usuarios adicionales completada';
 PRINT 'Usuarios disponibles:';
 PRINT '- admin@claromedia.com / admin123 (Administrador completo)';
@@ -123,3 +154,5 @@ PRINT '- user@test.com / user123 (Usuario básico)';
 PRINT '- upload@claromedia.com / upload123 (Solo carga)';
 PRINT '- dashboard@claromedia.com / dashboard123 (Solo dashboard)';
 PRINT '- adminpanel@test.com / 123456 (Admin Panel Test)';
+PRINT '- ops1@test.com / admin123 (Operaciones)';
+PRINT '- ops2@test.com / admin123 (Operaciones)';

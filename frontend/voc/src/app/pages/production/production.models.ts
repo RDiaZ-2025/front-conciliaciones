@@ -150,6 +150,7 @@ export interface ProductionRequest {
   audienceData?: AudienceData;
   campaignDetail?: CampaignDetail;
   productionInfo?: ProductionInfo;
+  materialData?: any;
 }
 
 export const WORKFLOW_STAGES = [

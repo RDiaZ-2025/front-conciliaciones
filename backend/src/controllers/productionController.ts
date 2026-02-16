@@ -997,3 +997,46 @@ export const updateStepProduction = async (req: Request, res: Response): Promise
     return res.status(500).json({ message: 'Error updating production info', error });
   }
 };
+
+// Update Material Data
+export const updateMaterialData = async (req: Request, res: Response): Promise<Response | void> => {
+  try {
+    const { id } = req.params;
+    const { materialData } = req.body;
+
+    if (!AppDataSource.isInitialized) {
+      return res.status(503).json({ success: false, message: 'Base de datos no disponible' });
+    }
+
+    const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
+    const existingRequest = await productionRequestRepository.findOne({
+      where: { id: parseInt(id) }
+    });
+
+    if (!existingRequest) {
+      return res.status(404).json({ message: 'Production request not found' });
+    }
+
+    // Update materialData (stringify if it's an object)
+    existingRequest.materialData = typeof materialData === 'string' ? materialData : JSON.stringify(materialData);
+
+    await productionRequestRepository.save(existingRequest);
+
+    // Log change
+    if (req.user?.userId) {
+      await historyService.logChange(
+        existingRequest.id,
+        'MaterialData',
+        null,
+        'Material Preparation Data Updated',
+        req.user.userId,
+        'update'
+      );
+    }
+
+    return res.status(200).json(existingRequest);
+  } catch (error) {
+    console.error('Error updating material data:', error);
+    return res.status(500).json({ message: 'Error updating material data', error });
+  }
+};
