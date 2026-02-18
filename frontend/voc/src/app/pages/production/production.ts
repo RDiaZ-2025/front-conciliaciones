@@ -376,9 +376,11 @@ export class ProductionComponent implements OnInit, OnDestroy {
   openMaterialPreparation(request: ProductionRequest) {
     this.ref = this.dialogService.open(MaterialPreparationDialogComponent, {
       header: 'Preparación de Materiales',
-      width: '600px',
+      width: '90%',
+      height: '90%',
       contentStyle: { "overflow": "auto" },
       baseZIndex: 10000,
+      maximizable: true,
       data: { request }
     });
 
