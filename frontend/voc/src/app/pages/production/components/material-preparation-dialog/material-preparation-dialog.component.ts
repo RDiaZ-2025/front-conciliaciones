@@ -65,7 +65,19 @@ export class MaterialPreparationDialogComponent {
     'CONTENT_RED_PLUS': []
   };
 
+  programmaticSubcategories = [
+    { label: 'DISPLAY', value: 'DISPLAY' },
+    { label: 'RICH MEDIA', value: 'RICH_MEDIA' },
+    { label: 'PMAX', value: 'PMAX' },
+    { label: 'NATIVE', value: 'NATIVE' },
+    { label: 'REDES SOCIALES', value: 'SOCIAL_MEDIA' },
+    { label: 'YOUTUBE', value: 'YOUTUBE' },
+    { label: 'DOOH', value: 'DOOH' },
+    { label: 'CTV-OFF', value: 'CTV_OFF' }
+  ];
+
   filteredSolutions: any[] = [];
+  filteredSubcategories: any[] = [];
 
   emailTemplates = [
     { label: 'Plantilla Básica', value: 'BASIC' },
@@ -174,6 +186,7 @@ export class MaterialPreparationDialogComponent {
   constructor() {
     this.form = this.fb.group({
       solutionCategory: [null, Validators.required],
+      solutionSubcategory: [null], // Optional, depends on category
       solutionType: [null, Validators.required],
       
       // SMS
@@ -246,10 +259,67 @@ export class MaterialPreparationDialogComponent {
 
     // Handle Category Changes
     this.form.get('solutionCategory')?.valueChanges.subscribe(category => {
-      this.filteredSolutions = this.solutionsMap[category] || [];
-      this.form.get('solutionType')?.setValue(null);
-      // If empty, we can optionaly disable the control or show a message, 
-      // but the template will handle the empty list.
+      // Handle both object and string value (in case p-select behavior varies)
+      const selectedCategory = category?.value || category;
+      console.log('Category Changed:', selectedCategory);
+
+      // 1. Reset all fields except solutionCategory
+      Object.keys(this.form.controls).forEach(key => {
+        if (key !== 'solutionCategory') {
+            const control = this.form.get(key);
+            if (control instanceof FormArray) {
+                control.clear();
+            } else {
+                control?.setValue(null, { emitEvent: false });
+            }
+            control?.markAsPristine();
+            control?.markAsUntouched();
+            control?.setErrors(null);
+        }
+      });
+
+      // 2. Clear File Uploads and Reset State
+      this.uploadedFiles = [];
+      this.selectedSolution.set(null);
+
+      // 3. Clear all field-specific validators
+      this.updateValidators('');
+
+      // 4. Reset Filtered Lists
+      this.filteredSolutions = [];
+      this.filteredSubcategories = [];
+
+      // 5. Apply Category-Specific Logic
+      if (selectedCategory === 'MOBILE') {
+          this.filteredSolutions = [...this.solutionsMap['MOBILE']]; // Use spread to ensure new reference
+          console.log('Populated MOBILE Solutions:', this.filteredSolutions);
+          this.form.get('solutionSubcategory')?.clearValidators();
+          this.form.get('solutionType')?.setValidators([Validators.required]);
+      } else if (selectedCategory === 'PROGRAMMATIC') {
+          this.filteredSubcategories = this.programmaticSubcategories;
+          this.form.get('solutionSubcategory')?.setValidators([Validators.required]);
+          // Solution Types not available yet for Programmatic
+          this.form.get('solutionType')?.clearValidators(); 
+      } else if (selectedCategory === 'CONTENT_RED_PLUS') {
+          // No subcategories yet, just placeholder
+          this.form.get('solutionSubcategory')?.clearValidators();
+          // Solution Types not available yet for Content Red+
+          this.form.get('solutionType')?.clearValidators();
+      }
+      
+      // 6. Update Validity for structural fields
+      this.form.get('solutionSubcategory')?.updateValueAndValidity({ emitEvent: false });
+      this.form.get('solutionType')?.updateValueAndValidity({ emitEvent: false });
+    });
+
+    // Handle Subcategory Changes
+    this.form.get('solutionSubcategory')?.valueChanges.subscribe(subcategory => {
+        // Only clear if not already null (to avoid redundant clearing)
+        if (this.form.get('solutionType')?.value) {
+            this.form.get('solutionType')?.setValue(null);
+        }
+        // For PROGRAMMATIC, even with subcategory, solutions are not available yet
+        this.filteredSolutions = []; 
     });
 
     // Re-validate SMS message text when Client Name changes
