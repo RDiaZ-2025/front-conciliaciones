@@ -53,7 +53,7 @@
         </div>
     </div>
 
-    <div class="field" *ngIf="form.get('solutionCategory')?.value">
+    <div class="field" *ngIf="filteredSolutions.length > 0 || (form.get('solutionCategory')?.value && form.get('solutionCategory')?.value !== 'PROGRAMMATIC' && filteredSolutions.length === 0)">
       <label for="solutionType" class="font-bold block mb-2">
         Tipo de Solución
         <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
@@ -63,8 +63,8 @@
            aria-label="Información sobre Tipo de Solución"></i>
       </label>
       
-      <!-- MOBILE: Show Dropdown -->
-      <ng-container *ngIf="form.get('solutionCategory')?.value === 'MOBILE'">
+      <!-- Solutions Dropdown -->
+      <ng-container *ngIf="filteredSolutions.length > 0">
           <p-select 
             id="solutionType" 
             [options]="filteredSolutions" 
@@ -78,12 +78,280 @@
           <small *ngIf="form.get('solutionType')?.invalid && form.get('solutionType')?.touched" class="p-error block">El tipo de solución es obligatorio.</small>
       </ng-container>
 
-      <!-- OTHERS: Show Not Available Message -->
-      <ng-container *ngIf="form.get('solutionCategory')?.value !== 'MOBILE'">
+      <!-- Not Available Message -->
+      <ng-container *ngIf="filteredSolutions.length === 0">
           <div class="p-3 surface-100 border-round text-500 font-italic">
               Solution types not available yet
           </div>
       </ng-container>
+    </div>
+
+    <!-- Solution Rules Info Box -->
+    <div *ngIf="selectedSolution() && solutionRules[selectedSolution()!]" class="field fadein animation-duration-300">
+        <div class="p-3 surface-100 border-round border-left-3 border-primary">
+            <div class="font-bold text-primary mb-2">Requisitos:</div>
+            <div class="text-700" style="white-space: pre-wrap;">{{ solutionRules[selectedSolution()!] }}</div>
+        </div>
+    </div>
+
+    <!-- PMAX Fields -->
+    <div *ngIf="selectedSolution() === 'PMAX_AD'" class="fadein animation-duration-300">
+        <div class="field">
+            <label for="pmax_youtubeUrl" class="font-bold block mb-2">
+                URL Video Youtube
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" pTooltip="URL del video de Youtube. (Obligatorio)" tooltipPosition="top"></i>
+            </label>
+            <input pInputText id="pmax_youtubeUrl" formControlName="pmax_youtubeUrl" class="w-full" placeholder="https://youtube.com/..."/>
+            <small *ngIf="form.get('pmax_youtubeUrl')?.invalid && (form.get('pmax_youtubeUrl')?.dirty || form.get('pmax_youtubeUrl')?.touched)" class="p-error block">URL válida requerida.</small>
+        </div>
+
+        <div class="field">
+            <label class="font-bold block mb-2">5 Títulos (30 caracteres)</label>
+            <div formArrayName="pmax_titles30">
+                <div *ngFor="let control of pmaxTitles30.controls; let i=index" class="mb-2">
+                    <div class="p-inputgroup">
+                        <span class="p-inputgroup-addon">{{i+1}}</span>
+                        <input pInputText [formControlName]="i" maxlength="30" placeholder="Título corto (máx 30)">
+                    </div>
+                    <small *ngIf="control.invalid && (control.dirty || control.touched)" class="p-error block">Requerido, máx 30 caracteres.</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="field">
+            <label for="pmax_title90" class="font-bold block mb-2">
+                1 Título (90 caracteres)
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" pTooltip="Título largo de 90 caracteres. (Obligatorio)" tooltipPosition="top"></i>
+            </label>
+            <input pInputText id="pmax_title90" formControlName="pmax_title90" class="w-full" maxlength="90" placeholder="Título largo (máx 90)"/>
+            <small *ngIf="form.get('pmax_title90')?.invalid && (form.get('pmax_title90')?.dirty || form.get('pmax_title90')?.touched)" class="p-error block">Requerido, máx 90 caracteres.</small>
+        </div>
+
+        <div class="field">
+            <label class="font-bold block mb-2">5 Descripciones (90 caracteres)</label>
+            <div formArrayName="pmax_descriptions90">
+                <div *ngFor="let control of pmaxDescriptions90.controls; let i=index" class="mb-2">
+                    <div class="p-inputgroup">
+                        <span class="p-inputgroup-addon">{{i+1}}</span>
+                        <input pInputText [formControlName]="i" maxlength="90" placeholder="Descripción largo (máx 90)">
+                    </div>
+                     <small *ngIf="control.invalid && (control.dirty || control.touched)" class="p-error block">Requerido, máx 90 caracteres.</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="field">
+             <label class="font-bold block mb-2">5 Descripciones (60 caracteres)</label>
+            <div formArrayName="pmax_descriptions60">
+                <div *ngFor="let control of pmaxDescriptions60.controls; let i=index" class="mb-2">
+                    <div class="p-inputgroup">
+                        <span class="p-inputgroup-addon">{{i+1}}</span>
+                        <input pInputText [formControlName]="i" maxlength="60" placeholder="Descripción corta (máx 60)">
+                    </div>
+                     <small *ngIf="control.invalid && (control.dirty || control.touched)" class="p-error block">Requerido, máx 60 caracteres.</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- PMAX Specific Uploads -->
+        <div class="field mt-3">
+            <label class="font-bold block mb-2">
+                Imágenes Display
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                   pTooltip="Resoluciones: 600x314, 300x300, 480x600, 314x314 px. Formato: JPG/PNG. (Obligatorio)" 
+                   tooltipPosition="top"></i>
+            </label>
+            <p-fileupload mode="advanced" chooseLabel="Subir Imágenes" accept="image/jpeg,image/png" [multiple]="true" [maxFileSize]="2000000" [customUpload]="true" (uploadHandler)="onUpload($event, 'pmax_images')" [auto]="true"></p-fileupload>
+            <div *ngFor="let file of uploadedFiles">
+                 <div *ngIf="file.category === 'pmax_images'" class="mt-2 text-sm text-green-500">
+                     <i class="pi pi-check-circle"></i> Imagen cargada: {{file.name}}
+                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NATIVE ADS Fields -->
+    <div *ngIf="selectedSolution() === 'NATIVE_ADS'" class="fadein animation-duration-300">
+        <div class="field">
+            <label for="native_shortTitle" class="font-bold block mb-2">
+                Título Corto
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" pTooltip="Máximo 25 caracteres. (Obligatorio)" tooltipPosition="top"></i>
+            </label>
+            <input pInputText id="native_shortTitle" formControlName="native_shortTitle" class="w-full" maxlength="25" placeholder="Título corto"/>
+            <small *ngIf="form.get('native_shortTitle')?.invalid && (form.get('native_shortTitle')?.dirty || form.get('native_shortTitle')?.touched)" class="p-error block">Requerido, máx 25 caracteres.</small>
+        </div>
+        <div class="field">
+            <label for="native_longTitle" class="font-bold block mb-2">
+                Título Largo
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" pTooltip="Máximo 50 caracteres. (Obligatorio)" tooltipPosition="top"></i>
+            </label>
+            <input pInputText id="native_longTitle" formControlName="native_longTitle" class="w-full" maxlength="50" placeholder="Título largo"/>
+            <small *ngIf="form.get('native_longTitle')?.invalid && (form.get('native_longTitle')?.dirty || form.get('native_longTitle')?.touched)" class="p-error block">Requerido, máx 50 caracteres.</small>
+        </div>
+        <div class="field">
+            <label for="native_shortDesc" class="font-bold block mb-2">
+                Descripción Corta
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" pTooltip="Máximo 90 caracteres. (Obligatorio)" tooltipPosition="top"></i>
+            </label>
+            <textarea pTextarea id="native_shortDesc" formControlName="native_shortDesc" class="w-full" maxlength="90" rows="2" placeholder="Descripción corta"></textarea>
+            <small *ngIf="form.get('native_shortDesc')?.invalid && (form.get('native_shortDesc')?.dirty || form.get('native_shortDesc')?.touched)" class="p-error block">Requerido, máx 90 caracteres.</small>
+        </div>
+        <div class="field">
+            <label for="native_longDesc" class="font-bold block mb-2">
+                Descripción Larga
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" pTooltip="Máximo 150 caracteres. (Obligatorio)" tooltipPosition="top"></i>
+            </label>
+            <textarea pTextarea id="native_longDesc" formControlName="native_longDesc" class="w-full" maxlength="150" rows="3" placeholder="Descripción larga"></textarea>
+            <small *ngIf="form.get('native_longDesc')?.invalid && (form.get('native_longDesc')?.dirty || form.get('native_longDesc')?.touched)" class="p-error block">Requerido, máx 150 caracteres.</small>
+        </div>
+
+        <!-- Native Ads Specific Uploads -->
+        <div class="grid formgrid mt-3">
+            <div class="col-12 md:col-6">
+                <div class="field">
+                    <label class="font-bold block mb-2">
+                        Banner
+                        <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                           pTooltip="Resolución: 1200x627 o 627x627 px. Formato: JPG/PNG. (Obligatorio)" 
+                           tooltipPosition="top"></i>
+                    </label>
+                    <p-fileupload mode="basic" chooseLabel="Subir Banner" accept="image/jpeg,image/png" [maxFileSize]="2000000" [customUpload]="true" (uploadHandler)="onUpload($event, 'native_banner')" [auto]="true"></p-fileupload>
+                    <div *ngFor="let file of uploadedFiles">
+                         <div *ngIf="file.category === 'native_banner'" class="mt-2 text-sm text-green-500">
+                             <i class="pi pi-check-circle"></i> Banner cargado: {{file.name}}
+                         </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 md:col-6">
+                <div class="field">
+                    <label class="font-bold block mb-2">
+                        Logo
+                        <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                           pTooltip="Resolución: 100x100 px. Formato: JPG/PNG. (Obligatorio)" 
+                           tooltipPosition="top"></i>
+                    </label>
+                    <p-fileupload mode="basic" chooseLabel="Subir Logo" accept="image/jpeg,image/png" [maxFileSize]="1000000" [customUpload]="true" (uploadHandler)="onUpload($event, 'native_logo')" [auto]="true"></p-fileupload>
+                    <div *ngFor="let file of uploadedFiles">
+                         <div *ngIf="file.category === 'native_logo'" class="mt-2 text-sm text-green-500">
+                             <i class="pi pi-check-circle"></i> Logo cargado: {{file.name}}
+                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FACEBOOK / INSTAGRAM Fields -->
+    <div *ngIf="selectedSolution() === 'FACEBOOK_INSTAGRAM'" class="fadein animation-duration-300">
+        <div class="field">
+            <label for="fb_primaryText" class="font-bold block mb-2">
+                Texto Principal
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" pTooltip="Máximo 125 caracteres. (Obligatorio)" tooltipPosition="top"></i>
+            </label>
+            <textarea pTextarea id="fb_primaryText" formControlName="fb_primaryText" class="w-full" maxlength="125" rows="3" placeholder="Texto principal"></textarea>
+            <small *ngIf="form.get('fb_primaryText')?.invalid && (form.get('fb_primaryText')?.dirty || form.get('fb_primaryText')?.touched)" class="p-error block">Requerido, máx 125 caracteres.</small>
+        </div>
+        <div class="field">
+            <label for="fb_title" class="font-bold block mb-2">
+                Título
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" pTooltip="Máximo 27 caracteres. (Obligatorio)" tooltipPosition="top"></i>
+            </label>
+            <input pInputText id="fb_title" formControlName="fb_title" class="w-full" maxlength="27" placeholder="Título"/>
+            <small *ngIf="form.get('fb_title')?.invalid && (form.get('fb_title')?.dirty || form.get('fb_title')?.touched)" class="p-error block">Requerido, máx 27 caracteres.</small>
+        </div>
+        <div class="field">
+            <label for="fb_description" class="font-bold block mb-2">
+                Descripción
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" pTooltip="Máximo 27 caracteres. (Obligatorio)" tooltipPosition="top"></i>
+            </label>
+            <input pInputText id="fb_description" formControlName="fb_description" class="w-full" maxlength="27" placeholder="Descripción"/>
+            <small *ngIf="form.get('fb_description')?.invalid && (form.get('fb_description')?.dirty || form.get('fb_description')?.touched)" class="p-error block">Requerido, máx 27 caracteres.</small>
+        </div>
+
+        <!-- FB/Insta Specific Upload -->
+        <div class="field mt-3">
+            <label class="font-bold block mb-2">
+                Imagen o Video
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                   pTooltip="Imagen (JPG/PNG) o Video (MP4). Resolución 1080x1080 px. Máx 30MB. (Obligatorio)" 
+                   tooltipPosition="top"></i>
+            </label>
+            <p-fileupload mode="advanced" chooseLabel="Seleccionar Archivo" accept="image/jpeg,image/png,video/mp4" [maxFileSize]="30000000" [customUpload]="true" (uploadHandler)="onUpload($event, 'fb_media')" [auto]="true"></p-fileupload>
+            <div *ngFor="let file of uploadedFiles">
+                 <div *ngIf="file.category === 'fb_media'" class="mt-2 text-sm text-green-500">
+                     <i class="pi pi-check-circle"></i> Archivo cargado: {{file.name}}
+                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TIKTOK Fields -->
+    <div *ngIf="selectedSolution() === 'TIKTOK'" class="fadein animation-duration-300">
+        <div class="field">
+            <label for="tiktok_brandName" class="font-bold block mb-2">
+                Nombre de la Marca
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" pTooltip="Nombre de la marca a mostrar. (Obligatorio)" tooltipPosition="top"></i>
+            </label>
+            <input pInputText id="tiktok_brandName" formControlName="tiktok_brandName" class="w-full" placeholder="Marca"/>
+            <small *ngIf="form.get('tiktok_brandName')?.invalid && (form.get('tiktok_brandName')?.dirty || form.get('tiktok_brandName')?.touched)" class="p-error block">Requerido.</small>
+        </div>
+        <div class="field">
+            <label for="tiktok_adDesc" class="font-bold block mb-2">
+                Descripción del Anuncio
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" pTooltip="1 - 100 caracteres. (Obligatorio)" tooltipPosition="top"></i>
+            </label>
+            <textarea pTextarea id="tiktok_adDesc" formControlName="tiktok_adDesc" class="w-full" maxlength="100" rows="3" placeholder="Descripción del anuncio"></textarea>
+            <small *ngIf="form.get('tiktok_adDesc')?.invalid && (form.get('tiktok_adDesc')?.dirty || form.get('tiktok_adDesc')?.touched)" class="p-error block">Requerido, máx 100 caracteres.</small>
+        </div>
+
+        <!-- TikTok Specific Uploads -->
+        <div class="grid formgrid mt-3">
+            <div class="col-12 md:col-6">
+                <div class="field">
+                    <label class="font-bold block mb-2">
+                        Videos
+                        <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                           pTooltip="Máx 5 videos. 1080x1920 (9:16). 9-15 seg. (Obligatorio)" 
+                           tooltipPosition="top"></i>
+                    </label>
+                    <p-fileupload mode="advanced" chooseLabel="Subir Videos" accept="video/mp4" [multiple]="true" [maxFileSize]="50000000" [customUpload]="true" (uploadHandler)="onUpload($event, 'tiktok_videos')" [auto]="true"></p-fileupload>
+                    <div *ngFor="let file of uploadedFiles">
+                         <div *ngIf="file.category === 'tiktok_videos'" class="mt-2 text-sm text-green-500">
+                             <i class="pi pi-check-circle"></i> Video cargado: {{file.name}}
+                         </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 md:col-6">
+                <div class="field">
+                    <label class="font-bold block mb-2">
+                        Logo
+                        <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                           pTooltip="Resolución: 100x100 px. Formato: JPG/PNG. (Obligatorio)" 
+                           tooltipPosition="top"></i>
+                    </label>
+                    <p-fileupload mode="basic" chooseLabel="Subir Logo" accept="image/jpeg,image/png" [maxFileSize]="1000000" [customUpload]="true" (uploadHandler)="onUpload($event, 'tiktok_logo')" [auto]="true"></p-fileupload>
+                    <div *ngFor="let file of uploadedFiles">
+                         <div *ngIf="file.category === 'tiktok_logo'" class="mt-2 text-sm text-green-500">
+                             <i class="pi pi-check-circle"></i> Logo cargado: {{file.name}}
+                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- YOUTUBE Fields -->
+    <div *ngIf="selectedSolution() === 'BUMPER_ADS' || selectedSolution() === 'SKIPPABLE_IN_STREAM' || selectedSolution() === 'UNSKIPPABLE_IN_STREAM'" class="fadein animation-duration-300">
+        <div class="field">
+            <label for="youtube_url" class="font-bold block mb-2">
+                URL Video Youtube
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" pTooltip="URL del video público de Youtube. (Obligatorio)" tooltipPosition="top"></i>
+            </label>
+            <input pInputText id="youtube_url" formControlName="youtube_url" class="w-full" placeholder="https://youtube.com/..."/>
+            <small *ngIf="form.get('youtube_url')?.invalid && (form.get('youtube_url')?.dirty || form.get('youtube_url')?.touched)" class="p-error block">URL válida requerida.</small>
+        </div>
     </div>
 
     <!-- SMS Fields -->
@@ -977,7 +1245,7 @@
     </div>
 
     <!-- Common Upload Area -->
-    <div class="field mt-4" *ngIf="selectedSolution() && !['SMS', 'RCS', 'SAT_PUSH', 'WHATSAPP_BUSINESS', 'PUSH_MULTIMEDIA', 'VIRTUAL_PRELOADS', 'PRE_RECORDED_CALL', 'EMAIL_MARKETING', 'DATA_REWARDS'].includes(selectedSolution()!)">
+    <div class="field mt-4" *ngIf="selectedSolution() && !['RCS', 'PUSH_MULTIMEDIA', 'VIRTUAL_PRELOADS', 'PRE_RECORDED_CALL', 'EMAIL_MARKETING', 'DATA_REWARDS', 'NATIVE_ADS', 'FACEBOOK_INSTAGRAM', 'TIKTOK', 'PMAX_AD', 'SMS', 'SAT_PUSH', 'WHATSAPP_BUSINESS', 'BUMPER_ADS', 'SKIPPABLE_IN_STREAM', 'UNSKIPPABLE_IN_STREAM'].includes(selectedSolution()!)">
         <label class="font-bold block mb-2">
           Cargas Multimedia (Imágenes, Videos, etc.)
           <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 

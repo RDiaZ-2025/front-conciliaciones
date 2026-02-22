@@ -76,8 +76,62 @@ export class MaterialPreparationDialogComponent {
     { label: 'CTV-OFF', value: 'CTV_OFF' }
   ];
 
+  programmaticSolutionsMap: { [key: string]: any[] } = {
+    'DISPLAY': [
+      { label: 'Mobile', value: 'MOBILE_DISPLAY' },
+      { label: 'Desktop', value: 'DESKTOP_DISPLAY' }
+    ],
+    'RICH_MEDIA': [
+      { label: 'AdInteractive', value: 'ADINTERACTIVE' },
+      { label: 'Full Reminder', value: 'FULL_REMINDER' },
+      { label: 'Sun Instant', value: 'SUN_INSTANT' },
+      { label: 'Skin', value: 'SKIN' }
+    ],
+    'PMAX': [
+      { label: 'PMAX', value: 'PMAX_AD' }
+    ],
+    'NATIVE': [
+      { label: 'Native Ads', value: 'NATIVE_ADS' }
+    ],
+    'SOCIAL_MEDIA': [
+      { label: 'Facebook e Instagram', value: 'FACEBOOK_INSTAGRAM' },
+      { label: 'TikTok', value: 'TIKTOK' }
+    ],
+    'YOUTUBE': [
+      { label: 'Bumper Ads', value: 'BUMPER_ADS' },
+      { label: 'Skippable In-Stream', value: 'SKIPPABLE_IN_STREAM' },
+      { label: 'Unskippable In-Stream', value: 'UNSKIPPABLE_IN_STREAM' }
+    ],
+    'DOOH': [
+      { label: 'Vallas Exteriores', value: 'OUTDOOR_BILLBOARDS' },
+      { label: 'Vallas Interiores', value: 'INDOOR_BILLBOARDS' }
+    ],
+    'CTV_OFF': [
+      { label: 'Video CTV', value: 'CTV_VIDEO' }
+    ]
+  };
+
   filteredSolutions: any[] = [];
   filteredSubcategories: any[] = [];
+
+  solutionRules: { [key: string]: string } = {
+    'MOBILE_DISPLAY': 'Tamaños de los banners: 300x200, 300x50, 300x110, 300x250, 200x200',
+    'DESKTOP_DISPLAY': 'Tamaños de los banners: 160x600, 200x200, 250x250, 486x60, 728x90, 970x90, 300x600, 300x250, 300x280',
+    'ADINTERACTIVE': 'Tamaño: 720x720px, Peso máximo de 4MB, Archivo tipo: Mp4, mov',
+    'FULL_REMINDER': 'Tamaño: 720x720px - 300x250px, Duración de 20 segundos, 30 segundos máximo, Archivo tipo: Mp4, mov',
+    'SUN_INSTANT': 'Tamaño: 720x720px, Peso máximo de 4MB, Archivo tipo: mp4 - mov',
+    'SKIN': 'Editables Layered PSD (todos los elementos de los productos deben estar en diferentes layers), Minimum size: 12920x1000 pixels, peso maximo: 250Mb. Incluir las fuentes necesarias. Logo de la marca: Vector, Layered PSD o PNG transparente. Mínimo: 300px',
+    'PMAX_AD': 'Display: 600x314, 300x300, 480x600, 314x314. URL video Youtube. 5 Títulos 30 caracteres, 1 Título de 90 caracteres, 5 descripciones de 90 caracteres, 5 descripciones de 60 caracteres',
+    'NATIVE_ADS': 'Titulo Corto: 25 caracteres, Título largo: 50 caracteres, Descripción corta: 90 caracteres, Descripción larga: 150 caracteres, Banner: 1200x627, 627x627, Logo: 100x100',
+    'FACEBOOK_INSTAGRAM': 'Recomendaciones de diseño Tipo de archivo Imagen: JPG o PNG. Tipo de archivo Video: MP4 Relación de aspecto: 1,91:1 a 1:1. Resolución Post y Video Post: 1.080 x 1.080 píxeles. Resolucion Reel y Story: 1080x1920 Recomendaciones para el texto Texto principal: 125 caracteres. Título: 27 caracteres. Descripción: 27 caracteres. Requisitos técnicos Tamaño máximo de archivo: 30 MB. Ancho mínimo: 600 píxeles. Altura mínima: 600 píxeles. Tolerancia de relación de aspecto: 3%. Panorámicas o fotos 360° Se pueden usar panorámicas y fotos 360° en Facebook como una experiencia interactiva con algunos objetivos. La plataforma identifica y procesa estas imágenes a partir de metadatos específicos de la cámara que se encuentran en las fotos tomadas con dispositivos diseñados para fotos 360°.',
+    'TIKTOK': '5 Videos: 1080x1920 Ratio: 9:16 Duracion: 9-15 segundos Logo: 100x100 Ad Description: 1 - 100 caracteres Nombre de la Marca',
+    'BUMPER_ADS': 'Url de video publico de Youtube de máximo 6 segundos',
+    'SKIPPABLE_IN_STREAM': 'Url de video público de Youtube de debe ser mínimo de 6 segundos, despues de 5 segundos el usuario puede saltar el video',
+    'UNSKIPPABLE_IN_STREAM': 'Url de video público de Youtube de duracion de 6 a 15 segundos',
+    'OUTDOOR_BILLBOARDS': 'En Bogotá no se pueden utilizar formatos de video',
+    'INDOOR_BILLBOARDS': 'Puede ser display o video',
+    'CTV_VIDEO': 'Max Duracion: 120 sec (15s o 30s recomendado). Max Bitrate: 10.000. Max Player Size: 1920x1080. Tipo de archivo: MP4. Tamaño del archivo: Por debajo de 50MBs'
+  };
 
   emailTemplates = [
     { label: 'Plantilla Básica', value: 'BASIC' },
@@ -111,7 +165,27 @@ export class MaterialPreparationDialogComponent {
       case 'PUSH_MULTIMEDIA':
       case 'VIRTUAL_PRELOADS':
       case 'WHATSAPP_BUSINESS':
+      case 'MOBILE_DISPLAY':
+      case 'DESKTOP_DISPLAY':
+      case 'NATIVE_ADS':
+      case 'FACEBOOK_INSTAGRAM':
+      case 'TIKTOK':
+      case 'OUTDOOR_BILLBOARDS':
+      case 'INDOOR_BILLBOARDS':
         return 'image/*,video/*'; // General media
+      
+      case 'ADINTERACTIVE':
+      case 'FULL_REMINDER':
+      case 'SUN_INSTANT':
+      case 'BUMPER_ADS':
+      case 'SKIPPABLE_IN_STREAM':
+      case 'UNSKIPPABLE_IN_STREAM':
+      case 'CTV_VIDEO':
+        return 'video/mp4,video/quicktime'; // Mp4, mov
+
+      case 'SKIN':
+        return '.psd,image/vnd.adobe.photoshop'; // PSD
+
       case 'PRE_RECORDED_CALL':
         return 'audio/*';
       case 'EMAIL_MARKETING':
@@ -132,6 +206,20 @@ export class MaterialPreparationDialogComponent {
       case 'SAT_PUSH': return 2000000; // 2MB
       case 'PUSH_MULTIMEDIA': return 2000000; // 2MB
       case 'VIRTUAL_PRELOADS': return 2000000; // 2MB
+      
+      case 'ADINTERACTIVE':
+      case 'SUN_INSTANT':
+        return 4000000; // 4MB
+
+      case 'SKIN':
+        return 250000000; // 250MB
+      
+      case 'PMAX_AD':
+        return 30000000; // 30MB
+      
+      case 'CTV_VIDEO':
+        return 50000000; // 50MB
+
       case 'PRE_RECORDED_CALL': return 5000000; // 5MB
       case 'WHATSAPP_BUSINESS': return 10000000; // 10MB
       case 'EMAIL_MARKETING': return 10000000; // 10MB
@@ -250,6 +338,31 @@ export class MaterialPreparationDialogComponent {
 
       // DATA REWARDS
       // handled by file upload
+
+      // PMAX
+      pmax_youtubeUrl: [''],
+      pmax_titles30: this.fb.array([]),
+      pmax_title90: [''],
+      pmax_descriptions90: this.fb.array([]),
+      pmax_descriptions60: this.fb.array([]),
+
+      // NATIVE ADS
+      native_shortTitle: [''],
+      native_longTitle: [''],
+      native_shortDesc: [''],
+      native_longDesc: [''],
+
+      // FACEBOOK/INSTAGRAM
+      fb_primaryText: [''],
+      fb_title: [''],
+      fb_description: [''],
+
+      // TIKTOK
+      tiktok_adDesc: [''],
+      tiktok_brandName: [''],
+
+      // YOUTUBE (Bumper, Skippable, Unskippable)
+      youtube_url: ['']
     });
 
     this.form.get('solutionType')?.valueChanges.subscribe(value => {
@@ -298,7 +411,7 @@ export class MaterialPreparationDialogComponent {
       } else if (selectedCategory === 'PROGRAMMATIC') {
           this.filteredSubcategories = this.programmaticSubcategories;
           this.form.get('solutionSubcategory')?.setValidators([Validators.required]);
-          // Solution Types not available yet for Programmatic
+          // Solution Types depend on Subcategory
           this.form.get('solutionType')?.clearValidators(); 
       } else if (selectedCategory === 'CONTENT_RED_PLUS') {
           // No subcategories yet, just placeholder
@@ -318,8 +431,24 @@ export class MaterialPreparationDialogComponent {
         if (this.form.get('solutionType')?.value) {
             this.form.get('solutionType')?.setValue(null);
         }
-        // For PROGRAMMATIC, even with subcategory, solutions are not available yet
-        this.filteredSolutions = []; 
+
+        const category = this.form.get('solutionCategory')?.value;
+        if (category === 'PROGRAMMATIC' && subcategory) {
+             this.filteredSolutions = this.programmaticSolutionsMap[subcategory] || [];
+             if (this.filteredSolutions.length > 0) {
+                 this.form.get('solutionType')?.setValidators([Validators.required]);
+             } else {
+                 this.form.get('solutionType')?.clearValidators();
+             }
+        } else {
+            // For other categories or no subcategory, keep empty or handled elsewhere
+            // (Note: MOBILE handles its own solutions in category change)
+             if (category !== 'MOBILE') {
+                 this.filteredSolutions = [];
+                 this.form.get('solutionType')?.clearValidators();
+             }
+        }
+        this.form.get('solutionType')?.updateValueAndValidity();
     });
 
     // Re-validate SMS message text when Client Name changes
@@ -375,6 +504,18 @@ export class MaterialPreparationDialogComponent {
       return this.form.get('email_social_list') as FormArray;
   }
 
+  get pmaxTitles30() {
+      return this.form.get('pmax_titles30') as FormArray;
+  }
+
+  get pmaxDescriptions90() {
+      return this.form.get('pmax_descriptions90') as FormArray;
+  }
+
+  get pmaxDescriptions60() {
+      return this.form.get('pmax_descriptions60') as FormArray;
+  }
+
   addEmailCta() {
       const ctaGroup = this.fb.group({
           text: ['', Validators.required],
@@ -423,6 +564,20 @@ export class MaterialPreparationDialogComponent {
       }
     });
 
+    // Clear FormArrays if not relevant to current solution
+    if (solution !== 'PMAX_AD') {
+        this.pmaxTitles30.clear();
+        this.pmaxDescriptions90.clear();
+        this.pmaxDescriptions60.clear();
+    }
+    if (solution !== 'RCS') {
+        this.rcsButtons.clear();
+    }
+    if (solution !== 'EMAIL_MARKETING') {
+        this.emailCtasList.clear();
+        this.emailSocialList.clear();
+    }
+
     // Apply specific validators based on solution
     // PRE-RECORDED CALL: Clear validators
     this.form.get('prc_clientName')?.clearValidators();
@@ -437,6 +592,24 @@ export class MaterialPreparationDialogComponent {
     this.form.get('vp_clientName')?.clearValidators();
     this.form.get('vp_playStoreUrl')?.clearValidators();
     this.form.get('vp_notificationText')?.clearValidators();
+
+    // NATIVE ADS
+    this.form.get('native_shortTitle')?.clearValidators();
+    this.form.get('native_longTitle')?.clearValidators();
+    this.form.get('native_shortDesc')?.clearValidators();
+    this.form.get('native_longDesc')?.clearValidators();
+
+    // FACEBOOK/INSTAGRAM
+    this.form.get('fb_primaryText')?.clearValidators();
+    this.form.get('fb_title')?.clearValidators();
+    this.form.get('fb_description')?.clearValidators();
+
+    // TIKTOK
+    this.form.get('tiktok_adDesc')?.clearValidators();
+    this.form.get('tiktok_brandName')?.clearValidators();
+
+    // YOUTUBE
+    this.form.get('youtube_url')?.clearValidators();
     
     if (solution === 'SMS') {
       this.setValidators('sms_clientName', [Validators.required, Validators.pattern(/^[A-Z\s]+$/)]);
@@ -510,7 +683,46 @@ export class MaterialPreparationDialogComponent {
         this.setValidators('email_dnsConfig', [Validators.required]);
         this.setValidators('email_trackingUrls', [Validators.pattern(/https?:\/\/.+/)]);
     }
-    // DATA REWARDS has no form controls to validate, but we check files on submit
+    else if (solution === 'PMAX_AD') {
+        this.setValidators('pmax_youtubeUrl', [Validators.required, Validators.pattern(/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.*$/)]);
+        this.setValidators('pmax_title90', [Validators.required, Validators.maxLength(90)]);
+        
+        // Initialize arrays if empty (5 items each)
+        if (this.pmaxTitles30.length === 0) {
+            for (let i = 0; i < 5; i++) {
+                this.pmaxTitles30.push(this.fb.control('', [Validators.required, Validators.maxLength(30)]));
+            }
+        }
+        if (this.pmaxDescriptions90.length === 0) {
+             for (let i = 0; i < 5; i++) {
+                this.pmaxDescriptions90.push(this.fb.control('', [Validators.required, Validators.maxLength(90)]));
+            }
+        }
+        if (this.pmaxDescriptions60.length === 0) {
+             for (let i = 0; i < 5; i++) {
+                 this.pmaxDescriptions60.push(this.fb.control('', [Validators.required, Validators.maxLength(60)]));
+             }
+         }
+     }
+     else if (solution === 'NATIVE_ADS') {
+         this.setValidators('native_shortTitle', [Validators.required, Validators.maxLength(25)]);
+         this.setValidators('native_longTitle', [Validators.required, Validators.maxLength(50)]);
+         this.setValidators('native_shortDesc', [Validators.required, Validators.maxLength(90)]);
+         this.setValidators('native_longDesc', [Validators.required, Validators.maxLength(150)]);
+     }
+     else if (solution === 'FACEBOOK_INSTAGRAM') {
+         this.setValidators('fb_primaryText', [Validators.required, Validators.maxLength(125)]);
+         this.setValidators('fb_title', [Validators.required, Validators.maxLength(27)]);
+         this.setValidators('fb_description', [Validators.required, Validators.maxLength(27)]);
+     }
+     else if (solution === 'TIKTOK') {
+         this.setValidators('tiktok_adDesc', [Validators.required, Validators.maxLength(100)]);
+         this.setValidators('tiktok_brandName', [Validators.required]);
+     }
+     else if (solution === 'BUMPER_ADS' || solution === 'SKIPPABLE_IN_STREAM' || solution === 'UNSKIPPABLE_IN_STREAM') {
+         this.setValidators('youtube_url', [Validators.required, Validators.pattern(/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.*$/)]);
+     }
+     // DATA REWARDS has no form controls to validate, but we check files on submit
     
     this.form.updateValueAndValidity();
   }
@@ -692,6 +904,50 @@ export class MaterialPreparationDialogComponent {
              this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Falta el Logo (PNG/JPG, Máx 600px).' });
              return;
         }
+    } else if (this.selectedSolution() === 'PMAX_AD') {
+        const images = this.uploadedFiles.filter(f => f.category === 'pmax_images');
+        if (images.length === 0) {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'PMAX requiere al menos una imagen Display.' });
+            return;
+        }
+    } else if (this.selectedSolution() === 'NATIVE_ADS') {
+        const banner = this.uploadedFiles.find(f => f.category === 'native_banner');
+        const logo = this.uploadedFiles.find(f => f.category === 'native_logo');
+        if (!banner) {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Native Ads requiere un Banner.' });
+            return;
+        }
+        if (!logo) {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Native Ads requiere un Logo.' });
+            return;
+        }
+    } else if (this.selectedSolution() === 'FACEBOOK_INSTAGRAM') {
+        const media = this.uploadedFiles.filter(f => f.category === 'fb_media');
+        if (media.length === 0) {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Facebook/Instagram requiere al menos un archivo multimedia (Imagen o Video).' });
+            return;
+        }
+    } else if (this.selectedSolution() === 'TIKTOK') {
+        const videos = this.uploadedFiles.filter(f => f.category === 'tiktok_videos');
+        const logo = this.uploadedFiles.find(f => f.category === 'tiktok_logo');
+        
+        if (videos.length === 0) {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'TikTok requiere al menos un video.' });
+            return;
+        }
+        if (videos.length > 5) {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'TikTok permite máximo 5 videos.' });
+            return;
+        }
+        if (!logo) {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'TikTok requiere un Logo.' });
+            return;
+        }
+    } else if (this.selectedSolution() === 'CTV_VIDEO') {
+        if (this.uploadedFiles.length === 0) {
+             this.messageService.add({ severity: 'error', summary: 'Error', detail: 'CTV Video requiere al menos un archivo de video.' });
+             return;
+        }
     }
 
     if (this.form.valid) {
@@ -757,7 +1013,7 @@ export class MaterialPreparationDialogComponent {
   }
 
 
-  validateVideoMetadata(file: File): Promise<boolean> {
+  validateVideoMetadata(file: File, category: string = 'general'): Promise<boolean> {
     return new Promise((resolve) => {
       const video = document.createElement('video');
       video.preload = 'metadata';
@@ -768,16 +1024,49 @@ export class MaterialPreparationDialogComponent {
         const width = video.videoWidth;
         const height = video.videoHeight;
 
-        // Duration: 5s - 60s
-        if (duration < 5 || duration > 60) {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: `Duración del video inválida. Debe ser entre 5 y 60 segundos. (Actual: ${duration.toFixed(1)}s)` });
-          valid = false;
-        }
+        if (category === 'tiktok_videos') {
+            // Duration: 9s - 15s
+            if (duration < 9 || duration > 15) {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: `Duración TikTok inválida. Debe ser entre 9 y 15 segundos. (Actual: ${duration.toFixed(1)}s)` });
+                valid = false;
+            }
+            // Resolution: 1080x1920
+            if (width !== 1080 || height !== 1920) {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: `Resolución TikTok inválida. Debe ser 1080x1920. (Actual: ${width}x${height})` });
+                valid = false;
+            }
+        } else if (category === 'fb_media') {
+             // Resolution: 1080x1080 OR 1080x1920
+             const isPost = (width === 1080 && height === 1080);
+             const isStory = (width === 1080 && height === 1920);
+             if (!isPost && !isStory) {
+                 this.messageService.add({ severity: 'error', summary: 'Error', detail: `Resolución FB/IG inválida. Permitidas: 1080x1080, 1080x1920. (Actual: ${width}x${height})` });
+                 valid = false;
+             }
+        } else if (this.selectedSolution() === 'CTV_VIDEO') {
+             // Duration: Max 120s
+             if (duration > 120) {
+                 this.messageService.add({ severity: 'error', summary: 'Error', detail: `Duración CTV inválida. Máximo 120 segundos. (Actual: ${duration.toFixed(1)}s)` });
+                 valid = false;
+             }
+             // Resolution: Max 1920x1080 (Usually implies target resolution)
+             if (width > 1920 || height > 1080) {
+                 this.messageService.add({ severity: 'error', summary: 'Error', detail: `Resolución CTV excede el máximo permitido de 1920x1080. (Actual: ${width}x${height})` });
+                 valid = false;
+             }
+        } else {
+            // Default (Data Rewards, etc.)
+            // Duration: 5s - 60s
+            if (duration < 5 || duration > 60) {
+              this.messageService.add({ severity: 'error', summary: 'Error', detail: `Duración del video inválida. Debe ser entre 5 y 60 segundos. (Actual: ${duration.toFixed(1)}s)` });
+              valid = false;
+            }
 
-        // Resolution: 1920x1080
-        if (width !== 1920 || height !== 1080) {
-            this.messageService.add({ severity: 'error', summary: 'Error', detail: `Resolución inválida. Debe ser 1920x1080. (Actual: ${width}x${height})` });
-            valid = false;
+            // Resolution: 1920x1080
+            if (width !== 1920 || height !== 1080) {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: `Resolución inválida. Debe ser 1920x1080. (Actual: ${width}x${height})` });
+                valid = false;
+            }
         }
 
         resolve(valid);
@@ -832,8 +1121,79 @@ export class MaterialPreparationDialogComponent {
         }
       }
 
+      // PMAX_AD Validations
+      if (this.selectedSolution() === 'PMAX_AD' && category === 'pmax_images') {
+        for (const file of files) {
+            const isValid = await this.validateImageDimensions(file, category);
+            if (!isValid) {
+                this.isUploading.set(false);
+                return;
+            }
+        }
+      }
+
+      // NATIVE_ADS Validations
+      if (this.selectedSolution() === 'NATIVE_ADS') {
+        for (const file of files) {
+            const isValid = await this.validateImageDimensions(file, category);
+            if (!isValid) {
+                this.isUploading.set(false);
+                return;
+            }
+        }
+      }
+
+      // FACEBOOK_INSTAGRAM Validations
+      if (this.selectedSolution() === 'FACEBOOK_INSTAGRAM') {
+        for (const file of files) {
+            if (file.type.startsWith('image/')) {
+                 const isValid = await this.validateImageDimensions(file, category);
+                 if (!isValid) {
+                     this.isUploading.set(false);
+                     return;
+                 }
+            } else if (file.type.startsWith('video/')) {
+                 const isValid = await this.validateVideoMetadata(file);
+                 if (!isValid) {
+                     this.isUploading.set(false);
+                     return;
+                 }
+            }
+        }
+      }
+
+      // TIKTOK Validations
+      if (this.selectedSolution() === 'TIKTOK') {
+         for (const file of files) {
+            if (category === 'tiktok_logo') {
+                 const isValid = await this.validateImageDimensions(file, category);
+                 if (!isValid) {
+                     this.isUploading.set(false);
+                     return;
+                 }
+            } else if (category === 'tiktok_videos') {
+                 const isValid = await this.validateVideoMetadata(file);
+                 if (!isValid) {
+                     this.isUploading.set(false);
+                     return;
+                 }
+            }
+         }
+      }
+
       // DATA REWARDS Validations
       if (this.selectedSolution() === 'DATA_REWARDS') {
+        for (const file of files) {
+            const isValid = await this.validateVideoMetadata(file);
+            if (!isValid) {
+                this.isUploading.set(false);
+                return;
+            }
+        }
+      }
+
+      // CTV_VIDEO Validations
+      if (this.selectedSolution() === 'CTV_VIDEO') {
         for (const file of files) {
             const isValid = await this.validateVideoMetadata(file);
             if (!isValid) {
@@ -941,6 +1301,50 @@ export class MaterialPreparationDialogComponent {
                   // Max width 600px
                   if (img.width > 600) {
                       this.messageService.add({ severity: 'error', summary: 'Error', detail: `La imagen no debe exceder 600px de ancho. (Actual: ${img.width}px)` });
+                      valid = false;
+                  }
+              } else if (category === 'pmax_images') {
+                  // Allowed: 600x314, 300x300, 480x600, 314x314
+                  const allowed = [
+                      { w: 600, h: 314 },
+                      { w: 300, h: 300 },
+                      { w: 480, h: 600 },
+                      { w: 314, h: 314 }
+                  ];
+                  const match = allowed.some(size => img.width === size.w && img.height === size.h);
+                  if (!match) {
+                      this.messageService.add({ severity: 'error', summary: 'Error', detail: `Resolución inválida para PMAX. Permitidas: 600x314, 300x300, 480x600, 314x314. (Actual: ${img.width}x${img.height})` });
+                      valid = false;
+                  }
+              } else if (category === 'native_banner') {
+                  // 1200x627, 627x627
+                  const allowed = [
+                      { w: 1200, h: 627 },
+                      { w: 627, h: 627 }
+                  ];
+                  const match = allowed.some(size => img.width === size.w && img.height === size.h);
+                  if (!match) {
+                      this.messageService.add({ severity: 'error', summary: 'Error', detail: `Resolución inválida para Banner Nativo. Permitidas: 1200x627, 627x627. (Actual: ${img.width}x${img.height})` });
+                      valid = false;
+                  }
+              } else if (category === 'native_logo' || category === 'tiktok_logo') {
+                  // 100x100
+                  if (img.width !== 100 || img.height !== 100) {
+                      this.messageService.add({ severity: 'error', summary: 'Error', detail: `Logo debe ser 100x100 px. (Actual: ${img.width}x${img.height})` });
+                      valid = false;
+                  }
+              } else if (category === 'fb_media') {
+                  // 1080x1080 or 1080x1920
+                  // Tolerance 3% on Aspect Ratio?
+                  // "Resolución Post y Video Post: 1.080 x 1.080 píxeles. Resolucion Reel y Story: 1080x1920"
+                  // "Tolerancia de relación de aspecto: 3%"
+                  // Let's stick to exact resolutions first as per prompt specs, or allow small variance?
+                  // Prompt says "Resolución...: 1.080 x 1.080".
+                  const isPost = (img.width === 1080 && img.height === 1080);
+                  const isStory = (img.width === 1080 && img.height === 1920);
+                  
+                  if (!isPost && !isStory) {
+                      this.messageService.add({ severity: 'error', summary: 'Error', detail: `Resolución inválida para FB/IG. Permitidas: 1080x1080, 1080x1920. (Actual: ${img.width}x${img.height})` });
                       valid = false;
                   }
               }
