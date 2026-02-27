@@ -130,7 +130,19 @@ export class MaterialPreparationDialogComponent {
     'UNSKIPPABLE_IN_STREAM': 'Url de video público de Youtube de duracion de 6 a 15 segundos',
     'OUTDOOR_BILLBOARDS': 'En Bogotá no se pueden utilizar formatos de video',
     'INDOOR_BILLBOARDS': 'Puede ser display o video',
-    'CTV_VIDEO': 'Max Duracion: 120 sec (15s o 30s recomendado). Max Bitrate: 10.000. Max Player Size: 1920x1080. Tipo de archivo: MP4. Tamaño del archivo: Por debajo de 50MBs'
+    'CTV_VIDEO': 'Duración Máxima: 120 seg (15s o 30s recomendado). Bitrate Máximo: 10.000. Resolución Máxima: 1920x1080. Tipo de archivo: MP4. Tamaño del archivo: Por debajo de 50MBs',
+    'CONTENT_PUBLIRREPORTAJE': `Requisitos de Contenido
+• Longitud del artículo: mínimo 450 palabras, máximo 700 palabras
+• El contenido se alojará en redmas.com.co
+• Debe incluir imágenes proporcionadas por el cliente
+• Incluye 1 publicación en redes sociales
+
+Requisitos de Imagen
+• Resolución mínima: 1200 x 800 píxeles
+• Formato: Solo JPG
+
+Video (Opcional)
+• El formato debe ser MP4`
   };
 
   emailTemplates = [
@@ -182,6 +194,8 @@ export class MaterialPreparationDialogComponent {
       case 'UNSKIPPABLE_IN_STREAM':
       case 'CTV_VIDEO':
         return 'video/mp4,video/quicktime'; // Mp4, mov
+      case 'CONTENT_PUBLIRREPORTAJE':
+        return 'image/jpeg,video/mp4';
 
       case 'SKIN':
         return '.psd,image/vnd.adobe.photoshop'; // PSD
@@ -260,6 +274,14 @@ export class MaterialPreparationDialogComponent {
         return false;
     }
     
+    // CONTENT_PUBLIRREPORTAJE requires at least 1 image (JPG)
+    if (solution === 'CONTENT_PUBLIRREPORTAJE') {
+        const images = this.uploadedFiles.filter(f => f.category === 'redplus_images' && (f.name.toLowerCase().endsWith('.jpg') || f.name.toLowerCase().endsWith('.jpeg')));
+        if (images.length === 0) {
+            return false;
+        }
+    }
+
     return true;
   });
 
@@ -268,8 +290,24 @@ export class MaterialPreparationDialogComponent {
     if ((solution === 'DATA_REWARDS' || solution === 'PRE_RECORDED_CALL' || solution === 'EMAIL_MARKETING') && this.uploadedFiles.length === 0) {
         return 'Se requiere al menos un archivo para esta solución.';
     }
+    if (solution === 'CONTENT_PUBLIRREPORTAJE') {
+        const images = this.uploadedFiles.filter(f => f.category === 'redplus_images' && (f.name.toLowerCase().endsWith('.jpg') || f.name.toLowerCase().endsWith('.jpeg')));
+        if (images.length === 0) {
+            return 'Se requiere al menos una imagen (JPG).';
+        }
+    }
     return '';
   });
+
+  wordCountValidator(control: AbstractControl): ValidationErrors | null {
+    const value = control.value;
+    if (!value) return null;
+    const wordCount = value.trim().split(/\s+/).length;
+    if (wordCount < 450 || wordCount > 700) {
+        return { wordCount: { min: 450, max: 700, actual: wordCount } };
+    }
+    return null;
+  }
 
   constructor() {
     this.form = this.fb.group({
@@ -362,7 +400,11 @@ export class MaterialPreparationDialogComponent {
       tiktok_brandName: [''],
 
       // YOUTUBE (Bumper, Skippable, Unskippable)
-      youtube_url: ['']
+      youtube_url: [''],
+
+      // CONTENIDO RED+
+      redplus_legal_check: [false, Validators.requiredTrue],
+      article_content: ['', [Validators.required, this.wordCountValidator]]
     });
 
     this.form.get('solutionType')?.valueChanges.subscribe(value => {
@@ -412,8 +454,12 @@ export class MaterialPreparationDialogComponent {
           this.filteredSubcategories = this.programmaticSubcategories;
           this.form.get('solutionSubcategory')?.setValidators([Validators.required]);
           // Solution Types depend on Subcategory
-          this.form.get('solutionType')?.clearValidators(); 
       } else if (selectedCategory === 'CONTENT_RED_PLUS') {
+          this.filteredSubcategories = [{ label: 'CONTENIDO RED+', value: 'CONTENIDO_RED_PLUS' }];
+          this.form.get('solutionSubcategory')?.setValue('CONTENIDO_RED_PLUS');
+          this.form.get('solutionSubcategory')?.setValidators([Validators.required]);
+          // Solution populated in subcategory change
+      } else {
           // No subcategories yet, just placeholder
           this.form.get('solutionSubcategory')?.clearValidators();
           // Solution Types not available yet for Content Red+
@@ -440,6 +486,10 @@ export class MaterialPreparationDialogComponent {
              } else {
                  this.form.get('solutionType')?.clearValidators();
              }
+        } else if (category === 'CONTENT_RED_PLUS' && subcategory === 'CONTENIDO_RED_PLUS') {
+             this.filteredSolutions = [{ label: 'Content & Publirreportaje', value: 'CONTENT_PUBLIRREPORTAJE' }];
+             this.form.get('solutionType')?.setValue('CONTENT_PUBLIRREPORTAJE');
+             this.form.get('solutionType')?.setValidators([Validators.required]);
         } else {
             // For other categories or no subcategory, keep empty or handled elsewhere
             // (Note: MOBILE handles its own solutions in category change)
@@ -722,6 +772,10 @@ export class MaterialPreparationDialogComponent {
      else if (solution === 'BUMPER_ADS' || solution === 'SKIPPABLE_IN_STREAM' || solution === 'UNSKIPPABLE_IN_STREAM') {
          this.setValidators('youtube_url', [Validators.required, Validators.pattern(/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.*$/)]);
      }
+     else if (solution === 'CONTENT_PUBLIRREPORTAJE') {
+         this.setValidators('article_content', [Validators.required, this.wordCountValidator.bind(this)]);
+         this.setValidators('redplus_legal_check', [Validators.requiredTrue]);
+     }
      // DATA REWARDS has no form controls to validate, but we check files on submit
     
     this.form.updateValueAndValidity();
@@ -787,20 +841,6 @@ export class MaterialPreparationDialogComponent {
     if (formGroup) {
         const clientName = formGroup.get('sat_clientName')?.value;
         if (clientName) {
-            // Prompt says "written in uppercase". 
-            // "Publicidad de (CLIENT NAME)" -> "PUBLICIDAD DE CLIENTNAME"? 
-            // Or "Publicidad de CLIENTNAME"?
-            // User Prompt: "The message text must begin with: “Publicidad de (CLIENT NAME)” written in uppercase."
-            // This usually means the whole string "PUBLICIDAD DE CLIENTNAME".
-            // Let's assume user meant "PUBLICIDAD DE [CLIENT NAME]" all caps.
-            // Or "Publicidad de [CLIENT NAME]" where [CLIENT NAME] is uppercase?
-            // "written in uppercase" applies to the whole phrase or just client name?
-            // "The message text must begin with: “Publicidad de (CLIENT NAME)” written in uppercase."
-            // I'll assume "PUBLICIDAD DE CLIENTNAME".
-            
-            // Wait, standard SAT PUSH messages in Latin America often use "Publicidad de NAME".
-            // But "written in uppercase" likely applies to the whole prefix requirement.
-            // Let's enforce "PUBLICIDAD DE " + clientName.
             const prefix = `PUBLICIDAD DE ${clientName}`;
             if (!value.startsWith(prefix)) {
                 errors['invalidPrefix'] = true;
@@ -948,6 +988,26 @@ export class MaterialPreparationDialogComponent {
              this.messageService.add({ severity: 'error', summary: 'Error', detail: 'CTV Video requiere al menos un archivo de video.' });
              return;
         }
+    } else if (this.selectedSolution() === 'CONTENT_PUBLIRREPORTAJE') {
+        // Filter for JPG images specifically
+        const images = this.uploadedFiles.filter(f => f.category === 'redplus_images' && (f.name.toLowerCase().endsWith('.jpg') || f.name.toLowerCase().endsWith('.jpeg')));
+        
+        if (images.length === 0) {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Debe incluir al menos una imagen (JPG) proporcionada por el cliente.' });
+            return;
+        }
+        
+        const article = this.form.get('article_content')?.value;
+        const wordCount = article ? article.trim().split(/\s+/).length : 0;
+        if (wordCount < 450 || wordCount > 700) {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: `La longitud del artículo debe ser entre 450 y 700 palabras. (Actual: ${wordCount})` });
+            return;
+        }
+
+        if (!this.form.get('redplus_legal_check')?.value) {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Debe confirmar que todos los materiales tienen derechos de uso autorizados.' });
+            return;
+        }
     }
 
     if (this.form.valid) {
@@ -1013,6 +1073,8 @@ export class MaterialPreparationDialogComponent {
   }
 
 
+
+
   validateVideoMetadata(file: File, category: string = 'general'): Promise<boolean> {
     return new Promise((resolve) => {
       const video = document.createElement('video');
@@ -1043,6 +1105,9 @@ export class MaterialPreparationDialogComponent {
                  this.messageService.add({ severity: 'error', summary: 'Error', detail: `Resolución FB/IG inválida. Permitidas: 1080x1080, 1080x1920. (Actual: ${width}x${height})` });
                  valid = false;
              }
+        } else if (category === 'redplus_video') {
+             // Just ensure it's a valid video file; no specific duration/resolution constraints in requirements
+             valid = true;
         } else if (this.selectedSolution() === 'CTV_VIDEO') {
              // Duration: Max 120s
              if (duration > 120) {
@@ -1203,6 +1268,35 @@ export class MaterialPreparationDialogComponent {
         }
       }
 
+      // CONTENT_PUBLIRREPORTAJE Validations
+      if (this.selectedSolution() === 'CONTENT_PUBLIRREPORTAJE') {
+        for (const file of files) {
+            if (file.type.startsWith('image/')) {
+                 if (file.type !== 'image/jpeg') {
+                     this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Invalid image format or resolution. Images must be JPG format with a minimum size of 1200x800 pixels.' });
+                     this.isUploading.set(false);
+                     return;
+                 }
+                 const isValid = await this.validateImageDimensions(file, 'redplus_images');
+                 if (!isValid) {
+                     this.isUploading.set(false);
+                     return;
+                 }
+            } else if (file.type.startsWith('video/')) {
+                if (file.type !== 'video/mp4') {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Invalid video format. Only MP4 files are accepted.' });
+                    this.isUploading.set(false);
+                    return;
+                }
+                const isValid = await this.validateVideoMetadata(file, 'redplus_video');
+                if (!isValid) {
+                    this.isUploading.set(false);
+                    return;
+                }
+            }
+        }
+      }
+
           const results = await this.azureService.uploadFiles(files, {
               folderPath: folderPath,
               containerName: 'private' 
@@ -1345,6 +1439,12 @@ export class MaterialPreparationDialogComponent {
                   
                   if (!isPost && !isStory) {
                       this.messageService.add({ severity: 'error', summary: 'Error', detail: `Resolución inválida para FB/IG. Permitidas: 1080x1080, 1080x1920. (Actual: ${img.width}x${img.height})` });
+                      valid = false;
+                  }
+              } else if (category === 'redplus_images') {
+                  // Min 1200x800
+                  if (img.width < 1200 || img.height < 800) {
+                      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Invalid image format or resolution. Images must be JPG format with a minimum size of 1200x800 pixels.' });
                       valid = false;
                   }
               }

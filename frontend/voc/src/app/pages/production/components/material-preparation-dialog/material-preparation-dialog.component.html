@@ -45,12 +45,10 @@
         <small *ngIf="form.get('solutionSubcategory')?.invalid && form.get('solutionSubcategory')?.touched" class="p-error block">La subcategoría es obligatoria.</small>
     </div>
 
-    <!-- Placeholder for CONTENT_RED_PLUS Subcategory -->
+    <!-- CONTENT_RED_PLUS Subcategory (Auto-populated) -->
     <div *ngIf="form.get('solutionCategory')?.value === 'CONTENT_RED_PLUS'" class="field fadein animation-duration-300">
         <label class="font-bold block mb-2">Subcategoría</label>
-        <div class="p-3 surface-100 border-round text-500 font-italic">
-            Subcategories not available yet
-        </div>
+        <input pInputText [value]="'CONTENIDO RED+'" [readonly]="true" class="w-full surface-200" />
     </div>
 
     <div class="field" *ngIf="filteredSolutions.length > 0 || (form.get('solutionCategory')?.value && form.get('solutionCategory')?.value !== 'PROGRAMMATIC' && filteredSolutions.length === 0)">
@@ -338,6 +336,54 @@
                          </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTENT_PUBLIRREPORTAJE Fields -->
+    <div *ngIf="selectedSolution() === 'CONTENT_PUBLIRREPORTAJE'" class="fadein animation-duration-300">
+        <div class="field">
+            <label for="article_content" class="font-bold block mb-2">
+                Contenido del Artículo
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                   pTooltip="Mínimo 450, Máximo 700 palabras. (Obligatorio)" 
+                   tooltipPosition="top"></i>
+            </label>
+            <textarea pTextarea id="article_content" formControlName="article_content" class="w-full" rows="10" placeholder="Escriba el contenido del artículo aquí..."></textarea>
+            <div class="flex justify-content-between">
+                <small *ngIf="form.get('article_content')?.invalid && (form.get('article_content')?.dirty || form.get('article_content')?.touched)" class="p-error block">
+                    Contenido requerido.
+                </small>
+                <small [ngClass]="{'text-red-500': (form.get('article_content')?.value?.trim() ? form.get('article_content')?.value?.trim().split(/\s+/).length : 0) < 450 || (form.get('article_content')?.value?.trim() ? form.get('article_content')?.value?.trim().split(/\s+/).length : 0) > 700}">
+                    Palabras: {{ form.get('article_content')?.value?.trim() ? form.get('article_content')?.value?.trim().split(/\s+/).length : 0 }} / 450-700
+                </small>
+            </div>
+        </div>
+
+        <div class="field-checkbox mt-4">
+            <p-checkbox formControlName="redplus_legal_check" [binary]="true" inputId="redplusLegal"></p-checkbox>
+            <label for="redplusLegal" class="ml-2 font-bold cursor-pointer">
+                Confirmo que todos los materiales proporcionados tienen derechos de uso autorizados.
+                <span class="text-red-500">*</span>
+            </label>
+        </div>
+        <small *ngIf="form.get('redplus_legal_check')?.invalid && form.get('redplus_legal_check')?.touched" class="p-error block ml-5">
+            Debe confirmar los derechos de uso.
+        </small>
+
+        <!-- Red Plus Specific Uploads -->
+        <div class="field mt-3">
+            <label class="font-bold block mb-2">
+                Imágenes y Video (Opcional)
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                   pTooltip="Imágenes: JPG, Mín 1200x800. Video: MP4. (Obligatorio: al menos 1 imagen)" 
+                   tooltipPosition="top"></i>
+            </label>
+            <p-fileupload mode="advanced" chooseLabel="Subir Archivos" accept="image/jpeg,video/mp4" [multiple]="true" [maxFileSize]="50000000" [customUpload]="true" (uploadHandler)="onUpload($event, 'redplus_images')" [auto]="true"></p-fileupload>
+            <div *ngFor="let file of uploadedFiles">
+                 <div *ngIf="file.category === 'redplus_images'" class="mt-2 text-sm text-green-500">
+                     <i class="pi pi-check-circle"></i> Archivo cargado: {{file.name}}
+                 </div>
             </div>
         </div>
     </div>
@@ -1245,7 +1291,7 @@
     </div>
 
     <!-- Common Upload Area -->
-    <div class="field mt-4" *ngIf="selectedSolution() && !['RCS', 'PUSH_MULTIMEDIA', 'VIRTUAL_PRELOADS', 'PRE_RECORDED_CALL', 'EMAIL_MARKETING', 'DATA_REWARDS', 'NATIVE_ADS', 'FACEBOOK_INSTAGRAM', 'TIKTOK', 'PMAX_AD', 'SMS', 'SAT_PUSH', 'WHATSAPP_BUSINESS', 'BUMPER_ADS', 'SKIPPABLE_IN_STREAM', 'UNSKIPPABLE_IN_STREAM'].includes(selectedSolution()!)">
+    <div class="field mt-4" *ngIf="selectedSolution() && !['RCS', 'PUSH_MULTIMEDIA', 'VIRTUAL_PRELOADS', 'PRE_RECORDED_CALL', 'EMAIL_MARKETING', 'DATA_REWARDS', 'NATIVE_ADS', 'FACEBOOK_INSTAGRAM', 'TIKTOK', 'PMAX_AD', 'SMS', 'SAT_PUSH', 'WHATSAPP_BUSINESS', 'BUMPER_ADS', 'SKIPPABLE_IN_STREAM', 'UNSKIPPABLE_IN_STREAM', 'CONTENT_PUBLIRREPORTAJE'].includes(selectedSolution()!)">
         <label class="font-bold block mb-2">
           Cargas Multimedia (Imágenes, Videos, etc.)
           <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
