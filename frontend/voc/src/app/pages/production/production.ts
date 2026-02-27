@@ -391,12 +391,12 @@ export class ProductionComponent implements OnInit, OnDestroy {
           this.productionService.saveMaterialData(request.id, result).subscribe({
             next: () => {
               if (result.status === 'COMPLETED') {
-                 this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Material data submitted' });
-                 // Move request only if completed
-                 this.performMove(request, 'gestion_operativa');
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Material data submitted' });
+                // Move request only if completed
+                this.performMove(request, 'gestion_operativa');
               } else {
-                 this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Material data draft saved' });
-                 this.loadRequests();
+                this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Material data draft saved' });
+                this.loadRequests();
               }
             },
             error: (err) => {
@@ -424,20 +424,20 @@ export class ProductionComponent implements OnInit, OnDestroy {
       case 'request':
         // Skip quotation, go directly to in_sell or get_data based on budget
         const budget = getBudget(request);
-        if (budget >= 50000000) {
-          nextStageId = 'create_proposal';
+        if (budget < 50000000) {
+          nextStageId = 'get_data';
         } else {
-          nextStageId = 'in_sell';
+          nextStageId = 'create_proposal';
         }
         break;
 
       case 'quotation':
         // Legacy path, just in case
         const budgetQ = getBudget(request);
-        if (budgetQ >= 50000000) {
-          nextStageId = 'create_proposal';
+        if (budgetQ < 50000000) {
+          nextStageId = 'get_data';
         } else {
-          nextStageId = 'in_sell';
+          nextStageId = 'create_proposal';
         }
         break;
 

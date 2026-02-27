@@ -306,10 +306,66 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       if (!isNaN(budgetValue)) {
         // Threshold: 50,000,000
         if (budgetValue < 50000000) {
-          finalStatus = 'in_sell';
+          finalStatus = 'get_data';
         } else {
           finalStatus = 'create_proposal';
         }
+      }
+    }
+
+    // Auto-assignment for get_data stage (Data Team)
+    if (finalStatus === 'get_data') {
+      try {
+        const teamRepository = AppDataSource.getRepository(Team);
+        const userRepository = AppDataSource.getRepository(User);
+
+        // Find Data team by ID 5
+        const dataTeam = await teamRepository.findOne({ where: { id: 5 } });
+
+        if (dataTeam) {
+          department = dataTeam.name;
+
+          const teamUsers = await userRepository.find({ where: { teamId: dataTeam.id, status: 1 } });
+          if (teamUsers.length > 0) {
+            const randomUser = teamUsers[Math.floor(Math.random() * teamUsers.length)];
+            assignedUserId = randomUser.id;
+            assignmentMethod = 'Auto-assigned to Data Team';
+          } else {
+            console.warn(`No active users found in Data Team (ID: ${dataTeam.id})`);
+          }
+        } else {
+          console.warn('Data Team (ID 5) not found');
+        }
+      } catch (assignError) {
+        console.error('Error in auto-assignment to Data Team:', assignError);
+      }
+    }
+
+    // Auto-assignment for create_proposal stage (Strategy Team)
+    if (finalStatus === 'create_proposal') {
+      try {
+        const teamRepository = AppDataSource.getRepository(Team);
+        const userRepository = AppDataSource.getRepository(User);
+
+        // Find Strategy team by ID 3
+        const strategyTeam = await teamRepository.findOne({ where: { id: 3 } });
+
+        if (strategyTeam) {
+          department = strategyTeam.name;
+
+          const teamUsers = await userRepository.find({ where: { teamId: strategyTeam.id, status: 1 } });
+          if (teamUsers.length > 0) {
+            const randomUser = teamUsers[Math.floor(Math.random() * teamUsers.length)];
+            assignedUserId = randomUser.id;
+            assignmentMethod = 'Auto-assigned to Strategy Team';
+          } else {
+            console.warn(`No active users found in Strategy Team (ID: ${strategyTeam.id})`);
+          }
+        } else {
+          console.warn('Strategy Team (ID 3) not found');
+        }
+      } catch (assignError) {
+        console.error('Error in auto-assignment to Strategy Team:', assignError);
       }
     }
 
@@ -557,10 +613,10 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
         // Find "Operations" Team (Try 'Operaciones' or 'Operations' or 'Gestión Operativa')
         let operationsTeam = await teamRepository.findOne({ where: { name: 'Operaciones' } });
         if (!operationsTeam) {
-             operationsTeam = await teamRepository.findOne({ where: { name: 'Operations' } });
+          operationsTeam = await teamRepository.findOne({ where: { name: 'Operations' } });
         }
         if (!operationsTeam) {
-             operationsTeam = await teamRepository.findOne({ where: { name: 'Gestión Operativa' } });
+          operationsTeam = await teamRepository.findOne({ where: { name: 'Gestión Operativa' } });
         }
 
         if (operationsTeam) {
@@ -593,13 +649,56 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
       }
     }
 
-    // Auto-assignment logic for create_proposal -> get_data transition
-    if (oldStatusCode === 'create_proposal' && stage === 'get_data') {
+    // Auto-assignment logic for ANY transition to create_proposal (Strategy Team)
+    if (stage === 'create_proposal' && oldStatusCode !== 'create_proposal') {
       try {
         const teamRepository = AppDataSource.getRepository(Team);
         const userRepository = AppDataSource.getRepository(User);
 
-        // Find "Data" Team (ID 5)
+        // Find Strategy team by ID 3
+        const strategyTeam = await teamRepository.findOne({ where: { id: 3 } });
+
+        if (strategyTeam) {
+          // Update department to Strategy team name
+          existingRequest.department = strategyTeam.name;
+
+          // Find active users in "Strategy" team
+          const teamUsers = await userRepository.find({ where: { teamId: strategyTeam.id, status: 1 } });
+
+          if (teamUsers.length > 0) {
+            // Select random user
+            const randomUser = teamUsers[Math.floor(Math.random() * teamUsers.length)];
+            existingRequest.assignedUserId = randomUser.id;
+
+            // Log auto-assignment
+            if (req.user?.userId) {
+              await historyService.logChange(
+                existingRequest.id,
+                'AutoAssignment',
+                null,
+                `Stage transition to 'create_proposal': Auto-assigned to Strategy Team user ${randomUser.name} (${randomUser.id})`,
+                req.user.userId,
+                'update'
+              );
+            }
+          } else {
+            console.warn(`No active users found in Strategy Team (ID: ${strategyTeam.id})`);
+          }
+        } else {
+          console.warn('Strategy Team (ID 3) not found');
+        }
+      } catch (assignError) {
+        console.error('Error in auto-assignment during stage transition to create_proposal:', assignError);
+      }
+    }
+
+    // Auto-assignment logic for ANY transition to get_data
+    if (stage === 'get_data' && oldStatusCode !== 'get_data') {
+      try {
+        const teamRepository = AppDataSource.getRepository(Team);
+        const userRepository = AppDataSource.getRepository(User);
+
+        // Find Data team by ID 5
         const dataTeam = await teamRepository.findOne({ where: { id: 5 } });
 
         if (dataTeam) {
@@ -607,7 +706,7 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
           existingRequest.department = dataTeam.name;
 
           // Find active users in "Data" team
-          const teamUsers = await userRepository.find({ where: { teamId: 5, status: 1 } });
+          const teamUsers = await userRepository.find({ where: { teamId: dataTeam.id, status: 1 } });
 
           if (teamUsers.length > 0) {
             // Select random user
@@ -625,7 +724,11 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
                 'update'
               );
             }
+          } else {
+            console.warn(`No active users found in Data Team (ID: ${dataTeam.id})`);
           }
+        } else {
+          console.warn('Data Team (ID 5) not found');
         }
       } catch (assignError) {
         console.error('Error in auto-assignment during stage transition:', assignError);
@@ -638,7 +741,7 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
       try {
         if (existingRequest.userCreatorId) {
           const userRepository = AppDataSource.getRepository(User);
-          const creator = await userRepository.findOne({ 
+          const creator = await userRepository.findOne({
             where: { id: existingRequest.userCreatorId },
             relations: ['team']
           });
@@ -646,7 +749,7 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
           if (creator) {
             // Reassign to creator
             existingRequest.assignedUserId = creator.id;
-            
+
             // Restore department if creator has a team
             if (creator.team) {
               existingRequest.department = creator.team.name;
@@ -880,48 +983,103 @@ export const updateStepCampaign = async (req: Request, res: Response): Promise<R
     if (campaignDetail) {
       existingRequest.campaignDetail = { ...existingRequest.campaignDetail, ...campaignDetail };
 
-      // Logic for high budget reassignment (> 50,000,000)
+      // Logic for budget-based status and assignment
       if (campaignDetail.budget) {
         const budgetStr = String(campaignDetail.budget).replace(/[^0-9]/g, '');
         const budgetValue = parseInt(budgetStr);
 
-        // Check if budget is higher than 50 million
-         if (!isNaN(budgetValue) && budgetValue >= 50000000) {
-            // 1. Change status to 'create_proposal'
-            existingRequest.status = 'create_proposal';
-            
-            // Only perform reassignment if the department is not already 'Estrategia'
-            // This prevents re-shuffling the user every time the campaign is saved with a high budget
-            if (existingRequest.department !== 'Estrategia') {
-                // 2. Change Team to "Estrategia" (Team ID 3)
-                existingRequest.department = 'Estrategia';
-     
-                // 3. Assign a random person from Team "Estrategia" (Team ID 3)
-                try {
-                  const userRepository = AppDataSource.getRepository(User);
-                  // Find active users (status = 1) in Team 3
-                  const strategyUsers = await userRepository.find({ where: { teamId: 3, status: 1 } });
-                  
-                  if (strategyUsers.length > 0) {
-                    const randomIndex = Math.floor(Math.random() * strategyUsers.length);
-                    const selectedUser = strategyUsers[randomIndex];
-                    
-                    // Assign the selected user
-                    existingRequest.assignedUserId = selectedUser.id;
-                    
-                    // Send notification to the new assigned user
-                    await notificationService.createNotification(
-                       selectedUser.id,
-                       'Nueva Solicitud Asignada (Presupuesto Alto)',
-                       `Se te ha asignado la solicitud "${existingRequest.name}" debido a su alto presupuesto (> 50M).`,
-                       'info'
+        if (!isNaN(budgetValue)) {
+          if (budgetValue < 50000000) {
+            // Low Budget (< 50M) -> 'get_data'
+            // Assign to Data Team (ID 5)
+            existingRequest.status = 'get_data';
+
+            try {
+              const teamRepository = AppDataSource.getRepository(Team);
+              const userRepository = AppDataSource.getRepository(User);
+
+              // Try to find Data team by ID 5, or by name if not found
+              let dataTeam = await teamRepository.findOne({ where: { id: 5 } });
+              if (!dataTeam) {
+                dataTeam = await teamRepository.findOne({ where: { name: 'Data' } });
+              }
+              if (!dataTeam) {
+                dataTeam = await teamRepository.findOne({ where: { name: 'Datos' } });
+              }
+
+              if (dataTeam) {
+                existingRequest.department = dataTeam.name;
+
+                const teamUsers = await userRepository.find({ where: { teamId: dataTeam.id, status: 1 } });
+                if (teamUsers.length > 0) {
+                  const randomUser = teamUsers[Math.floor(Math.random() * teamUsers.length)];
+                  existingRequest.assignedUserId = randomUser.id;
+
+                  // Log auto-assignment
+                  if (req.user?.userId) {
+                    await historyService.logChange(
+                      existingRequest.id,
+                      'AutoAssignment',
+                      null,
+                      `Budget < 50M: Auto-assigned to Data Team user ${randomUser.name} (${randomUser.id})`,
+                      req.user.userId,
+                      'update'
                     );
                   }
-                } catch (assignError) {
-                  console.error('Error auto-assigning Strategy user:', assignError);
                 }
+              }
+            } catch (assignError) {
+              console.error('Error in auto-assignment to Data Team:', assignError);
             }
-         }
+
+          } else {
+            // High Budget (>= 50M) -> 'create_proposal'
+            // Assign to Strategy Team (ID 3)
+            existingRequest.status = 'create_proposal';
+
+            try {
+              const teamRepository = AppDataSource.getRepository(Team);
+              const userRepository = AppDataSource.getRepository(User);
+
+              // Try to find Strategy team by ID 3, or by name if not found
+              let strategyTeam = await teamRepository.findOne({ where: { id: 3 } });
+              if (!strategyTeam) {
+                strategyTeam = await teamRepository.findOne({ where: { name: 'Estrategy' } });
+              }
+              if (!strategyTeam) {
+                strategyTeam = await teamRepository.findOne({ where: { name: 'Estrategia' } });
+              }
+
+              if (strategyTeam) {
+                existingRequest.department = strategyTeam.name;
+
+                const teamUsers = await userRepository.find({ where: { teamId: strategyTeam.id, status: 1 } });
+                if (teamUsers.length > 0) {
+                  const randomUser = teamUsers[Math.floor(Math.random() * teamUsers.length)];
+                  existingRequest.assignedUserId = randomUser.id;
+
+                  // Log auto-assignment
+                  if (req.user?.userId) {
+                    await historyService.logChange(
+                      existingRequest.id,
+                      'AutoAssignment',
+                      null,
+                      `Budget >= 50M: Auto-assigned to Strategy Team user ${randomUser.name} (${randomUser.id})`,
+                      req.user.userId,
+                      'update'
+                    );
+                  }
+                } else {
+                  console.warn(`No active users found in Strategy Team (ID: ${strategyTeam.id}, Name: ${strategyTeam.name})`);
+                }
+              } else {
+                console.warn('Strategy Team (ID 3 or name "Estrategy"/"Estrategia") not found');
+              }
+            } catch (assignError) {
+              console.error('Error in auto-assignment to Strategy Team:', assignError);
+            }
+          }
+        }
       }
     }
 

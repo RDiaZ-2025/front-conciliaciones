@@ -177,7 +177,7 @@ export class ProductionDialogComponent implements OnInit {
       if (currentUser) {
         // Set Assigned User (User Creator)
         if (currentUser.id) {
-           this.form.patchValue({ assignedUserId: currentUser.id });
+          this.form.patchValue({ assignedUserId: currentUser.id });
         }
 
         // Set Department (Team) - Auto-select user's team and make it read-only
@@ -547,13 +547,15 @@ export class ProductionDialogComponent implements OnInit {
     } else if (this.currentStep === 2) {
       // Saving Campaign Step (Step 2 -> 3)
       // User requirement: Update based on budget
+      // Budget < 50M -> create_proposal
+      // Budget >= 50M -> get_data
       const budgetStr = formValue.campaignDetail?.budget || '0';
       const cleanBudget = String(budgetStr).replace(/[^0-9]/g, '');
       const budget = parseFloat(cleanBudget);
 
-      let targetStageCode = 'in_sell';
-      if (budget >= 50000000) {
-        targetStageCode = 'create_proposal';
+      let targetStageCode = 'create_proposal';
+      if (budget < 50000000) {
+        targetStageCode = 'get_data';
       }
 
       // Only apply if we are in an early stage (or if explicitly creating/updating early info)
