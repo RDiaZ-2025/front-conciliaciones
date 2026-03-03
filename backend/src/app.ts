@@ -6,7 +6,6 @@ import rateLimit from 'express-rate-limit';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
-import loadDocumentsOCbyUserRouter from './routes/loadDocumentsOCbyUser';
 
 // Importar rutas
 import authRoutes from './routes/auth';
@@ -84,7 +83,6 @@ app.get('/api/test/permissions', (req, res) => {
 // Rutas de la API
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/load-documents', loadDocumentsOCbyUserRouter);
 app.use('/api/production', productionRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/menus', menuRoutes);

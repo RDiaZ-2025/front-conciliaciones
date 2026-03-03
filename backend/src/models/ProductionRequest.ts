@@ -59,6 +59,9 @@ export class ProductionRequest {
   @Column({ name: 'Observations', type: 'nvarchar', length: 'MAX', nullable: true })
   observations!: string | null;
 
+  @Column({ name: 'Consecutive', type: 'int', nullable: true })
+  consecutive!: number | null;
+
   @Column({ name: 'MaterialData', type: 'nvarchar', length: 'MAX', nullable: true })
   materialData!: string | null;
 

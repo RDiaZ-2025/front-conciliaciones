@@ -1,6 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { PermissionByUser } from './PermissionByUser';
-import { LoadDocumentsOCbyUser } from './LoadDocumentsOCbyUser';
 import { Notification } from './Notification';
 import { Team } from './Team';
 
@@ -99,12 +98,6 @@ export class User {
      */
     @OneToMany(() => User, user => user.boss)
     subordinates!: User[];
-
-    /**
-     * One-to-many relationship with document loads
-     */
-    @OneToMany(() => LoadDocumentsOCbyUser, loadDocument => loadDocument.user)
-    documentLoads!: LoadDocumentsOCbyUser[];
 
     /**
      * One-to-many relationship with notifications
