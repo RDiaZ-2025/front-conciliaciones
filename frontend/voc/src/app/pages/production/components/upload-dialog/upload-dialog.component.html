@@ -1,0 +1,93 @@
+<div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
+    <p-toast></p-toast>
+
+    <div class="card p-0 surface-card border-round shadow-none">
+        <p-stepper [value]="activeStep()" (valueChange)="onActiveStepChange($event)" [linear]="true">
+            <p-step-list>
+                <p-step [value]="0">Subir Excel</p-step>
+                <p-step [value]="1">Subir PDF</p-step>
+            </p-step-list>
+
+            <p-step-panels>
+                <!-- Step 1: Subir Excel -->
+                <p-step-panel [value]="0">
+                    <ng-template pTemplate="content" let-activateCallback="activateCallback">
+                        <div class="flex flex-column gap-4 py-4">
+                            <p-message severity="info"
+                                text="Seleccione el archivo Excel de Valorización (.xlsx)"></p-message>
+
+                            <div class="flex justify-content-center">
+                                <p-fileUpload mode="advanced" chooseLabel="Seleccionar Excel" accept=".xlsx"
+                                    [maxFileSize]="10000000" [auto]="true" [customUpload]="true"
+                                    (uploadHandler)="onExcelSelect($event)" [disabled]="uploading()">
+                                </p-fileUpload>
+                            </div>
+
+                            <div *ngIf="debugExcelValues().length > 0" class="surface-ground p-3 border-round">
+                                <h3 class="text-lg font-medium mb-2">Datos extraídos:</h3>
+                                <ul class="list-none p-0 m-0">
+                                    <li *ngFor="let item of debugExcelValues()" class="mb-1 text-sm text-600">
+                                        <i class="pi pi-check-circle text-green-500 mr-2"></i>{{ item }}
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="flex justify-content-between mt-4">
+                                <div class="flex gap-2">
+                                    <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary"
+                                        (onClick)="cancel()"></p-button>
+                                </div>
+                                <p-button label="Siguiente" icon="pi pi-arrow-right" (onClick)="activeStep.set(1)"
+                                    [disabled]="!isExcelStepValid()"></p-button>
+                            </div>
+                        </div>
+                    </ng-template>
+                </p-step-panel>
+
+                <!-- Step 2: Subir PDF -->
+                <p-step-panel [value]="1">
+                    <ng-template pTemplate="content" let-activateCallback="activateCallback">
+                        <div class="flex flex-column gap-4 py-4">
+                            <p-message severity="info"
+                                text="Seleccione el archivo PDF de la Orden de Compra"></p-message>
+
+                            <div class="flex justify-content-center">
+                                <p-fileUpload mode="advanced" chooseLabel="Seleccionar PDF" accept=".pdf"
+                                    [maxFileSize]="10000000" [auto]="true" [customUpload]="true"
+                                    (uploadHandler)="onPdfSelect($event)" [disabled]="uploading()">
+                                </p-fileUpload>
+                            </div>
+
+                            <div *ngIf="pdfThumbnail()" class="flex flex-column align-items-center gap-3 mt-3">
+                                <iframe [src]="pdfThumbnail() | safeUrl" width="100%" height="400px"
+                                    class="border-1 surface-border border-round"></iframe>
+
+                                <div
+                                    class="flex align-items-center gap-2 p-3 surface-ground border-round w-full justify-content-center">
+                                    <p-checkbox [ngModel]="manualPdfConfirmation()"
+                                        (ngModelChange)="manualPdfConfirmation.set($event)" [binary]="true"
+                                        inputId="pdfConfirm"></p-checkbox>
+                                    <label for="pdfConfirm" class="font-medium">Confirmo que el PDF corresponde a la
+                                        Orden
+                                        de Compra y está firmado.</label>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-content-between mt-4">
+                                <div class="flex gap-2">
+                                    <p-button label="Atrás" icon="pi pi-arrow-left" [text]="true"
+                                        (onClick)="activeStep.set(0)"></p-button>
+                                    <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary"
+                                        (onClick)="cancel()"></p-button>
+                                </div>
+                                <p-button label="Finalizar y Enviar" icon="pi pi-check" severity="success"
+                                    (onClick)="onSubmit()" [loading]="uploading()"
+                                    [disabled]="!isPdfStepValid() || envioExitoso()"></p-button>
+                            </div>
+                        </div>
+                    </ng-template>
+                </p-step-panel>
+            </p-step-panels>
+        </p-stepper>
+    </div>
+</div>

@@ -3,7 +3,7 @@
         <div class="formgrid grid">
             <div class="col-12 md:col-6">
                 <p-floatlabel variant="in">
-                    <input pInputText formControlName="clientAgency" class="w-full" />
+                    <p-select [options]="clientTypes" formControlName="clientAgency" optionLabel="label" optionValue="value" styleClass="w-full" />
                     <label>Cliente / Agencia</label>
                 </p-floatlabel>
             </div>
@@ -24,7 +24,7 @@
             </div>
             <div class="col-12 md:col-6">
                 <p-floatlabel variant="in">
-                    <input pInputText formControlName="requesterPhone" class="w-full" />
+                    <p-inputMask formControlName="requesterPhone" mask="999 999-9999" styleClass="w-full" />
                     <label>Teléfono del Solicitante</label>
                 </p-floatlabel>
             </div>
@@ -39,7 +39,7 @@
             </div>
             <div class="col-12 md:col-6">
                 <p-floatlabel variant="in">
-                    <input pInputText formControlName="nit" class="w-full" />
+                    <p-inputMask formControlName="nit" mask="999999999-9" styleClass="w-full" />
                     <label>NIT</label>
                 </p-floatlabel>
             </div>

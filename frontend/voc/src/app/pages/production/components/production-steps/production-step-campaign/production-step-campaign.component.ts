@@ -5,6 +5,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { FloatLabelModule } from 'primeng/floatlabel';
 import { SelectModule } from 'primeng/select';
 import { ButtonModule } from 'primeng/button';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { Objective, Product } from '../../../production.models';
 
 @Component({
@@ -16,7 +17,8 @@ import { Objective, Product } from '../../../production.models';
     InputTextModule,
     FloatLabelModule,
     SelectModule,
-    ButtonModule
+    ButtonModule,
+    InputNumberModule
   ],
   templateUrl: './production-step-campaign.component.html'
 })

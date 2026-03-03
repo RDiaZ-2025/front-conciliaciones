@@ -30,6 +30,7 @@ import { FilePreviewComponent } from '../../components/file-preview/file-preview
 import { UploadedFile } from './production.models';
 import { InSellActionDialogComponent } from './components/in-sell-action-dialog/in-sell-action-dialog.component';
 import { MaterialPreparationDialogComponent } from './components/material-preparation-dialog/material-preparation-dialog.component';
+import { UploadDialogComponent } from './components/upload-dialog/upload-dialog.component';
 
 @Component({
   selector: 'app-production',
@@ -409,6 +410,25 @@ export class ProductionComponent implements OnInit, OnDestroy {
     }
   }
 
+  openUploadDialog(request: ProductionRequest) {
+    this.ref = this.dialogService.open(UploadDialogComponent, {
+      header: 'Carga de Documentos (Orden de Compra)',
+      width: '70%',
+      contentStyle: { overflow: 'auto' },
+      baseZIndex: 10000,
+      maximizable: true,
+      data: { request }
+    });
+
+    if (this.ref) {
+      this.ref.onClose.subscribe((result: any) => {
+        if (result && result.success) {
+          this.performMove(request, 'consecutive_generation');
+        }
+      });
+    }
+  }
+
   moveRequest(request: ProductionRequest) {
     const currentStage = request.stage;
     let nextStageId = '';
@@ -462,7 +482,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
           this.ref.onClose.subscribe((result: any) => {
             if (result && result.action) {
               if (result.action === 'sold') {
-                this.performMove(request, 'material_preparation');
+                this.openUploadDialog(request);
               } else if (result.action === 'not_sold') {
                 this.performMove(request, 'completed');
               }
@@ -543,6 +563,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
       case 'val_materiales_red_plus':
         return 'secondary';
       case 'material_preparation': return 'warn';
+      case 'consecutive_generation': return 'info';
       case 'venta': return 'info';
       case 'obtener_datos': return 'danger';
       case 'create_proposal': return 'warn';

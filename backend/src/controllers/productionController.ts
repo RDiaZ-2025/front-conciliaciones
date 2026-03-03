@@ -577,7 +577,8 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
       'delivered_approval',
       'client_approved',
       'completed',
-      'material_preparation'
+      'material_preparation',
+      'consecutive_generation'
     ];
 
     if (!stage || !validStages.includes(stage)) {
@@ -646,6 +647,49 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
         }
       } catch (assignError) {
         console.error('Error in auto-assignment during stage transition to material_preparation:', assignError);
+      }
+    }
+
+    // Auto-assignment logic for in_sell -> consecutive_generation transition (Administration Team)
+    if (oldStatusCode === 'in_sell' && stage === 'consecutive_generation') {
+      try {
+        const teamRepository = AppDataSource.getRepository(Team);
+        const userRepository = AppDataSource.getRepository(User);
+
+        // Find Administration team by ID 7
+        const adminTeam = await teamRepository.findOne({ where: { id: 7 } });
+
+        if (adminTeam) {
+          // Update department to Administration team name
+          existingRequest.department = adminTeam.name;
+
+          // Find active users in "Administration" team
+          const teamUsers = await userRepository.find({ where: { teamId: adminTeam.id, status: 1 } });
+
+          if (teamUsers.length > 0) {
+            // Select random user
+            const randomUser = teamUsers[Math.floor(Math.random() * teamUsers.length)];
+            existingRequest.assignedUserId = randomUser.id;
+
+            // Log auto-assignment
+            if (req.user?.userId) {
+              await historyService.logChange(
+                existingRequest.id,
+                'AutoAssignment',
+                null,
+                `Stage transition to 'consecutive_generation': Auto-assigned to Administration Team user ${randomUser.name} (${randomUser.id})`,
+                req.user.userId,
+                'update'
+              );
+            }
+          } else {
+            console.warn(`No active users found in Administration Team (ID: ${adminTeam.id})`);
+          }
+        } else {
+          console.warn('Administration Team (ID 7) not found');
+        }
+      } catch (assignError) {
+        console.error('Error in auto-assignment during stage transition to consecutive_generation:', assignError);
       }
     }
 
