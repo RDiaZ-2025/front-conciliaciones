@@ -31,6 +31,7 @@ import { UploadedFile } from './production.models';
 import { InSellActionDialogComponent } from './components/in-sell-action-dialog/in-sell-action-dialog.component';
 import { MaterialPreparationDialogComponent } from './components/material-preparation-dialog/material-preparation-dialog.component';
 import { UploadDialogComponent } from './components/upload-dialog/upload-dialog.component';
+import { ConsecutiveDialogComponent } from './components/consecutive-dialog/consecutive-dialog.component';
 
 @Component({
   selector: 'app-production',
@@ -429,6 +430,24 @@ export class ProductionComponent implements OnInit, OnDestroy {
     }
   }
 
+  openConsecutiveDialog(request: ProductionRequest) {
+    this.ref = this.dialogService.open(ConsecutiveDialogComponent, {
+      header: 'Generate Consecutive',
+      width: '400px',
+      contentStyle: { "overflow": "auto" },
+      baseZIndex: 10000,
+      data: { request }
+    });
+
+    if (this.ref) {
+      this.ref.onClose.subscribe((result: any) => {
+        if (result && result.consecutive) {
+          this.performMove(request, 'closed_won', { consecutive: result.consecutive });
+        }
+      });
+    }
+  }
+
   moveRequest(request: ProductionRequest) {
     const currentStage = request.stage;
     let nextStageId = '';
@@ -492,6 +511,10 @@ export class ProductionComponent implements OnInit, OnDestroy {
         }
         return;
 
+      case 'consecutive_generation':
+        this.openConsecutiveDialog(request);
+        return;
+
       case 'material_preparation':
         this.openMaterialPreparation(request);
         return;
@@ -535,8 +558,8 @@ export class ProductionComponent implements OnInit, OnDestroy {
     }
   }
 
-  performMove(request: ProductionRequest, nextStageId: string) {
-    this.productionService.moveRequest(request.id, nextStageId).subscribe({
+  performMove(request: ProductionRequest, nextStageId: string, data?: any) {
+    this.productionService.moveRequest(request.id, nextStageId, data).subscribe({
       next: (updatedRequest) => {
         const nextStageLabel = this.getStageLabel(nextStageId);
         this.requests.update(current => current.map(r => r.id === request.id ? updatedRequest : r));

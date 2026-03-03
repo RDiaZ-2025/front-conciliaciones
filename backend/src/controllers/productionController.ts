@@ -578,7 +578,8 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
       'client_approved',
       'completed',
       'material_preparation',
-      'consecutive_generation'
+      'consecutive_generation',
+      'closed_won'
     ];
 
     if (!stage || !validStages.includes(stage)) {
@@ -814,6 +815,47 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
         }
       } catch (assignError) {
         console.error('Error in auto-assignment (return to creator) during stage transition:', assignError);
+      }
+    }
+
+    // Logic for consecutive_generation -> closed_won transition
+    if (stage === 'closed_won') {
+      const { consecutive } = req.body;
+      if (!consecutive) {
+        return res.status(400).json({ message: 'Consecutive number is mandatory for this transition' });
+      }
+
+      existingRequest.consecutive = parseInt(consecutive);
+
+      if (existingRequest.userCreatorId) {
+        try {
+          const userRepository = AppDataSource.getRepository(User);
+          const creator = await userRepository.findOne({
+            where: { id: existingRequest.userCreatorId },
+            relations: ['team']
+          });
+
+          if (creator) {
+            existingRequest.assignedUserId = creator.id;
+
+            if (creator.team) {
+              existingRequest.department = creator.team.name;
+            }
+
+            if (req.user?.userId) {
+              await historyService.logChange(
+                existingRequest.id,
+                'AutoAssignment',
+                null,
+                `Stage transition to 'closed_won': Auto-assigned to Creator ${creator.name} (${creator.id})`,
+                req.user.userId,
+                'update'
+              );
+            }
+          }
+        } catch (assignError) {
+          console.error('Error in auto-assignment (return to creator) during stage transition to closed_won:', assignError);
+        }
       }
     }
 

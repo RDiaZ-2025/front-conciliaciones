@@ -151,6 +151,7 @@ export interface ProductionRequest {
   campaignDetail?: CampaignDetail;
   productionInfo?: ProductionInfo;
   materialData?: any;
+  consecutive?: number | null;
 }
 
 export const WORKFLOW_STAGES = [
@@ -160,6 +161,7 @@ export const WORKFLOW_STAGES = [
   { id: 'get_data', label: 'Obtener Datos' },
   { id: 'in_sell', label: 'Venta' },
   { id: 'consecutive_generation', label: 'Generación de Consecutivo' },
+  { id: 'closed_won', label: 'Cerrado Ganado' },
   { id: 'material_preparation', label: 'Preparación de Materiales' },
   { id: 'val_materiales_mobile', label: 'Val. Materiales Mobile' },
   { id: 'val_materiales_programatica', label: 'Val. Materiales Programática' },

@@ -63,8 +63,8 @@ export class ProductionService {
     return this.http.get<ProductionRequestHistory[]>(`${this.apiUrl}/${id}/history`);
   }
 
-  moveRequest(id: number, stage: string): Observable<ProductionRequest> {
-    return this.http.put<ProductionRequest>(`${this.apiUrl}/${id}/move`, { stage });
+  moveRequest(id: number, stage: string, data?: any): Observable<ProductionRequest> {
+    return this.http.put<ProductionRequest>(`${this.apiUrl}/${id}/move`, { stage, ...data });
   }
 
   saveMaterialData(id: number, data: any): Observable<ProductionRequest> {
