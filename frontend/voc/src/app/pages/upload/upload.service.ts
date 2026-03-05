@@ -148,21 +148,4 @@ export class UploadService {
       return false;
     }
   }
-
-  async registerInDatabase(payload: any): Promise<boolean> {
-    try {
-      const response = await fetch(`${environment.apiUrl}/load-documents`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem('auth_token')}`
-        },
-        body: JSON.stringify(payload)
-      });
-      return response.ok;
-    } catch (err) {
-      console.error('Database Registration Error:', err);
-      return false;
-    }
-  }
 }

@@ -220,19 +220,7 @@ export class UploadComponent {
       };
 
       const n8nOk = await this.uploadService.notifyN8N(payload);
-      if (!n8nOk) throw new Error('Error al notificar a N8N');
-
-      // 3. Register in DB
-      const dbPayload = {
-        iduser: this.authService.currentUser()?.id || 1,
-        idfolder: this.guid(),
-        fecha: new Date().toISOString(),
-        status: "uploaded",
-        filename: this.excelFile()?.name || ""
-      };
-
-      const dbOk = await this.uploadService.registerInDatabase(dbPayload);
-      if (!dbOk) throw new Error('Error al registrar en base de datos');
+      if (!n8nOk) console.warn('Error al notificar a N8N');
 
       this.envioExitoso.set(true);
       this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Proceso completado correctamente' });

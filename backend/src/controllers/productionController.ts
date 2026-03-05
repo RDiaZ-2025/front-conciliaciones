@@ -577,7 +577,7 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
       'delivered_approval',
       'client_approved',
       'completed',
-      'material_preparation',
+      'implementation',
       'consecutive_generation',
       'closed_won'
     ];
@@ -606,8 +606,8 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
 
     const oldStatusCode = existingRequest.status || 'unknown';
 
-    // Auto-assignment logic for in_sell -> material_preparation transition
-    if (oldStatusCode === 'in_sell' && stage === 'material_preparation') {
+    // Auto-assignment logic for in_sell -> implementation transition
+    if (oldStatusCode === 'in_sell' && stage === 'implementation') {
       try {
         const teamRepository = AppDataSource.getRepository(Team);
         const userRepository = AppDataSource.getRepository(User);
@@ -639,7 +639,7 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
                 existingRequest.id,
                 'AutoAssignment',
                 null,
-                `Stage transition to 'material_preparation': Auto-assigned to Operations Team user ${randomUser.name} (${randomUser.id})`,
+                `Stage transition to 'implementation': Auto-assigned to Operations Team user ${randomUser.name} (${randomUser.id})`,
                 req.user.userId,
                 'update'
               );
@@ -647,7 +647,7 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
           }
         }
       } catch (assignError) {
-        console.error('Error in auto-assignment during stage transition to material_preparation:', assignError);
+        console.error('Error in auto-assignment during stage transition to implementation:', assignError);
       }
     }
 
@@ -855,6 +855,49 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
           }
         } catch (assignError) {
           console.error('Error in auto-assignment (return to creator) during stage transition to closed_won:', assignError);
+        }
+      }
+    }
+
+    // Logic for closed_won -> implementation transition
+    if (stage === 'implementation') {
+      const { unitAssigned, assignedUserId } = req.body;
+      
+      if (unitAssigned) {
+        existingRequest.unitAssigned = unitAssigned;
+      }
+
+      if (assignedUserId) {
+        // Verify user exists and is in Operations team (optional but good practice)
+        try {
+            const userRepository = AppDataSource.getRepository(User);
+            const user = await userRepository.findOne({ where: { id: assignedUserId }, relations: ['team'] });
+            
+            if (user) {
+                existingRequest.assignedUserId = user.id;
+                
+                // Update Department to "Operations" (or the user's team name if we want to be dynamic, 
+                // but requirement says "Operations")
+                // Let's use the team name from the user if available, otherwise "Operaciones"
+                if (user.team) {
+                    existingRequest.department = user.team.name;
+                } else {
+                    existingRequest.department = "Operaciones";
+                }
+
+                if (req.user?.userId) {
+                  await historyService.logChange(
+                    existingRequest.id,
+                    'Assignment',
+                    null,
+                    `Stage transition to 'implementation': Assigned to ${user.name} (${user.id}), Unit: ${unitAssigned}`,
+                    req.user.userId,
+                    'update'
+                  );
+                }
+            }
+        } catch (err) {
+            console.error('Error verifying assigned user for implementation:', err);
         }
       }
     }

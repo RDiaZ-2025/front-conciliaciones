@@ -32,6 +32,7 @@ import { InSellActionDialogComponent } from './components/in-sell-action-dialog/
 import { MaterialPreparationDialogComponent } from './components/material-preparation-dialog/material-preparation-dialog.component';
 import { UploadDialogComponent } from './components/upload-dialog/upload-dialog.component';
 import { ConsecutiveDialogComponent } from './components/consecutive-dialog/consecutive-dialog.component';
+import { AssignImplementationDialogComponent } from './components/assign-implementation-dialog/assign-implementation-dialog.component';
 
 @Component({
   selector: 'app-production',
@@ -375,9 +376,9 @@ export class ProductionComponent implements OnInit, OnDestroy {
     });
   }
 
-  openMaterialPreparation(request: ProductionRequest) {
+  openImplementation(request: ProductionRequest) {
     this.ref = this.dialogService.open(MaterialPreparationDialogComponent, {
-      header: 'Preparación de Materiales',
+      header: 'Implementación',
       width: '90%',
       height: '90%',
       contentStyle: { "overflow": "auto" },
@@ -448,6 +449,27 @@ export class ProductionComponent implements OnInit, OnDestroy {
     }
   }
 
+  openAssignImplementationDialog(request: ProductionRequest) {
+    this.ref = this.dialogService.open(AssignImplementationDialogComponent, {
+      header: 'Asignar Implementación',
+      width: '400px',
+      contentStyle: { "overflow": "auto" },
+      baseZIndex: 10000,
+      data: { request }
+    });
+
+    if (this.ref) {
+      this.ref.onClose.subscribe((result: any) => {
+        if (result) {
+          this.performMove(request, 'implementation', {
+            unitAssigned: result.unit,
+            assignedUserId: result.assignedUser
+          });
+        }
+      });
+    }
+  }
+
   moveRequest(request: ProductionRequest) {
     const currentStage = request.stage;
     let nextStageId = '';
@@ -511,12 +533,16 @@ export class ProductionComponent implements OnInit, OnDestroy {
         }
         return;
 
+      case 'closed_won':
+        this.openAssignImplementationDialog(request);
+        return;
+
       case 'consecutive_generation':
         this.openConsecutiveDialog(request);
         return;
 
-      case 'material_preparation':
-        this.openMaterialPreparation(request);
+      case 'implementation':
+        this.openImplementation(request);
         return;
 
       case 'val_materiales_mobile':
@@ -561,8 +587,11 @@ export class ProductionComponent implements OnInit, OnDestroy {
   performMove(request: ProductionRequest, nextStageId: string, data?: any) {
     this.productionService.moveRequest(request.id, nextStageId, data).subscribe({
       next: (updatedRequest) => {
+        const stage = (typeof updatedRequest.status === 'string' ? updatedRequest.status : (updatedRequest.status as any)?.code) || updatedRequest.stage || 'request';
+        const mappedRequest = { ...updatedRequest, stage };
+
         const nextStageLabel = this.getStageLabel(nextStageId);
-        this.requests.update(current => current.map(r => r.id === request.id ? updatedRequest : r));
+        this.requests.update(current => current.map(r => r.id === request.id ? mappedRequest : r));
         this.messageService.add({ severity: 'success', summary: 'Success', detail: `Moved to ${nextStageLabel}` });
       },
       error: () => {
@@ -585,7 +614,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
       case 'val_materiales_programatica':
       case 'val_materiales_red_plus':
         return 'secondary';
-      case 'material_preparation': return 'warn';
+      case 'implementation': return 'warn';
       case 'consecutive_generation': return 'info';
       case 'venta': return 'info';
       case 'obtener_datos': return 'danger';

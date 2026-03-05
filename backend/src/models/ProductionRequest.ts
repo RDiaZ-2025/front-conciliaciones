@@ -65,6 +65,9 @@ export class ProductionRequest {
   @Column({ name: 'MaterialData', type: 'nvarchar', length: 'MAX', nullable: true })
   materialData!: string | null;
 
+  @Column({ name: 'UnitAssigned', type: 'nvarchar', length: 255, nullable: true })
+  unitAssigned!: string | null;
+
   isInRequestStage(): boolean {
     return (this.status ?? '').toLowerCase() === 'request';
   }
