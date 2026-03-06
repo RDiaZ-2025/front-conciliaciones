@@ -1,0 +1,60 @@
+<div class="flex flex-col gap-4 p-4">
+    <h3 class="text-xl font-semibold text-white">Push Multimedia Configuration</h3>
+    
+    <form [formGroup]="form" class="flex flex-col gap-4">
+        <div class="flex flex-col gap-2">
+            <label class="text-gray-300">Texto Línea 1 (Max 25 chars, debe empezar con "Publicidad De:")</label>
+            <input pInputText formControlName="push_textLine1" placeholder="Publicidad De: Marca" />
+            <small *ngIf="form.get('push_textLine1')?.hasError('required') && form.get('push_textLine1')?.touched" class="text-red-500">Requerido.</small>
+            <small *ngIf="form.get('push_textLine1')?.hasError('maxlength')" class="text-red-500">Máximo 25 caracteres.</small>
+            <small *ngIf="form.get('push_textLine1')?.hasError('invalidPrefix')" class="text-red-500">Debe comenzar con "Publicidad De:".</small>
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <label class="text-gray-300">Texto Línea 2 (Max 35 chars)</label>
+            <input pInputText formControlName="push_textLine2" />
+            <small *ngIf="form.get('push_textLine2')?.hasError('maxlength')" class="text-red-500">Máximo 35 caracteres.</small>
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <label class="text-gray-300">URL Destino</label>
+            <input pInputText formControlName="push_url" placeholder="https://..." />
+            <small *ngIf="form.get('push_url')?.hasError('pattern')" class="text-red-500">URL inválida.</small>
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <label class="text-gray-300">UTM (Opcional)</label>
+            <input pInputText formControlName="push_utm" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-2">
+                <label class="text-gray-300">Banner (700x330 JPG)</label>
+                <p-fileUpload 
+                    mode="basic" 
+                    chooseLabel="Subir Banner" 
+                    accept="image/jpeg" 
+                    [maxFileSize]="2000000" 
+                    (onSelect)="onUpload($event, 'banner')"
+                    [auto]="true">
+                </p-fileUpload>
+            </div>
+            <div class="flex flex-col gap-2">
+                <label class="text-gray-300">Logo (96x96 JPG)</label>
+                <p-fileUpload 
+                    mode="basic" 
+                    chooseLabel="Subir Logo" 
+                    accept="image/jpeg" 
+                    [maxFileSize]="1000000" 
+                    (onSelect)="onUpload($event, 'logo')"
+                    [auto]="true">
+                </p-fileUpload>
+            </div>
+        </div>
+    </form>
+
+    <div class="flex justify-end gap-2 mt-4">
+        <p-button label="Cancelar" severity="secondary" (onClick)="cancel()"></p-button>
+        <p-button label="Guardar" (onClick)="submit()" [loading]="isUploading()"></p-button>
+    </div>
+</div>

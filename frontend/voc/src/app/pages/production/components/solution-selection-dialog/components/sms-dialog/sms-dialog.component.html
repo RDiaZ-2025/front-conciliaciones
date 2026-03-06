@@ -1,0 +1,67 @@
+<div class="flex flex-column gap-3 p-3">
+    <form [formGroup]="form" (ngSubmit)="submit()">
+        <div class="field mb-4">
+            <label class="font-bold block mb-2 text-xl text-900">Configuración SMS</label>
+            <div class="p-3 surface-ground border-round-md shadow-1">
+                <div class="text-700">Complete la información para la campaña de SMS.</div>
+            </div>
+        </div>
+
+        <div class="field">
+            <label for="sms_clientName" class="font-bold block mb-2">
+                Nombre del Cliente (Sender ID)
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                   pTooltip="Máximo 11 caracteres alfanuméricos (A-Z, 0-9). Sin caracteres especiales." tooltipPosition="top"></i>
+            </label>
+            <input pInputText id="sms_clientName" formControlName="sms_clientName" class="w-full" placeholder="SENDERID" maxlength="11" />
+            <small *ngIf="form.get('sms_clientName')?.invalid && (form.get('sms_clientName')?.dirty || form.get('sms_clientName')?.touched)" class="p-error block">
+                Requerido. Solo mayúsculas y números.
+            </small>
+        </div>
+
+        <div class="field">
+            <label for="sms_messageText" class="font-bold block mb-2">
+                Texto del Mensaje
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                   pTooltip="Máximo 160 caracteres estándar (GSM 7-bit)." tooltipPosition="top"></i>
+            </label>
+            <textarea pTextarea id="sms_messageText" formControlName="sms_messageText" class="w-full" rows="4" maxlength="200" placeholder="Escriba el mensaje aquí..."></textarea>
+            <div class="text-right text-sm text-500">{{form.get('sms_messageText')?.value?.length || 0}} / 200</div>
+            <small *ngIf="form.get('sms_messageText')?.invalid && (form.get('sms_messageText')?.dirty || form.get('sms_messageText')?.touched)" class="p-error block">
+                Requerido. Máximo 200 caracteres.
+            </small>
+        </div>
+
+        <div class="field">
+            <label for="sms_destinationUrl" class="font-bold block mb-2">
+                URL de Destino
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                   pTooltip="URL válida (https://...)." tooltipPosition="top"></i>
+            </label>
+            <input pInputText id="sms_destinationUrl" formControlName="sms_destinationUrl" class="w-full" placeholder="https://example.com" />
+            <small *ngIf="form.get('sms_destinationUrl')?.invalid && (form.get('sms_destinationUrl')?.dirty || form.get('sms_destinationUrl')?.touched)" class="p-error block">
+                URL válida requerida.
+            </small>
+        </div>
+
+        <div class="field mt-3">
+            <label class="font-bold block mb-2">
+                Archivos Adicionales (Opcional)
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                   pTooltip="Imágenes o videos de apoyo. Máx 1MB." tooltipPosition="top"></i>
+            </label>
+            <p-fileupload mode="advanced" chooseLabel="Seleccionar Archivos" [accept]="fileAccept" 
+                [maxFileSize]="maxFileSize" [customUpload]="true" (uploadHandler)="onUpload($event)" 
+                [auto]="true" [multiple]="true"></p-fileupload>
+            
+            <div *ngFor="let file of uploadedFiles" class="mt-2 text-sm text-green-500 flex align-items-center gap-2">
+                <i class="pi pi-check-circle"></i> {{file.name}} ({{(file.size/1024).toFixed(2)}} KB)
+            </div>
+        </div>
+
+        <div class="flex justify-content-end gap-2 mt-4">
+            <p-button label="Cancelar" icon="pi pi-times" styleClass="p-button-text" (onClick)="cancel()"></p-button>
+            <p-button label="Guardar y Continuar" icon="pi pi-check" type="submit" [disabled]="form.invalid || isUploading()"></p-button>
+        </div>
+    </form>
+</div>

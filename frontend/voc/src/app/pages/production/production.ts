@@ -30,6 +30,23 @@ import { FilePreviewComponent } from '../../components/file-preview/file-preview
 import { UploadedFile } from './production.models';
 import { InSellActionDialogComponent } from './components/in-sell-action-dialog/in-sell-action-dialog.component';
 import { MaterialPreparationDialogComponent } from './components/material-preparation-dialog/material-preparation-dialog.component';
+import { SolutionSelectionDialogComponent } from './components/solution-selection-dialog/solution-selection-dialog.component';
+import { SmsDialogComponent } from './components/solution-selection-dialog/components/sms-dialog/sms-dialog.component';
+import { RcsDialogComponent } from './components/solution-selection-dialog/components/rcs-dialog/rcs-dialog.component';
+import { SatPushDialogComponent } from './components/solution-selection-dialog/components/sat-push-dialog/sat-push-dialog.component';
+import { PushMultimediaDialogComponent } from './components/solution-selection-dialog/components/push-multimedia-dialog/push-multimedia-dialog.component';
+import { VirtualPreloadsDialogComponent } from './components/solution-selection-dialog/components/virtual-preloads-dialog/virtual-preloads-dialog.component';
+import { PreRecordedCallDialogComponent } from './components/solution-selection-dialog/components/pre-recorded-call-dialog/pre-recorded-call-dialog.component';
+import { WhatsappBusinessDialogComponent } from './components/solution-selection-dialog/components/whatsapp-business-dialog/whatsapp-business-dialog.component';
+import { EmailMarketingDialogComponent } from './components/solution-selection-dialog/components/email-marketing-dialog/email-marketing-dialog.component';
+import { DataRewardsDialogComponent } from './components/solution-selection-dialog/components/data-rewards-dialog/data-rewards-dialog.component';
+import { GenericUploadDialogComponent } from './components/solution-selection-dialog/components/generic-upload-dialog/generic-upload-dialog.component';
+import { PmaxDialogComponent } from './components/solution-selection-dialog/components/pmax-dialog/pmax-dialog.component';
+import { NativeAdsDialogComponent } from './components/solution-selection-dialog/components/native-ads-dialog/native-ads-dialog.component';
+import { MetaAdsDialogComponent } from './components/solution-selection-dialog/components/meta-ads-dialog/meta-ads-dialog.component';
+import { TiktokDialogComponent } from './components/solution-selection-dialog/components/tiktok-dialog/tiktok-dialog.component';
+import { YoutubeDialogComponent } from './components/solution-selection-dialog/components/youtube-dialog/youtube-dialog.component';
+import { ContentRedplusDialogComponent } from './components/solution-selection-dialog/components/content-redplus-dialog/content-redplus-dialog.component';
 import { UploadDialogComponent } from './components/upload-dialog/upload-dialog.component';
 import { ConsecutiveDialogComponent } from './components/consecutive-dialog/consecutive-dialog.component';
 import { AssignImplementationDialogComponent } from './components/assign-implementation-dialog/assign-implementation-dialog.component';
@@ -51,7 +68,9 @@ import { AssignImplementationDialogComponent } from './components/assign-impleme
     RippleModule,
     FilePreviewComponent,
     PageHeaderComponent,
-    AnsDialogComponent
+    AnsDialogComponent,
+    // Dynamic components do not strictly need to be in imports if opened via DialogService, 
+    // but good practice if used in template or for standalone verification
   ],
   providers: [DialogService, ConfirmationService, MessageService],
   templateUrl: './production.html',
@@ -377,6 +396,97 @@ export class ProductionComponent implements OnInit, OnDestroy {
   }
 
   openImplementation(request: ProductionRequest) {
+    this.ref = this.dialogService.open(SolutionSelectionDialogComponent, {
+      header: 'Seleccione Solución',
+      width: '400px',
+      contentStyle: { "overflow": "auto" },
+      baseZIndex: 10000,
+      data: { request }
+    });
+
+    if (this.ref) {
+      this.ref.onClose.subscribe((selection: any) => {
+        if (selection) {
+          this.openSolutionDialog(request, selection);
+        }
+      });
+    }
+  }
+
+  openSolutionDialog(request: ProductionRequest, selection: any) {
+    let component: any;
+    let header = 'Configuración de Solución';
+    const solution = selection.solution;
+
+    switch (solution) {
+      // Mobile
+      case 'SMS': component = SmsDialogComponent; header = 'SMS'; break;
+      case 'RCS': component = RcsDialogComponent; header = 'RCS'; break;
+      case 'SAT_PUSH': component = SatPushDialogComponent; header = 'SAT Push'; break;
+      case 'PUSH_MULTIMEDIA': component = PushMultimediaDialogComponent; header = 'Push Multimedia'; break;
+      case 'VIRTUAL_PRELOADS': component = VirtualPreloadsDialogComponent; header = 'Precargas Virtuales'; break;
+      case 'PRE_RECORDED_CALL': component = PreRecordedCallDialogComponent; header = 'Llamada Pregrabada'; break;
+      case 'WHATSAPP_BUSINESS': component = WhatsappBusinessDialogComponent; header = 'WhatsApp Business'; break;
+      case 'EMAIL_MARKETING': component = EmailMarketingDialogComponent; header = 'Email Marketing'; break;
+      case 'DATA_REWARDS': component = DataRewardsDialogComponent; header = 'Data Rewards'; break;
+
+      // Programmatic
+      case 'PMAX_AD': component = PmaxDialogComponent; header = 'PMAX'; break;
+      case 'NATIVE_ADS': component = NativeAdsDialogComponent; header = 'Native Ads'; break;
+      case 'FACEBOOK_INSTAGRAM': component = MetaAdsDialogComponent; header = 'Facebook & Instagram'; break;
+      case 'TIKTOK': component = TiktokDialogComponent; header = 'TikTok'; break;
+      case 'BUMPER_ADS':
+      case 'SKIPPABLE_IN_STREAM':
+      case 'UNSKIPPABLE_IN_STREAM':
+        component = YoutubeDialogComponent; header = 'YouTube'; break;
+
+      // Content Red+
+      case 'CONTENT_PUBLIRREPORTAJE': component = ContentRedplusDialogComponent; header = 'Contenido Red+'; break;
+
+      // Generic / Others
+      default:
+        component = GenericUploadDialogComponent;
+        header = `Carga de Material: ${solution}`;
+        break;
+    }
+
+    this.ref = this.dialogService.open(component, {
+      header: header,
+      width: '600px',
+      contentStyle: { "overflow": "auto" },
+      baseZIndex: 10000,
+      data: { request, selection, solutionType: solution }
+    });
+
+    if (this.ref) {
+      this.ref.onClose.subscribe((result: any) => {
+        if (result) {
+          // Merge selection into result to ensure we have all context
+          const finalData = { ...result, ...selection };
+
+          // Save material data
+          this.productionService.saveMaterialData(request.id, finalData).subscribe({
+            next: () => {
+              if (result.status === 'COMPLETED') {
+                this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Información guardada correctamente' });
+                // Move request only if completed
+                this.performMove(request, 'material_preparation');
+              } else {
+                this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Borrador guardado' });
+                this.loadRequests();
+              }
+            },
+            error: (err) => {
+              console.error('Error saving material data:', err);
+              this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Error al guardar la información' });
+            }
+          });
+        }
+      });
+    }
+  }
+
+  openMaterialPreparationDialog(request: ProductionRequest, selection: any) {
     this.ref = this.dialogService.open(MaterialPreparationDialogComponent, {
       header: 'Implementación',
       width: '90%',
@@ -384,7 +494,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
       contentStyle: { "overflow": "auto" },
       baseZIndex: 10000,
       maximizable: true,
-      data: { request }
+      data: { request, selection }
     });
 
     if (this.ref) {
@@ -396,7 +506,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
               if (result.status === 'COMPLETED') {
                 this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Material data submitted' });
                 // Move request only if completed
-                this.performMove(request, 'gestion_operativa');
+                this.performMove(request, 'material_preparation');
               } else {
                 this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Material data draft saved' });
                 this.loadRequests();
@@ -433,7 +543,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
 
   openConsecutiveDialog(request: ProductionRequest) {
     this.ref = this.dialogService.open(ConsecutiveDialogComponent, {
-      header: 'Generate Consecutive',
+      header: 'Generar Consecutivo',
       width: '400px',
       contentStyle: { "overflow": "auto" },
       baseZIndex: 10000,
@@ -534,16 +644,20 @@ export class ProductionComponent implements OnInit, OnDestroy {
         return;
 
       case 'closed_won':
-        this.openAssignImplementationDialog(request);
+        this.openImplementation(request);
         return;
 
       case 'consecutive_generation':
         this.openConsecutiveDialog(request);
         return;
 
-      case 'implementation':
-        this.openImplementation(request);
+      case 'material_preparation':
+        this.openAssignImplementationDialog(request);
         return;
+
+      case 'implementation':
+        nextStageId = 'gestion_operativa';
+        break;
 
       case 'val_materiales_mobile':
       case 'val_materiales_programatica':
@@ -615,6 +729,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
       case 'val_materiales_red_plus':
         return 'secondary';
       case 'implementation': return 'warn';
+      case 'material_preparation': return 'warn';
       case 'consecutive_generation': return 'info';
       case 'venta': return 'info';
       case 'obtener_datos': return 'danger';

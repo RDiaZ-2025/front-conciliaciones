@@ -101,11 +101,7 @@
                         <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger"
                             pTooltip="Eliminar" (click)="deleteRequest(request.id)"></p-button>
 
-                        <p-button *ngIf="request.stage === 'implementation'" icon="pi pi-cog" [rounded]="true"
-                            [text]="true" severity="warn" pTooltip="Implementación"
-                            (click)="openImplementation(request)"></p-button>
-
-                        <p-button *ngIf="request.stage !== 'completed' && request.stage !== 'implementation'"
+                        <p-button *ngIf="request.stage !== 'completed'"
                             icon="pi pi-arrow-right" [rounded]="true" [text]="true" severity="success"
                             pTooltip="Avanzar etapa" (click)="moveRequest(request)"></p-button>
                     </div>

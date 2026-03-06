@@ -162,6 +162,7 @@ export const WORKFLOW_STAGES = [
   { id: 'in_sell', label: 'Venta' },
   { id: 'consecutive_generation', label: 'Generación de Consecutivo' },
   { id: 'closed_won', label: 'Cerrado Ganado' },
+  { id: 'material_preparation', label: 'Preparación de Material' },
   { id: 'implementation', label: 'Implementación' },
   { id: 'val_materiales_mobile', label: 'Val. Materiales Mobile' },
   { id: 'val_materiales_programatica', label: 'Val. Materiales Programática' },

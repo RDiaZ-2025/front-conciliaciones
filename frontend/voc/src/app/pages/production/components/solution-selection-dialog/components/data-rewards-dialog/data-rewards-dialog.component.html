@@ -1,0 +1,34 @@
+<div class="p-4">
+    <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
+        <div class="flex flex-col gap-2">
+            <label for="data_rewards_campaignName" class="font-bold">Nombre de la Campaña</label>
+            <input pInputText id="data_rewards_campaignName" formControlName="data_rewards_campaignName" />
+            <small class="text-red-500" *ngIf="form.get('data_rewards_campaignName')?.invalid && form.get('data_rewards_campaignName')?.touched">
+                El nombre de la campaña es requerido
+            </small>
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <label class="font-bold">Video (MP4, Max 27MB)</label>
+            <p-fileUpload 
+                mode="basic" 
+                chooseLabel="Seleccionar Video" 
+                name="data_rewards_video"
+                accept="video/mp4" 
+                maxFileSize="27000000" 
+                (onSelect)="onUpload($event, 'data_rewards_video')"
+                [auto]="true"
+                [styleClass]="uploadStatus()['data_rewards_video'] ? 'p-button-success' : ''">
+            </p-fileUpload>
+            <small class="text-red-500" *ngIf="form.get('data_rewards_video')?.invalid && form.get('data_rewards_video')?.touched">
+                El video es requerido
+            </small>
+            <small class="text-green-500" *ngIf="uploadStatus()['data_rewards_video']">Archivo cargado</small>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-4">
+            <p-button label="Cancelar" styleClass="p-button-secondary" (onClick)="close()"></p-button>
+            <p-button label="Guardar" type="submit" [disabled]="form.invalid"></p-button>
+        </div>
+    </form>
+</div>

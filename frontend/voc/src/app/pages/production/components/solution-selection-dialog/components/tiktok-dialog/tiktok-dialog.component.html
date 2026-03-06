@@ -1,0 +1,51 @@
+<div class="flex flex-col gap-4 p-4">
+    <h3 class="text-xl font-semibold text-white">TikTok Configuration</h3>
+    
+    <form [formGroup]="form" class="flex flex-col gap-4">
+        <div class="flex flex-col gap-2">
+            <label class="text-gray-300">Nombre de la Marca</label>
+            <input pInputText formControlName="tiktok_brandName" />
+            <small *ngIf="form.get('tiktok_brandName')?.hasError('required') && form.get('tiktok_brandName')?.touched" class="text-red-500">Requerido.</small>
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <label class="text-gray-300">Descripción del Anuncio (Max 100 chars)</label>
+            <input pInputText formControlName="tiktok_adDesc" />
+            <small *ngIf="form.get('tiktok_adDesc')?.hasError('maxlength')" class="text-red-500">Máximo 100 caracteres.</small>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-2">
+                <label class="text-gray-300">Logo (100x100)</label>
+                <p-fileUpload 
+                    mode="basic" 
+                    chooseLabel="Subir Logo" 
+                    accept="image/*" 
+                    [maxFileSize]="1000000" 
+                    (onSelect)="onUpload($event, 'tiktok_logo')"
+                    [auto]="true">
+                </p-fileUpload>
+            </div>
+            <div class="flex flex-col gap-2">
+                <label class="text-gray-300">Videos (1-5, 9-15s, 1080x1920)</label>
+                <p-fileUpload 
+                    mode="basic" 
+                    chooseLabel="Subir Videos" 
+                    accept="video/*" 
+                    [multiple]="true"
+                    [maxFileSize]="30000000" 
+                    (onSelect)="onUpload($event, 'tiktok_videos')"
+                    [auto]="true">
+                </p-fileUpload>
+                <div *ngIf="uploadedFiles.length > 0" class="text-sm text-green-400">
+                    {{ uploadedFiles.length }} archivos subidos.
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="flex justify-end gap-2 mt-4">
+        <p-button label="Cancelar" severity="secondary" (onClick)="cancel()"></p-button>
+        <p-button label="Guardar" (onClick)="submit()" [loading]="isUploading()"></p-button>
+    </div>
+</div>

@@ -1,18 +1,13 @@
 <div class="flex flex-column gap-4 p-4">
-    <p class="text-gray-600 dark:text-gray-300 m-0">
-        Please enter the consecutive number to proceed. This action will change the stage to <strong>Closed Won</strong>
-        and assign the request back to the creator.
-    </p>
-
     <div class="flex flex-column gap-2">
-        <label for="consecutive" class="font-medium">Consecutive Number <span class="text-red-500">*</span></label>
+        <label for="consecutive" class="font-medium">Consecutivo<span class="text-red-500">*</span></label>
         <p-inputNumber inputId="consecutive" [(ngModel)]="consecutive" [useGrouping]="false" [min]="1"
-            placeholder="Enter number" styleClass="w-full" class="w-full block" [inputStyle]="{'width': '100%'}">
+            placeholder="Ingrese número" styleClass="w-full" class="w-full block" [inputStyle]="{'width': '100%'}">
         </p-inputNumber>
     </div>
 
     <div class="flex justify-content-end gap-2 mt-4">
-        <p-button label="Cancel" severity="secondary" (onClick)="cancel()"></p-button>
-        <p-button label="Confirm" (onClick)="confirm()" [disabled]="!consecutive"></p-button>
+        <p-button label="Cancelar" severity="secondary" (onClick)="cancel()"></p-button>
+        <p-button label="Confirmar" (onClick)="confirm()" [disabled]="!consecutive"></p-button>
     </div>
 </div>

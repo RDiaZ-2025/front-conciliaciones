@@ -1,0 +1,29 @@
+<div class="flex flex-col gap-4 p-4">
+    <h3 class="text-xl font-semibold text-white">Carga de Material: {{ solutionType() }}</h3>
+    
+    <div class="bg-gray-800 p-3 rounded border border-gray-700">
+        <p class="text-sm text-gray-300">{{ instructions() }}</p>
+    </div>
+    
+    <form [formGroup]="form" class="flex flex-col gap-4">
+        <div class="flex flex-col gap-2">
+            <label class="text-gray-300">Archivos</label>
+            <p-fileUpload 
+                mode="basic" 
+                chooseLabel="Subir Archivos" 
+                [multiple]="true"
+                [maxFileSize]="50000000" 
+                (onSelect)="onUpload($event)"
+                [auto]="true">
+            </p-fileUpload>
+            <div *ngIf="uploadedFiles.length > 0" class="text-sm text-green-400">
+                {{ uploadedFiles.length }} archivos subidos.
+            </div>
+        </div>
+    </form>
+
+    <div class="flex justify-end gap-2 mt-4">
+        <p-button label="Cancelar" severity="secondary" (onClick)="cancel()"></p-button>
+        <p-button label="Guardar" (onClick)="submit()" [loading]="isUploading()"></p-button>
+    </div>
+</div>
