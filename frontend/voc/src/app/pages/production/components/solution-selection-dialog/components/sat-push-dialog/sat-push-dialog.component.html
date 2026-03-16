@@ -1,4 +1,4 @@
-<div class="flex flex-columnumn gap-3 p-3">
+<div class="flex flex-column gap-3 p-3">
     <form [formGroup]="form" (ngSubmit)="submit()">
         <div class="field mb-4">
             <label class="font-bold block mb-2 text-xl text-900">Configuración SAT PUSH</label>
@@ -13,7 +13,7 @@
                 <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
                    pTooltip="Solo mayúsculas y espacios. Sin caracteres especiales." tooltipPosition="top"></i>
             </label>
-            <input pInputText id="sat_clientName" formControlName="sat_clientName" class="w-full" placeholder="NOMBRE CLIENTE" style="text-transform: uppercase;" />
+            <input pInputText class="w-full" id="sat_clientName" formControlName="sat_clientName" class="w-full" placeholder="NOMBRE CLIENTE" style="text-transform: uppercase;" />
             <small *ngIf="form.get('sat_clientName')?.invalid && (form.get('sat_clientName')?.dirty || form.get('sat_clientName')?.touched)" class="p-error block">
                 Requerido. Solo mayúsculas (A-Z) y espacios.
             </small>
@@ -25,7 +25,7 @@
                 <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
                    pTooltip="Debe comenzar con 'PUBLICIDAD DE [CLIENTE]'. Máx 160 caracteres." tooltipPosition="top"></i>
             </label>
-            <textarea pTextarea id="sat_messageText" formControlName="sat_messageText" class="w-full" rows="4" maxlength="160" placeholder="PUBLICIDAD DE ..."></textarea>
+            <textarea pTextarea class="w-full" id="sat_messageText" formControlName="sat_messageText" class="w-full" rows="4" maxlength="160" placeholder="PUBLICIDAD DE ..."></textarea>
             <div class="text-right text-sm text-500">{{form.get('sat_messageText')?.value?.length || 0}} / 160</div>
             
             <small *ngIf="form.get('sat_messageText')?.errors?.['forbiddenChars']" class="p-error block">
@@ -40,7 +40,7 @@
             <label for="sat_url" class="font-bold block mb-2">
                 URL de Destino
             </label>
-            <input pInputText id="sat_url" formControlName="sat_url" class="w-full" placeholder="https://example.com" />
+            <input pInputText class="w-full" id="sat_url" formControlName="sat_url" class="w-full" placeholder="https://example.com" />
             <small *ngIf="form.get('sat_url')?.invalid && (form.get('sat_url')?.dirty || form.get('sat_url')?.touched)" class="p-error block">
                 URL válida requerida.
             </small>
@@ -57,7 +57,7 @@
                 <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
                    pTooltip="Número de 10 dígitos." tooltipPosition="top"></i>
             </label>
-            <input pInputText id="sat_phoneNumber" formControlName="sat_phoneNumber" class="w-full" placeholder="3001234567" maxlength="10" pKeyFilter="int" />
+            <input pInputText class="w-full" id="sat_phoneNumber" formControlName="sat_phoneNumber" class="w-full" placeholder="3001234567" maxlength="10" pKeyFilter="int" />
             <small *ngIf="form.get('sat_phoneNumber')?.invalid && (form.get('sat_phoneNumber')?.dirty || form.get('sat_phoneNumber')?.touched)" class="p-error block">
                 Número válido de 10 dígitos requerido.
             </small>

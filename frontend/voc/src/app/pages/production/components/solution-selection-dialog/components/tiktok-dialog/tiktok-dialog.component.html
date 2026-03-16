@@ -4,13 +4,13 @@
     <form [formGroup]="form" class="flex flex-column gap-4">
         <div class="flex flex-column gap-2">
             <label class="text-700">Nombre de la Marca</label>
-            <input pInputText formControlName="tiktok_brandName" />
+            <input pInputText class="w-full" formControlName="tiktok_brandName" />
             <small *ngIf="form.get('tiktok_brandName')?.hasError('required') && form.get('tiktok_brandName')?.touched" class="text-red-500">Requerido.</small>
         </div>
 
         <div class="flex flex-column gap-2">
             <label class="text-700">Descripción del Anuncio (Max 100 chars)</label>
-            <input pInputText formControlName="tiktok_adDesc" />
+            <input pInputText class="w-full" formControlName="tiktok_adDesc" />
             <small *ngIf="form.get('tiktok_adDesc')?.hasError('maxlength')" class="text-red-500">Máximo 100 caracteres.</small>
         </div>
 

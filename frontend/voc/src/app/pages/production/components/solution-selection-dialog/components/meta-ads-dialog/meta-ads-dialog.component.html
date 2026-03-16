@@ -4,19 +4,19 @@
     <form [formGroup]="form" class="flex flex-column gap-4">
         <div class="flex flex-column gap-2">
             <label class="text-700">Texto Principal (Max 125 chars)</label>
-            <textarea pTextarea formControlName="fb_primaryText" rows="2"></textarea>
+            <textarea pTextarea class="w-full" formControlName="fb_primaryText" rows="2"></textarea>
             <small *ngIf="form.get('fb_primaryText')?.hasError('maxlength')" class="text-red-500">Máximo 125 caracteres.</small>
         </div>
 
         <div class="flex flex-column gap-2">
             <label class="text-700">Título (Max 27 chars)</label>
-            <input pInputText formControlName="fb_title" />
+            <input pInputText class="w-full" formControlName="fb_title" />
             <small *ngIf="form.get('fb_title')?.hasError('maxlength')" class="text-red-500">Máximo 27 caracteres.</small>
         </div>
 
         <div class="flex flex-column gap-2">
             <label class="text-700">Descripción (Max 27 chars)</label>
-            <input pInputText formControlName="fb_description" />
+            <input pInputText class="w-full" formControlName="fb_description" />
             <small *ngIf="form.get('fb_description')?.hasError('maxlength')" class="text-red-500">Máximo 27 caracteres.</small>
         </div>
 

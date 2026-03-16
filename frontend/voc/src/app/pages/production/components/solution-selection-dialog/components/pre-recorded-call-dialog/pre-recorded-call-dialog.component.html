@@ -4,7 +4,7 @@
     <form [formGroup]="form" class="flex flex-column gap-4">
         <div class="flex flex-column gap-2">
             <label class="text-700">Nombre del Cliente</label>
-            <input pInputText formControlName="prc_clientName" />
+            <input pInputText class="w-full" formControlName="prc_clientName" />
             <small *ngIf="form.get('prc_clientName')?.hasError('required') && form.get('prc_clientName')?.touched" class="text-red-500">Requerido.</small>
         </div>
 
@@ -15,7 +15,7 @@
             </div>
             <div *ngIf="form.get('prc_hasDtmf')?.value" class="flex flex-column gap-2 ml-6">
                 <label class="text-700">Opciones DTMF (Descripción)</label>
-                <input pInputText formControlName="prc_dtmfOptions" placeholder="Ej: 1. Ventas, 2. Soporte" />
+                <input pInputText class="w-full" formControlName="prc_dtmfOptions" placeholder="Ej: 1. Ventas, 2. Soporte" />
                 <small *ngIf="form.get('prc_dtmfOptions')?.hasError('required')" class="text-red-500">Requerido si DTMF está activo.</small>
             </div>
         </div>
@@ -27,7 +27,7 @@
             </div>
             <div *ngIf="form.get('prc_hasSms')?.value" class="flex flex-column gap-2 ml-6">
                 <label class="text-700">Texto SMS (Max 200 chars)</label>
-                <input pInputText formControlName="prc_smsText" />
+                <input pInputText class="w-full" formControlName="prc_smsText" />
                 <small *ngIf="form.get('prc_smsText')?.hasError('required')" class="text-red-500">Requerido si SMS está activo.</small>
                 <small *ngIf="form.get('prc_smsText')?.hasError('maxlength')" class="text-red-500">Máximo 200 caracteres.</small>
             </div>

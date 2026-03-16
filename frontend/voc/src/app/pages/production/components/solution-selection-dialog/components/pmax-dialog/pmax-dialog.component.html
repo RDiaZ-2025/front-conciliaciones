@@ -4,13 +4,13 @@
     <form [formGroup]="form" class="flex flex-column gap-4">
         <div class="flex flex-column gap-2">
             <label class="text-700">YouTube URL</label>
-            <input pInputText formControlName="pmax_youtubeUrl" placeholder="https://youtube.com/..." />
+            <input pInputText class="w-full" formControlName="pmax_youtubeUrl" placeholder="https://youtube.com/..." />
             <small *ngIf="form.get('pmax_youtubeUrl')?.hasError('pattern')" class="text-red-500">URL inválida.</small>
         </div>
 
         <div class="flex flex-column gap-2">
             <label class="text-700">Título Largo (Max 90 chars)</label>
-            <input pInputText formControlName="pmax_title90" />
+            <input pInputText class="w-full" formControlName="pmax_title90" />
             <small *ngIf="form.get('pmax_title90')?.hasError('maxlength')" class="text-red-500">Máximo 90 caracteres.</small>
         </div>
 
@@ -21,7 +21,7 @@
                     <div formArrayName="pmax_titles30" class="flex flex-column gap-2">
                         <div *ngFor="let control of pmaxTitles30.controls; let i=index" class="flex flex-column gap-1">
                             <label class="text-sm text-600">Título {{i+1}}</label>
-                            <input pInputText [formControlName]="i" />
+                            <input pInputText class="w-full" [formControlName]="i" />
                             <small *ngIf="control.invalid && control.touched" class="text-red-500">Requerido, max 30 chars.</small>
                         </div>
                     </div>
@@ -34,7 +34,7 @@
                     <div formArrayName="pmax_descriptions90" class="flex flex-column gap-2">
                         <div *ngFor="let control of pmaxDescriptions90.controls; let i=index" class="flex flex-column gap-1">
                             <label class="text-sm text-600">Descripción {{i+1}}</label>
-                            <input pInputText [formControlName]="i" />
+                            <input pInputText class="w-full" [formControlName]="i" />
                             <small *ngIf="control.invalid && control.touched" class="text-red-500">Requerido, max 90 chars.</small>
                         </div>
                     </div>
@@ -47,7 +47,7 @@
                     <div formArrayName="pmax_descriptions60" class="flex flex-column gap-2">
                         <div *ngFor="let control of pmaxDescriptions60.controls; let i=index" class="flex flex-column gap-1">
                             <label class="text-sm text-600">Descripción {{i+1}}</label>
-                            <input pInputText [formControlName]="i" />
+                            <input pInputText class="w-full" [formControlName]="i" />
                             <small *ngIf="control.invalid && control.touched" class="text-red-500">Requerido, max 60 chars.</small>
                         </div>
                     </div>

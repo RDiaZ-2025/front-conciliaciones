@@ -4,7 +4,7 @@
     <form [formGroup]="form" class="flex flex-column gap-4">
         <div class="flex flex-column gap-2">
             <label class="text-700">URL del Video Público (Youtube)</label>
-            <input pInputText formControlName="youtube_url" placeholder="https://youtube.com/..." />
+            <input pInputText class="w-full" formControlName="youtube_url" placeholder="https://youtube.com/..." />
             <small *ngIf="form.get('youtube_url')?.hasError('required') && form.get('youtube_url')?.touched" class="text-red-500">Requerido.</small>
             <small *ngIf="form.get('youtube_url')?.hasError('pattern')" class="text-red-500">URL inválida.</small>
         </div>

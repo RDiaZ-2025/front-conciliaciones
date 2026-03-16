@@ -4,7 +4,7 @@
     <form [formGroup]="form" class="flex flex-column gap-4">
         <div class="flex flex-column gap-2">
             <label class="text-700">Texto Línea 1 (Max 25 chars, debe empezar con "Publicidad De:")</label>
-            <input pInputText formControlName="push_textLine1" placeholder="Publicidad De: Marca" />
+            <input pInputText class="w-full" formControlName="push_textLine1" placeholder="Publicidad De: Marca" />
             <small *ngIf="form.get('push_textLine1')?.hasError('required') && form.get('push_textLine1')?.touched" class="text-red-500">Requerido.</small>
             <small *ngIf="form.get('push_textLine1')?.hasError('maxlength')" class="text-red-500">Máximo 25 caracteres.</small>
             <small *ngIf="form.get('push_textLine1')?.hasError('invalidPrefix')" class="text-red-500">Debe comenzar con "Publicidad De:".</small>
@@ -12,19 +12,19 @@
 
         <div class="flex flex-column gap-2">
             <label class="text-700">Texto Línea 2 (Max 35 chars)</label>
-            <input pInputText formControlName="push_textLine2" />
+            <input pInputText class="w-full" formControlName="push_textLine2" />
             <small *ngIf="form.get('push_textLine2')?.hasError('maxlength')" class="text-red-500">Máximo 35 caracteres.</small>
         </div>
 
         <div class="flex flex-column gap-2">
             <label class="text-700">URL Destino</label>
-            <input pInputText formControlName="push_url" placeholder="https://..." />
+            <input pInputText class="w-full" formControlName="push_url" placeholder="https://..." />
             <small *ngIf="form.get('push_url')?.hasError('pattern')" class="text-red-500">URL inválida.</small>
         </div>
 
         <div class="flex flex-column gap-2">
             <label class="text-700">UTM (Opcional)</label>
-            <input pInputText formControlName="push_utm" />
+            <input pInputText class="w-full" formControlName="push_utm" />
         </div>
 
         <div class="formgrid grid gap-4">

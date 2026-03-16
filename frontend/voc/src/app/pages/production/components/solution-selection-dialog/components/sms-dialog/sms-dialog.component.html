@@ -1,4 +1,4 @@
-<div class="flex flex-columnumn gap-3 p-3">
+<div class="flex flex-column gap-3 p-3">
     <form [formGroup]="form" (ngSubmit)="submit()">
         <div class="field mb-4">
             <label class="font-bold block mb-2 text-xl text-900">Configuración SMS</label>
@@ -13,7 +13,7 @@
                 <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
                    pTooltip="Máximo 11 caracteres alfanuméricos (A-Z, 0-9). Sin caracteres especiales." tooltipPosition="top"></i>
             </label>
-            <input pInputText id="sms_clientName" formControlName="sms_clientName" class="w-full" placeholder="SENDERID" maxlength="11" />
+            <input pInputText class="w-full" id="sms_clientName" formControlName="sms_clientName" class="w-full" placeholder="SENDERID" maxlength="11" />
             <small *ngIf="form.get('sms_clientName')?.invalid && (form.get('sms_clientName')?.dirty || form.get('sms_clientName')?.touched)" class="p-error block">
                 Requerido. Solo mayúsculas y números.
             </small>
@@ -25,7 +25,7 @@
                 <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
                    pTooltip="Máximo 160 caracteres estándar (GSM 7-bit)." tooltipPosition="top"></i>
             </label>
-            <textarea pTextarea id="sms_messageText" formControlName="sms_messageText" class="w-full" rows="4" maxlength="200" placeholder="Escriba el mensaje aquí..."></textarea>
+            <textarea pTextarea class="w-full" id="sms_messageText" formControlName="sms_messageText" class="w-full" rows="4" maxlength="200" placeholder="Escriba el mensaje aquí..."></textarea>
             <div class="text-right text-sm text-500">{{form.get('sms_messageText')?.value?.length || 0}} / 200</div>
             <small *ngIf="form.get('sms_messageText')?.invalid && (form.get('sms_messageText')?.dirty || form.get('sms_messageText')?.touched)" class="p-error block">
                 Requerido. Máximo 200 caracteres.
@@ -38,7 +38,7 @@
                 <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
                    pTooltip="URL válida (https://...)." tooltipPosition="top"></i>
             </label>
-            <input pInputText id="sms_destinationUrl" formControlName="sms_destinationUrl" class="w-full" placeholder="https://example.com" />
+            <input pInputText class="w-full" id="sms_destinationUrl" formControlName="sms_destinationUrl" class="w-full" placeholder="https://example.com" />
             <small *ngIf="form.get('sms_destinationUrl')?.invalid && (form.get('sms_destinationUrl')?.dirty || form.get('sms_destinationUrl')?.touched)" class="p-error block">
                 URL válida requerida.
             </small>

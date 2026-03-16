@@ -4,25 +4,25 @@
     <form [formGroup]="form" class="flex flex-column gap-4">
         <div class="flex flex-column gap-2">
             <label class="text-700">Título Corto (Max 25 chars)</label>
-            <input pInputText formControlName="native_shortTitle" />
+            <input pInputText class="w-full" formControlName="native_shortTitle" />
             <small *ngIf="form.get('native_shortTitle')?.hasError('maxlength')" class="text-red-500">Máximo 25 caracteres.</small>
         </div>
 
         <div class="flex flex-column gap-2">
             <label class="text-700">Título Largo (Max 50 chars)</label>
-            <input pInputText formControlName="native_longTitle" />
+            <input pInputText class="w-full" formControlName="native_longTitle" />
             <small *ngIf="form.get('native_longTitle')?.hasError('maxlength')" class="text-red-500">Máximo 50 caracteres.</small>
         </div>
 
         <div class="flex flex-column gap-2">
             <label class="text-700">Descripción Corta (Max 90 chars)</label>
-            <textarea pTextarea formControlName="native_shortDesc" rows="2"></textarea>
+            <textarea pTextarea class="w-full" formControlName="native_shortDesc" rows="2"></textarea>
             <small *ngIf="form.get('native_shortDesc')?.hasError('maxlength')" class="text-red-500">Máximo 90 caracteres.</small>
         </div>
 
         <div class="flex flex-column gap-2">
             <label class="text-700">Descripción Larga (Max 150 chars)</label>
-            <textarea pTextarea formControlName="native_longDesc" rows="3"></textarea>
+            <textarea pTextarea class="w-full" formControlName="native_longDesc" rows="3"></textarea>
             <small *ngIf="form.get('native_longDesc')?.hasError('maxlength')" class="text-red-500">Máximo 150 caracteres.</small>
         </div>
 

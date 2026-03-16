@@ -1,4 +1,4 @@
-<div class="flex flex-columnumn gap-3 p-3">
+<div class="flex flex-column gap-3 p-3">
     <form [formGroup]="form" (ngSubmit)="submit()">
         <div class="field mb-4">
             <label class="font-bold block mb-2 text-xl text-900">Configuración RCS</label>
@@ -13,7 +13,7 @@
                 <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
                    pTooltip="Información para crear el agente en Google (Nombre, Descripción, Color, etc.)" tooltipPosition="top"></i>
             </label>
-            <textarea pTextarea id="rcs_agentData" formControlName="rcs_agentData" class="w-full" rows="3" placeholder="Ingrese los datos requeridos para el agente..."></textarea>
+            <textarea pTextarea class="w-full" id="rcs_agentData" formControlName="rcs_agentData" class="w-full" rows="3" placeholder="Ingrese los datos requeridos para el agente..."></textarea>
             <small *ngIf="form.get('rcs_agentData')?.invalid && (form.get('rcs_agentData')?.dirty || form.get('rcs_agentData')?.touched)" class="p-error block">
                 Requerido.
             </small>
@@ -25,7 +25,7 @@
                 <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
                    pTooltip="Máximo 350 caracteres." tooltipPosition="top"></i>
             </label>
-            <textarea pTextarea id="rcs_messageText" formControlName="rcs_messageText" class="w-full" rows="4" maxlength="350" placeholder="Mensaje principal..."></textarea>
+            <textarea pTextarea class="w-full" id="rcs_messageText" formControlName="rcs_messageText" class="w-full" rows="4" maxlength="350" placeholder="Mensaje principal..."></textarea>
             <div class="text-right text-sm text-500">{{form.get('rcs_messageText')?.value?.length || 0}} / 350</div>
         </div>
 
@@ -33,7 +33,7 @@
             <label for="rcs_redirectUrl" class="font-bold block mb-2">
                 URL de Redirección (Opcional)
             </label>
-            <input pInputText id="rcs_redirectUrl" formControlName="rcs_redirectUrl" class="w-full" placeholder="https://example.com" />
+            <input pInputText class="w-full" id="rcs_redirectUrl" formControlName="rcs_redirectUrl" class="w-full" placeholder="https://example.com" />
         </div>
 
         <div class="field">
@@ -50,15 +50,15 @@
         <div *ngIf="form.get('rcs_mediaType')?.value === 'IMAGE'" class="pl-4 border-left-2 border-primary-500 mb-3">
             <div class="field">
                 <label for="rcs_image_caption" class="font-bold block mb-2">Caption (Título)</label>
-                <input pInputText id="rcs_image_caption" formControlName="rcs_image_caption" class="w-full" maxlength="25" />
+                <input pInputText class="w-full" id="rcs_image_caption" formControlName="rcs_image_caption" class="w-full" maxlength="25" />
             </div>
             <div class="field">
                 <label for="rcs_image_button_label" class="font-bold block mb-2">Texto del Botón</label>
-                <input pInputText id="rcs_image_button_label" formControlName="rcs_image_button_label" class="w-full" maxlength="25" />
+                <input pInputText class="w-full" id="rcs_image_button_label" formControlName="rcs_image_button_label" class="w-full" maxlength="25" />
             </div>
             <div class="field">
                 <label for="rcs_image_button_url" class="font-bold block mb-2">URL del Botón</label>
-                <input pInputText id="rcs_image_button_url" formControlName="rcs_image_button_url" class="w-full" placeholder="https://..." />
+                <input pInputText class="w-full" id="rcs_image_button_url" formControlName="rcs_image_button_url" class="w-full" placeholder="https://..." />
             </div>
         </div>
 
@@ -74,7 +74,7 @@
                     <div class="grid p-fluid">
                         <div class="col-12 md:col-4">
                             <label class="block text-sm font-bold mb-1">Etiqueta</label>
-                            <input pInputText formControlName="label" placeholder="Texto del botón" maxlength="25" />
+                            <input pInputText class="w-full" formControlName="label" placeholder="Texto del botón" maxlength="25" />
                         </div>
                         <div class="col-12 md:col-3">
                             <label class="block text-sm font-bold mb-1">Tipo</label>
@@ -82,7 +82,7 @@
                         </div>
                         <div class="col-12 md:col-5">
                             <label class="block text-sm font-bold mb-1">Valor</label>
-                            <input pInputText formControlName="value" placeholder="https://... o Teléfono" />
+                            <input pInputText class="w-full" formControlName="value" placeholder="https://... o Teléfono" />
                         </div>
                     </div>
                     <button pButton icon="pi pi-trash" class="p-button-rounded p-button-danger p-button-text absolute top-0 right-0 mt-2 mr-2" (click)="removeRcsButton(i)"></button>

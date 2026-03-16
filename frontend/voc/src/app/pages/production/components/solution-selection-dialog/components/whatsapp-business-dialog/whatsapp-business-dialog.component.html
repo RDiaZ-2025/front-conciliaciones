@@ -2,7 +2,7 @@
     <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-column gap-4">
         <div class="flex flex-column gap-2">
             <label for="wsp_business_campaignName" class="font-bold">Nombre de la Campaña</label>
-            <input pInputText id="wsp_business_campaignName" formControlName="wsp_business_campaignName" />
+            <input pInputText class="w-full" id="wsp_business_campaignName" formControlName="wsp_business_campaignName" />
             <small class="text-red-500" *ngIf="form.get('wsp_business_campaignName')?.invalid && form.get('wsp_business_campaignName')?.touched">
                 El nombre de la campaña es requerido
             </small>
@@ -10,7 +10,7 @@
 
         <div class="flex flex-column gap-2">
             <label for="wsp_business_message" class="font-bold">Mensaje</label>
-            <textarea pTextarea id="wsp_business_message" formControlName="wsp_business_message" rows="5" class="w-full"></textarea>
+            <textarea pTextarea class="w-full" id="wsp_business_message" formControlName="wsp_business_message" rows="5" class="w-full"></textarea>
             <small class="text-red-500" *ngIf="form.get('wsp_business_message')?.invalid && form.get('wsp_business_message')?.touched">
                 El mensaje es requerido
             </small>

@@ -4,25 +4,25 @@
     <form [formGroup]="form" class="flex flex-column gap-4">
         <div class="flex flex-column gap-2">
             <label class="text-700">Nombre de la App</label>
-            <input pInputText formControlName="vp_appName" />
+            <input pInputText class="w-full" formControlName="vp_appName" />
             <small *ngIf="form.get('vp_appName')?.hasError('required') && form.get('vp_appName')?.touched" class="text-red-500">Requerido.</small>
         </div>
 
         <div class="flex flex-column gap-2">
             <label class="text-700">Nombre del Cliente</label>
-            <input pInputText formControlName="vp_clientName" />
+            <input pInputText class="w-full" formControlName="vp_clientName" />
             <small *ngIf="form.get('vp_clientName')?.hasError('required') && form.get('vp_clientName')?.touched" class="text-red-500">Requerido.</small>
         </div>
 
         <div class="flex flex-column gap-2">
             <label class="text-700">URL Play Store (Opcional si sube APK)</label>
-            <input pInputText formControlName="vp_playStoreUrl" placeholder="https://play.google.com/..." />
+            <input pInputText class="w-full" formControlName="vp_playStoreUrl" placeholder="https://play.google.com/..." />
             <small *ngIf="form.get('vp_playStoreUrl')?.hasError('pattern')" class="text-red-500">URL inválida.</small>
         </div>
 
         <div class="flex flex-column gap-2">
             <label class="text-700">Texto Notificación (Max 50 chars)</label>
-            <input pInputText formControlName="vp_notificationText" />
+            <input pInputText class="w-full" formControlName="vp_notificationText" />
             <small *ngIf="form.get('vp_notificationText')?.hasError('maxlength')" class="text-red-500">Máximo 50 caracteres.</small>
         </div>
 

@@ -2,7 +2,7 @@
     <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-column gap-4">
         <div class="flex flex-column gap-2">
             <label for="data_rewards_campaignName" class="font-bold">Nombre de la Campaña</label>
-            <input pInputText id="data_rewards_campaignName" formControlName="data_rewards_campaignName" />
+            <input pInputText class="w-full" id="data_rewards_campaignName" formControlName="data_rewards_campaignName" />
             <small class="text-red-500" *ngIf="form.get('data_rewards_campaignName')?.invalid && form.get('data_rewards_campaignName')?.touched">
                 El nombre de la campaña es requerido
             </small>

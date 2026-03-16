@@ -4,7 +4,7 @@
     <form [formGroup]="form" class="flex flex-column gap-4">
         <div class="flex flex-column gap-2">
             <label class="text-700">Contenido del Artículo (450-700 palabras)</label>
-            <textarea pTextarea formControlName="article_content" rows="10" placeholder="Escriba o pegue el contenido aquí..."></textarea>
+            <textarea pTextarea class="w-full" formControlName="article_content" rows="10" placeholder="Escriba o pegue el contenido aquí..."></textarea>
             
             <div *ngIf="form.get('article_content')?.hasError('wordCount')" class="text-red-500">
                 Palabras: {{ form.get('article_content')?.errors?.['wordCount'].actual }} (Min: 450, Max: 700)
