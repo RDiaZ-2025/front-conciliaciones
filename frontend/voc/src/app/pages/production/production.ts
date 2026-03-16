@@ -50,6 +50,7 @@ import { ContentRedplusDialogComponent } from './components/solution-selection-d
 import { UploadDialogComponent } from './components/upload-dialog/upload-dialog.component';
 import { ConsecutiveDialogComponent } from './components/consecutive-dialog/consecutive-dialog.component';
 import { AssignImplementationDialogComponent } from './components/assign-implementation-dialog/assign-implementation-dialog.component';
+import { MaterialRegisterListDialogComponent } from './components/material-register-list-dialog/material-register-list-dialog.component';
 
 @Component({
   selector: 'app-production',
@@ -465,19 +466,26 @@ export class ProductionComponent implements OnInit, OnDestroy {
           const finalData = { ...result, ...selection };
 
           // Save material data
-          this.productionService.saveMaterialData(request.id, finalData).subscribe({
+          const registerData = {
+            category: selection.category,
+            type: selection.type,
+            solution: selection.solution,
+            jsonRequest: result
+          };
+
+          this.productionService.addMaterialRegister(request.id, registerData).subscribe({
             next: () => {
               if (result.status === 'COMPLETED') {
                 this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Información guardada correctamente' });
                 // Move request only if completed
                 this.performMove(request, 'material_preparation');
               } else {
-                this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Borrador guardado' });
+                this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Registro agregado' });
                 this.loadRequests();
               }
             },
             error: (err) => {
-              console.error('Error saving material data:', err);
+              console.error('Error adding material register:', err);
               this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Error al guardar la información' });
             }
           });
@@ -501,7 +509,14 @@ export class ProductionComponent implements OnInit, OnDestroy {
       this.ref.onClose.subscribe((result: any) => {
         if (result) {
           // Save material data first
-          this.productionService.saveMaterialData(request.id, result).subscribe({
+          const registerData = {
+            category: selection.category,
+            type: selection.type,
+            solution: selection.solution,
+            jsonRequest: result
+          };
+
+          this.productionService.addMaterialRegister(request.id, registerData).subscribe({
             next: () => {
               if (result.status === 'COMPLETED') {
                 this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Material data submitted' });
@@ -513,7 +528,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
               }
             },
             error: (err) => {
-              console.error('Error saving material data:', err);
+              console.error('Error adding material register:', err);
               this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save material data' });
             }
           });
@@ -576,6 +591,22 @@ export class ProductionComponent implements OnInit, OnDestroy {
             assignedUserId: result.assignedUser
           });
         }
+      });
+    }
+  }
+
+  openMaterialRegisterListDialog(request: ProductionRequest) {
+    this.ref = this.dialogService.open(MaterialRegisterListDialogComponent, {
+      header: 'Gestión de Materiales',
+      width: '800px',
+      contentStyle: { "overflow": "auto" },
+      baseZIndex: 10000,
+      data: { request }
+    });
+
+    if (this.ref) {
+      this.ref.onClose.subscribe(() => {
+          this.loadRequests();
       });
     }
   }

@@ -120,6 +120,7 @@ export const getAllProductionRequests = async (req: Request, res: Response): Pro
     const query = productionRequestRepository.createQueryBuilder('request')
       .leftJoinAndSelect('request.customerData', 'customerData')
       .leftJoinAndSelect('request.assignedUser', 'assignedUser')
+      .leftJoinAndSelect('request.materialRegisters', 'materialRegisters')
       .orderBy('request.requestDate', 'DESC');
 
     // If user doesn't have management permission, filter by assignment or ownership
@@ -217,7 +218,9 @@ export const getProductionRequestById = async (req: Request, res: Response): Pro
         'productionInfo',
         'productionInfo.formatType',
         'productionInfo.rightsDuration',
-        'assignedUser'
+        'assignedUser',
+        'materialRegisters',
+        'materialRegisters.creator'
       ]
     });
 
@@ -873,7 +876,7 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
     // Logic for closed_won -> implementation transition
     if (stage === 'implementation') {
       const { unitAssigned, assignedUserId } = req.body;
-      
+
       if (unitAssigned) {
         existingRequest.unitAssigned = unitAssigned;
       }
@@ -881,34 +884,34 @@ export const moveProductionRequest = async (req: Request, res: Response): Promis
       if (assignedUserId) {
         // Verify user exists and is in Operations team (optional but good practice)
         try {
-            const userRepository = AppDataSource.getRepository(User);
-            const user = await userRepository.findOne({ where: { id: assignedUserId }, relations: ['team'] });
-            
-            if (user) {
-                existingRequest.assignedUserId = user.id;
-                
-                // Update Department to "Operations" (or the user's team name if we want to be dynamic, 
-                // but requirement says "Operations")
-                // Let's use the team name from the user if available, otherwise "Operaciones"
-                if (user.team) {
-                    existingRequest.department = user.team.name;
-                } else {
-                    existingRequest.department = "Operaciones";
-                }
+          const userRepository = AppDataSource.getRepository(User);
+          const user = await userRepository.findOne({ where: { id: assignedUserId }, relations: ['team'] });
 
-                if (req.user?.userId) {
-                  await historyService.logChange(
-                    existingRequest.id,
-                    'Assignment',
-                    null,
-                    `Stage transition to 'implementation': Assigned to ${user.name} (${user.id}), Unit: ${unitAssigned}`,
-                    req.user.userId,
-                    'update'
-                  );
-                }
+          if (user) {
+            existingRequest.assignedUserId = user.id;
+
+            // Update Department to "Operations" (or the user's team name if we want to be dynamic, 
+            // but requirement says "Operations")
+            // Let's use the team name from the user if available, otherwise "Operaciones"
+            if (user.team) {
+              existingRequest.department = user.team.name;
+            } else {
+              existingRequest.department = "Operaciones";
             }
+
+            if (req.user?.userId) {
+              await historyService.logChange(
+                existingRequest.id,
+                'Assignment',
+                null,
+                `Stage transition to 'implementation': Assigned to ${user.name} (${user.id}), Unit: ${unitAssigned}`,
+                req.user.userId,
+                'update'
+              );
+            }
+          }
         } catch (err) {
-            console.error('Error verifying assigned user for implementation:', err);
+          console.error('Error verifying assigned user for implementation:', err);
         }
       }
     }
@@ -1125,7 +1128,7 @@ export const updateStepCampaign = async (req: Request, res: Response): Promise<R
       if (campaignDetail.budget !== undefined && campaignDetail.budget !== null) {
         campaignDetail.budget = String(campaignDetail.budget);
       }
-      
+
       existingRequest.campaignDetail = { ...existingRequest.campaignDetail, ...campaignDetail };
 
       // Logic for budget-based status and assignment

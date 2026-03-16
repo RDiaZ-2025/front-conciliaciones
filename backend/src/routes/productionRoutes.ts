@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { ProductionController, getAllProductionRequests, getProductionRequestById, createProductionRequest, updateProductionRequest, deleteProductionRequest, getProducts, moveProductionRequest, updateStepGeneral, updateStepCustomer, updateStepCampaign, updateStepAudience, updateStepProduction, updateMaterialData } from '../controllers/productionController';
+import { addMaterialRegister, getMaterialRegisters } from '../controllers/materialRegisterController';
 import { RequestsReportController } from '../controllers/requestsReportController';
 import { getProductionRequestHistory } from '../controllers/productionRequestHistoryController';
 import { authenticateToken, requirePermission } from '../middleware/auth';
@@ -30,6 +31,11 @@ router.put('/:id/customer', updateStepCustomer);
 router.put('/:id/campaign', updateStepCampaign);
 router.put('/:id/audience', updateStepAudience);
 router.put('/:id/production', updateStepProduction);
+// Material Routes
+router.post('/:id/material', addMaterialRegister);
+router.get('/:id/material', getMaterialRegisters);
+
+// Deprecated or alternative material data update
 router.put('/:id/material-data', updateMaterialData);
 router.put('/:id/move', moveProductionRequest);
 router.delete('/:id', deleteProductionRequest);

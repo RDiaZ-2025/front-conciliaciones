@@ -71,6 +71,14 @@ export class ProductionService {
     return this.http.put<ProductionRequest>(`${this.apiUrl}/${id}/material-data`, { materialData: data });
   }
 
+  addMaterialRegister(id: number, register: { category: string, type: string, solution: string, jsonRequest: any }): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${id}/material`, register);
+  }
+
+  getMaterialRegisters(id: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/${id}/material`);
+  }
+
   getProducts(): Observable<Product[]> {
     return this.http.get<Product[]>(`${this.apiUrl}/products`);
   }

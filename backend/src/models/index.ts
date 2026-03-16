@@ -14,6 +14,7 @@ export * from './Product';
 export * from './CampaignProduct';
 export * from './Objective';
 export * from './Campaign';
+export * from './MaterialRegister';
 
 export { MenuItem } from './MenuItem';
 export { UserActionLog } from './UserActionLog';
@@ -44,6 +45,7 @@ import { FormatType } from './FormatType';
 import { RightsDuration } from './RightsDuration';
 
 import { Campaign } from './Campaign';
+import { MaterialRegister } from './MaterialRegister';
 
 export const entities = [
   User,
@@ -68,7 +70,8 @@ export const entities = [
   AgeRange,
   SocioeconomicLevel,
   FormatType,
-  RightsDuration
+  RightsDuration,
+  MaterialRegister
 ];
 
 export const ModelCategories = {

@@ -108,6 +108,17 @@ export interface ProductionInfo {
   additionalComments?: string;
 }
 
+export interface MaterialRegister {
+  id: number;
+  productionRequestId: number;
+  category: string;
+  type: string;
+  solution: string;
+  jsonRequest: string;
+  createdAt: string;
+  createdBy: number;
+}
+
 export interface ProductionRequestHistory {
   id: number;
   productionRequestId: number;
@@ -151,6 +162,7 @@ export interface ProductionRequest {
   campaignDetail?: CampaignDetail;
   productionInfo?: ProductionInfo;
   materialData?: any;
+  materialRegisters?: MaterialRegister[];
   consecutive?: number | null;
 }
 

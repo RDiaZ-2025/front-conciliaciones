@@ -1,9 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn, OneToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn, OneToOne, OneToMany } from 'typeorm';
 import { User } from './User';
 import { CustomerData } from './CustomerData';
 import { CampaignDetail } from './CampaignDetail';
 import { AudienceData } from './AudienceData';
 import { ProductionInfo } from './ProductionInfo';
+import { MaterialRegister } from './MaterialRegister';
 
 /**
  * ProductionRequest entity representing production request management
@@ -52,6 +53,9 @@ export class ProductionRequest {
 
   @OneToOne(() => ProductionInfo, productionInfo => productionInfo.productionRequest, { cascade: true })
   productionInfo!: ProductionInfo;
+
+  @OneToMany(() => MaterialRegister, materialRegister => materialRegister.productionRequest, { cascade: true })
+  materialRegisters!: MaterialRegister[];
 
   @Column({ name: 'DeliveryDate', type: 'datetime', nullable: true })
   deliveryDate!: Date | null;

@@ -101,6 +101,10 @@
                         <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger"
                             pTooltip="Eliminar" (click)="deleteRequest(request.id)"></p-button>
 
+                        <p-button *ngIf="request.stage === 'closed_won'"
+                            icon="pi pi-list" [rounded]="true" [text]="true" severity="help"
+                            pTooltip="Registros de Material" (click)="openMaterialRegisterListDialog(request)"></p-button>
+
                         <p-button *ngIf="request.stage !== 'completed'"
                             icon="pi pi-arrow-right" [rounded]="true" [text]="true" severity="success"
                             pTooltip="Avanzar etapa" (click)="moveRequest(request)"></p-button>

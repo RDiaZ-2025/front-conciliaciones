@@ -68,6 +68,23 @@
         </div>
     </div>
 
+    <!-- Material Registers Section -->
+    <div *ngIf="request.materialRegisters && request.materialRegisters.length > 0" class="mt-4">
+        <h3 class="text-lg font-bold mb-3 text-700">Registros de Material</h3>
+        <div class="flex flex-column gap-2">
+            <div *ngFor="let register of request.materialRegisters"
+                class="flex align-items-center justify-content-between surface-100 p-3 border-round hover:surface-200 transition-colors transition-duration-150">
+                <div class="flex flex-column gap-1">
+                    <div class="font-medium text-700">{{ register.category }}</div>
+                    <div class="text-sm text-500">{{ register.type }} - {{ register.solution }}</div>
+                </div>
+                <div class="text-sm text-500">
+                    {{ register.createdAt | date:'dd/MM/yyyy HH:mm' }}
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="flex justify-content-end mt-4 pt-3 border-top-1 surface-border">
         <p-button label="Cerrar" icon="pi pi-times" (click)="ref.close()" [text]="true" severity="secondary"></p-button>
     </div>
