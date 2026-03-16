@@ -15,35 +15,44 @@
         </div>
 
         <p-accordion [multiple]="true">
-            <p-accordionTab header="Títulos Cortos (5 requeridos, Max 30 chars)">
-                <div formArrayName="pmax_titles30" class="flex flex-col gap-2">
-                    <div *ngFor="let control of pmaxTitles30.controls; let i=index" class="flex flex-col gap-1">
-                        <label class="text-sm text-gray-400">Título {{i+1}}</label>
-                        <input pInputText [formControlName]="i" />
-                        <small *ngIf="control.invalid && control.touched" class="text-red-500">Requerido, max 30 chars.</small>
+            <p-accordion-panel value="0">
+                <p-accordion-header>Títulos Cortos (5 requeridos, Max 30 chars)</p-accordion-header>
+                <p-accordion-content>
+                    <div formArrayName="pmax_titles30" class="flex flex-col gap-2">
+                        <div *ngFor="let control of pmaxTitles30.controls; let i=index" class="flex flex-col gap-1">
+                            <label class="text-sm text-gray-400">Título {{i+1}}</label>
+                            <input pInputText [formControlName]="i" />
+                            <small *ngIf="control.invalid && control.touched" class="text-red-500">Requerido, max 30 chars.</small>
+                        </div>
                     </div>
-                </div>
-            </p-accordionTab>
+                </p-accordion-content>
+            </p-accordion-panel>
 
-            <p-accordionTab header="Descripciones Largas (5 requeridos, Max 90 chars)">
-                <div formArrayName="pmax_descriptions90" class="flex flex-col gap-2">
-                    <div *ngFor="let control of pmaxDescriptions90.controls; let i=index" class="flex flex-col gap-1">
-                        <label class="text-sm text-gray-400">Descripción {{i+1}}</label>
-                        <input pInputText [formControlName]="i" />
-                        <small *ngIf="control.invalid && control.touched" class="text-red-500">Requerido, max 90 chars.</small>
+            <p-accordion-panel value="1">
+                <p-accordion-header>Descripciones Largas (5 requeridos, Max 90 chars)</p-accordion-header>
+                <p-accordion-content>
+                    <div formArrayName="pmax_descriptions90" class="flex flex-col gap-2">
+                        <div *ngFor="let control of pmaxDescriptions90.controls; let i=index" class="flex flex-col gap-1">
+                            <label class="text-sm text-gray-400">Descripción {{i+1}}</label>
+                            <input pInputText [formControlName]="i" />
+                            <small *ngIf="control.invalid && control.touched" class="text-red-500">Requerido, max 90 chars.</small>
+                        </div>
                     </div>
-                </div>
-            </p-accordionTab>
+                </p-accordion-content>
+            </p-accordion-panel>
 
-            <p-accordionTab header="Descripciones Cortas (5 requeridos, Max 60 chars)">
-                <div formArrayName="pmax_descriptions60" class="flex flex-col gap-2">
-                    <div *ngFor="let control of pmaxDescriptions60.controls; let i=index" class="flex flex-col gap-1">
-                        <label class="text-sm text-gray-400">Descripción {{i+1}}</label>
-                        <input pInputText [formControlName]="i" />
-                        <small *ngIf="control.invalid && control.touched" class="text-red-500">Requerido, max 60 chars.</small>
+            <p-accordion-panel value="2">
+                <p-accordion-header>Descripciones Cortas (5 requeridos, Max 60 chars)</p-accordion-header>
+                <p-accordion-content>
+                    <div formArrayName="pmax_descriptions60" class="flex flex-col gap-2">
+                        <div *ngFor="let control of pmaxDescriptions60.controls; let i=index" class="flex flex-col gap-1">
+                            <label class="text-sm text-gray-400">Descripción {{i+1}}</label>
+                            <input pInputText [formControlName]="i" />
+                            <small *ngIf="control.invalid && control.touched" class="text-red-500">Requerido, max 60 chars.</small>
+                        </div>
                     </div>
-                </div>
-            </p-accordionTab>
+                </p-accordion-content>
+            </p-accordion-panel>
         </p-accordion>
 
         <div class="flex flex-col gap-2">
