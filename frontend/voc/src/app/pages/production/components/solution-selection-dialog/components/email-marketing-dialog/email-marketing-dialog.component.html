@@ -22,7 +22,7 @@
                         <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
                            pTooltip="Códigos Hexadecimales separados por coma (ej: #FF0000, #00FF00)" tooltipPosition="top"></i>
                     </label>
-                    <input pInputText formControlName="email_colors" placeholder="#FFFFFF, #000000" />
+                    <input pInputText class="w-full" formControlName="email_colors" placeholder="#FFFFFF, #000000" />
                     <small *ngIf="form.get('email_colors')?.invalid && (form.get('email_colors')?.dirty || form.get('email_colors')?.touched)" class="p-error block">Requerido. Formato Hex.</small>
                 </div>
             </div>
@@ -30,13 +30,13 @@
 
         <div class="field">
             <label class="font-bold block mb-2">Fuentes / Tipografía</label>
-            <input pInputText formControlName="email_fonts" placeholder="Ej: Arial, Helvetica, sans-serif" />
+            <input pInputText class="w-full" formControlName="email_fonts" placeholder="Ej: Arial, Helvetica, sans-serif" />
             <small *ngIf="form.get('email_fonts')?.invalid && (form.get('email_fonts')?.dirty || form.get('email_fonts')?.touched)" class="p-error block">Requerido.</small>
         </div>
 
         <div class="field">
             <label class="font-bold block mb-2">Información del Footer</label>
-            <textarea pTextarea formControlName="email_footer_info" rows="3" placeholder="Dirección, Copyright, etc."></textarea>
+            <textarea pTextarea class="w-full" formControlName="email_footer_info" rows="3" placeholder="Dirección, Copyright, etc."></textarea>
             <small *ngIf="form.get('email_footer_info')?.invalid && (form.get('email_footer_info')?.dirty || form.get('email_footer_info')?.touched)" class="p-error block">Requerido.</small>
         </div>
 
@@ -44,21 +44,21 @@
             <div class="col-12 md:col-6">
                 <div class="field">
                     <label class="font-bold block mb-2">Emails de Contacto</label>
-                    <input pInputText formControlName="email_contact_emails" placeholder="contacto@empresa.com" />
+                    <input pInputText class="w-full" formControlName="email_contact_emails" placeholder="contacto@empresa.com" />
                     <small *ngIf="form.get('email_contact_emails')?.invalid && (form.get('email_contact_emails')?.dirty || form.get('email_contact_emails')?.touched)" class="p-error block">Email válido requerido.</small>
                 </div>
             </div>
             <div class="col-12 md:col-6">
                 <div class="field">
                     <label class="font-bold block mb-2">Enlace de Soporte</label>
-                    <input pInputText formControlName="email_support_links" placeholder="https://soporte.empresa.com" />
+                    <input pInputText class="w-full" formControlName="email_support_links" placeholder="https://soporte.empresa.com" />
                 </div>
             </div>
         </div>
 
         <div class="field">
             <label class="font-bold block mb-2">Texto Legal / TyC</label>
-            <textarea pTextarea formControlName="email_legal_text" rows="3" placeholder="Términos y condiciones..."></textarea>
+            <textarea pTextarea class="w-full" formControlName="email_legal_text" rows="3" placeholder="Términos y condiciones..."></textarea>
             <small *ngIf="form.get('email_legal_text')?.invalid && (form.get('email_legal_text')?.dirty || form.get('email_legal_text')?.touched)" class="p-error block">Requerido.</small>
         </div>
 
@@ -68,13 +68,13 @@
                 <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
                    pTooltip="Registros DNS necesarios para la autenticación del dominio." tooltipPosition="top"></i>
             </label>
-            <textarea pTextarea formControlName="email_dnsConfig" rows="2" placeholder="v=spf1 include:sendgrid.net ~all"></textarea>
+            <textarea pTextarea class="w-full" formControlName="email_dnsConfig" rows="2" placeholder="v=spf1 include:sendgrid.net ~all"></textarea>
             <small *ngIf="form.get('email_dnsConfig')?.invalid && (form.get('email_dnsConfig')?.dirty || form.get('email_dnsConfig')?.touched)" class="p-error block">Requerido.</small>
         </div>
 
         <!-- CTAs Array -->
         <div class="field mt-4">
-            <div class="flex justify-content-between align-items-center mb-2">
+            <div class="flex justify-content-between align-align-align-items-center mb-2">
                 <label class="font-bold block">Call to Actions (CTAs)</label>
                 <p-button label="Agregar CTA" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="addEmailCta()"></p-button>
             </div>
@@ -83,11 +83,11 @@
                     <div class="grid p-fluid">
                         <div class="col-12 md:col-5">
                             <label class="block text-sm font-bold mb-1">Texto</label>
-                            <input pInputText formControlName="text" placeholder="Ver más" />
+                            <input pInputText class="w-full" formControlName="text" placeholder="Ver más" />
                         </div>
                         <div class="col-12 md:col-7">
                             <label class="block text-sm font-bold mb-1">URL</label>
-                            <input pInputText formControlName="url" placeholder="https://..." />
+                            <input pInputText class="w-full" formControlName="url" placeholder="https://..." />
                         </div>
                     </div>
                     <button pButton icon="pi pi-trash" class="p-button-rounded p-button-danger p-button-text absolute top-0 right-0 mt-2 mr-2" (click)="removeEmailCta(i)"></button>
@@ -97,7 +97,7 @@
 
         <!-- Social Array -->
         <div class="field mt-4">
-            <div class="flex justify-content-between align-items-center mb-2">
+            <div class="flex justify-content-between align-align-align-items-center mb-2">
                 <label class="font-bold block">Redes Sociales</label>
                 <p-button label="Agregar Red Social" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="addEmailSocial()"></p-button>
             </div>
@@ -110,7 +110,7 @@
                         </div>
                         <div class="col-12 md:col-7">
                             <label class="block text-sm font-bold mb-1">URL Perfil</label>
-                            <input pInputText formControlName="url" placeholder="https://facebook.com/..." />
+                            <input pInputText class="w-full" formControlName="url" placeholder="https://facebook.com/..." />
                         </div>
                     </div>
                     <button pButton icon="pi pi-trash" class="p-button-rounded p-button-danger p-button-text absolute top-0 right-0 mt-2 mr-2" (click)="removeEmailSocial(i)"></button>
@@ -130,7 +130,7 @@
                 [auto]="true"></p-fileupload>
             
             <div *ngFor="let file of uploadedFiles">
-                <div *ngIf="file.category === 'email_logo'" class="mt-2 text-sm text-green-500 flex align-items-center gap-2">
+                <div *ngIf="file.category === 'email_logo'" class="mt-2 text-sm text-green-500 flex align-align-align-items-center gap-2">
                     <i class="pi pi-check-circle"></i> Logo cargado: {{file.name}}
                 </div>
             </div>

@@ -1,10 +1,10 @@
-<div class="flex flex-col gap-4 p-4 h-full overflow-y-auto" style="max-height: 80vh;">
-    <h3 class="text-xl font-semibold text-white">Contenido Red+ (Publirreportaje)</h3>
+<div class="flex flex-column gap-4 p-4 h-full overflow-y-auto" style="max-height: 80vh;">
+    <h3 class="text-xl font-semibold text-900">Contenido Red+ (Publirreportaje)</h3>
     
-    <form [formGroup]="form" class="flex flex-col gap-4">
-        <div class="flex flex-col gap-2">
-            <label class="text-gray-300">Contenido del Artículo (450-700 palabras)</label>
-            <textarea pTextarea formControlName="article_content" rows="10" placeholder="Escriba o pegue el contenido aquí..."></textarea>
+    <form [formGroup]="form" class="flex flex-column gap-4">
+        <div class="flex flex-column gap-2">
+            <label class="text-700">Contenido del Artículo (450-700 palabras)</label>
+            <textarea pTextarea class="w-full" formControlName="article_content" rows="10" placeholder="Escriba o pegue el contenido aquí..."></textarea>
             
             <div *ngIf="form.get('article_content')?.hasError('wordCount')" class="text-red-500">
                 Palabras: {{ form.get('article_content')?.errors?.['wordCount'].actual }} (Min: 450, Max: 700)
@@ -12,8 +12,8 @@
             <small *ngIf="form.get('article_content')?.hasError('required') && form.get('article_content')?.touched" class="text-red-500">Requerido.</small>
         </div>
 
-        <div class="flex flex-col gap-2">
-            <label class="text-gray-300">Imágenes (JPG, Min 1200x800)</label>
+        <div class="flex flex-column gap-2">
+            <label class="text-700">Imágenes (JPG, Min 1200x800)</label>
             <p-fileUpload 
                 mode="basic" 
                 chooseLabel="Subir Imágenes" 
@@ -28,8 +28,8 @@
             </div>
         </div>
 
-        <div class="flex flex-col gap-2">
-            <label class="text-gray-300">Video (Opcional, MP4)</label>
+        <div class="flex flex-column gap-2">
+            <label class="text-700">Video (Opcional, MP4)</label>
             <p-fileUpload 
                 mode="basic" 
                 chooseLabel="Subir Video" 
@@ -40,15 +40,15 @@
             </p-fileUpload>
         </div>
 
-        <div class="flex items-center gap-2 mt-2">
+        <div class="flex align-align-items-center gap-2 mt-2">
             <p-checkbox formControlName="redplus_legal_check" [binary]="true" inputId="legal"></p-checkbox>
-            <label for="legal" class="text-gray-300 text-sm">Confirmo que todos los materiales tienen derechos de uso autorizados.</label>
+            <label for="legal" class="text-700 text-sm">Confirmo que todos los materiales tienen derechos de uso autorizados.</label>
         </div>
         <small *ngIf="form.get('redplus_legal_check')?.hasError('required') && form.get('redplus_legal_check')?.touched" class="text-red-500">Debe aceptar los términos.</small>
 
     </form>
 
-    <div class="flex justify-end gap-2 mt-4">
+    <div class="flex justify-content-end gap-2 mt-4">
         <p-button label="Cancelar" severity="secondary" (onClick)="cancel()"></p-button>
         <p-button label="Guardar" (onClick)="submit()" [loading]="isUploading()"></p-button>
     </div>

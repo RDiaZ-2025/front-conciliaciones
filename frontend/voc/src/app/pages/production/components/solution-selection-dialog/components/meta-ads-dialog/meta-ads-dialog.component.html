@@ -1,27 +1,27 @@
-<div class="flex flex-col gap-4 p-4">
-    <h3 class="text-xl font-semibold text-white">Facebook & Instagram Configuration</h3>
+<div class="flex flex-column gap-4 p-4">
+    <h3 class="text-xl font-semibold text-900">Facebook & Instagram Configuration</h3>
     
-    <form [formGroup]="form" class="flex flex-col gap-4">
-        <div class="flex flex-col gap-2">
-            <label class="text-gray-300">Texto Principal (Max 125 chars)</label>
-            <textarea pTextarea formControlName="fb_primaryText" rows="2"></textarea>
+    <form [formGroup]="form" class="flex flex-column gap-4">
+        <div class="flex flex-column gap-2">
+            <label class="text-700">Texto Principal (Max 125 chars)</label>
+            <textarea pTextarea class="w-full" formControlName="fb_primaryText" rows="2"></textarea>
             <small *ngIf="form.get('fb_primaryText')?.hasError('maxlength')" class="text-red-500">Máximo 125 caracteres.</small>
         </div>
 
-        <div class="flex flex-col gap-2">
-            <label class="text-gray-300">Título (Max 27 chars)</label>
-            <input pInputText formControlName="fb_title" />
+        <div class="flex flex-column gap-2">
+            <label class="text-700">Título (Max 27 chars)</label>
+            <input pInputText class="w-full" formControlName="fb_title" />
             <small *ngIf="form.get('fb_title')?.hasError('maxlength')" class="text-red-500">Máximo 27 caracteres.</small>
         </div>
 
-        <div class="flex flex-col gap-2">
-            <label class="text-gray-300">Descripción (Max 27 chars)</label>
-            <input pInputText formControlName="fb_description" />
+        <div class="flex flex-column gap-2">
+            <label class="text-700">Descripción (Max 27 chars)</label>
+            <input pInputText class="w-full" formControlName="fb_description" />
             <small *ngIf="form.get('fb_description')?.hasError('maxlength')" class="text-red-500">Máximo 27 caracteres.</small>
         </div>
 
-        <div class="flex flex-col gap-2">
-            <label class="text-gray-300">Multimedia (Imagen/Video)</label>
+        <div class="flex flex-column gap-2">
+            <label class="text-700">Multimedia (Imagen/Video)</label>
             <p-fileUpload 
                 mode="basic" 
                 chooseLabel="Subir Media" 
@@ -37,7 +37,7 @@
         </div>
     </form>
 
-    <div class="flex justify-end gap-2 mt-4">
+    <div class="flex justify-content-end gap-2 mt-4">
         <p-button label="Cancelar" severity="secondary" (onClick)="cancel()"></p-button>
         <p-button label="Guardar" (onClick)="submit()" [loading]="isUploading()"></p-button>
     </div>

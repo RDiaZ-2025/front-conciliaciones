@@ -1,22 +1,22 @@
 <div class="p-4">
-    <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
-        <div class="flex flex-col gap-2">
+    <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-column gap-4">
+        <div class="flex flex-column gap-2">
             <label for="wsp_business_campaignName" class="font-bold">Nombre de la Campaña</label>
-            <input pInputText id="wsp_business_campaignName" formControlName="wsp_business_campaignName" />
+            <input pInputText class="w-full" id="wsp_business_campaignName" formControlName="wsp_business_campaignName" />
             <small class="text-red-500" *ngIf="form.get('wsp_business_campaignName')?.invalid && form.get('wsp_business_campaignName')?.touched">
                 El nombre de la campaña es requerido
             </small>
         </div>
 
-        <div class="flex flex-col gap-2">
+        <div class="flex flex-column gap-2">
             <label for="wsp_business_message" class="font-bold">Mensaje</label>
-            <textarea pTextarea id="wsp_business_message" formControlName="wsp_business_message" rows="5" class="w-full"></textarea>
+            <textarea pTextarea class="w-full" id="wsp_business_message" formControlName="wsp_business_message" rows="5" class="w-full"></textarea>
             <small class="text-red-500" *ngIf="form.get('wsp_business_message')?.invalid && form.get('wsp_business_message')?.touched">
                 El mensaje es requerido
             </small>
         </div>
 
-        <div class="flex flex-col gap-2">
+        <div class="flex flex-column gap-2">
             <label class="font-bold">Imágenes (Opcional)</label>
             <p-fileUpload 
                 mode="basic" 
@@ -31,7 +31,7 @@
             <small class="text-green-500" *ngIf="uploadStatus()['wsp_business_images']">Archivo cargado</small>
         </div>
 
-        <div class="flex flex-col gap-2">
+        <div class="flex flex-column gap-2">
             <label class="font-bold">Video (Opcional)</label>
             <p-fileUpload 
                 mode="basic" 
@@ -46,7 +46,7 @@
             <small class="text-green-500" *ngIf="uploadStatus()['wsp_business_video']">Archivo cargado</small>
         </div>
 
-        <div class="flex flex-col gap-2">
+        <div class="flex flex-column gap-2">
             <label class="font-bold">Base de Datos (CSV)</label>
             <p-fileUpload 
                 mode="basic" 
@@ -64,7 +64,7 @@
             <small class="text-green-500" *ngIf="uploadStatus()['wsp_business_csv']">Archivo cargado</small>
         </div>
 
-        <div class="flex justify-end gap-2 mt-4">
+        <div class="flex justify-content-end gap-2 mt-4">
             <p-button label="Cancelar" styleClass="p-button-secondary" (onClick)="close()"></p-button>
             <p-button label="Guardar" type="submit" [disabled]="form.invalid"></p-button>
         </div>

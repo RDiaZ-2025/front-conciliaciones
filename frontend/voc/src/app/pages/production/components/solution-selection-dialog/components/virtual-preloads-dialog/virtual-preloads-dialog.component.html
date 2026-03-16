@@ -1,34 +1,34 @@
-<div class="flex flex-col gap-4 p-4">
-    <h3 class="text-xl font-semibold text-white">Virtual Preloads Configuration</h3>
+<div class="flex flex-column gap-4 p-4">
+    <h3 class="text-xl font-semibold text-900">Virtual Preloads Configuration</h3>
     
-    <form [formGroup]="form" class="flex flex-col gap-4">
-        <div class="flex flex-col gap-2">
-            <label class="text-gray-300">Nombre de la App</label>
-            <input pInputText formControlName="vp_appName" />
+    <form [formGroup]="form" class="flex flex-column gap-4">
+        <div class="flex flex-column gap-2">
+            <label class="text-700">Nombre de la App</label>
+            <input pInputText class="w-full" formControlName="vp_appName" />
             <small *ngIf="form.get('vp_appName')?.hasError('required') && form.get('vp_appName')?.touched" class="text-red-500">Requerido.</small>
         </div>
 
-        <div class="flex flex-col gap-2">
-            <label class="text-gray-300">Nombre del Cliente</label>
-            <input pInputText formControlName="vp_clientName" />
+        <div class="flex flex-column gap-2">
+            <label class="text-700">Nombre del Cliente</label>
+            <input pInputText class="w-full" formControlName="vp_clientName" />
             <small *ngIf="form.get('vp_clientName')?.hasError('required') && form.get('vp_clientName')?.touched" class="text-red-500">Requerido.</small>
         </div>
 
-        <div class="flex flex-col gap-2">
-            <label class="text-gray-300">URL Play Store (Opcional si sube APK)</label>
-            <input pInputText formControlName="vp_playStoreUrl" placeholder="https://play.google.com/..." />
+        <div class="flex flex-column gap-2">
+            <label class="text-700">URL Play Store (Opcional si sube APK)</label>
+            <input pInputText class="w-full" formControlName="vp_playStoreUrl" placeholder="https://play.google.com/..." />
             <small *ngIf="form.get('vp_playStoreUrl')?.hasError('pattern')" class="text-red-500">URL inválida.</small>
         </div>
 
-        <div class="flex flex-col gap-2">
-            <label class="text-gray-300">Texto Notificación (Max 50 chars)</label>
-            <input pInputText formControlName="vp_notificationText" />
+        <div class="flex flex-column gap-2">
+            <label class="text-700">Texto Notificación (Max 50 chars)</label>
+            <input pInputText class="w-full" formControlName="vp_notificationText" />
             <small *ngIf="form.get('vp_notificationText')?.hasError('maxlength')" class="text-red-500">Máximo 50 caracteres.</small>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
-            <div class="flex flex-col gap-2">
-                <label class="text-gray-300">Icono (256x256)</label>
+        <div class="formgrid grid gap-4">
+            <div class="col-12 md:col-6 flex flex-column gap-2">
+                <label class="text-700">Icono (256x256)</label>
                 <p-fileUpload 
                     mode="basic" 
                     chooseLabel="Subir Icono" 
@@ -38,8 +38,8 @@
                     [auto]="true">
                 </p-fileUpload>
             </div>
-            <div class="flex flex-col gap-2">
-                <label class="text-gray-300">Imagen (Aspecto 2:1)</label>
+            <div class="col-12 md:col-6 flex flex-column gap-2">
+                <label class="text-700">Imagen (Aspecto 2:1)</label>
                 <p-fileUpload 
                     mode="basic" 
                     chooseLabel="Subir Imagen" 
@@ -49,8 +49,8 @@
                     [auto]="true">
                 </p-fileUpload>
             </div>
-            <div class="flex flex-col gap-2 col-span-2">
-                <label class="text-gray-300">APK (Opcional si hay URL)</label>
+            <div class="flex flex-column gap-2 col-span-2">
+                <label class="text-700">APK (Opcional si hay URL)</label>
                 <p-fileUpload 
                     mode="basic" 
                     chooseLabel="Subir APK" 
@@ -63,7 +63,7 @@
         </div>
     </form>
 
-    <div class="flex justify-end gap-2 mt-4">
+    <div class="flex justify-content-end gap-2 mt-4">
         <p-button label="Cancelar" severity="secondary" (onClick)="cancel()"></p-button>
         <p-button label="Guardar" (onClick)="submit()" [loading]="isUploading()"></p-button>
     </div>

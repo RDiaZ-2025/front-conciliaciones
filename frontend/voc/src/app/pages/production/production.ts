@@ -399,7 +399,11 @@ export class ProductionComponent implements OnInit, OnDestroy {
   openImplementation(request: ProductionRequest) {
     this.ref = this.dialogService.open(SolutionSelectionDialogComponent, {
       header: 'Seleccione Solución',
-      width: '400px',
+      width: '60vw',
+      breakpoints: {
+        '960px': '75vw',
+        '640px': '90vw'
+      },
       contentStyle: { "overflow": "auto" },
       baseZIndex: 10000,
       data: { request }
@@ -453,7 +457,11 @@ export class ProductionComponent implements OnInit, OnDestroy {
 
     this.ref = this.dialogService.open(component, {
       header: header,
-      width: '600px',
+      width: '70vw',
+      breakpoints: {
+        '960px': '85vw',
+        '640px': '95vw'
+      },
       contentStyle: { "overflow": "auto" },
       baseZIndex: 10000,
       data: { request, selection, solutionType: solution }
