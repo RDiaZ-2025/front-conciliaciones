@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DynamicDialogConfig, DynamicDialogRef, DialogService } from 'primeng/dynamicdialog';
 import { TableModule } from 'primeng/table';
@@ -27,52 +27,15 @@ import { MetaAdsDialogComponent } from '../solution-selection-dialog/components/
 import { TiktokDialogComponent } from '../solution-selection-dialog/components/tiktok-dialog/tiktok-dialog.component';
 import { YoutubeDialogComponent } from '../solution-selection-dialog/components/youtube-dialog/youtube-dialog.component';
 import { ContentRedplusDialogComponent } from '../solution-selection-dialog/components/content-redplus-dialog/content-redplus-dialog.component';
+import { GenericViewDialogComponent } from './generic-view-dialog/generic-view-dialog.component';
 
 @Component({
     selector: 'app-material-register-list-dialog',
     standalone: true,
     imports: [CommonModule, TableModule, ButtonModule, TooltipModule],
     providers: [DialogService],
-    template: `
-    <div class="flex flex-column gap-3 p-3">
-        <div class="flex justify-content-between align-items-center">
-            <h3 class="m-0 text-700">Registros de Material</h3>
-            <p-button label="Agregar Nuevo" icon="pi pi-plus" (click)="addMaterialRegister()"></p-button>
-        </div>
-
-        <p-table [value]="registers" [rows]="5" [paginator]="true" [rowHover]="true" styleClass="p-datatable-sm">
-            <ng-template pTemplate="header">
-                <tr>
-                    <th>Categoría</th>
-                    <th>Tipo</th>
-                    <th>Solución</th>
-                    <th>Fecha Creación</th>
-                    <!-- <th>Acciones</th> -->
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-register>
-                <tr>
-                    <td>{{ register.category }}</td>
-                    <td>{{ register.type }}</td>
-                    <td>{{ register.solution }}</td>
-                    <td>{{ register.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
-                    <!-- <td>
-                        <p-button icon="pi pi-eye" [text]="true" [rounded]="true" severity="info" pTooltip="Ver Detalle"></p-button>
-                    </td> -->
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="emptymessage">
-                <tr>
-                    <td colspan="4" class="text-center p-4">No hay registros de material.</td>
-                </tr>
-            </ng-template>
-        </p-table>
-
-        <div class="flex justify-content-end mt-3 border-top-1 surface-border pt-3">
-            <p-button label="Cerrar" icon="pi pi-times" [text]="true" (click)="close()"></p-button>
-        </div>
-    </div>
-  `
+    templateUrl: './material-register-list-dialog.component.html',
+    styleUrls: ['./material-register-list-dialog.component.css']
 })
 export class MaterialRegisterListDialogComponent implements OnInit {
     config = inject(DynamicDialogConfig);
@@ -80,6 +43,7 @@ export class MaterialRegisterListDialogComponent implements OnInit {
     productionService = inject(ProductionService);
     dialogService = inject(DialogService);
     messageService = inject(MessageService);
+    cdr = inject(ChangeDetectorRef);
 
     request!: ProductionRequest;
     registers: MaterialRegister[] = [];
@@ -96,6 +60,7 @@ export class MaterialRegisterListDialogComponent implements OnInit {
         this.productionService.getProductionRequestById(this.request.id).subscribe((updatedRequest: ProductionRequest) => {
             this.request = updatedRequest;
             this.registers = updatedRequest.materialRegisters || [];
+            this.cdr.detectChanges();
         });
     }
 
@@ -154,37 +119,6 @@ export class MaterialRegisterListDialogComponent implements OnInit {
                 break;
         }
 
-        // Special case for complex material preparation dialog (if needed)
-        // Actually, ProductionComponent logic splits this. 
-        // Wait, ProductionComponent calls openSolutionDialog for specific components, 
-        // and openMaterialPreparationDialog for... when?
-        // Ah, lines 496 in production.ts defines openMaterialPreparationDialog but it seems unused in openImplementation?
-        // Let's re-read production.ts. openImplementation calls openSolutionDialog (line 410).
-        // openSolutionDialog handles all cases.
-        // So openMaterialPreparationDialog might be legacy or for a different flow?
-        // Wait, MaterialPreparationDialogComponent IS used in openMaterialPreparationDialog.
-        // But openImplementation calls openSolutionDialog.
-        // Ah, I see. SolutionSelectionDialog returns selection.
-        // If I check openImplementation (line 398), it calls openSolutionDialog.
-        // openSolutionDialog (line 416) uses specific components.
-        // Where is MaterialPreparationDialogComponent used?
-        // It is imported at line 32.
-        // It is used in openMaterialPreparationDialog (line 496).
-        // Is openMaterialPreparationDialog called anywhere?
-        // I don't see it called in the visible snippet of production.ts.
-        // Maybe it's not used? Or maybe I missed it.
-        // However, the user asked to use MaterialPreparationDialogComponent logic?
-        // Wait, the user said "when I save the data, it must be stored in a list...".
-        // And "in that modal a button to add new MaterialRequests".
-        // The previous context showed me editing MaterialPreparationDialogComponent.
-        // Is MaterialPreparationDialogComponent a wrapper for all solutions?
-        // Let's check MaterialPreparationDialogComponent.
-
-        // Actually, let's just stick to what openSolutionDialog does, which seems to be the active code.
-        // It opens specific dialogs (SmsDialog, RcsDialog, etc.).
-        // These dialogs return data.
-        // Then it saves using productionService.addMaterialRegister.
-
         this.dialogRef = this.dialogService.open(component, {
             header: header,
             width: '600px',
@@ -222,5 +156,35 @@ export class MaterialRegisterListDialogComponent implements OnInit {
 
     close() {
         this.ref.close();
+    }
+
+    viewRegister(register: MaterialRegister) {
+        let content = '';
+        try {
+            const data = typeof register.jsonRequest === 'string'
+                ? JSON.parse(register.jsonRequest)
+                : register.jsonRequest;
+
+            content = '<div class="flex flex-column gap-2">';
+            for (const [key, value] of Object.entries(data)) {
+                content += `
+                    <div class="flex flex-column">
+                        <span class="font-bold text-700">${key}:</span>
+                        <span class="text-900" style="word-break: break-word;">${value}</span>
+                    </div>
+                `;
+            }
+            content += '</div>';
+        } catch (e) {
+            content = '<p class="text-red-500">Error parsing data</p>';
+        }
+
+        this.dialogService.open(GenericViewDialogComponent, {
+            header: `Detalle: ${register.solution}`,
+            width: '500px',
+            contentStyle: { "overflow": "auto" },
+            baseZIndex: 10000,
+            data: { content }
+        });
     }
 }
