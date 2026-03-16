@@ -369,6 +369,13 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       }
     }
 
+    if (campaignDetail) {
+      // Ensure budget is converted to string for nvarchar column
+      if (campaignDetail.budget !== undefined && campaignDetail.budget !== null) {
+        campaignDetail.budget = String(campaignDetail.budget);
+      }
+    }
+
     const newProductionRequest = productionRequestRepository.create({
       name,
       requestDate: new Date(),
@@ -530,6 +537,10 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
     if (productionInfo) existingRequest.productionInfo = { ...existingRequest.productionInfo, ...productionInfo };
 
     if (campaignDetail) {
+      // Ensure budget is converted to string for nvarchar column
+      if (campaignDetail.budget !== undefined && campaignDetail.budget !== null) {
+        campaignDetail.budget = String(campaignDetail.budget);
+      }
       // Handle campaign products separately if needed, or rely on cascade
       // For deep nested relations like campaignProducts, we might need to handle them carefully
       // But for now, let's assume cascade works for the main object
@@ -1110,6 +1121,11 @@ export const updateStepCampaign = async (req: Request, res: Response): Promise<R
     }
 
     if (campaignDetail) {
+      // Ensure budget is converted to string for nvarchar column to avoid EPARAM error
+      if (campaignDetail.budget !== undefined && campaignDetail.budget !== null) {
+        campaignDetail.budget = String(campaignDetail.budget);
+      }
+      
       existingRequest.campaignDetail = { ...existingRequest.campaignDetail, ...campaignDetail };
 
       // Logic for budget-based status and assignment
