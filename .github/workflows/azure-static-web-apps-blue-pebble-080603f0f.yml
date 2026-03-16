@@ -46,7 +46,8 @@ jobs:
           action: "upload"
           app_location: "frontend"
           api_location: "backend" 
-          output_location: "dist/voc/frontend/browser"
+          output_location: "dist/voc/browser"
+          app_build_command: "npm run build:voc"
           github_id_token: ${{ steps.idtoken.outputs.result }}
         env:
           NODE_VERSION: '20'
