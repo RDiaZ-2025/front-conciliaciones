@@ -1,4 +1,4 @@
-<div class="flex flex-column gap-3 p-3">
+<div class="flex flex-columnumn gap-3 p-3">
     <form [formGroup]="form" (ngSubmit)="submit()">
         <div class="field mb-4">
             <label class="font-bold block mb-2 text-xl text-900">Configuración SMS</label>
@@ -54,7 +54,7 @@
                 [maxFileSize]="maxFileSize" [customUpload]="true" (uploadHandler)="onUpload($event)" 
                 [auto]="true" [multiple]="true"></p-fileupload>
             
-            <div *ngFor="let file of uploadedFiles" class="mt-2 text-sm text-green-500 flex align-items-center gap-2">
+            <div *ngFor="let file of uploadedFiles" class="mt-2 text-sm text-green-500 flex align-align-align-items-center gap-2">
                 <i class="pi pi-check-circle"></i> {{file.name}} ({{(file.size/1024).toFixed(2)}} KB)
             </div>
         </div>

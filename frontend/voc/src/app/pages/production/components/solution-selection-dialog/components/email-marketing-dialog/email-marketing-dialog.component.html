@@ -1,4 +1,4 @@
-<div class="flex flex-column gap-3 p-3">
+<div class="flex flex-columnumn gap-3 p-3">
     <form [formGroup]="form" (ngSubmit)="submit()">
         <div class="field mb-4">
             <label class="font-bold block mb-2 text-xl text-900">Configuración Email Marketing</label>
@@ -74,7 +74,7 @@
 
         <!-- CTAs Array -->
         <div class="field mt-4">
-            <div class="flex justify-content-between align-items-center mb-2">
+            <div class="flex justify-content-between align-align-align-items-center mb-2">
                 <label class="font-bold block">Call to Actions (CTAs)</label>
                 <p-button label="Agregar CTA" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="addEmailCta()"></p-button>
             </div>
@@ -97,7 +97,7 @@
 
         <!-- Social Array -->
         <div class="field mt-4">
-            <div class="flex justify-content-between align-items-center mb-2">
+            <div class="flex justify-content-between align-align-align-items-center mb-2">
                 <label class="font-bold block">Redes Sociales</label>
                 <p-button label="Agregar Red Social" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="addEmailSocial()"></p-button>
             </div>
@@ -130,7 +130,7 @@
                 [auto]="true"></p-fileupload>
             
             <div *ngFor="let file of uploadedFiles">
-                <div *ngIf="file.category === 'email_logo'" class="mt-2 text-sm text-green-500 flex align-items-center gap-2">
+                <div *ngIf="file.category === 'email_logo'" class="mt-2 text-sm text-green-500 flex align-align-align-items-center gap-2">
                     <i class="pi pi-check-circle"></i> Logo cargado: {{file.name}}
                 </div>
             </div>

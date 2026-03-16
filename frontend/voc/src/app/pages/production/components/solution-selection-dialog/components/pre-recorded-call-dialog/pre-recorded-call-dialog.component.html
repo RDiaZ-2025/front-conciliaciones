@@ -1,40 +1,40 @@
-<div class="flex flex-col gap-4 p-4">
-    <h3 class="text-xl font-semibold text-white">Pre-Recorded Call Configuration</h3>
+<div class="flex flex-column gap-4 p-4">
+    <h3 class="text-xl font-semibold text-900">Pre-Recorded Call Configuration</h3>
     
-    <form [formGroup]="form" class="flex flex-col gap-4">
-        <div class="flex flex-col gap-2">
-            <label class="text-gray-300">Nombre del Cliente</label>
+    <form [formGroup]="form" class="flex flex-column gap-4">
+        <div class="flex flex-column gap-2">
+            <label class="text-700">Nombre del Cliente</label>
             <input pInputText formControlName="prc_clientName" />
             <small *ngIf="form.get('prc_clientName')?.hasError('required') && form.get('prc_clientName')?.touched" class="text-red-500">Requerido.</small>
         </div>
 
-        <div class="flex flex-col gap-2">
-            <div class="flex items-center gap-2">
+        <div class="flex flex-column gap-2">
+            <div class="flex align-align-items-center gap-2">
                 <p-checkbox formControlName="prc_hasDtmf" [binary]="true" inputId="dtmf"></p-checkbox>
-                <label for="dtmf" class="text-gray-300">Habilitar DTMF</label>
+                <label for="dtmf" class="text-700">Habilitar DTMF</label>
             </div>
-            <div *ngIf="form.get('prc_hasDtmf')?.value" class="flex flex-col gap-2 ml-6">
-                <label class="text-gray-300">Opciones DTMF (Descripción)</label>
+            <div *ngIf="form.get('prc_hasDtmf')?.value" class="flex flex-column gap-2 ml-6">
+                <label class="text-700">Opciones DTMF (Descripción)</label>
                 <input pInputText formControlName="prc_dtmfOptions" placeholder="Ej: 1. Ventas, 2. Soporte" />
                 <small *ngIf="form.get('prc_dtmfOptions')?.hasError('required')" class="text-red-500">Requerido si DTMF está activo.</small>
             </div>
         </div>
 
-        <div class="flex flex-col gap-2">
-            <div class="flex items-center gap-2">
+        <div class="flex flex-column gap-2">
+            <div class="flex align-align-items-center gap-2">
                 <p-checkbox formControlName="prc_hasSms" [binary]="true" inputId="sms"></p-checkbox>
-                <label for="sms" class="text-gray-300">Enviar SMS de Seguimiento</label>
+                <label for="sms" class="text-700">Enviar SMS de Seguimiento</label>
             </div>
-            <div *ngIf="form.get('prc_hasSms')?.value" class="flex flex-col gap-2 ml-6">
-                <label class="text-gray-300">Texto SMS (Max 200 chars)</label>
+            <div *ngIf="form.get('prc_hasSms')?.value" class="flex flex-column gap-2 ml-6">
+                <label class="text-700">Texto SMS (Max 200 chars)</label>
                 <input pInputText formControlName="prc_smsText" />
                 <small *ngIf="form.get('prc_smsText')?.hasError('required')" class="text-red-500">Requerido si SMS está activo.</small>
                 <small *ngIf="form.get('prc_smsText')?.hasError('maxlength')" class="text-red-500">Máximo 200 caracteres.</small>
             </div>
         </div>
 
-        <div class="flex flex-col gap-2">
-            <label class="text-gray-300">Audio (.wav)</label>
+        <div class="flex flex-column gap-2">
+            <label class="text-700">Audio (.wav)</label>
             <p-fileUpload 
                 mode="basic" 
                 chooseLabel="Subir Audio" 
@@ -46,7 +46,7 @@
         </div>
     </form>
 
-    <div class="flex justify-end gap-2 mt-4">
+    <div class="flex justify-content-end gap-2 mt-4">
         <p-button label="Cancelar" severity="secondary" (onClick)="cancel()"></p-button>
         <p-button label="Guardar" (onClick)="submit()" [loading]="isUploading()"></p-button>
     </div>

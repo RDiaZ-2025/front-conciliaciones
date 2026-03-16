@@ -1,4 +1,4 @@
-<div class="flex flex-column gap-3 p-3">
+<div class="flex flex-columnumn gap-3 p-3">
     <form [formGroup]="form" (ngSubmit)="submit()">
         <div class="field mb-4">
             <label class="font-bold block mb-2 text-xl text-900">Configuración RCS</label>
@@ -64,7 +64,7 @@
 
         <!-- Buttons Array -->
         <div class="field mt-4">
-            <div class="flex justify-content-between align-items-center mb-2">
+            <div class="flex justify-content-between align-align-align-items-center mb-2">
                 <label class="font-bold block">Botones de Acción (Máx 4)</label>
                 <p-button label="Agregar Botón" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="addRcsButton()" [disabled]="rcsButtons.length >= 4"></p-button>
             </div>
@@ -100,7 +100,7 @@
                 [maxFileSize]="maxFileSize" [customUpload]="true" (uploadHandler)="onUpload($event)" 
                 [auto]="true" [multiple]="true"></p-fileupload>
             
-            <div *ngFor="let file of uploadedFiles" class="mt-2 text-sm text-green-500 flex align-items-center gap-2">
+            <div *ngFor="let file of uploadedFiles" class="mt-2 text-sm text-green-500 flex align-align-align-items-center gap-2">
                 <i class="pi pi-check-circle"></i> {{file.name}} ({{(file.size/1024).toFixed(2)}} KB)
             </div>
         </div>
