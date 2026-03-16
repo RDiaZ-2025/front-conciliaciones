@@ -5,14 +5,14 @@ on:
     branches:
       - main
     paths:
-      - 'frontend/**'
+      - 'frontend/voc/**'
       - '.github/workflows/azure-static-web-apps-blue-pebble-080603f0f.yml'
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
       - main
     paths:
-      - 'frontend/**'
+      - 'frontend/voc/**'
       - '.github/workflows/azure-static-web-apps-blue-pebble-080603f0f.yml'
 
 jobs:
@@ -46,7 +46,7 @@ jobs:
           action: "upload"
           app_location: "frontend"
           api_location: "backend" 
-          output_location: "dist/frontend/browser"
+          output_location: "dist/voc/frontend/browser"
           github_id_token: ${{ steps.idtoken.outputs.result }}
         env:
           NODE_VERSION: '20'
