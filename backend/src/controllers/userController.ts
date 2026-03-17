@@ -15,7 +15,6 @@ export class UserController {
         return;
       }
 
-      // Usar el servicio de usuarios que ya tiene la lógica corregida
       const users = await UserService.getAllUsers();
 
       res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -63,7 +62,6 @@ export class UserController {
         return;
       }
 
-      // Filter out undefined values and ensure type safety
       const permissions = user.permissions
         ?.map((pbu: any) => pbu.permission?.name)
         .filter((name: any): name is string => !!name) || [];
@@ -109,13 +107,10 @@ export class UserController {
         const permissionByUserRepository = queryRunner.manager.getRepository(PermissionByUser);
         const permissionRepository = queryRunner.manager.getRepository(Permission);
 
-        // Eliminar permisos existentes
         await permissionByUserRepository.delete({ userId: parseInt(id) });
 
-        // Agregar nuevos permisos
         if (permissions && permissions.length > 0) {
           for (const permissionName of permissions) {
-            // Obtener el permiso por nombre
             const permission = await permissionRepository.findOne({
               where: { name: permissionName.toUpperCase() }
             });
@@ -162,7 +157,6 @@ export class UserController {
         bossId?: number;
       } = req.body;
 
-      // Validación básica
       if (!name || !email || !password) {
         res.status(400).json({
           success: false,
@@ -171,7 +165,6 @@ export class UserController {
         return;
       }
 
-      // Validar formato de email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         res.status(400).json({
@@ -219,7 +212,6 @@ export class UserController {
       });
 
       if (result.success) {
-        // Obtener el usuario actualizado y retornarlo
         const updatedUser = await UserService.getUserById(parseInt(id));
         res.status(200).json({ ...result, user: updatedUser });
       } else {
@@ -248,7 +240,6 @@ export class UserController {
 
       const userRepository = AppDataSource.getRepository(User);
 
-      // Verificar que el usuario existe
       const user = await userRepository.findOne({
         where: { id: parseInt(id) },
         select: ['id', 'status']

@@ -110,6 +110,10 @@ export class ProductionService {
     return this.http.get<RightsDuration[]>(`${this.apiUrl}/rights-durations`);
   }
 
+  getWorkflowStages(): Observable<{ id: string; label: string }[]> {
+    return this.http.get<{ id: string; label: string }[]>(`${this.apiUrl}/workflow-stages`);
+  }
+
   getStatuses(): Observable<Status[]> {
     return this.http.get<Status[]>(this.statusUrl);
   }

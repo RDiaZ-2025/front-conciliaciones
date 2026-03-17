@@ -165,21 +165,3 @@ export interface ProductionRequest {
   materialRegisters?: MaterialRegister[];
   consecutive?: number | null;
 }
-
-export const WORKFLOW_STAGES = [
-  { id: 'request', label: 'Inicio' },
-  { id: 'quotation', label: 'Cotización' },
-  { id: 'create_proposal', label: 'Crear Propuesta' },
-  { id: 'get_data', label: 'Obtener Datos' },
-  { id: 'in_sell', label: 'Venta' },
-  { id: 'consecutive_generation', label: 'Generación de Consecutivo' },
-  { id: 'closed_won', label: 'Cerrado Ganado' },
-  { id: 'material_preparation', label: 'Preparación de Material' },
-  { id: 'implementation', label: 'Implementación' },
-  { id: 'val_materiales_mobile', label: 'Val. Materiales Mobile' },
-  { id: 'val_materiales_programatica', label: 'Val. Materiales Programática' },
-  { id: 'val_materiales_red_plus', label: 'Val. Materiales Red+' },
-  { id: 'gestion_operativa', label: 'Gestión Operativa' },
-  { id: 'cierre', label: 'Cierre' },
-  { id: 'completed', label: 'Completado' } // Keep for backward compatibility if needed
-];

@@ -10,6 +10,7 @@ const router = Router();
 // Public routes for production options
 router.get('/format-types', ProductionController.getFormatTypes);
 router.get('/rights-durations', ProductionController.getRightsDurations);
+router.get('/workflow-stages', ProductionController.getWorkflowStages);
 
 // Protected routes
 router.use(authenticateToken);

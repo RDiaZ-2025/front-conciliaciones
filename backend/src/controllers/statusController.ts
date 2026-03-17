@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 
 export const getAllStatuses = async (req: Request, res: Response) => {
   try {
-    // Hardcoded statuses since Status table is removed
     const statuses = [
       { id: 1, name: 'Solicitud', code: 'request', order: 1 },
       { id: 11, name: 'En Venta', code: 'in_sell', order: 2 },

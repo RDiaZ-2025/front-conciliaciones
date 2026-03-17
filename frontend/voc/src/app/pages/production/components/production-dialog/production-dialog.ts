@@ -6,7 +6,7 @@ import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ButtonModule } from 'primeng/button';
 import { MenuItem, MessageService } from 'primeng/api';
 import { StepsModule } from 'primeng/steps';
-import { ProductionRequest, UploadedFile, Team, CustomerData, AudienceData, CampaignDetail, ProductionInfo, Product, Objective, Gender, AgeRange, SocioeconomicLevel, FormatType, RightsDuration, Status, WORKFLOW_STAGES } from '../../production.models';
+import { ProductionRequest, UploadedFile, Team, CustomerData, AudienceData, CampaignDetail, ProductionInfo, Product, Objective, Gender, AgeRange, SocioeconomicLevel, FormatType, RightsDuration, Status } from '../../production.models';
 import { AzureStorageService } from '../../../../services/azure-storage.service';
 import { TeamService } from '../../../../services/team.service';
 import { User } from '../../../../services/user.service';
@@ -333,7 +333,14 @@ export class ProductionDialogComponent implements OnInit {
   }
 
   loadStatuses() {
-    this.workflowStages = WORKFLOW_STAGES;
+    this.productionService.getWorkflowStages().subscribe({
+      next: (stages) => {
+        this.workflowStages = stages;
+      },
+      error: (error) => {
+        console.error('Error loading workflow stages', error);
+      }
+    });
   }
 
   loadFilesFromStorage(requestId: number) {

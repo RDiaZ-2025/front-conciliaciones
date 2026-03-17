@@ -12,7 +12,6 @@ import {
 export class StorageController {
   static async generateSasToken(req: Request, res: Response) {
     try {
-      // Get container from query or env
       const allowedContainers = ['private', 'public', 'autoconsumoshared'];
       let containerName = req.query.container as string;
 
@@ -30,7 +29,6 @@ export class StorageController {
         });
       }
 
-      // Check permissions for specific containers and handle File Share
       if (containerName === 'autoconsumoshared') {
         const user = (req as any).user;
         if (!user || !user.permissions || !user.permissions.includes('view_commercial')) {
@@ -42,7 +40,6 @@ export class StorageController {
 
         const sharedKeyCredential = new ShareSharedKeyCredential(accountName, accountKey);
 
-        // Set start and expiry time
         const startDate = new Date();
         startDate.setMinutes(startDate.getMinutes() - 5);
         const expiryDate = new Date();
@@ -74,15 +71,12 @@ export class StorageController {
 
       const sharedKeyCredential = new StorageSharedKeyCredential(accountName, accountKey);
 
-      // Set start and expiry time
       const startDate = new Date();
-      startDate.setMinutes(startDate.getMinutes() - 5); // Allow for clock skew
+      startDate.setMinutes(startDate.getMinutes() - 5);
 
       const expiryDate = new Date();
-      expiryDate.setMinutes(expiryDate.getMinutes() + 60); // Valid for 1 hour
+      expiryDate.setMinutes(expiryDate.getMinutes() + 60);
 
-      // Set permissions (Read, Add, Create, Write, Delete, List)
-      // We use ContainerSASPermissions to include 'list' (l) permission which is needed for listing blobs
       const permissions = ContainerSASPermissions.parse("racwdl");
 
       const sasOptions = {
@@ -136,11 +130,9 @@ export class StorageController {
       const shareClient = serviceClient.getShareClient(shareName);
       const folderPath = req.query.path as string || '';
 
-      // Use root directory if no path provided, otherwise get subdirectory
       const directoryClient = folderPath ? shareClient.getDirectoryClient(folderPath) : shareClient.rootDirectoryClient;
       console.log('Directory client created:', directoryClient);
 
-      // Check if exists (only for non-root)
       console.log('Checking if directory exists:', folderPath);
       if (folderPath && !await directoryClient.exists()) {
         return res.json({ success: true, data: [] });
@@ -150,7 +142,7 @@ export class StorageController {
       for await (const entity of directoryClient.listFilesAndDirectories()) {
         files.push({
           name: entity.name,
-          kind: entity.kind, // 'file' or 'directory'
+          kind: entity.kind,
           size: entity.kind === 'file' ? entity.properties.contentLength : 0,
           lastModified: entity.kind === 'file' ? entity.properties.lastModified : undefined
         });
@@ -186,9 +178,6 @@ export class StorageController {
       const serviceClient = new ShareServiceClient(`https://${accountName}.file.core.windows.net`, credential);
       const shareClient = serviceClient.getShareClient(shareName);
 
-      // Parse path to get directory and filename
-      // Format: "Folder/Subfolder/file.ext"
-      // If root: "file.ext"
       const lastSlash = filePath.lastIndexOf('/');
       const dirName = lastSlash > -1 ? filePath.substring(0, lastSlash) : '';
       const fileName = lastSlash > -1 ? filePath.substring(lastSlash + 1) : filePath;

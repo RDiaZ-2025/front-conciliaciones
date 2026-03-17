@@ -10,7 +10,6 @@ export class AuthController {
     try {
       const { email, password }: LoginRequest = req.body;
 
-      // Validación básica
       if (!email || !password) {
         res.status(400).json({
           success: false,
@@ -45,7 +44,6 @@ export class AuthController {
         return;
       }
 
-      // Obtener usuario de la base de datos
       const user = await AuthService.getUserById(req.user.userId);
 
       if (!user) {
@@ -56,7 +54,6 @@ export class AuthController {
         return;
       }
 
-      // Obtener permisos del usuario
       const permissions = await AuthService.getUserPermissions(req.user.userId);
       const teams = await AuthService.getUserTeams(req.user.userId);
 
@@ -91,7 +88,6 @@ export class AuthController {
         return;
       }
 
-      // Hash de la contraseña 'admin123', 'manager123', 'user123', etc.
       const passwordHash = await bcrypt.hash('admin123', 12);
       const managerHash = await bcrypt.hash('manager123', 12);
       const userHash = await bcrypt.hash('user123', 12);
@@ -107,7 +103,6 @@ export class AuthController {
         const permissionRepository = queryRunner.manager.getRepository(Permission);
         const permissionByUserRepository = queryRunner.manager.getRepository(PermissionByUser);
 
-        // Crear usuarios adicionales
         const users = [
           { name: 'Administrador Test', email: 'admin@test.com', hash: passwordHash, permissions: ['document_upload', 'management_dashboard', 'admin_panel'] },
           { name: 'Manager Test', email: 'manager@test.com', hash: managerHash, permissions: ['document_upload', 'management_dashboard'] },
@@ -118,13 +113,11 @@ export class AuthController {
         ];
 
         for (const userData of users) {
-          // Verificar si el usuario ya existe
           const existingUser = await userRepository.findOne({
             where: { email: userData.email }
           });
 
           if (!existingUser) {
-            // Crear usuario
             const newUser = userRepository.create({
               name: userData.name,
               email: userData.email,
@@ -134,7 +127,6 @@ export class AuthController {
 
             const savedUser = await userRepository.save(newUser);
 
-            // Asignar permisos
             for (const permissionName of userData.permissions) {
               const permission = await permissionRepository.findOne({
                 where: { name: permissionName }
@@ -185,8 +177,6 @@ export class AuthController {
   }
 
   static async logout(req: Request, res: Response): Promise<void> {
-    // En un sistema JWT stateless, el logout se maneja en el frontend
-    // eliminando el token del almacenamiento local
     res.status(200).json({
       success: true,
       message: 'Logout exitoso'

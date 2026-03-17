@@ -11,7 +11,6 @@ export class CampaignController {
     getAll = async (req: Request, res: Response) => {
         try {
             const campaigns = await this.campaignService.findAll();
-            // Parse impacts JSON for frontend
             const formattedCampaigns = campaigns.map(c => ({
                 ...c,
                 impacts: c.impacts ? JSON.parse(c.impacts) : []
@@ -27,13 +26,13 @@ export class CampaignController {
         try {
             const id = parseInt(req.params.id);
             const campaign = await this.campaignService.findById(id);
-            
+
             if (!campaign) {
                 return res.status(404).json({ success: false, message: 'Campaign not found' });
             }
 
-            return res.json({ 
-                success: true, 
+            return res.json({
+                success: true,
                 data: {
                     ...campaign,
                     impacts: campaign.impacts ? JSON.parse(campaign.impacts) : []
@@ -47,10 +46,8 @@ export class CampaignController {
 
     create = async (req: Request, res: Response) => {
         try {
-            // Assuming auth middleware populates req.user
-            // @ts-ignore
-            const userId = req.user?.id || 1; // Fallback to 1 if no auth (dev) or handle error
-            
+            const userId = req.user?.userId || 1;
+
             const campaign = await this.campaignService.create(req.body, userId);
             return res.status(201).json({ success: true, data: campaign });
         } catch (error) {
@@ -63,7 +60,7 @@ export class CampaignController {
         try {
             const id = parseInt(req.params.id);
             const campaign = await this.campaignService.update(id, req.body);
-            
+
             if (!campaign) {
                 return res.status(404).json({ success: false, message: 'Campaign not found' });
             }
@@ -79,7 +76,7 @@ export class CampaignController {
         try {
             const id = parseInt(req.params.id);
             const success = await this.campaignService.delete(id);
-            
+
             if (!success) {
                 return res.status(404).json({ success: false, message: 'Campaign not found' });
             }

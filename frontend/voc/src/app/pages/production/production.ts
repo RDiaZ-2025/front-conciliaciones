@@ -19,7 +19,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
 import { ProductionService } from '../../services/production.service';
 import { AuthService } from '../../services/auth.service';
-import { ProductionRequest, WORKFLOW_STAGES } from './production.models';
+import { ProductionRequest } from './production.models';
 import { ProductionDialogComponent } from './components/production-dialog/production-dialog';
 import { ProductionDetailDialogComponent } from './components/production-detail-dialog/production-detail-dialog';
 import { StageTransitionUploadDialogComponent } from './components/stage-transition-upload-dialog/stage-transition-upload-dialog.component';
@@ -101,7 +101,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
   // Historical View state
   showHistorical = signal<boolean>(false);
 
-  workflowStages = WORKFLOW_STAGES;
+  workflowStages: { id: string; label: string }[] = [];
 
   // Computed lists
   activeRequests = computed(() => this.requests().filter(r => r.stage !== 'completed'));
@@ -129,6 +129,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadRequests();
+    this.loadWorkflowStages();
 
     // Handle deep linking
     this.route.queryParams.subscribe(params => {
@@ -197,6 +198,17 @@ export class ProductionComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load requests' });
         this.loading.set(false);
+      }
+    });
+  }
+
+  loadWorkflowStages() {
+    this.productionService.getWorkflowStages().subscribe({
+      next: (stages) => {
+        this.workflowStages = stages;
+      },
+      error: (error) => {
+        console.error('Error loading workflow stages', error);
       }
     });
   }
@@ -377,24 +389,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
     });
   }
 
-  deleteRequest(id: number) {
-    this.confirmationService.confirm({
-      message: '¿Está seguro de eliminar esta solicitud?',
-      header: 'Confirmar Eliminación',
-      icon: 'pi pi-exclamation-triangle',
-      accept: () => {
-        this.productionService.deleteProductionRequest(id).subscribe({
-          next: () => {
-            this.requests.update(current => current.filter(r => r.id !== id));
-            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Request deleted' });
-          },
-          error: () => {
-            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete request' });
-          }
-        });
-      }
-    });
-  }
+
 
   openImplementation(request: ProductionRequest) {
     this.ref = this.dialogService.open(SolutionSelectionDialogComponent, {
@@ -614,7 +609,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
 
     if (this.ref) {
       this.ref.onClose.subscribe(() => {
-          this.loadRequests();
+        this.loadRequests();
       });
     }
   }

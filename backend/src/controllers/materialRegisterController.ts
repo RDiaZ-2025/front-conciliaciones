@@ -7,7 +7,7 @@ const materialRegisterService = new MaterialRegisterService();
 
 export const addMaterialRegister = async (req: Request, res: Response): Promise<Response | void> => {
     try {
-        const { id } = req.params; // ProductionRequest ID
+        const { id } = req.params; 
         const { category, type, solution, jsonRequest } = req.body;
         const userId = req.user?.userId;
 
@@ -44,7 +44,7 @@ export const addMaterialRegister = async (req: Request, res: Response): Promise<
 
 export const getMaterialRegisters = async (req: Request, res: Response): Promise<Response | void> => {
     try {
-        const { id } = req.params; // ProductionRequest ID
+        const { id } = req.params; 
 
         if (!AppDataSource.isInitialized) {
             return res.status(503).json({ success: false, message: 'Database not available' });

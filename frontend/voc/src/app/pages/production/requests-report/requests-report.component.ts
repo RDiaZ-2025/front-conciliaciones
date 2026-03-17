@@ -38,6 +38,9 @@ export class RequestsReportComponent implements OnInit {
   executionChartData: any;
   executionChartOptions: any;
 
+  stageChartData: any;
+  stageChartOptions: any;
+
   ngOnInit() {
     this.loadStats();
     this.initChartOptions();
@@ -78,6 +81,18 @@ export class RequestsReportComponent implements OnInit {
         }
       ]
     };
+
+    // Stages Chart (Horizontal Bar)
+    this.stageChartData = {
+      labels: data.stages.map(s => s.label),
+      datasets: [
+        {
+          label: 'Solicitudes por Etapa',
+          backgroundColor: '#8B5CF6', // Violet
+          data: data.stages.map(s => s.count)
+        }
+      ]
+    };
   }
 
   initChartOptions() {
@@ -99,6 +114,38 @@ export class RequestsReportComponent implements OnInit {
         x: {
           ticks: {
             color: textColorSecondary
+          },
+          grid: {
+            color: surfaceBorder,
+            drawBorder: false
+          }
+        },
+        y: {
+          ticks: {
+            color: textColorSecondary
+          },
+          grid: {
+            color: surfaceBorder,
+            drawBorder: false
+          }
+        }
+      }
+    };
+
+    this.stageChartOptions = {
+      indexAxis: 'y',
+      maintainAspectRatio: false,
+      aspectRatio: 0.8,
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: textColorSecondary,
+            stepSize: 1
           },
           grid: {
             color: surfaceBorder,

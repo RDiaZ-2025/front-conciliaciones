@@ -1,9 +1,6 @@
 import { Request, Response } from 'express';
 import { teamService } from '../services/teamService';
 
-/**
- * Get all teams
- */
 export const getAllTeams = async (req: Request, res: Response): Promise<void> => {
   try {
     const teams = await teamService.getAllTeams();
@@ -20,9 +17,6 @@ export const getAllTeams = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-/**
- * Create a new team
- */
 export const createTeam = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, description } = req.body;
@@ -54,13 +48,10 @@ export const createTeam = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-/**
- * Get users by team ID
- */
 export const getUsersByTeam = async (req: Request, res: Response): Promise<void> => {
   try {
     const teamId = parseInt(req.params.id);
-    
+
     if (isNaN(teamId)) {
       res.status(400).json({
         success: false,
@@ -70,7 +61,7 @@ export const getUsersByTeam = async (req: Request, res: Response): Promise<void>
     }
 
     const users = await teamService.getUsersByTeam(teamId);
-    
+
     res.status(200).json({
       success: true,
       data: users
@@ -84,14 +75,11 @@ export const getUsersByTeam = async (req: Request, res: Response): Promise<void>
   }
 };
 
-/**
- * Update team
- */
 export const updateTeam = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { name, description } = req.body;
-    
+
     if (!name) {
       res.status(400).json({
         success: false,
@@ -124,9 +112,6 @@ export const updateTeam = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-/**
- * Delete team
- */
 export const deleteTeam = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -153,13 +138,10 @@ export const deleteTeam = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-/**
- * Update users in a team
- */
 export const updateTeamUsers = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { userIds } = req.body; // Expecting array of user IDs
+    const { userIds } = req.body;
 
     if (!Array.isArray(userIds)) {
       res.status(400).json({

@@ -31,6 +31,11 @@ export interface DashboardStats {
     deadline: string;
     avatar?: string;
   }[];
+  stages: {
+    id: string;
+    label: string;
+    count: number;
+  }[];
 }
 
 @Injectable({

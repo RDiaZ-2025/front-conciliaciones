@@ -1,13 +1,14 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
-import { ProductionRequest, WORKFLOW_STAGES, UploadedFile } from '../../production.models';
+import { ProductionRequest, UploadedFile } from '../../production.models';
 import { TagModule } from 'primeng/tag';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { AzureStorageService } from '../../../../services/azure-storage.service';
 import { MessageService } from 'primeng/api';
 import { FilePreviewComponent } from '../../../../components/file-preview/file-preview';
+import { ProductionService } from '../../../../services/production.service';
 
 @Component({
   selector: 'app-production-detail-dialog',
@@ -15,14 +16,26 @@ import { FilePreviewComponent } from '../../../../components/file-preview/file-p
   imports: [CommonModule, TagModule, ButtonModule, TooltipModule, FilePreviewComponent],
   templateUrl: './production-detail-dialog.html'
 })
-export class ProductionDetailDialogComponent {
+export class ProductionDetailDialogComponent implements OnInit {
   ref = inject(DynamicDialogRef);
   config = inject(DynamicDialogConfig);
   azureService = inject(AzureStorageService);
   messageService = inject(MessageService);
+  productionService = inject(ProductionService);
 
   request: ProductionRequest = this.config.data.request;
-  workflowStages = WORKFLOW_STAGES;
+  workflowStages: { id: string; label: string }[] = [];
+
+  ngOnInit() {
+    this.productionService.getWorkflowStages().subscribe({
+      next: (stages) => {
+        this.workflowStages = stages;
+      },
+      error: (error) => {
+        console.error('Error loading workflow stages', error);
+      }
+    });
+  }
 
   // File Preview State
   previewVisible = signal(false);
