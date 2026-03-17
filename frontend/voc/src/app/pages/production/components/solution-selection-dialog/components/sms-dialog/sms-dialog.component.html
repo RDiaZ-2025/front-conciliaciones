@@ -27,20 +27,22 @@
             </label>
             <textarea pTextarea class="w-full" id="sms_messageText" formControlName="sms_messageText" class="w-full" rows="4" maxlength="170" placeholder="Escriba el mensaje aquí..."></textarea>
             <div class="text-right text-sm text-500">{{form.get('sms_messageText')?.value?.length || 0}} / 170</div>
-            <small *ngIf="form.get('sms_messageText')?.invalid && (form.get('sms_messageText')?.dirty || form.get('sms_messageText')?.touched)" class="p-error block">
-                Requerido. Máximo 170 caracteres.
-            </small>
+            <div *ngIf="form.get('sms_messageText')?.invalid && (form.get('sms_messageText')?.dirty || form.get('sms_messageText')?.touched)">
+                <small *ngIf="form.get('sms_messageText')?.hasError('required')" class="p-error block">Requerido.</small>
+                <small *ngIf="form.get('sms_messageText')?.hasError('maxlength')" class="p-error block">Máximo 170 caracteres.</small>
+                <small *ngIf="form.get('sms_messageText')?.hasError('forbiddenChars')" class="p-error block">Contiene caracteres no permitidos (tildes, ñ, ¡, ¿).</small>
+            </div>
         </div>
 
         <div class="field">
             <label for="sms_destinationUrl" class="font-bold block mb-2">
                 URL de Destino
                 <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
-                   pTooltip="URL válida (https://...)." tooltipPosition="top"></i>
+                   pTooltip="Ruta o URL válida." tooltipPosition="top"></i>
             </label>
-            <input pInputText class="w-full" id="sms_destinationUrl" formControlName="sms_destinationUrl" class="w-full" placeholder="https://example.com" />
+            <input pInputText class="w-full" id="sms_destinationUrl" formControlName="sms_destinationUrl" class="w-full" placeholder="ej. https://example.com o /ruta/interna" />
             <small *ngIf="form.get('sms_destinationUrl')?.invalid && (form.get('sms_destinationUrl')?.dirty || form.get('sms_destinationUrl')?.touched)" class="p-error block">
-                URL válida requerida.
+                Requerido.
             </small>
         </div>
 

@@ -53,20 +53,6 @@ export class SmsDialogComponent {
             errors['forbiddenChars'] = true;
         }
 
-        // 2. Must include a destination URL
-        if (!/https?:\/\/[^\s]+/.test(value)) {
-            errors['missingUrl'] = true;
-        }
-
-        // 3. Must begin with client/brand name
-        const formGroup = control.parent;
-        if (formGroup) {
-            const clientName = formGroup.get('sms_clientName')?.value;
-            if (clientName && !value.startsWith(clientName)) {
-                errors['doesNotStartWithBrand'] = true;
-            }
-        }
-
         return Object.keys(errors).length > 0 ? errors : null;
     }
 
@@ -76,7 +62,7 @@ export class SmsDialogComponent {
             solutionType: ['SMS'],
             sms_clientName: ['', [Validators.required, Validators.pattern(/^[A-Z0-9\s]+$/)]],
             sms_messageText: ['', [Validators.required, Validators.maxLength(170), this.smsContentValidator]],
-            sms_destinationUrl: ['', [Validators.required, Validators.pattern(/https?:\/\/.+/)]]
+            sms_destinationUrl: ['', [Validators.required]]
         });
 
         // Pre-fill if editing? The requirement is for new flow, but maybe editing too.
