@@ -23,12 +23,12 @@
             <label for="sms_messageText" class="font-bold block mb-2">
                 Texto del Mensaje
                 <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
-                   pTooltip="Máximo 160 caracteres estándar (GSM 7-bit)." tooltipPosition="top"></i>
+                   pTooltip="Máximo 170 caracteres estándar (GSM 7-bit)." tooltipPosition="top"></i>
             </label>
-            <textarea pTextarea class="w-full" id="sms_messageText" formControlName="sms_messageText" class="w-full" rows="4" maxlength="200" placeholder="Escriba el mensaje aquí..."></textarea>
-            <div class="text-right text-sm text-500">{{form.get('sms_messageText')?.value?.length || 0}} / 200</div>
+            <textarea pTextarea class="w-full" id="sms_messageText" formControlName="sms_messageText" class="w-full" rows="4" maxlength="170" placeholder="Escriba el mensaje aquí..."></textarea>
+            <div class="text-right text-sm text-500">{{form.get('sms_messageText')?.value?.length || 0}} / 170</div>
             <small *ngIf="form.get('sms_messageText')?.invalid && (form.get('sms_messageText')?.dirty || form.get('sms_messageText')?.touched)" class="p-error block">
-                Requerido. Máximo 200 caracteres.
+                Requerido. Máximo 170 caracteres.
             </small>
         </div>
 

@@ -75,7 +75,7 @@ export class SmsDialogComponent {
             solutionCategory: ['MOBILE'],
             solutionType: ['SMS'],
             sms_clientName: ['', [Validators.required, Validators.pattern(/^[A-Z0-9\s]+$/)]],
-            sms_messageText: ['', [Validators.required, Validators.maxLength(200), this.smsContentValidator]],
+            sms_messageText: ['', [Validators.required, Validators.maxLength(170), this.smsContentValidator]],
             sms_destinationUrl: ['', [Validators.required, Validators.pattern(/https?:\/\/.+/)]]
         });
 
