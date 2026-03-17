@@ -29,24 +29,6 @@ import { AzureStorageService } from '../../services/azure-storage.service';
 import { FilePreviewComponent } from '../../components/file-preview/file-preview';
 import { UploadedFile } from './production.models';
 import { InSellActionDialogComponent } from './components/in-sell-action-dialog/in-sell-action-dialog.component';
-import { MaterialPreparationDialogComponent } from './components/material-preparation-dialog/material-preparation-dialog.component';
-import { SolutionSelectionDialogComponent } from './components/solution-selection-dialog/solution-selection-dialog.component';
-import { SmsDialogComponent } from './components/solution-selection-dialog/components/sms-dialog/sms-dialog.component';
-import { RcsDialogComponent } from './components/solution-selection-dialog/components/rcs-dialog/rcs-dialog.component';
-import { SatPushDialogComponent } from './components/solution-selection-dialog/components/sat-push-dialog/sat-push-dialog.component';
-import { PushMultimediaDialogComponent } from './components/solution-selection-dialog/components/push-multimedia-dialog/push-multimedia-dialog.component';
-import { VirtualPreloadsDialogComponent } from './components/solution-selection-dialog/components/virtual-preloads-dialog/virtual-preloads-dialog.component';
-import { PreRecordedCallDialogComponent } from './components/solution-selection-dialog/components/pre-recorded-call-dialog/pre-recorded-call-dialog.component';
-import { WhatsappBusinessDialogComponent } from './components/solution-selection-dialog/components/whatsapp-business-dialog/whatsapp-business-dialog.component';
-import { EmailMarketingDialogComponent } from './components/solution-selection-dialog/components/email-marketing-dialog/email-marketing-dialog.component';
-import { DataRewardsDialogComponent } from './components/solution-selection-dialog/components/data-rewards-dialog/data-rewards-dialog.component';
-import { GenericUploadDialogComponent } from './components/solution-selection-dialog/components/generic-upload-dialog/generic-upload-dialog.component';
-import { PmaxDialogComponent } from './components/solution-selection-dialog/components/pmax-dialog/pmax-dialog.component';
-import { NativeAdsDialogComponent } from './components/solution-selection-dialog/components/native-ads-dialog/native-ads-dialog.component';
-import { MetaAdsDialogComponent } from './components/solution-selection-dialog/components/meta-ads-dialog/meta-ads-dialog.component';
-import { TiktokDialogComponent } from './components/solution-selection-dialog/components/tiktok-dialog/tiktok-dialog.component';
-import { YoutubeDialogComponent } from './components/solution-selection-dialog/components/youtube-dialog/youtube-dialog.component';
-import { ContentRedplusDialogComponent } from './components/solution-selection-dialog/components/content-redplus-dialog/content-redplus-dialog.component';
 import { UploadDialogComponent } from './components/upload-dialog/upload-dialog.component';
 import { ConsecutiveDialogComponent } from './components/consecutive-dialog/consecutive-dialog.component';
 import { AssignImplementationDialogComponent } from './components/assign-implementation-dialog/assign-implementation-dialog.component';
@@ -346,20 +328,19 @@ export class ProductionComponent implements OnInit, OnDestroy {
     });
   }
 
-  openStageTransitionUploadDialog(request: ProductionRequest, targetStage: string) {
+  openStageTransitionUploadDialog(request: ProductionRequest, nextStageId: string) {
     this.ref = this.dialogService.open(StageTransitionUploadDialogComponent, {
-      header: 'Carga de Documentos',
-      width: '50vw',
-      contentStyle: { overflow: 'auto' },
+      header: 'Subir Archivos',
+      width: '500px',
+      contentStyle: { "overflow": "auto" },
       baseZIndex: 10000,
-      maximizable: true,
-      data: { request }
+      data: { request, nextStageId }
     });
 
     if (this.ref) {
       this.ref.onClose.subscribe((result: any) => {
         if (result && result.success) {
-          this.performMove(request, targetStage);
+          this.performMove(request, nextStageId);
         }
       });
     }
@@ -387,157 +368,6 @@ export class ProductionComponent implements OnInit, OnDestroy {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update request' });
       }
     });
-  }
-
-
-
-  openImplementation(request: ProductionRequest) {
-    this.ref = this.dialogService.open(SolutionSelectionDialogComponent, {
-      header: 'Seleccione Solución',
-      width: '60vw',
-      breakpoints: {
-        '960px': '75vw',
-        '640px': '90vw'
-      },
-      contentStyle: { "overflow": "auto" },
-      baseZIndex: 10000,
-      data: { request }
-    });
-
-    if (this.ref) {
-      this.ref.onClose.subscribe((selection: any) => {
-        if (selection) {
-          this.openSolutionDialog(request, selection);
-        }
-      });
-    }
-  }
-
-  openSolutionDialog(request: ProductionRequest, selection: any) {
-    let component: any;
-    let header = 'Configuración de Solución';
-    const solution = selection.solution;
-
-    switch (solution) {
-      // Mobile
-      case 'SMS': component = SmsDialogComponent; header = 'SMS'; break;
-      case 'RCS': component = RcsDialogComponent; header = 'RCS'; break;
-      case 'SAT_PUSH': component = SatPushDialogComponent; header = 'SAT Push'; break;
-      case 'PUSH_MULTIMEDIA': component = PushMultimediaDialogComponent; header = 'Push Multimedia'; break;
-      case 'VIRTUAL_PRELOADS': component = VirtualPreloadsDialogComponent; header = 'Precargas Virtuales'; break;
-      case 'PRE_RECORDED_CALL': component = PreRecordedCallDialogComponent; header = 'Llamada Pregrabada'; break;
-      case 'WHATSAPP_BUSINESS': component = WhatsappBusinessDialogComponent; header = 'WhatsApp Business'; break;
-      case 'EMAIL_MARKETING': component = EmailMarketingDialogComponent; header = 'Email Marketing'; break;
-      case 'DATA_REWARDS': component = DataRewardsDialogComponent; header = 'Data Rewards'; break;
-
-      // Programmatic
-      case 'PMAX_AD': component = PmaxDialogComponent; header = 'PMAX'; break;
-      case 'NATIVE_ADS': component = NativeAdsDialogComponent; header = 'Native Ads'; break;
-      case 'FACEBOOK_INSTAGRAM': component = MetaAdsDialogComponent; header = 'Facebook & Instagram'; break;
-      case 'TIKTOK': component = TiktokDialogComponent; header = 'TikTok'; break;
-      case 'BUMPER_ADS':
-      case 'SKIPPABLE_IN_STREAM':
-      case 'UNSKIPPABLE_IN_STREAM':
-        component = YoutubeDialogComponent; header = 'YouTube'; break;
-
-      // Content Red+
-      case 'CONTENT_PUBLIRREPORTAJE': component = ContentRedplusDialogComponent; header = 'Contenido Red+'; break;
-
-      // Generic / Others
-      default:
-        component = GenericUploadDialogComponent;
-        header = `Carga de Material: ${solution}`;
-        break;
-    }
-
-    this.ref = this.dialogService.open(component, {
-      header: header,
-      width: '70vw',
-      breakpoints: {
-        '960px': '85vw',
-        '640px': '95vw'
-      },
-      contentStyle: { "overflow": "auto" },
-      baseZIndex: 10000,
-      data: { request, selection, solutionType: solution }
-    });
-
-    if (this.ref) {
-      this.ref.onClose.subscribe((result: any) => {
-        if (result) {
-          // Merge selection into result to ensure we have all context
-          const finalData = { ...result, ...selection };
-
-          // Save material data
-          const registerData = {
-            category: selection.category,
-            type: selection.type,
-            solution: selection.solution,
-            jsonRequest: result
-          };
-
-          this.productionService.addMaterialRegister(request.id, registerData).subscribe({
-            next: () => {
-              if (result.status === 'COMPLETED') {
-                this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Información guardada correctamente' });
-                // Move request only if completed
-                this.performMove(request, 'material_preparation');
-              } else {
-                this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Registro agregado' });
-                this.loadRequests();
-              }
-            },
-            error: (err) => {
-              console.error('Error adding material register:', err);
-              this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Error al guardar la información' });
-            }
-          });
-        }
-      });
-    }
-  }
-
-  openMaterialPreparationDialog(request: ProductionRequest, selection: any) {
-    this.ref = this.dialogService.open(MaterialPreparationDialogComponent, {
-      header: 'Implementación',
-      width: '90%',
-      height: '90%',
-      contentStyle: { "overflow": "auto" },
-      baseZIndex: 10000,
-      maximizable: true,
-      data: { request, selection }
-    });
-
-    if (this.ref) {
-      this.ref.onClose.subscribe((result: any) => {
-        if (result) {
-          // Save material data first
-          const registerData = {
-            category: selection.category,
-            type: selection.type,
-            solution: selection.solution,
-            jsonRequest: result
-          };
-
-          this.productionService.addMaterialRegister(request.id, registerData).subscribe({
-            next: () => {
-              if (result.status === 'COMPLETED') {
-                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Material data submitted' });
-                // Move request only if completed
-                this.performMove(request, 'material_preparation');
-              } else {
-                this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Material data draft saved' });
-                this.loadRequests();
-              }
-            },
-            error: (err) => {
-              console.error('Error adding material register:', err);
-              this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save material data' });
-            }
-          });
-        }
-      });
-    }
   }
 
   openUploadDialog(request: ProductionRequest) {
@@ -678,7 +508,16 @@ export class ProductionComponent implements OnInit, OnDestroy {
         return;
 
       case 'closed_won':
-        this.openImplementation(request);
+        this.confirmationService.confirm({
+          message: '¿Estás seguro de continuar a la etapa de Implementación?',
+          header: 'Confirmación',
+          icon: 'pi pi-exclamation-triangle',
+          acceptLabel: 'Sí, continuar',
+          rejectLabel: 'Cancelar',
+          accept: () => {
+            this.openAssignImplementationDialog(request);
+          }
+        });
         return;
 
       case 'consecutive_generation':
@@ -686,12 +525,26 @@ export class ProductionComponent implements OnInit, OnDestroy {
         return;
 
       case 'material_preparation':
+        // Left here for backward compatibility if any request is currently in this stage
         this.openAssignImplementationDialog(request);
         return;
 
       case 'implementation':
-        nextStageId = 'gestion_operativa';
-        break;
+        this.openStageTransitionUploadDialog(request, 'customer_review');
+        return;
+
+      case 'customer_review':
+        this.confirmationService.confirm({
+          message: '¿Estás seguro de finalizar la solicitud y marcarla como completada?',
+          header: 'Confirmación de Cierre',
+          icon: 'pi pi-check-circle',
+          acceptLabel: 'Sí, finalizar',
+          rejectLabel: 'Cancelar',
+          accept: () => {
+            this.performMove(request, 'completed');
+          }
+        });
+        return;
 
       case 'val_materiales_mobile':
       case 'val_materiales_programatica':
@@ -757,6 +610,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
     switch (stageId) {
       case 'completed': return 'success';
       case 'cierre': return 'success';
+      case 'customer_review': return 'info';
       case 'gestion_operativa': return 'contrast';
       case 'val_materiales_mobile':
       case 'val_materiales_programatica':

@@ -543,7 +543,12 @@ const updateProductionRequestPartial = async (req: Request, res: Response): Prom
     if (body.deliveryDate) existingRequest.deliveryDate = new Date(body.deliveryDate);
     if (body.observations) existingRequest.observations = body.observations;
     if (body.status) existingRequest.status = body.status;
-    if (body.stage) existingRequest.status = body.stage;
+    if (body.stage) {
+      existingRequest.status = body.stage;
+      if (body.stage === 'customer_review') {
+        existingRequest.assignedUserId = existingRequest.userCreatorId;
+      }
+    }
 
     if (body.customerData) existingRequest.customerData = { ...existingRequest.customerData, ...body.customerData };
     if (body.audienceData) existingRequest.audienceData = { ...existingRequest.audienceData, ...body.audienceData };

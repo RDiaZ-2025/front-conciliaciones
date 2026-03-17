@@ -7,5 +7,6 @@ export const WORKFLOW_STAGES = [
   { id: 'consecutive_generation', label: 'Generación de Consecutivo' },
   { id: 'closed_won', label: 'Cerrado Ganado' },
   { id: 'implementation', label: 'Implementación' },
+  { id: 'customer_review', label: 'Revisión del Cliente' },
   { id: 'completed', label: 'Completado' }
 ];
