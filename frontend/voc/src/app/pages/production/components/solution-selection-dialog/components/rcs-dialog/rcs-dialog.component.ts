@@ -56,8 +56,8 @@ export class RcsDialogComponent {
         this.form = this.fb.group({
             solutionCategory: ['MOBILE'],
             solutionType: ['RCS'],
-            rcs_agentData: ['', Validators.required],
-            rcs_messageText: ['', [Validators.maxLength(350)]],
+            rcs_agentData: [null, Validators.required],
+            rcs_messageText: ['', [Validators.maxLength(100)]],
             rcs_redirectUrl: ['', [Validators.pattern(/https?:\/\/.+/)]],
             rcs_mediaType: [''], // IMAGE, CAROUSEL, VIDEO
             
@@ -130,6 +130,16 @@ export class RcsDialogComponent {
             this.uploadedFiles.push(file);
         }
         this.messageService.add({ severity: 'info', summary: 'File Uploaded', detail: '' });
+    }
+
+    onAgentDataUpload(event: any) {
+        if (event.files && event.files.length > 0) {
+            const file = event.files[0];
+            this.form.patchValue({ rcs_agentData: file });
+            this.form.get('rcs_agentData')?.markAsTouched();
+            this.form.get('rcs_agentData')?.updateValueAndValidity();
+            this.messageService.add({ severity: 'info', summary: 'Archivo Excel Subido', detail: file.name });
+        }
     }
 
     submit() {

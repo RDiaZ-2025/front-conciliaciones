@@ -8,14 +8,21 @@
         </div>
 
         <div class="field">
-            <label for="rcs_agentData" class="font-bold block mb-2">
+            <label class="font-bold block mb-2">
                 Datos del Agente
                 <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
-                   pTooltip="Información para crear el agente en Google (Nombre, Descripción, Color, etc.)" tooltipPosition="top"></i>
+                   pTooltip="Archivo Excel con la información para crear el agente en Google." tooltipPosition="top"></i>
             </label>
-            <textarea pTextarea class="w-full" id="rcs_agentData" formControlName="rcs_agentData" class="w-full" rows="3" placeholder="Ingrese los datos requeridos para el agente..."></textarea>
-            <small *ngIf="form.get('rcs_agentData')?.invalid && (form.get('rcs_agentData')?.dirty || form.get('rcs_agentData')?.touched)" class="p-error block">
-                Requerido.
+            <p-fileupload mode="basic" chooseLabel="Subir Excel" accept=".xlsx,.xls" 
+                [maxFileSize]="5000000" [customUpload]="true" (uploadHandler)="onAgentDataUpload($event)" 
+                [auto]="true"></p-fileupload>
+            
+            <div *ngIf="form.get('rcs_agentData')?.value" class="mt-2 text-sm text-green-500 flex align-items-center gap-2">
+                <i class="pi pi-check-circle"></i> {{form.get('rcs_agentData')?.value?.name || 'Archivo subido'}}
+            </div>
+
+            <small *ngIf="form.get('rcs_agentData')?.invalid && (form.get('rcs_agentData')?.dirty || form.get('rcs_agentData')?.touched)" class="p-error block mt-1">
+                Requerido. Suba un archivo Excel.
             </small>
         </div>
 
@@ -23,10 +30,10 @@
             <label for="rcs_messageText" class="font-bold block mb-2">
                 Texto del Mensaje
                 <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
-                   pTooltip="Máximo 350 caracteres." tooltipPosition="top"></i>
+                   pTooltip="Máximo 100 caracteres." tooltipPosition="top"></i>
             </label>
-            <textarea pTextarea class="w-full" id="rcs_messageText" formControlName="rcs_messageText" class="w-full" rows="4" maxlength="350" placeholder="Mensaje principal..."></textarea>
-            <div class="text-right text-sm text-500">{{form.get('rcs_messageText')?.value?.length || 0}} / 350</div>
+            <textarea pTextarea class="w-full" id="rcs_messageText" formControlName="rcs_messageText" class="w-full" rows="4" maxlength="100" placeholder="Mensaje principal..."></textarea>
+            <div class="text-right text-sm text-500">{{form.get('rcs_messageText')?.value?.length || 0}} / 100</div>
         </div>
 
         <div class="field">
