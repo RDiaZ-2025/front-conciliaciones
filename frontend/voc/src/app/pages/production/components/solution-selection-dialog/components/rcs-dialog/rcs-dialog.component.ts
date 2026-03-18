@@ -141,16 +141,18 @@ export class RcsDialogComponent {
                             detail: `La imagen ${file.name} debe ser exactamente de 480x240 píxeles. (Actual: ${img.width}x${img.height})` 
                         });
                         
-                        // Eliminar el archivo del componente p-fileupload
-                        const index = uploader.files.indexOf(file);
-                        if (index !== -1) {
-                            uploader.files.splice(index, 1);
+                        // Limpiar el uploader para que no muestre ni retenga el archivo inválido
+                        if (uploader && typeof uploader.clear === 'function') {
+                            uploader.clear();
                         }
                     } else {
                         // Evitar duplicados
                         if (!this.uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
                             this.uploadedFiles.push(file);
                             this.messageService.add({ severity: 'info', summary: 'Archivo Subido', detail: file.name });
+                        }
+                        if (uploader && typeof uploader.clear === 'function') {
+                            uploader.clear();
                         }
                     }
                     URL.revokeObjectURL(img.src);
@@ -159,6 +161,9 @@ export class RcsDialogComponent {
                 if (!this.uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
                     this.uploadedFiles.push(file);
                     this.messageService.add({ severity: 'info', summary: 'Archivo Subido', detail: file.name });
+                }
+                if (uploader && typeof uploader.clear === 'function') {
+                    uploader.clear();
                 }
             }
         }
