@@ -104,6 +104,9 @@ export class RcsDialogComponent {
     }
 
     updateRCSValidators(mediaType: string) {
+        // Limpiar archivos multimedia al cambiar de tipo para evitar inconsistencias
+        this.uploadedFiles = [];
+
         if (mediaType === 'IMAGE') {
             this.setValidators('rcs_image_caption', [Validators.maxLength(25)]);
             this.setValidators('rcs_image_button_label', [Validators.maxLength(25)]);
@@ -125,11 +128,52 @@ export class RcsDialogComponent {
         }
     }
 
-    onUpload(event: any) {
+    onUpload(event: any, uploader: any) {
         for (let file of event.files) {
-            this.uploadedFiles.push(file);
+            if (file.type.startsWith('image/')) {
+                const img = new Image();
+                img.src = URL.createObjectURL(file);
+                img.onload = () => {
+                    if (img.width !== 480 || img.height !== 240) {
+                        this.messageService.add({ 
+                            severity: 'error', 
+                            summary: 'Dimensión Inválida', 
+                            detail: `La imagen ${file.name} debe ser exactamente de 480x240 píxeles. (Actual: ${img.width}x${img.height})` 
+                        });
+                        
+                        // Eliminar el archivo del componente p-fileupload
+                        const index = uploader.files.indexOf(file);
+                        if (index !== -1) {
+                            uploader.files.splice(index, 1);
+                        }
+                    } else {
+                        // Evitar duplicados
+                        if (!this.uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                            this.uploadedFiles.push(file);
+                            this.messageService.add({ severity: 'info', summary: 'Archivo Subido', detail: file.name });
+                        }
+                    }
+                    URL.revokeObjectURL(img.src);
+                };
+            } else {
+                if (!this.uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                    this.uploadedFiles.push(file);
+                    this.messageService.add({ severity: 'info', summary: 'Archivo Subido', detail: file.name });
+                }
+            }
         }
-        this.messageService.add({ severity: 'info', summary: 'File Uploaded', detail: '' });
+    }
+
+    removeUploadedFile(index: number, uploader: any) {
+        const file = this.uploadedFiles[index];
+        this.uploadedFiles.splice(index, 1);
+        
+        if (uploader && uploader.files) {
+            const uploaderIndex = uploader.files.findIndex((f: any) => f.name === file.name && f.size === file.size);
+            if (uploaderIndex !== -1) {
+                uploader.files.splice(uploaderIndex, 1);
+            }
+        }
     }
 
     onAgentDataUpload(event: any) {
