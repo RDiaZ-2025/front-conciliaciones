@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray, AbstractControl } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -37,6 +37,7 @@ export class RcsDialogComponent {
     public ref = inject(DynamicDialogRef);
     public config = inject(DynamicDialogConfig);
     private messageService = inject(MessageService);
+    private cd = inject(ChangeDetectorRef);
 
     form: FormGroup;
     uploadedFiles: any[] = [];
@@ -134,11 +135,11 @@ export class RcsDialogComponent {
                 const img = new Image();
                 img.src = URL.createObjectURL(file);
                 img.onload = () => {
-                    if (img.width !== 480 || img.height !== 240) {
+                    if (img.width !== 480 || img.height !== 220) {
                         this.messageService.add({ 
                             severity: 'error', 
                             summary: 'Dimensión Inválida', 
-                            detail: `La imagen ${file.name} debe ser exactamente de 480x240 píxeles. (Actual: ${img.width}x${img.height})` 
+                            detail: `La imagen ${file.name} debe ser exactamente de 480x220 píxeles. (Actual: ${img.width}x${img.height})` 
                         });
                         
                         // Limpiar el uploader para que no muestre ni retenga el archivo inválido
@@ -155,6 +156,7 @@ export class RcsDialogComponent {
                             uploader.clear();
                         }
                     }
+                    this.cd.detectChanges();
                     URL.revokeObjectURL(img.src);
                 };
             } else {

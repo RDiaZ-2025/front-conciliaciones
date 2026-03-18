@@ -81,6 +81,10 @@ Video (Opcional)
         { label: 'Transaccional', value: 'TRANSACTIONAL' }
     ];
 
+    categories: any[] = [];
+    filteredSubcategories: any[] = [];
+    filteredSolutions: any[] = [];
+
     socialNetworks = [
         { label: 'Facebook', value: 'FACEBOOK' },
         { label: 'Instagram', value: 'INSTAGRAM' },
@@ -564,7 +568,7 @@ Video (Opcional)
             this.updateRCSValidators(this.form.get('rcs_mediaType')?.value);
         }
         else if (solution === 'SAT_PUSH') {
-            this.setValidators('sat_clientName', [Validators.required, Validators.pattern(/^[A-Z\s]+$/)]);
+            this.setValidators('sat_clientName', [Validators.required, Validators.pattern(/^[a-zA-Z\s]+$/)]);
             this.setValidators('sat_messageText', [
                 Validators.required,
                 Validators.maxLength(160),
@@ -718,13 +722,15 @@ Video (Opcional)
         if (formGroup) {
             const clientName = formGroup.get('sat_clientName')?.value;
             if (clientName) {
-                const prefix = `PUBLICIDAD DE ${clientName}`;
-                if (!value.startsWith(prefix)) {
+                const prefix = `PUBLICIDAD DE ${clientName.toUpperCase()}`;
+                // Allow case-insensitive prefix check and allow optional colon
+                const cleanValue = value.toUpperCase().replace(/^PUBLICIDAD DE:\s*/, 'PUBLICIDAD DE ');
+                if (!cleanValue.startsWith(prefix)) {
                     errors['invalidPrefix'] = true;
                     errors['expectedPrefix'] = prefix;
                 }
             } else {
-                if (!value.startsWith("PUBLICIDAD DE ")) {
+                if (!value.toUpperCase().startsWith("PUBLICIDAD DE ")) {
                     errors['invalidPrefix'] = true;
                     errors['expectedPrefix'] = "PUBLICIDAD DE (NOMBRE CLIENTE)";
                 }
@@ -788,7 +794,7 @@ Video (Opcional)
             const logo = this.uploadedFiles.find(f => f.category === 'logo');
 
             if (!banner) {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Falta la imagen Banner (700x330 JPG).' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Falta la imagen Banner (700x300 JPG).' });
                 return;
             }
             if (!logo) {
@@ -893,6 +899,11 @@ Video (Opcional)
                 files: this.uploadedFiles,
                 status: 'COMPLETED'
             };
+            
+            if (this.selectedSolution() === 'SAT_PUSH' && formValue.sat_clientName) {
+                formValue.sat_clientName = formValue.sat_clientName.toUpperCase();
+            }
+
             this.ref.close(formValue);
         } else {
             this.form.markAllAsTouched();
@@ -1241,9 +1252,9 @@ Video (Opcional)
             img.onload = () => {
                 let valid = true;
                 if (category === 'banner') {
-                    // 700x330
-                    if (img.width !== 700 || img.height !== 330) {
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail: `Banner debe ser 700x330 px. (Actual: ${img.width}x${img.height})` });
+                    // 700x300
+                    if (img.width !== 700 || img.height !== 300) {
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: `Banner debe ser 700x300 px. (Actual: ${img.width}x${img.height})` });
                         valid = false;
                     }
                 } else if (category === 'logo') {

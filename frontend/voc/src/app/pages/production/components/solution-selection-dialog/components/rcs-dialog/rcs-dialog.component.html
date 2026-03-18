@@ -99,10 +99,10 @@
 
         <div class="field mt-3">
             <label class="font-bold block mb-2">
-                Archivos Multimedia
-                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
-                   pTooltip="Imagen (480x240 JPG/PNG) o Video (MP4). Verifique los requisitos según el tipo seleccionado." tooltipPosition="top"></i>
-            </label>
+            Archivos Multimedia
+            <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+               pTooltip="Imagen (480x220 JPG/PNG) o Video (MP4). Verifique los requisitos según el tipo seleccionado." tooltipPosition="top"></i>
+          </label>
             <p-fileupload #fileUploader mode="basic" chooseLabel="Seleccionar Archivos" [accept]="fileAccept" 
                 [maxFileSize]="maxFileSize" [customUpload]="true" (uploadHandler)="onUpload($event, fileUploader)" 
                 [auto]="true" [multiple]="true" class="mb-3 block"></p-fileupload>

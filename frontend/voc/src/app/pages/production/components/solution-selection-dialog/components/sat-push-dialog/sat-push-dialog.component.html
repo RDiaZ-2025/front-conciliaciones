@@ -32,7 +32,7 @@
                 No se permiten tildes, ñ, Ñ ni caracteres especiales.
             </small>
             <small *ngIf="form.get('sat_messageText')?.errors?.['invalidPrefix']" class="p-error block">
-                Debe comenzar con: <strong>{{form.get('sat_messageText')?.errors?.['expectedPrefix']}}</strong>
+                Debe comenzar exactamente con: "<strong>{{form.get('sat_messageText')?.errors?.['expectedPrefix']}}</strong>"
             </small>
         </div>
 

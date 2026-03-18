@@ -29,26 +29,46 @@
 
         <div class="formgrid grid gap-4">
             <div class="col-12 md:col-6 flex flex-column gap-2">
-                <label class="text-700">Banner (700x330 JPG)</label>
-                <p-fileUpload 
+                <label class="text-700">Banner (700x300 JPG)
+                    <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                       pTooltip="El banner debe tener dimensiones exactas de 700x300 píxeles." tooltipPosition="top"></i>
+                </label>
+                <p-fileUpload #bannerUploader
                     mode="basic" 
                     chooseLabel="Subir Banner" 
-                    accept="image/jpeg" 
+                    accept="image/jpeg, image/jpg" 
                     [maxFileSize]="2000000" 
-                    (onSelect)="onUpload($event, 'banner')"
+                    (onSelect)="onUpload($event, 'banner', bannerUploader)"
                     [auto]="true">
                 </p-fileUpload>
+                <div *ngIf="getUploadedFile('banner')" class="flex align-items-center justify-content-between mt-2 p-2 surface-ground border-round">
+                    <div class="flex align-items-center gap-2 overflow-hidden">
+                        <img [src]="getUploadedFile('banner').safeUrl" alt="Banner Preview" style="max-height: 50px; max-width: 100px; object-fit: contain;" class="border-round" />
+                        <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ getUploadedFile('banner').name }}</span>
+                    </div>
+                    <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('banner', bannerUploader)"></p-button>
+                </div>
             </div>
             <div class="col-12 md:col-6 flex flex-column gap-2">
-                <label class="text-700">Logo (96x96 JPG)</label>
-                <p-fileUpload 
+                <label class="text-700">Logo (96x96 JPG)
+                    <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                       pTooltip="El logo debe tener dimensiones exactas de 96x96 píxeles." tooltipPosition="top"></i>
+                </label>
+                <p-fileUpload #logoUploader
                     mode="basic" 
                     chooseLabel="Subir Logo" 
-                    accept="image/jpeg" 
+                    accept="image/jpeg, image/jpg" 
                     [maxFileSize]="1000000" 
-                    (onSelect)="onUpload($event, 'logo')"
+                    (onSelect)="onUpload($event, 'logo', logoUploader)"
                     [auto]="true">
                 </p-fileUpload>
+                <div *ngIf="getUploadedFile('logo')" class="flex align-items-center justify-content-between mt-2 p-2 surface-ground border-round">
+                    <div class="flex align-items-center gap-2 overflow-hidden">
+                        <img [src]="getUploadedFile('logo').safeUrl" alt="Logo Preview" style="max-height: 50px; max-width: 50px; object-fit: contain;" class="border-round" />
+                        <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ getUploadedFile('logo').name }}</span>
+                    </div>
+                    <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('logo', logoUploader)"></p-button>
+                </div>
             </div>
         </div>
     </form>

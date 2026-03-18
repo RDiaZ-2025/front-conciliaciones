@@ -51,13 +51,15 @@ export class SatPushDialogComponent {
         if (formGroup) {
             const clientName = formGroup.get('sat_clientName')?.value;
             if (clientName) {
-                const prefix = `PUBLICIDAD DE ${clientName}`;
-                if (!value.startsWith(prefix)) {
+                const prefix = `PUBLICIDAD DE ${clientName.toUpperCase()}`;
+                // Allow case-insensitive prefix check and allow optional colon
+                const cleanValue = value.toUpperCase().replace(/^PUBLICIDAD DE:\s*/, 'PUBLICIDAD DE ');
+                if (!cleanValue.startsWith(prefix)) {
                     errors['invalidPrefix'] = true;
                     errors['expectedPrefix'] = prefix;
                 }
             } else {
-                if (!value.startsWith("PUBLICIDAD DE ")) {
+                if (!value.toUpperCase().startsWith("PUBLICIDAD DE ")) {
                     errors['invalidPrefix'] = true;
                     errors['expectedPrefix'] = "PUBLICIDAD DE (NOMBRE CLIENTE)";
                 }
@@ -71,7 +73,7 @@ export class SatPushDialogComponent {
         this.form = this.fb.group({
             solutionCategory: ['MOBILE'],
             solutionType: ['SAT_PUSH'],
-            sat_clientName: ['', [Validators.required, Validators.pattern(/^[A-Z\s]+$/)]],
+            sat_clientName: ['', [Validators.required, Validators.pattern(/^[a-zA-Z\s]+$/)]],
             sat_messageText: ['', [Validators.required, Validators.maxLength(160), this.satMessageValidator]],
             sat_url: ['', [Validators.required, Validators.pattern(/https?:\/\/.+/)]],
             sat_isClickToCall: [false],
@@ -111,6 +113,7 @@ export class SatPushDialogComponent {
         if (this.form.valid) {
             const formValue = {
                 ...this.form.value,
+                sat_clientName: this.form.value.sat_clientName?.toUpperCase(),
                 status: 'COMPLETED'
             };
             this.ref.close(formValue);
