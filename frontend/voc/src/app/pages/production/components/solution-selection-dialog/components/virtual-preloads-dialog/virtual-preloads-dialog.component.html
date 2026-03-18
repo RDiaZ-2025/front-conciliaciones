@@ -28,37 +28,61 @@
 
         <div class="formgrid grid gap-4">
             <div class="col-12 md:col-6 flex flex-column gap-2">
-                <label class="text-700">Icono (256x256)</label>
-                <p-fileUpload 
+                <label class="text-700">Icono (256x256)
+                    <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                       pTooltip="El icono debe tener dimensiones exactas de 256x256 píxeles." tooltipPosition="top"></i>
+                </label>
+                <p-fileUpload #iconUploader
                     mode="basic" 
                     chooseLabel="Subir Icono" 
                     accept="image/*" 
                     [maxFileSize]="2000000" 
-                    (onSelect)="onUpload($event, 'icon')"
+                    (onSelect)="onUpload($event, 'icon', iconUploader)"
                     [auto]="true">
                 </p-fileUpload>
+                <div *ngIf="getUploadedFile('icon')" class="flex align-items-center justify-content-between mt-2 p-2 surface-ground border-round">
+                    <div class="flex align-items-center gap-2 overflow-hidden">
+                        <img [src]="getUploadedFile('icon').safeUrl" alt="Icon Preview" style="max-height: 50px; max-width: 50px; object-fit: contain;" class="border-round" />
+                        <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ getUploadedFile('icon').name }}</span>
+                    </div>
+                    <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('icon', iconUploader)"></p-button>
+                </div>
             </div>
             <div class="col-12 md:col-6 flex flex-column gap-2">
                 <label class="text-700">Imagen (Aspecto 2:1)</label>
-                <p-fileUpload 
+                <p-fileUpload #imageUploader
                     mode="basic" 
                     chooseLabel="Subir Imagen" 
                     accept="image/*" 
                     [maxFileSize]="2000000" 
-                    (onSelect)="onUpload($event, 'image')"
+                    (onSelect)="onUpload($event, 'image', imageUploader)"
                     [auto]="true">
                 </p-fileUpload>
+                <div *ngIf="getUploadedFile('image')" class="flex align-items-center justify-content-between mt-2 p-2 surface-ground border-round">
+                    <div class="flex align-items-center gap-2 overflow-hidden">
+                        <img [src]="getUploadedFile('image').safeUrl" alt="Image Preview" style="max-height: 50px; max-width: 100px; object-fit: contain;" class="border-round" />
+                        <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ getUploadedFile('image').name }}</span>
+                    </div>
+                    <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('image', imageUploader)"></p-button>
+                </div>
             </div>
-            <div class="flex flex-column gap-2 col-span-2">
+            <div class="col-12 flex flex-column gap-2">
                 <label class="text-700">APK (Opcional si hay URL)</label>
-                <p-fileUpload 
+                <p-fileUpload #apkUploader
                     mode="basic" 
                     chooseLabel="Subir APK" 
                     accept=".apk,application/vnd.android.package-archive" 
                     [maxFileSize]="50000000" 
-                    (onSelect)="onUpload($event, 'apk')"
+                    (onSelect)="onUpload($event, 'apk', apkUploader)"
                     [auto]="true">
                 </p-fileUpload>
+                <div *ngIf="getUploadedFile('apk')" class="flex align-items-center justify-content-between mt-2 p-2 surface-ground border-round">
+                    <div class="flex align-items-center gap-2 overflow-hidden">
+                        <i class="pi pi-file text-primary"></i>
+                        <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ getUploadedFile('apk').name }}</span>
+                    </div>
+                    <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('apk', apkUploader)"></p-button>
+                </div>
             </div>
         </div>
     </form>
