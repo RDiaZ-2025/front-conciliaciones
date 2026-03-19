@@ -64,12 +64,26 @@ export class PreRecordedCallDialogComponent {
     });
   }
 
-  onUpload(event: any, category: string) {
+  getUploadedFile(category: string) {
+    return this.uploadedFiles.find(f => f.category === category);
+  }
+
+  removeFile(category: string, uploader: any) {
+    this.uploadedFiles = this.uploadedFiles.filter(f => f.category !== category);
+    if (uploader && typeof uploader.clear === 'function') {
+      uploader.clear();
+    }
+  }
+
+  onUpload(event: any, category: string, uploader: any) {
     for (const file of event.files) {
       this.uploadedFiles = this.uploadedFiles.filter(f => f.category !== category);
       this.uploadedFiles.push({ ...file, category });
     }
     this.messageService.add({ severity: 'info', summary: 'Success', detail: 'File uploaded' });
+    if (uploader && typeof uploader.clear === 'function') {
+      uploader.clear();
+    }
   }
 
   async submit() {

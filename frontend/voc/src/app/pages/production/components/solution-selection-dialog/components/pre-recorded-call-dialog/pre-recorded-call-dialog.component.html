@@ -35,14 +35,21 @@
 
         <div class="flex flex-column gap-2">
             <label class="text-700">Audio (.wav)</label>
-            <p-fileUpload 
+            <p-fileUpload #audioUploader
                 mode="basic" 
                 chooseLabel="Subir Audio" 
                 accept="audio/wav,audio/x-wav" 
                 [maxFileSize]="5000000" 
-                (onSelect)="onUpload($event, 'audio')"
+                (onSelect)="onUpload($event, 'audio', audioUploader)"
                 [auto]="true">
             </p-fileUpload>
+            <div *ngIf="getUploadedFile('audio')" class="flex align-items-center justify-content-between mt-2 p-2 surface-ground border-round">
+                <div class="flex align-items-center gap-2 overflow-hidden">
+                    <i class="pi pi-volume-up text-primary"></i>
+                    <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ getUploadedFile('audio').name }}</span>
+                </div>
+                <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('audio', audioUploader)"></p-button>
+            </div>
         </div>
     </form>
 
