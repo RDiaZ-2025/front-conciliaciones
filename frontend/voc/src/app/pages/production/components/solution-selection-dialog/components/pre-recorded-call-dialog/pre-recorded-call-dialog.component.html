@@ -43,12 +43,15 @@
                 (onSelect)="onUpload($event, 'audio', audioUploader)"
                 [auto]="true">
             </p-fileUpload>
-            <div *ngIf="getUploadedFile('audio')" class="flex align-items-center justify-content-between mt-2 p-2 surface-ground border-round">
-                <div class="flex align-items-center gap-2 overflow-hidden">
-                    <i class="pi pi-volume-up text-primary"></i>
-                    <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ getUploadedFile('audio').name }}</span>
+            <div *ngIf="getUploadedFile('audio')" class="flex flex-column gap-2 mt-2 p-2 surface-ground border-round">
+                <div class="flex align-items-center justify-content-between">
+                    <div class="flex align-items-center gap-2 overflow-hidden">
+                        <i class="pi pi-volume-up text-primary"></i>
+                        <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap font-medium">{{ getUploadedFile('audio').name }}</span>
+                    </div>
+                    <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('audio', audioUploader)"></p-button>
                 </div>
-                <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('audio', audioUploader)"></p-button>
+                <audio *ngIf="getUploadedFile('audio').safeUrl" controls [src]="getUploadedFile('audio').safeUrl" class="w-full mt-2" style="height: 40px;"></audio>
             </div>
         </div>
     </form>
