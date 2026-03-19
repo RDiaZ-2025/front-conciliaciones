@@ -18,50 +18,65 @@
 
         <div class="flex flex-column gap-2">
             <label class="font-bold">Imágenes (Opcional)</label>
-            <p-fileUpload 
+            <p-fileUpload #imagesUploader
                 mode="basic" 
                 chooseLabel="Seleccionar Imágenes" 
                 name="wsp_business_images"
                 accept="image/*" 
                 maxFileSize="1000000" 
-                (onSelect)="onUpload($event, 'wsp_business_images')"
-                [auto]="true"
-                [styleClass]="uploadStatus()['wsp_business_images'] ? 'p-button-success' : ''">
+                (onSelect)="onUpload($event, 'wsp_business_images', imagesUploader)"
+                [auto]="true">
             </p-fileUpload>
-            <small class="text-green-500" *ngIf="uploadStatus()['wsp_business_images']">Archivo cargado</small>
+            <div *ngIf="getUploadedFile('wsp_business_images')" class="flex align-items-center justify-content-between mt-2 p-2 surface-ground border-round">
+                <div class="flex align-items-center gap-2 overflow-hidden">
+                    <img *ngIf="getUploadedFile('wsp_business_images').safeUrl" [src]="getUploadedFile('wsp_business_images').safeUrl" alt="Preview" style="max-height: 50px; max-width: 50px; object-fit: contain;" class="border-round" />
+                    <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap font-medium">{{ getUploadedFile('wsp_business_images').name }}</span>
+                </div>
+                <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('wsp_business_images', imagesUploader)"></p-button>
+            </div>
         </div>
 
         <div class="flex flex-column gap-2">
             <label class="font-bold">Video (Opcional)</label>
-            <p-fileUpload 
+            <p-fileUpload #videoUploader
                 mode="basic" 
                 chooseLabel="Seleccionar Video" 
                 name="wsp_business_video"
                 accept="video/*" 
                 maxFileSize="10000000" 
-                (onSelect)="onUpload($event, 'wsp_business_video')"
-                [auto]="true"
-                [styleClass]="uploadStatus()['wsp_business_video'] ? 'p-button-success' : ''">
+                (onSelect)="onUpload($event, 'wsp_business_video', videoUploader)"
+                [auto]="true">
             </p-fileUpload>
-            <small class="text-green-500" *ngIf="uploadStatus()['wsp_business_video']">Archivo cargado</small>
+            <div *ngIf="getUploadedFile('wsp_business_video')" class="flex align-items-center justify-content-between mt-2 p-2 surface-ground border-round">
+                <div class="flex align-items-center gap-2 overflow-hidden">
+                    <video *ngIf="getUploadedFile('wsp_business_video').safeUrl" [src]="getUploadedFile('wsp_business_video').safeUrl" style="max-height: 50px; max-width: 50px; object-fit: cover;" class="border-round"></video>
+                    <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap font-medium">{{ getUploadedFile('wsp_business_video').name }}</span>
+                </div>
+                <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('wsp_business_video', videoUploader)"></p-button>
+            </div>
         </div>
 
         <div class="flex flex-column gap-2">
             <label class="font-bold">Base de Datos (CSV)</label>
-            <p-fileUpload 
+            <p-fileUpload #csvUploader
                 mode="basic" 
                 chooseLabel="Seleccionar CSV" 
                 name="wsp_business_csv"
                 accept=".csv" 
                 maxFileSize="5000000" 
-                (onSelect)="onUpload($event, 'wsp_business_csv')"
-                [auto]="true"
-                [styleClass]="uploadStatus()['wsp_business_csv'] ? 'p-button-success' : ''">
+                (onSelect)="onUpload($event, 'wsp_business_csv', csvUploader)"
+                [auto]="true">
             </p-fileUpload>
-            <small class="text-red-500" *ngIf="form.get('wsp_business_csv')?.invalid && form.get('wsp_business_csv')?.touched">
+            <div *ngIf="getUploadedFile('wsp_business_csv')" class="flex align-items-center justify-content-between mt-2 p-2 surface-ground border-round">
+                <div class="flex align-items-center gap-2 overflow-hidden">
+                    <i class="pi pi-file-excel text-primary text-2xl"></i>
+                    <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap font-medium">{{ getUploadedFile('wsp_business_csv').name }}</span>
+                </div>
+                <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('wsp_business_csv', csvUploader)"></p-button>
+            </div>
+            <small class="text-red-500" *ngIf="form.get('wsp_business_csv')?.invalid && form.get('wsp_business_csv')?.touched && !getUploadedFile('wsp_business_csv')">
                 El archivo CSV es requerido
             </small>
-            <small class="text-green-500" *ngIf="uploadStatus()['wsp_business_csv']">Archivo cargado</small>
         </div>
 
         <div class="flex justify-content-end gap-2 mt-4">
