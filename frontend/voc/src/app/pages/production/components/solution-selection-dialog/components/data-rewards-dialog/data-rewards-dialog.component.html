@@ -10,20 +10,28 @@
 
         <div class="flex flex-column gap-2">
             <label class="font-bold">Video (MP4, Max 27MB)</label>
-            <p-fileUpload 
+            <p-fileUpload #videoUploader
                 mode="basic" 
                 chooseLabel="Seleccionar Video" 
                 name="data_rewards_video"
                 accept="video/mp4" 
                 maxFileSize="27000000" 
-                (onSelect)="onUpload($event, 'data_rewards_video')"
-                [auto]="true"
-                [styleClass]="uploadStatus()['data_rewards_video'] ? 'p-button-success' : ''">
+                (onSelect)="onUpload($event, 'data_rewards_video', videoUploader)"
+                [auto]="true">
             </p-fileUpload>
-            <small class="text-red-500" *ngIf="form.get('data_rewards_video')?.invalid && form.get('data_rewards_video')?.touched">
+            <div *ngIf="getUploadedFile('data_rewards_video')" class="flex flex-column gap-2 mt-2 p-2 surface-ground border-round">
+                <div class="flex align-items-center justify-content-between">
+                    <div class="flex align-items-center gap-2 overflow-hidden">
+                        <i class="pi pi-video text-primary"></i>
+                        <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap font-medium">{{ getUploadedFile('data_rewards_video').name }}</span>
+                    </div>
+                    <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('data_rewards_video', videoUploader)"></p-button>
+                </div>
+                <video *ngIf="getUploadedFile('data_rewards_video').safeUrl" controls [src]="getUploadedFile('data_rewards_video').safeUrl" class="w-full mt-2 border-round" style="max-height: 200px;"></video>
+            </div>
+            <small class="text-red-500" *ngIf="form.get('data_rewards_video')?.invalid && form.get('data_rewards_video')?.touched && !getUploadedFile('data_rewards_video')">
                 El video es requerido
             </small>
-            <small class="text-green-500" *ngIf="uploadStatus()['data_rewards_video']">Archivo cargado</small>
         </div>
 
         <div class="flex justify-content-end gap-2 mt-4">
