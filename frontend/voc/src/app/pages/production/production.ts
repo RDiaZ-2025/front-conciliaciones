@@ -317,13 +317,13 @@ export class ProductionComponent implements OnInit, OnDestroy {
     });
   }
 
-  openStageTransitionUploadDialog(request: ProductionRequest, nextStageId: string) {
+  openStageTransitionUploadDialog(request: ProductionRequest, nextStageId: string, requiredDocumentName: string = 'documento de soporte') {
     this.ref = this.dialogService.open(StageTransitionUploadDialogComponent, {
       header: 'Subir Archivos',
       width: '500px',
       contentStyle: { "overflow": "auto" },
       baseZIndex: 10000,
-      data: { request, nextStageId }
+      data: { request, nextStageId, requiredDocumentName }
     });
 
     if (this.ref) {
@@ -453,7 +453,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
         this.openAssignImplementationDialog(request);
         return;
       case 'implementation':
-        this.openStageTransitionUploadDialog(request, 'customer_review');
+        this.openStageTransitionUploadDialog(request, 'customer_review', 'Informe de herramientas implementadas');
         return;
       case 'customer_review':
         this.confirmationService.confirm({
@@ -462,6 +462,8 @@ export class ProductionComponent implements OnInit, OnDestroy {
           icon: 'pi pi-check-circle',
           acceptLabel: 'Sí, finalizar',
           rejectLabel: 'Cancelar',
+          acceptButtonStyleClass: 'p-button-success',
+          rejectButtonStyleClass: 'p-button-text p-button-secondary mr-2',
           accept: () => {
             this.performMove(request, 'completed');
           }

@@ -1,6 +1,7 @@
 <div class="flex flex-column gap-4 p-4">
     <div class="text-color-secondary mb-3">
-        Para avanzar a la siguiente etapa, es necesario cargar al menos un (1) documento de soporte.
+        Para avanzar a la siguiente etapa, es necesario cargar al menos un (1) <span class="font-bold">{{
+            requiredDocumentName }}</span>.
     </div>
 
     <div>
@@ -24,10 +25,6 @@
                     <button pButton icon="pi pi-download"
                         class="p-button-text p-button-secondary p-button-sm p-0 w-2rem h-2rem"
                         (click)="downloadFile(file)" pTooltip="Descargar" tooltipPosition="top"></button>
-                    <!-- Usually we don't allow deleting files in this transition unless specified, but let's keep it safe (read-only for existing) or allow delete? 
-                         User said "allow to the user upload different files... show a list... allow upload more". 
-                         It doesn't explicitly say delete. I'll omit delete for existing files to be safe, or maybe allow it? 
-                         Let's stick to upload for now. -->
                 </div>
             </div>
         </div>

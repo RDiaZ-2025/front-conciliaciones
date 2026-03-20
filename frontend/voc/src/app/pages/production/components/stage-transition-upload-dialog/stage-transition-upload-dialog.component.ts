@@ -32,9 +32,13 @@ export class StageTransitionUploadDialogComponent implements OnInit {
   existingFiles: UploadedFile[] = [];
   selectedFiles: File[] = [];
   isUploading = false;
+  requiredDocumentName = 'documento de soporte';
 
   ngOnInit() {
     this.request = this.config.data.request;
+    if (this.config.data.requiredDocumentName) {
+      this.requiredDocumentName = this.config.data.requiredDocumentName;
+    }
     if (this.request) {
       this.loadFiles();
     }
@@ -114,7 +118,7 @@ export class StageTransitionUploadDialogComponent implements OnInit {
 
   advance() {
     if (this.existingFiles.length === 0) {
-      this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'Debe cargar al menos un (1) documento antes de avanzar.' });
+      this.messageService.add({ severity: 'warn', summary: 'Atención', detail: `Debe cargar al menos un (1) ${this.requiredDocumentName} antes de avanzar.` });
       return;
     }
 
