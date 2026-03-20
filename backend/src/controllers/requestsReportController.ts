@@ -150,7 +150,6 @@ export class RequestsReportController {
         let statusDisplay = task.status || 'unknown';
 
         const translations: { [key: string]: string } = {
-          'request': 'Solicitud',
           'quotation': 'Cotización',
           'in_edit': 'En Edición',
           'in_progress': 'En Curso',

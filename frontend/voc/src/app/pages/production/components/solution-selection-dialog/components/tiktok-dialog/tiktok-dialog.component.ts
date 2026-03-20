@@ -42,7 +42,8 @@ export class TiktokDialogComponent {
   onUpload(event: any, category: string) {
     for (const file of event.files) {
       this.uploadedFiles = this.uploadedFiles.filter(f => f.category !== category || category === 'tiktok_videos');
-      this.uploadedFiles.push({ ...file, category });
+      file.category = category;
+      this.uploadedFiles.push(file);
     }
     this.messageService.add({ severity: 'info', summary: 'Success', detail: 'File uploaded' });
   }

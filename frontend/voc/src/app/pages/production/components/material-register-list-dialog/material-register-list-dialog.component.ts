@@ -7,10 +7,10 @@ import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { MaterialRegister, ProductionRequest } from '../../production.models';
 import { ProductionService } from '../../../../services/production.service';
+import { AzureStorageService } from '../../../../services/azure-storage.service';
 
 // Dialog Components
 import { SolutionSelectionDialogComponent } from '../solution-selection-dialog/solution-selection-dialog.component';
-import { MaterialPreparationDialogComponent } from '../material-preparation-dialog/material-preparation-dialog.component';
 import { SmsDialogComponent } from '../solution-selection-dialog/components/sms-dialog/sms-dialog.component';
 import { RcsDialogComponent } from '../solution-selection-dialog/components/rcs-dialog/rcs-dialog.component';
 import { SatPushDialogComponent } from '../solution-selection-dialog/components/sat-push-dialog/sat-push-dialog.component';
@@ -28,6 +28,8 @@ import { TiktokDialogComponent } from '../solution-selection-dialog/components/t
 import { YoutubeDialogComponent } from '../solution-selection-dialog/components/youtube-dialog/youtube-dialog.component';
 import { ContentRedplusDialogComponent } from '../solution-selection-dialog/components/content-redplus-dialog/content-redplus-dialog.component';
 import { GenericViewDialogComponent } from './generic-view-dialog/generic-view-dialog.component';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 
 @Component({
     selector: 'app-material-register-list-dialog',
@@ -41,12 +43,14 @@ export class MaterialRegisterListDialogComponent implements OnInit {
     config = inject(DynamicDialogConfig);
     ref = inject(DynamicDialogRef);
     productionService = inject(ProductionService);
+    azureService = inject(AzureStorageService);
     dialogService = inject(DialogService);
     messageService = inject(MessageService);
     cdr = inject(ChangeDetectorRef);
 
     request!: ProductionRequest;
     registers: MaterialRegister[] = [];
+    isDownloading: { [key: number]: boolean } = {};
 
     // Keep track of secondary dialog ref
     dialogRef: DynamicDialogRef | undefined | null;
@@ -130,18 +134,41 @@ export class MaterialRegisterListDialogComponent implements OnInit {
         if (this.dialogRef) {
             this.dialogRef.onClose.subscribe((result: any) => {
                 if (result) {
-                    const finalData = { ...result, ...selection };
+                    const filesToUpload: File[] = result.files || [];
+                    const jsonRequestWithoutFiles = { ...result };
+                    delete jsonRequestWithoutFiles.files;
+
+                    const finalData = { ...jsonRequestWithoutFiles, ...selection };
 
                     const registerData = {
                         category: selection.category,
                         type: selection.type,
                         solution: selection.solution,
-                        jsonRequest: result
+                        jsonRequest: jsonRequestWithoutFiles
                     };
 
                     this.productionService.addMaterialRegister(request.id, registerData).subscribe({
-                        next: () => {
-                            this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Registro agregado' });
+                        next: async (newRegister: any) => {
+                            if (filesToUpload.length > 0 && newRegister && newRegister.id) {
+                                try {
+                                    const folderPath = `${AzureStorageService.generateProductionRequestFolderPath(request.id.toString())}/${newRegister.id}`;
+                                    await this.azureService.uploadFiles(filesToUpload, {
+                                        folderPath,
+                                        containerName: 'private',
+                                        metadata: {
+                                            requestId: request.id.toString(),
+                                            registerId: newRegister.id.toString(),
+                                            uploadType: 'material_register'
+                                        }
+                                    });
+                                    this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Registro y archivos agregados correctamente' });
+                                } catch (uploadErr) {
+                                    console.error('Error uploading files:', uploadErr);
+                                    this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'Registro creado pero hubo un error al subir los archivos' });
+                                }
+                            } else {
+                                this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Registro agregado' });
+                            }
                             this.loadRegisters(); // Refresh the list
                         },
                         error: (err) => {
@@ -156,6 +183,48 @@ export class MaterialRegisterListDialogComponent implements OnInit {
 
     close() {
         this.ref.close();
+    }
+
+    async downloadFiles(register: MaterialRegister) {
+        if (!register || !register.id) return;
+
+        this.isDownloading[register.id] = true;
+        this.messageService.add({ severity: 'info', summary: 'Descargando', detail: 'Preparando archivos para descarga...' });
+
+        try {
+            const folderPath = `${AzureStorageService.generateProductionRequestFolderPath(this.request.id.toString())}/${register.id}`;
+            const blobs = await this.azureService.listBlobs(folderPath, 'private');
+
+            if (!blobs || blobs.length === 0) {
+                this.messageService.add({ severity: 'info', summary: 'Sin archivos', detail: 'No se encontraron archivos para este registro.' });
+                this.isDownloading[register.id] = false;
+                return;
+            }
+
+            const zip = new JSZip();
+            const downloadPromises = blobs.map(async (blobName) => {
+                const blobData = await this.azureService.downloadBlob(blobName, 'private');
+                if (blobData) {
+                    // Extract just the file name from the full blob path
+                    const fileName = blobName.split('/').pop() || 'archivo_desconocido';
+                    zip.file(fileName, blobData);
+                }
+            });
+
+            await Promise.all(downloadPromises);
+
+            const content = await zip.generateAsync({ type: 'blob' });
+            const zipFileName = `Material_${register.solution}_${register.id}.zip`.replace(/\s+/g, '_');
+            saveAs(content, zipFileName);
+
+            this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Archivos descargados correctamente.' });
+        } catch (error) {
+            console.error('Error downloading files:', error);
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Hubo un problema al descargar los archivos.' });
+        } finally {
+            this.isDownloading[register.id] = false;
+            this.cdr.detectChanges();
+        }
     }
 
     viewRegister(register: MaterialRegister) {

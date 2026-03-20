@@ -7,12 +7,14 @@ import { ButtonModule } from 'primeng/button';
 import { MenuItem, MessageService } from 'primeng/api';
 import { StepsModule } from 'primeng/steps';
 import { ProductionRequest, UploadedFile, Team, CustomerData, AudienceData, CampaignDetail, ProductionInfo, Product, Objective, Gender, AgeRange, SocioeconomicLevel, FormatType, RightsDuration, Status } from '../../production.models';
+import { WORKFLOW_STAGES } from '../../production.constants';
 import { AzureStorageService } from '../../../../services/azure-storage.service';
 import { TeamService } from '../../../../services/team.service';
-import { User } from '../../../../services/user.service';
+import { User, UserService } from '../../../../services/user.service';
 import { ProductionService } from '../../../../services/production.service';
 import { AuthService } from '../../../../services/auth.service';
 import { HolidayService } from '../../../../services/holiday.service';
+import { DialogModule } from 'primeng/dialog';
 import { ProductionStepGeneralComponent } from '../production-steps/production-step-general/production-step-general.component';
 import { ProductionStepCustomerComponent } from '../production-steps/production-step-customer/production-step-customer.component';
 import { ProductionStepCampaignComponent } from '../production-steps/production-step-campaign/production-step-campaign.component';
@@ -27,6 +29,7 @@ import { ProductionStepProductionComponent } from '../production-steps/productio
     ReactiveFormsModule,
     ButtonModule,
     StepsModule,
+    DialogModule,
     ProductionStepGeneralComponent,
     ProductionStepCustomerComponent,
     ProductionStepCampaignComponent,
@@ -57,6 +60,7 @@ export class ProductionDialogComponent implements OnInit {
   productionService = inject(ProductionService);
   authService = inject(AuthService);
   holidayService = inject(HolidayService);
+  userService = inject(UserService);
   cd = inject(ChangeDetectorRef);
 
   form!: FormGroup;
@@ -75,6 +79,13 @@ export class ProductionDialogComponent implements OnInit {
   assignedUsers$ = new BehaviorSubject<User[]>([]);
   products$ = new BehaviorSubject<Product[]>([]);
   workflowStages: { id: string | number, label: string }[] = [];
+
+  showSuccessModal = false;
+  createdRequestId: string | number = '';
+  createdTeam: string = '';
+  createdUserId: string | number = '';
+  createdUserName: string = '';
+  finalResult: any = null;
 
   items: MenuItem[] = [];
   currentStep: number = 0;
@@ -114,7 +125,7 @@ export class ProductionDialogComponent implements OnInit {
       department: [data.department || '', Validators.required],
       assignedUserId: [data.assignedUserId || null],
       observations: [data.observations || ''],
-      status: [data.status || 'request', Validators.required],
+      status: [data.status || 'quotation', Validators.required],
 
       customerData: this.fb.group({
         clientAgency: [data.customerData?.clientAgency || '', Validators.required],
@@ -370,64 +381,73 @@ export class ProductionDialogComponent implements OnInit {
     this.selectedFiles = [];
   }
 
+  isCurrentStepEnabled(): boolean {
+    switch (this.currentStep) {
+      case 0:
+        return !this.form.get('name')?.disabled || !this.form.get('department')?.disabled;
+      case 1:
+        return !this.form.get('customerData')?.disabled;
+      case 2:
+        return !this.form.get('campaignDetail')?.disabled;
+      case 3:
+        return !this.form.get('audienceData')?.disabled;
+      case 4:
+        return !this.form.get('productionInfo')?.disabled;
+      default:
+        return false;
+    }
+  }
+
   next() {
     let isValid = false;
+    const stepEnabled = this.isCurrentStepEnabled();
 
-    if (!this.canEditCore && this.isAssignedUser) {
-      switch (this.currentStep) {
-        case 0:
-          const statusControl = this.form.get('statusId');
-          isValid = statusControl?.valid ?? true;
-          if (!isValid) statusControl?.markAsDirty();
-          break;
-        case 1:
-        case 2:
-        case 3:
-          isValid = true;
-          break;
-        case 4:
-          const prodInfo = this.form.get('productionInfo') as FormGroup;
-          isValid = prodInfo.valid;
-          if (!isValid) prodInfo.markAllAsTouched();
-          break;
-      }
-    } else {
-      switch (this.currentStep) {
-        case 0:
-          const mainControls = ['name', 'department'];
-          isValid = mainControls.every(key => {
-            const control = this.form.get(key);
-            return control?.valid || control?.disabled;
-          });
-          if (!isValid) {
-            mainControls.forEach(key => this.form.get(key)?.markAsDirty());
-          }
-          break;
-        case 1:
-          const customerGroup = this.form.get('customerData') as FormGroup;
-          isValid = customerGroup.valid;
-          if (!isValid) customerGroup.markAllAsTouched();
-          break;
-        case 2:
-          const campaignGroup = this.form.get('campaignDetail') as FormGroup;
-          isValid = campaignGroup.valid;
-          if (!isValid) campaignGroup.markAllAsTouched();
-          break;
-        case 3:
-          const audienceGroup = this.form.get('audienceData') as FormGroup;
-          isValid = audienceGroup.valid;
-          if (!isValid) audienceGroup.markAllAsTouched();
-          break;
-        case 4:
-          const prodInfo = this.form.get('productionInfo') as FormGroup;
-          isValid = prodInfo.valid;
-          if (!isValid) prodInfo.markAllAsTouched();
-          break;
-      }
+    switch (this.currentStep) {
+      case 0:
+        const mainControls = ['name', 'department'];
+        isValid = mainControls.every(key => {
+          const control = this.form.get(key);
+          return control?.valid || control?.disabled;
+        });
+
+        if (!this.canEditCore && this.isAssignedUser) {
+          const statusControl = this.form.get('status');
+          isValid = isValid && (statusControl?.valid ?? true);
+          if (!isValid && statusControl?.invalid) statusControl?.markAsDirty();
+        }
+
+        if (!isValid) {
+          mainControls.forEach(key => this.form.get(key)?.markAsDirty());
+        }
+        break;
+      case 1:
+        const customerGroup = this.form.get('customerData') as FormGroup;
+        isValid = customerGroup.disabled || customerGroup.valid;
+        if (!isValid) customerGroup.markAllAsTouched();
+        break;
+      case 2:
+        const campaignGroup = this.form.get('campaignDetail') as FormGroup;
+        isValid = campaignGroup.disabled || campaignGroup.valid;
+        if (!isValid) campaignGroup.markAllAsTouched();
+        break;
+      case 3:
+        const audienceGroup = this.form.get('audienceData') as FormGroup;
+        isValid = audienceGroup.disabled || audienceGroup.valid;
+        if (!isValid) audienceGroup.markAllAsTouched();
+        break;
+      case 4:
+        const prodInfo = this.form.get('productionInfo') as FormGroup;
+        isValid = prodInfo.disabled || prodInfo.valid;
+        if (!isValid) prodInfo.markAllAsTouched();
+        break;
     }
 
     if (isValid) {
-      this.saveData(false);
+      if (stepEnabled) {
+        this.saveData(false);
+      } else {
+        this.currentStep++;
+      }
     } else {
       this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'Por favor complete todos los campos requeridos' });
     }
@@ -443,6 +463,7 @@ export class ProductionDialogComponent implements OnInit {
     if (this.isReadonly) {
       this.canEditCore = false;
       this.form.disable();
+      this.enableIncompleteSteps(data);
       return;
     }
 
@@ -460,11 +481,40 @@ export class ProductionDialogComponent implements OnInit {
     } else if (this.isAssignedUser) {
       this.canEditCore = false;
       this.applyRestrictedMode();
+      this.enableIncompleteSteps(data);
     } else {
       this.canEditCore = false;
       this.form.disable();
+      this.enableIncompleteSteps(data);
     }
     this.cd.detectChanges();
+  }
+
+  enableIncompleteSteps(data: ProductionRequest) {
+    // Enable form groups to check validity based on current values
+    const customerGroup = this.form.get('customerData');
+    customerGroup?.enable();
+    if (customerGroup?.valid && data.customerData && Object.keys(data.customerData).length > 0) {
+      customerGroup?.disable();
+    }
+
+    const campaignGroup = this.form.get('campaignDetail');
+    campaignGroup?.enable();
+    if (campaignGroup?.valid && data.campaignDetail && Object.keys(data.campaignDetail).length > 0) {
+      campaignGroup?.disable();
+    }
+
+    const audienceGroup = this.form.get('audienceData');
+    audienceGroup?.enable();
+    if (audienceGroup?.valid && data.audienceData && Object.keys(data.audienceData).length > 0) {
+      audienceGroup?.disable();
+    }
+
+    const prodInfoGroup = this.form.get('productionInfo');
+    prodInfoGroup?.enable();
+    if (prodInfoGroup?.valid && data.productionInfo && Object.keys(data.productionInfo).length > 0) {
+      prodInfoGroup?.disable();
+    }
   }
 
   applyRestrictedMode() {
@@ -491,7 +541,7 @@ export class ProductionDialogComponent implements OnInit {
       if (!this.canEditCore && this.isAssignedUser) {
         const statusValid = this.form.get('status')?.valid ?? true;
         const prodInfo = this.form.get('productionInfo') as FormGroup;
-        const prodDetailsValid = prodInfo?.get('productionDetails')?.valid ?? true;
+        const prodDetailsValid = prodInfo?.disabled || (prodInfo?.get('productionDetails')?.valid ?? true);
 
         if (!statusValid || !prodDetailsValid) {
           isValid = false;
@@ -499,6 +549,10 @@ export class ProductionDialogComponent implements OnInit {
           if (!prodDetailsValid) prodInfo?.get('productionDetails')?.markAsDirty();
         }
       } else {
+        // If some steps are enabled (incomplete), we just need to make sure the enabled parts are valid.
+        // If the whole form is disabled, it will be valid.
+        // We can just use this.form.valid, but if we want to only check enabled controls:
+        // Angular forms consider a form group valid if all its enabled controls are valid.
         isValid = this.form.valid;
       }
     } else {
@@ -575,14 +629,16 @@ export class ProductionDialogComponent implements OnInit {
       formValue.deliveryDate = currentDate;
 
       const currentStatus = this.loadedRequest?.status || formValue.status;
-      const earlyStages = ['request', 'quotation', 'inicio', 'in_sell', 'get_data', 'create_proposal'];
+      const currentStageIndex = WORKFLOW_STAGES.findIndex(s => s.id === currentStatus);
+      const inSellIndex = WORKFLOW_STAGES.findIndex(s => s.id === 'in_sell');
+      const isEarlyStage = currentStageIndex === -1 || currentStageIndex <= inSellIndex;
 
-      if (!currentStatus || earlyStages.includes(currentStatus)) {
+      if (!currentStatus || isEarlyStage) {
         forcedStage = targetStageCode;
         formValue.status = targetStageCode;
       }
     } else if (!formValue.status) {
-      formValue.status = 'request';
+      formValue.status = 'quotation';
     }
 
     const productionInfo = formValue.productionInfo ? { ...formValue.productionInfo } : undefined;
@@ -614,7 +670,6 @@ export class ProductionDialogComponent implements OnInit {
 
     const afterPersist = (saved: ProductionRequest | any) => {
       const actualData = saved.data || saved;
-      console.log('Production request saved/updated:', saved);
 
       const requestId =
         actualData?.id ??
@@ -622,8 +677,6 @@ export class ProductionDialogComponent implements OnInit {
         actualData?.requestId ??
         actualData?.RequestId ??
         this.config.data?.id;
-
-      console.log('Extracted Request ID:', requestId);
 
       if (!requestId) {
         console.error('Could not determine request ID from response', saved);
@@ -648,7 +701,13 @@ export class ProductionDialogComponent implements OnInit {
         };
         if (closeOnComplete) {
           this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Solicitud guardada correctamente' });
-          this.ref.close(result);
+          this.createdRequestId = requestId;
+          this.createdTeam = actualData?.department || formValue.department;
+          this.createdUserId = actualData?.assignedUserId || formValue.assignedUserId || 'N/A';
+          this.finalResult = result;
+          this.showSuccessModal = true;
+          this.fetchUserName(this.createdUserId);
+          this.cd.detectChanges();
         } else {
           this.currentStep++;
           this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Progreso guardado correctamente' });
@@ -656,8 +715,6 @@ export class ProductionDialogComponent implements OnInit {
         }
         return;
       }
-
-      console.log('Files to upload:', this.selectedFiles);
 
       this.azureService.uploadFiles(this.selectedFiles, {
         folderPath,
@@ -686,7 +743,14 @@ export class ProductionDialogComponent implements OnInit {
             this.isUploading$.next(false);
             if (closeOnComplete) {
               this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Solicitud guardada y archivos cargados' });
-              this.ref.close({ ...updated, files: mergedFiles });
+              this.createdRequestId = requestId;
+              const updatedData = (updated as any).data || updated;
+              this.createdTeam = updatedData?.department || actualData?.department || formValue.department;
+              this.createdUserId = updatedData?.assignedUserId || actualData?.assignedUserId || formValue.assignedUserId || 'N/A';
+              this.finalResult = { ...updated, files: mergedFiles };
+              this.showSuccessModal = true;
+              this.fetchUserName(this.createdUserId);
+              this.cd.detectChanges();
             } else {
               this.currentStep++;
               this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Progreso guardado y archivos subidos' });
@@ -697,7 +761,13 @@ export class ProductionDialogComponent implements OnInit {
             this.isUploading$.next(false);
             this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'Archivos cargados, pero no se pudieron vincular en la solicitud' });
             if (closeOnComplete) {
-              this.ref.close({ ...saved, files: mergedFiles });
+              this.createdRequestId = requestId;
+              this.createdTeam = actualData?.department || formValue.department;
+              this.createdUserId = actualData?.assignedUserId || formValue.assignedUserId || 'N/A';
+              this.finalResult = { ...saved, files: mergedFiles };
+              this.showSuccessModal = true;
+              this.fetchUserName(this.createdUserId);
+              this.cd.detectChanges();
             } else {
               this.currentStep++;
               this.cd.detectChanges();
@@ -720,10 +790,9 @@ export class ProductionDialogComponent implements OnInit {
           const generalData = {
             name: formValue.name,
             department: formValue.department,
-            contactPerson: formValue.contactPerson,
             assignedUserId: formValue.assignedUserId,
             observations: formValue.observations,
-            statusId: formValue.statusId
+            status: formValue.status
           };
           request$ = this.productionService.updateStepGeneral(requestId, generalData);
           break;
@@ -781,5 +850,24 @@ export class ProductionDialogComponent implements OnInit {
   removeFile(file: UploadedFile) {
     this.existingFiles = this.existingFiles.filter(f => f.id !== file.id);
     this.uploadedFiles = this.uploadedFiles.filter(f => f.id !== file.id);
+  }
+
+  fetchUserName(userId: string | number) {
+    if (!userId || userId === 'N/A') return;
+    this.userService.getAllUsers().subscribe({
+      next: (users) => {
+        const user = users.find(u => String(u.id) === String(userId));
+        if (user) {
+          this.createdUserName = user.name;
+          this.cd.detectChanges();
+        }
+      },
+      error: (err) => console.error('Error fetching user for success modal', err)
+    });
+  }
+
+  closeDialogAfterSuccess() {
+    this.showSuccessModal = false;
+    this.ref.close(this.finalResult);
   }
 }

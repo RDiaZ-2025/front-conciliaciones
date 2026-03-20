@@ -42,10 +42,25 @@
         <div class="flex gap-2">
             <button *ngIf="currentStep > 0" pButton label="Atrás" icon="pi pi-arrow-left" class="p-button-outlined"
                 (click)="prev()"></button>
-            <button *ngIf="currentStep < 4" pButton label="Guardar y Continuar" icon="pi pi-arrow-right"
-                (click)="next()" [loading]="(isUploading$ | async) ?? false"></button>
-            <button *ngIf="currentStep === 4" pButton label="Guardar" icon="pi pi-check" (click)="saveData(true)"
+            <button *ngIf="currentStep < 4" pButton [label]="isCurrentStepEnabled() ? 'Guardar y Continuar' : 'Siguiente'" icon="pi pi-arrow-right"
+                (click)="next()" [loading]="isCurrentStepEnabled() && ((isUploading$ | async) ?? false)"></button>
+            <button *ngIf="currentStep === 4 && isCurrentStepEnabled()" pButton label="Guardar" icon="pi pi-check" (click)="saveData(true)"
                 [loading]="(isUploading$ | async) ?? false"></button>
         </div>
     </div>
 </div>
+
+<p-dialog [(visible)]="showSuccessModal" [modal]="true" [closable]="false" [style]="{width: '400px'}">
+    <ng-template pTemplate="header">
+        <div class="flex align-items-center gap-2">
+            <i class="pi pi-check-circle text-green-500" style="font-size: 1.5rem"></i>
+            <span class="font-bold text-xl">¡Éxito!</span>
+        </div>
+    </ng-template>
+    <div class="p-3 text-lg line-height-3">
+        <p>Genial! Tu solicitud fue creada y enviada con el Id <strong>{{createdRequestId}}</strong> al equipo <strong>{{createdTeam}}</strong> y fue asignada a la persona <strong>{{createdUserName || createdUserId}}</strong>.</p>
+    </div>
+    <ng-template pTemplate="footer">
+        <button pButton label="Aceptar" (click)="closeDialogAfterSuccess()"></button>
+    </ng-template>
+</p-dialog>

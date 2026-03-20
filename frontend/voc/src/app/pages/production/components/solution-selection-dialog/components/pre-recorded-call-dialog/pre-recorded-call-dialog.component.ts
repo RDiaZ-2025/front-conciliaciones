@@ -89,7 +89,9 @@ export class PreRecordedCallDialogComponent implements OnDestroy {
       const objectURL = URL.createObjectURL(file);
       this.objectUrls.push(objectURL);
       const safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(objectURL);
-      this.uploadedFiles.push({ ...file, category, safeUrl, name: file.name });
+      file.category = category;
+      file.safeUrl = safeUrl;
+      this.uploadedFiles.push(file);
     }
     this.messageService.add({ severity: 'info', summary: 'Success', detail: 'File uploaded' });
     if (uploader && typeof uploader.clear === 'function') {

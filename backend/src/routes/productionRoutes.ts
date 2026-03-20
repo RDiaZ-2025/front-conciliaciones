@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { ProductionController, getAllProductionRequests, getProductionRequestById, createProductionRequest, updateProductionRequest, deleteProductionRequest, getProducts, moveProductionRequest, updateStepGeneral, updateStepCustomer, updateStepCampaign, updateStepAudience, updateStepProduction, updateMaterialData } from '../controllers/productionController';
+import { ProductionController, getAllProductionRequests, getProductionRequestById, createProductionRequest, updateProductionRequest, getProducts, moveProductionRequest, updateStepGeneral, updateStepCustomer, updateStepCampaign, updateStepAudience, updateStepProduction, updateMaterialData } from '../controllers/productionController';
 import { addMaterialRegister, getMaterialRegisters } from '../controllers/materialRegisterController';
 import { RequestsReportController } from '../controllers/requestsReportController';
 import { getProductionRequestHistory } from '../controllers/productionRequestHistoryController';
@@ -39,6 +39,5 @@ router.get('/:id/material', getMaterialRegisters);
 // Deprecated or alternative material data update
 router.put('/:id/material-data', updateMaterialData);
 router.put('/:id/move', moveProductionRequest);
-router.delete('/:id', deleteProductionRequest);
 
 export default router;

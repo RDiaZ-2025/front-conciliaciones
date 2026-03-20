@@ -20,8 +20,9 @@
                 <td>{{ register.type }}</td>
                 <td>{{ register.solution }}</td>
                 <td>{{ register.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
-                <td>
+                <td class="flex gap-2">
                     <p-button icon="pi pi-eye" [text]="true" [rounded]="true" severity="info" pTooltip="Ver Detalle" (click)="viewRegister(register)"></p-button>
+                    <p-button icon="pi pi-download" [text]="true" [rounded]="true" severity="success" pTooltip="Descargar Archivos" (click)="downloadFiles(register)" [loading]="isDownloading[register.id]"></p-button>
                 </td>
             </tr>
         </ng-template>

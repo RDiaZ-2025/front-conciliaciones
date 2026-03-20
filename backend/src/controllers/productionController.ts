@@ -4,6 +4,7 @@ import { AppDataSource } from '../config/typeorm.config';
 import { NotificationService } from '../services/notificationService';
 import { ProductionRequestHistoryService } from '../services/productionRequestHistoryService';
 import { AuthService } from '../services/authService';
+import { WorkflowService } from '../services/workflowService';
 import { Not, In } from 'typeorm';
 import { WORKFLOW_STAGES } from '../constants/workflow';
 
@@ -40,8 +41,6 @@ const performSmartAssignment = async (department: string): Promise<{ assignedUse
         const randomIndex = Math.floor(Math.random() * candidates.length);
         const selectedCandidate = candidates[randomIndex];
 
-        console.log(`Smart Assignment: Assigned to ${selectedCandidate.user.name} (ID: ${selectedCandidate.user.id}) with ${selectedCandidate.count} active requests.`);
-
         return {
           assignedUserId: selectedCandidate.user.id,
           userName: selectedCandidate.user.name,
@@ -49,10 +48,11 @@ const performSmartAssignment = async (department: string): Promise<{ assignedUse
         };
       }
     }
+    return null;
   } catch (error) {
-    console.error("Error in Smart Workload Distribution:", error);
+    console.error('Error in smart assignment:', error);
+    return null;
   }
-  return null;
 };
 
 export class ProductionController {
@@ -271,71 +271,30 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
 
     const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
 
-    let finalStatus = status || stage || 'request';
+    let finalStatus = status || stage || 'quotation';
 
-    if (campaignDetail && campaignDetail.budget) {
-      const budgetStr = String(campaignDetail.budget).replace(/[^0-9]/g, '');
-      const budgetValue = parseInt(budgetStr);
+    const tempRequest = new ProductionRequest();
+    tempRequest.status = finalStatus === 'quotation' ? '' : 'quotation'; // Just to trigger correct logic if needed
+    tempRequest.department = department;
+    tempRequest.assignedUserId = assignedUserId;
+    tempRequest.userCreatorId = userCreatorId;
 
-      if (!isNaN(budgetValue)) {
-        if (budgetValue < 50000000) {
-          finalStatus = 'get_data';
-        } else {
-          finalStatus = 'create_proposal';
-        }
-      }
+    const budgetValue = campaignDetail?.budget ? parseInt(String(campaignDetail.budget).replace(/[^0-9]/g, '')) : 0;
+
+    // Determine if we should advance based on budget
+    if (finalStatus === 'quotation' && budgetValue > 0) {
+      tempRequest.status = 'quotation';
     }
 
-    if (finalStatus === 'get_data') {
-      try {
-        const teamRepository = AppDataSource.getRepository(Team);
-        const userRepository = AppDataSource.getRepository(User);
-
-        const dataTeam = await teamRepository.findOne({ where: { id: 5 } });
-
-        if (dataTeam) {
-          department = dataTeam.name;
-
-          const teamUsers = await userRepository.find({ where: { teamId: dataTeam.id, status: 1 } });
-          if (teamUsers.length > 0) {
-            const randomUser = teamUsers[Math.floor(Math.random() * teamUsers.length)];
-            assignedUserId = randomUser.id;
-            assignmentMethod = 'Auto-assigned to Data Team';
-          } else {
-            console.warn(`No active users found in Data Team (ID: ${dataTeam.id})`);
-          }
-        } else {
-          console.warn('Data Team (ID 5) not found');
-        }
-      } catch (assignError) {
-        console.error('Error in auto-assignment to Data Team:', assignError);
-      }
+    const rulesResult = await WorkflowService.advanceStage(tempRequest, { budget: budgetValue });
+    if (rulesResult.newStage) {
+      finalStatus = rulesResult.newStage;
     }
 
-    if (finalStatus === 'create_proposal') {
-      try {
-        const teamRepository = AppDataSource.getRepository(Team);
-        const userRepository = AppDataSource.getRepository(User);
-
-        const strategyTeam = await teamRepository.findOne({ where: { id: 3 } });
-
-        if (strategyTeam) {
-          department = strategyTeam.name;
-
-          const teamUsers = await userRepository.find({ where: { teamId: strategyTeam.id, status: 1 } });
-          if (teamUsers.length > 0) {
-            const randomUser = teamUsers[Math.floor(Math.random() * teamUsers.length)];
-            assignedUserId = randomUser.id;
-            assignmentMethod = 'Auto-assigned to Strategy Team';
-          } else {
-            console.warn(`No active users found in Strategy Team (ID: ${strategyTeam.id})`);
-          }
-        } else {
-          console.warn('Strategy Team (ID 3) not found');
-        }
-      } catch (assignError) {
-        console.error('Error in auto-assignment to Strategy Team:', assignError);
-      }
+    if (rulesResult.assignmentMethod !== 'Manual') {
+      assignmentMethod = rulesResult.assignmentMethod;
+      department = tempRequest.department;
+      assignedUserId = tempRequest.assignedUserId;
     }
 
     if (campaignDetail) {
@@ -358,6 +317,7 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
       observations,
       status: finalStatus,
+      unitAssigned: req.body.unitAssigned,
       customerData: isEmptyObject(customerData) ? undefined : customerData,
       audienceData: isEmptyObject(audienceData) ? undefined : audienceData,
       campaignDetail: isEmptyObject(campaignDetail) ? undefined : campaignDetail,
@@ -376,12 +336,12 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
         'create'
       );
 
-      if (assignmentMethod === 'Smart Workload Distribution' && assignedUserId) {
+      if (assignmentMethod !== 'Manual' && assignedUserId) {
         await historyService.logChange(
           savedRequest.id,
           'AssignmentMethod',
           null,
-          `Smart Workload Distribution: Auto-assigned to user ID ${assignedUserId} based on workload`,
+          `${assignmentMethod}: Auto-assigned to user ID ${assignedUserId}`,
           req.user.userId,
           'update'
         );
@@ -486,13 +446,31 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
     existingRequest.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
     existingRequest.observations = observations;
 
+    let oldAssignedUserId = existingRequest.assignedUserId;
+
     if (status || stage) {
-      existingRequest.status = status || stage;
+      const targetStage = status || stage;
+      if (targetStage && targetStage !== existingRequest.status) {
+        // Here we just want to advance based on current status.
+        // If frontend passes a target status, we can pass it as a hint in additionalData,
+        // or just let advanceStage decide. Since the user said advanceStage must NOT receive newStage
+        // and must calculate it via getNextStage, we call it with additionalData (req.body).
+        const rulesResult = await WorkflowService.advanceStage(existingRequest, {
+          ...req.body,
+          targetStage,
+          budget: campaignDetail?.budget ? parseInt(String(campaignDetail.budget).replace(/[^0-9]/g, '')) : undefined,
+          saleClosed: targetStage === 'completed' ? false : true // Heuristic for in_sell -> completed
+        });
+
+        assignmentMethod = rulesResult.assignmentMethod !== 'Manual' ? rulesResult.assignmentMethod : assignmentMethod;
+        assignedUserId = existingRequest.assignedUserId;
+      }
     }
 
     if (customerData) existingRequest.customerData = { ...existingRequest.customerData, ...customerData };
     if (audienceData) existingRequest.audienceData = { ...existingRequest.audienceData, ...audienceData };
     if (productionInfo) existingRequest.productionInfo = { ...existingRequest.productionInfo, ...productionInfo };
+    if (req.body.unitAssigned !== undefined) existingRequest.unitAssigned = req.body.unitAssigned;
 
     if (campaignDetail) {
       if (campaignDetail.budget !== undefined && campaignDetail.budget !== null) {
@@ -503,15 +481,29 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
 
     const updatedRequest = await productionRequestRepository.save(existingRequest);
 
-    if (req.user?.userId && assignmentMethod === 'Smart Workload Distribution' && assignedUserId) {
+    if (req.user?.userId && assignmentMethod !== 'Manual' && assignedUserId) {
       await historyService.logChange(
         updatedRequest.id,
         'AssignmentMethod',
         null,
-        `Smart Workload Distribution: Auto-assigned to user ID ${assignedUserId} based on workload`,
+        `${assignmentMethod}: Auto-assigned to user ID ${assignedUserId}`,
         req.user.userId,
         'update'
       );
+    }
+
+    // Send notification if a new user was assigned
+    if (assignedUserId && assignedUserId !== oldAssignedUserId && assignmentMethod !== 'Manual') {
+      try {
+        await notificationService.createNotification(
+          assignedUserId,
+          'Nueva Solicitud Asignada',
+          `Se te ha asignado la solicitud de producción: ${existingRequest.name}`,
+          'info'
+        );
+      } catch (notifError) {
+        console.error('Error sending notification:', notifError);
+      }
     }
 
     return res.status(200).json(updatedRequest);
@@ -556,11 +548,21 @@ const updateProductionRequestPartial = async (req: Request, res: Response): Prom
       existingRequest.deliveryDate = body.deliveryDate ? new Date(body.deliveryDate) : null;
     }
     if (body.observations) existingRequest.observations = body.observations;
-    if (body.status) existingRequest.status = body.status;
-    if (body.stage) {
-      existingRequest.status = body.stage;
-      if (body.stage === 'customer_review') {
-        existingRequest.assignedUserId = existingRequest.userCreatorId;
+
+    let assignmentMethod = 'Manual';
+    let oldAssignedUserId = existingRequest.assignedUserId;
+
+    if (body.status || body.stage) {
+      const targetStage = body.status || body.stage;
+      if (targetStage && targetStage !== existingRequest.status) {
+        const rulesResult = await WorkflowService.advanceStage(existingRequest, {
+          ...body,
+          targetStage,
+          budget: body.campaignDetail?.budget ? parseInt(String(body.campaignDetail.budget).replace(/[^0-9]/g, '')) : undefined,
+          saleClosed: targetStage === 'completed' ? false : true
+        });
+        assignmentMethod = rulesResult.assignmentMethod;
+        oldAssignedUserId = rulesResult.oldAssignedUserId;
       }
     }
 
@@ -568,37 +570,47 @@ const updateProductionRequestPartial = async (req: Request, res: Response): Prom
     if (body.audienceData) existingRequest.audienceData = { ...existingRequest.audienceData, ...body.audienceData };
     if (body.campaignDetail) existingRequest.campaignDetail = { ...existingRequest.campaignDetail, ...body.campaignDetail };
     if (body.productionInfo) existingRequest.productionInfo = { ...existingRequest.productionInfo, ...body.productionInfo };
+    if (body.unitAssigned !== undefined) existingRequest.unitAssigned = body.unitAssigned;
 
     const updatedRequest = await productionRequestRepository.save(existingRequest);
+
+    if (req.user?.userId) {
+      await historyService.logDifferences(
+        existingRequest,
+        { ...body, assignedUserId: existingRequest.assignedUserId, department: existingRequest.department },
+        req.user.userId
+      );
+
+      if (assignmentMethod !== 'Manual' && existingRequest.assignedUserId) {
+        await historyService.logChange(
+          updatedRequest.id,
+          'AssignmentMethod',
+          null,
+          `${assignmentMethod}: Auto-assigned to user ID ${existingRequest.assignedUserId}`,
+          req.user.userId,
+          'update'
+        );
+      }
+    }
+
+    // Send notification if a new user was assigned
+    if (existingRequest.assignedUserId && existingRequest.assignedUserId !== oldAssignedUserId && assignmentMethod !== 'Manual') {
+      try {
+        await notificationService.createNotification(
+          existingRequest.assignedUserId,
+          'Nueva Solicitud Asignada',
+          `Se te ha asignado la solicitud de producción: ${existingRequest.name}`,
+          'info'
+        );
+      } catch (notifError) {
+        console.error('Error sending notification:', notifError);
+      }
+    }
+
     return res.status(200).json(updatedRequest);
   } catch (error) {
     console.error('Error updating production request partial:', error);
     return res.status(500).json({ message: 'Error updating production request', error });
-  }
-};
-
-export const deleteProductionRequest = async (req: Request, res: Response): Promise<Response | void> => {
-  try {
-    const { id } = req.params;
-
-    if (!AppDataSource.isInitialized) {
-      return res.status(503).json({
-        success: false,
-        message: 'Base de datos no disponible'
-      });
-    }
-
-    const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
-    const result = await productionRequestRepository.delete(id);
-
-    if (result.affected === 0) {
-      return res.status(404).json({ message: 'Production request not found' });
-    }
-
-    return res.status(200).json({ message: 'Production request deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting production request:', error);
-    return res.status(500).json({ message: 'Error deleting production request', error });
   }
 };
 
@@ -631,10 +643,23 @@ export const updateStepCampaign = async (req: Request, res: Response): Promise<R
       existingRequest.campaignDetail = { ...existingRequest.campaignDetail, ...campaignDetail };
     }
 
-    if (status) {
-      existingRequest.status = status;
+    let assignmentMethod = 'Manual';
+    let assignedUserId = existingRequest.assignedUserId;
+    let oldAssignedUserId = existingRequest.assignedUserId;
+
+    if (status && status !== existingRequest.status) {
+      const rulesResult = await WorkflowService.advanceStage(existingRequest, {
+        campaignDetail,
+        status,
+        targetStage: status,
+        budget: campaignDetail?.budget ? parseInt(String(campaignDetail.budget).replace(/[^0-9]/g, '')) : undefined,
+        saleClosed: status === 'completed' ? false : true
+      });
+      assignmentMethod = rulesResult.assignmentMethod;
+      oldAssignedUserId = rulesResult.oldAssignedUserId;
+      assignedUserId = existingRequest.assignedUserId;
     }
-    
+
     if (deliveryDate !== undefined) {
       existingRequest.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
     }
@@ -644,9 +669,34 @@ export const updateStepCampaign = async (req: Request, res: Response): Promise<R
     if (req.user?.userId) {
       await historyService.logDifferences(
         existingRequest,
-        { campaignDetail, status, deliveryDate },
+        { campaignDetail, status, deliveryDate, assignedUserId: existingRequest.assignedUserId, department: existingRequest.department },
         req.user.userId
       );
+
+      if (assignmentMethod !== 'Manual' && assignedUserId) {
+        await historyService.logChange(
+          updatedRequest.id,
+          'AssignmentMethod',
+          null,
+          `${assignmentMethod}: Auto-assigned to user ID ${assignedUserId}`,
+          req.user.userId,
+          'update'
+        );
+      }
+    }
+
+    // Send notification if a new user was assigned
+    if (assignedUserId && assignedUserId !== oldAssignedUserId && assignmentMethod !== 'Manual') {
+      try {
+        await notificationService.createNotification(
+          assignedUserId,
+          'Nueva Solicitud Asignada',
+          `Se te ha asignado la solicitud de producción: ${existingRequest.name}`,
+          'info'
+        );
+      } catch (notifError) {
+        console.error('Error sending notification:', notifError);
+      }
     }
 
     return res.status(200).json(updatedRequest);

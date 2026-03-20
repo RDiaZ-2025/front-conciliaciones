@@ -16,6 +16,7 @@ import { DialogModule } from 'primeng/dialog';
 import { RippleModule } from 'primeng/ripple';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
 import { ProductionService } from '../../services/production.service';
 import { AuthService } from '../../services/auth.service';
@@ -49,6 +50,7 @@ import { MaterialRegisterListDialogComponent } from './components/material-regis
     BadgeModule,
     DialogModule,
     RippleModule,
+    ProgressSpinnerModule,
     FilePreviewComponent,
     PageHeaderComponent,
     AnsDialogComponent,
@@ -111,8 +113,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
   private alertedRequests = new Set<number>(); // Track alerted requests to avoid spam
 
   // Local Logic State
-  campaignTypeSelectionVisible = signal<boolean>(false);
-  currentRequestProcessing: ProductionRequest | null = null;
+  isProcessingMove = signal<boolean>(false);
 
   ngOnInit() {
     this.loadRequests();
@@ -176,7 +177,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
         // Map status.code or status string to stage property required by frontend logic
         const mappedData = data.map(req => ({
           ...req,
-          stage: (typeof req.status === 'string' ? req.status : req.status?.code) || req.stage || 'request'
+          stage: (typeof req.status === 'string' ? req.status : req.status?.code) || req.stage || 'quotation'
         }));
         this.requests.set(mappedData);
         this.loading.set(false);
@@ -238,23 +239,6 @@ export class ProductionComponent implements OnInit, OnDestroy {
     timeString += `${minutes}m`;
 
     return isOverdue ? `Vencido hace ${timeString}` : `${timeString} restantes`;
-  }
-
-  getTotalTime(request: ProductionRequest): string {
-    if (!request.requestDate || !request.deliveryDate) return 'N/A';
-
-    const start = new Date(request.requestDate).getTime();
-    const end = new Date(request.deliveryDate).getTime();
-    const diff = Math.abs(end - start);
-
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-
-    let result = '';
-    if (days > 0) result += `${days}d `;
-    result += `${hours}h`;
-
-    return result;
   }
 
   checkSLAAlerts() {
@@ -351,30 +335,6 @@ export class ProductionComponent implements OnInit, OnDestroy {
     }
   }
 
-  createRequest(request: Partial<ProductionRequest>) {
-    this.productionService.createProductionRequest(request).subscribe({
-      next: (newRequest) => {
-        this.requests.update(current => [...current, newRequest]);
-        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Request created' });
-      },
-      error: () => {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to create request' });
-      }
-    });
-  }
-
-  updateRequest(id: number, request: Partial<ProductionRequest>) {
-    this.productionService.updateProductionRequest(id, request).subscribe({
-      next: (updatedRequest) => {
-        this.requests.update(current => current.map(r => r.id === id ? updatedRequest : r));
-        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Request updated' });
-      },
-      error: () => {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update request' });
-      }
-    });
-  }
-
   openUploadDialog(request: ProductionRequest) {
     this.ref = this.dialogService.open(UploadDialogComponent, {
       header: 'Carga de Documentos (Orden de Compra)',
@@ -450,47 +410,22 @@ export class ProductionComponent implements OnInit, OnDestroy {
   }
 
   moveRequest(request: ProductionRequest) {
-    const currentStage = request.stage;
-    let nextStageId = '';
+    if (!request.stage) return;
 
-    // Budget cleaning helper
-    const getBudget = (req: ProductionRequest): number => {
-      const budgetStr = String(req.campaignDetail?.budget || '0');
-      const cleanBudget = budgetStr.replace(/[^0-9]/g, '');
-      return parseFloat(cleanBudget);
-    };
-
-    switch (currentStage) {
-      case 'request':
-        // Skip quotation, go directly to in_sell or get_data based on budget
-        const budget = getBudget(request);
-        if (budget < 50000000) {
-          nextStageId = 'get_data';
-        } else {
-          nextStageId = 'create_proposal';
-        }
-        break;
-
+    switch (request.stage) {
       case 'quotation':
-        // Legacy path, just in case
-        const budgetQ = getBudget(request);
-        if (budgetQ < 50000000) {
-          nextStageId = 'get_data';
-        } else {
-          nextStageId = 'create_proposal';
-        }
-        break;
-
+        this.performMove(request, 'create_proposal');
+        return;
       case 'create_proposal':
         this.openStageTransitionUploadDialog(request, 'get_data');
         return;
-
-      case 'get_data': // formerly obtener_datos
+      case 'get_data':
+        this.openStageTransitionUploadDialog(request, 'validate_proposal');
+        return;
+      case 'validate_proposal':
         this.openStageTransitionUploadDialog(request, 'in_sell');
         return;
-
-
-      case 'in_sell': // formerly venta
+      case 'in_sell':
         this.ref = this.dialogService.open(InSellActionDialogComponent, {
           header: 'Confirmar Venta',
           width: '400px',
@@ -511,33 +446,15 @@ export class ProductionComponent implements OnInit, OnDestroy {
           });
         }
         return;
-
-      case 'closed_won':
-        this.confirmationService.confirm({
-          message: '¿Estás seguro de continuar a la etapa de Implementación?',
-          header: 'Confirmación',
-          icon: 'pi pi-exclamation-triangle',
-          acceptLabel: 'Sí, continuar',
-          rejectLabel: 'Cancelar',
-          accept: () => {
-            this.openAssignImplementationDialog(request);
-          }
-        });
-        return;
-
       case 'consecutive_generation':
         this.openConsecutiveDialog(request);
         return;
-
-      case 'material_preparation':
-        // Left here for backward compatibility if any request is currently in this stage
+      case 'closed_won':
         this.openAssignImplementationDialog(request);
         return;
-
       case 'implementation':
         this.openStageTransitionUploadDialog(request, 'customer_review');
         return;
-
       case 'customer_review':
         this.confirmationService.confirm({
           message: '¿Estás seguro de finalizar la solicitud y marcarla como completada?',
@@ -550,58 +467,26 @@ export class ProductionComponent implements OnInit, OnDestroy {
           }
         });
         return;
-
-      case 'val_materiales_mobile':
-      case 'val_materiales_programatica':
-      case 'val_materiales_red_plus':
-        nextStageId = 'gestion_operativa';
-        break;
-
-      case 'gestion_operativa':
-        nextStageId = 'cierre';
-        break;
-
-      case 'cierre':
-        nextStageId = 'completed';
-        break;
-
-      case 'completed':
-        return;
-
       default:
-        // Fallback for any other stage
-        const currentIndex = this.workflowStages.findIndex(s => s.id === request.stage);
-        if (currentIndex !== -1 && currentIndex < this.workflowStages.length - 1) {
-          nextStageId = String(this.workflowStages[currentIndex + 1].id);
-        }
-        break;
-    }
-
-    if (nextStageId) {
-      this.performMove(request, nextStageId);
-    }
-  }
-
-  selectCampaignType(stageId: string) {
-    if (this.currentRequestProcessing) {
-      this.performMove(this.currentRequestProcessing, stageId);
-      this.campaignTypeSelectionVisible.set(false);
-      this.currentRequestProcessing = null;
+        console.warn(`Transición no definida para la etapa: ${request.stage}`);
+        return;
     }
   }
 
   performMove(request: ProductionRequest, nextStageId: string, data?: any) {
+    this.isProcessingMove.set(true);
     this.productionService.moveRequest(request.id, nextStageId, data).subscribe({
       next: (updatedRequest) => {
-        const stage = (typeof updatedRequest.status === 'string' ? updatedRequest.status : (updatedRequest.status as any)?.code) || updatedRequest.stage || 'request';
-        const mappedRequest = { ...updatedRequest, stage };
-
         const nextStageLabel = this.getStageLabel(nextStageId);
-        this.requests.update(current => current.map(r => r.id === request.id ? mappedRequest : r));
-        this.messageService.add({ severity: 'success', summary: 'Success', detail: `Moved to ${nextStageLabel}` });
+        this.messageService.add({ severity: 'success', summary: 'Éxito', detail: `Etapa avanzada a ${nextStageLabel}` });
+
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       },
       error: () => {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to move request' });
+        this.isProcessingMove.set(false);
       }
     });
   }
@@ -617,18 +502,12 @@ export class ProductionComponent implements OnInit, OnDestroy {
       case 'cierre': return 'success';
       case 'customer_review': return 'info';
       case 'gestion_operativa': return 'contrast';
-      case 'val_materiales_mobile':
-      case 'val_materiales_programatica':
-      case 'val_materiales_red_plus':
-        return 'secondary';
       case 'implementation': return 'warn';
-      case 'material_preparation': return 'warn';
       case 'consecutive_generation': return 'info';
       case 'venta': return 'info';
       case 'obtener_datos': return 'danger';
       case 'create_proposal': return 'warn';
-      case 'quotation': return 'warn';
-      case 'request': return 'secondary';
+      case 'quotation': return 'secondary';
       default: return 'info';
     }
   }

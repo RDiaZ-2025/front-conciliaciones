@@ -4,8 +4,7 @@ import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ButtonModule } from 'primeng/button';
 import { FileUploadModule, FileUpload } from 'primeng/fileupload';
 import { TooltipModule } from 'primeng/tooltip';
-import { MessageService, ConfirmationService } from 'primeng/api';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { MessageService } from 'primeng/api';
 import { AzureStorageService } from '../../../../services/azure-storage.service';
 import { ProductionRequest, UploadedFile } from '../../production.models';
 
@@ -16,10 +15,8 @@ import { ProductionRequest, UploadedFile } from '../../production.models';
     CommonModule,
     ButtonModule,
     FileUploadModule,
-    TooltipModule,
-    ConfirmDialogModule
+    TooltipModule
   ],
-  providers: [ConfirmationService],
   templateUrl: './stage-transition-upload-dialog.component.html'
 })
 export class StageTransitionUploadDialogComponent implements OnInit {
@@ -29,7 +26,6 @@ export class StageTransitionUploadDialogComponent implements OnInit {
   config = inject(DynamicDialogConfig);
   azureService = inject(AzureStorageService);
   messageService = inject(MessageService);
-  confirmationService = inject(ConfirmationService);
   cdr = inject(ChangeDetectorRef);
 
   request!: ProductionRequest;
@@ -122,16 +118,7 @@ export class StageTransitionUploadDialogComponent implements OnInit {
       return;
     }
 
-    this.confirmationService.confirm({
-      message: '¿Seguro que todos los documentos están cargados?',
-      header: 'Confirmación',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Sí',
-      rejectLabel: 'No',
-      accept: () => {
-        this.ref.close({ success: true });
-      }
-    });
+    this.ref.close({ success: true });
   }
 
   cancel() {

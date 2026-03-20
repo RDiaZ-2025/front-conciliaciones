@@ -68,8 +68,9 @@ export class DataRewardsDialogComponent implements OnDestroy {
         safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(objectURL);
       }
       
-      const fileObj = { ...file, category: fieldName, safeUrl, name: file.name };
-      this.uploadedFiles.push(fileObj);
+      file.category = fieldName;
+      file.safeUrl = safeUrl;
+      this.uploadedFiles.push(file);
     }
     this.form.patchValue({ [fieldName]: event.files[0] });
     this.uploadStatus.update(s => ({...s, [fieldName]: true}));

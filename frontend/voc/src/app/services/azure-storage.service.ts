@@ -231,10 +231,20 @@ export class AzureStorageService {
    * Upload multiple files to Azure Storage
    */
   async uploadFiles(files: File[], options: UploadOptions): Promise<UploadResult[]> {
-    const uploadPromises = files.map(file => this.uploadFile(file, {
-      ...options,
-      onProgress: undefined, // Individual progress tracking not supported for batch uploads
-    }));
+    const uploadPromises = files.map(file => {
+      // Extract custom category if attached to file
+      const fileCategory = (file as any).category;
+      const metadata = { ...options.metadata };
+      if (fileCategory) {
+        metadata['category'] = fileCategory;
+      }
+      
+      return this.uploadFile(file, {
+        ...options,
+        metadata,
+        onProgress: undefined, // Individual progress tracking not supported for batch uploads
+      });
+    });
 
     return Promise.all(uploadPromises);
   }

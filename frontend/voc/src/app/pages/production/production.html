@@ -100,8 +100,10 @@
                             pTooltip="Historial de Cambios" (click)="openHistory(request)"></p-button>
 
 
-                        <p-button *ngIf="request.stage === 'closed_won'" icon="pi pi-list" [rounded]="true"
-                            [text]="true" severity="help" pTooltip="Registros de Material"
+                        <p-button
+                            *ngIf="request.stage === 'closed_won' || request.stage === 'implementation' || request.stage === 'customer_review'"
+                            icon="pi pi-list" [rounded]="true" [text]="true" severity="help"
+                            pTooltip="Registros de Material"
                             (click)="openMaterialRegisterListDialog(request)"></p-button>
 
                         <p-button *ngIf="request.stage !== 'completed'" icon="pi pi-arrow-right" [rounded]="true"
@@ -137,21 +139,14 @@
     <p-toast></p-toast>
     <p-confirmDialog></p-confirmDialog>
 
+    <div *ngIf="isProcessingMove()" class="flex flex-column align-items-center justify-content-center"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 10001; backdrop-filter: blur(2px);">
+        <p-progressSpinner strokeWidth="4"></p-progressSpinner>
+        <span class="text-white font-bold mt-3 text-xl">Procesando cambio de etapa...</span>
+    </div>
+
     <app-file-preview [(visible)]="previewVisible" [file]="previewFile()" (onDownload)="downloadPreviewFile()">
     </app-file-preview>
 
     <app-ans-dialog [(visible)]="slaRulesVisible"></app-ans-dialog>
-
-    <p-dialog [(visible)]="campaignTypeSelectionVisible" header="Seleccione Tipo de Campaña" [modal]="true"
-        [style]="{width: '400px'}">
-        <div class="flex flex-column gap-3 pt-2">
-            <p class="m-0 text-500">Por favor seleccione el tipo de campaña para continuar:</p>
-            <p-button label="Mobile" icon="pi pi-mobile" styleClass="w-full p-button-outlined"
-                (click)="selectCampaignType('val_materiales_mobile')"></p-button>
-            <p-button label="Programática" icon="pi pi-code" styleClass="w-full p-button-outlined"
-                (click)="selectCampaignType('val_materiales_programatica')"></p-button>
-            <p-button label="Red+" icon="pi pi-share-alt" styleClass="w-full p-button-outlined"
-                (click)="selectCampaignType('val_materiales_red_plus')"></p-button>
-        </div>
-    </p-dialog>
 </div>

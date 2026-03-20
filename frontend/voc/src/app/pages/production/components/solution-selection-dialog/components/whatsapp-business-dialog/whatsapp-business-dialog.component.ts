@@ -34,7 +34,7 @@ export class WhatsappBusinessDialogComponent implements OnDestroy {
 
   form: FormGroup;
   uploadedFiles: any[] = [];
-  uploadStatus = signal<{[key: string]: boolean}>({});
+  uploadStatus = signal<{ [key: string]: boolean }>({});
   private objectUrls: string[] = [];
 
   constructor() {
@@ -58,7 +58,7 @@ export class WhatsappBusinessDialogComponent implements OnDestroy {
   removeFile(category: string, uploader: any) {
     this.uploadedFiles = this.uploadedFiles.filter(f => f.category !== category);
     this.form.patchValue({ [category]: null });
-    this.uploadStatus.update(s => ({...s, [category]: false}));
+    this.uploadStatus.update(s => ({ ...s, [category]: false }));
     if (uploader && typeof uploader.clear === 'function') {
       uploader.clear();
     }
@@ -67,19 +67,20 @@ export class WhatsappBusinessDialogComponent implements OnDestroy {
   onUpload(event: any, fieldName: string, uploader: any) {
     for (let file of event.files) {
       this.uploadedFiles = this.uploadedFiles.filter(f => f.category !== fieldName);
-      
+
       let safeUrl = null;
       if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
         const objectURL = URL.createObjectURL(file);
         this.objectUrls.push(objectURL);
         safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(objectURL);
       }
-      
-      const fileObj = { ...file, category: fieldName, safeUrl, name: file.name };
-      this.uploadedFiles.push(fileObj);
+
+      file.category = fieldName;
+      file.safeUrl = safeUrl;
+      this.uploadedFiles.push(file);
     }
     this.form.patchValue({ [fieldName]: event.files[0] });
-    this.uploadStatus.update(s => ({...s, [fieldName]: true}));
+    this.uploadStatus.update(s => ({ ...s, [fieldName]: true }));
     this.messageService.add({ severity: 'info', summary: 'Éxito', detail: 'Archivo cargado correctamente' });
     if (uploader && typeof uploader.clear === 'function') {
       uploader.clear();

@@ -51,8 +51,7 @@ export class ProductionDetailDialogComponent implements OnInit {
       case 'completed': return 'success';
       case 'in_production': return 'info';
       case 'create_proposal': return 'warn';
-      case 'quotation': return 'warn';
-      case 'request': return 'secondary';
+      case 'quotation': return 'secondary';
       default: return 'info';
     }
   }
