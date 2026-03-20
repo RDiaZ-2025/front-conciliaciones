@@ -1,10 +1,11 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { FileUploadModule } from 'primeng/fileupload';
 import { DynamicDialogRef, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { MessageService } from 'primeng/api';
+import { DomSanitizer } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-generic-upload-dialog',
@@ -18,16 +19,19 @@ import { MessageService } from 'primeng/api';
   templateUrl: './generic-upload-dialog.component.html',
   styleUrls: ['./generic-upload-dialog.component.scss']
 })
-export class GenericUploadDialogComponent {
+export class GenericUploadDialogComponent implements OnDestroy {
   private fb = inject(FormBuilder);
   public ref = inject(DynamicDialogRef);
   public config = inject(DynamicDialogConfig);
   private messageService = inject(MessageService);
+  private sanitizer = inject(DomSanitizer);
+  private cd = inject(ChangeDetectorRef);
 
   form: FormGroup;
   uploadedFiles: any[] = [];
   isUploading = signal<boolean>(false);
   solutionType = signal<string>('');
+  private objectUrls: string[] = [];
   
   instructions = computed(() => {
     const type = this.solutionType();
@@ -56,11 +60,76 @@ export class GenericUploadDialogComponent {
     });
   }
 
-  onUpload(event: any) {
+  ngOnDestroy() {
+    this.objectUrls.forEach(url => URL.revokeObjectURL(url));
+  }
+
+  async onUpload(event: any, uploader: any) {
+    const validFiles = [];
+    
     for (const file of event.files) {
-      this.uploadedFiles.push({ ...file, category: 'general' });
+      if (this.solutionType() === 'MOBILE_DISPLAY' && file.type.startsWith('image/')) {
+         const isValid = await this.validateImageDimensions(file, [
+             { w: 300, h: 200 },
+             { w: 300, h: 50 },
+             { w: 300, h: 110 },
+             { w: 300, h: 250 },
+             { w: 200, h: 200 }
+         ]);
+         
+         if (!isValid) {
+             this.messageService.add({ 
+                 severity: 'error', 
+                 summary: 'Dimensión incorrecta', 
+                 detail: `El archivo ${file.name} no cumple con los tamaños permitidos (300x200, 300x50, 300x110, 300x250, 200x200).` 
+             });
+             continue; // Skip invalid file
+         }
+      }
+
+      let safeUrl = null;
+      if (file.type.startsWith('image/')) {
+        const objectURL = URL.createObjectURL(file);
+        this.objectUrls.push(objectURL);
+        safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(objectURL);
+      }
+      
+      validFiles.push({ ...file, category: 'general', safeUrl, name: file.name });
     }
-    this.messageService.add({ severity: 'info', summary: 'Success', detail: 'File uploaded' });
+    
+    if (validFiles.length > 0) {
+      this.uploadedFiles.push(...validFiles);
+      this.messageService.add({ severity: 'info', summary: 'Éxito', detail: 'Archivo(s) cargado(s) correctamente' });
+    }
+
+    if (uploader && typeof uploader.clear === 'function') {
+      uploader.clear();
+    }
+    this.cd.detectChanges();
+  }
+
+  validateImageDimensions(file: File, allowedDimensions: {w: number, h: number}[]): Promise<boolean> {
+      return new Promise((resolve) => {
+          const img = new Image();
+          const objectUrl = URL.createObjectURL(file);
+          
+          img.onload = () => {
+              const match = allowedDimensions.some(d => d.w === img.width && d.h === img.height);
+              URL.revokeObjectURL(objectUrl);
+              resolve(match);
+          };
+          
+          img.onerror = () => {
+              URL.revokeObjectURL(objectUrl);
+              resolve(false); // If it can't be loaded as an image, we reject it
+          };
+          
+          img.src = objectUrl;
+      });
+  }
+
+  removeFile(index: number) {
+    this.uploadedFiles.splice(index, 1);
   }
 
   async submit() {
