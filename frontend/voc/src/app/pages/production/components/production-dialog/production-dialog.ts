@@ -12,6 +12,7 @@ import { TeamService } from '../../../../services/team.service';
 import { User } from '../../../../services/user.service';
 import { ProductionService } from '../../../../services/production.service';
 import { AuthService } from '../../../../services/auth.service';
+import { HolidayService } from '../../../../services/holiday.service';
 import { ProductionStepGeneralComponent } from '../production-steps/production-step-general/production-step-general.component';
 import { ProductionStepCustomerComponent } from '../production-steps/production-step-customer/production-step-customer.component';
 import { ProductionStepCampaignComponent } from '../production-steps/production-step-campaign/production-step-campaign.component';
@@ -51,11 +52,11 @@ export class ProductionDialogComponent implements OnInit {
   rightsDurations: RightsDuration[] = [];
 
   constructor() {
-    // Auto-save setup is handled in setupValueChanges
   }
   teamService = inject(TeamService);
   productionService = inject(ProductionService);
   authService = inject(AuthService);
+  holidayService = inject(HolidayService);
   cd = inject(ChangeDetectorRef);
 
   form!: FormGroup;
@@ -88,17 +89,14 @@ export class ProductionDialogComponent implements OnInit {
     this.loadProductionOptions();
     this.loadStatuses();
 
-    // Initialize files from passed data immediately (fallback if storage fails)
     if (data.files) {
       this.existingFiles = [...data.files];
     }
 
-    // Initialize loadedRequest from passed data to ensure we have base fields immediately
     if (this.isEditMode && data.id) {
       this.loadedRequest = data as ProductionRequest;
     }
 
-    // Load files from Azure Storage if in Edit Mode
     if (this.isEditMode && this.config.data.id) {
       this.loadFilesFromStorage(this.config.data.id);
     }
@@ -112,29 +110,21 @@ export class ProductionDialogComponent implements OnInit {
     ];
 
     this.form = this.fb.group({
-      // Step 1: General Request
       name: [data.name || '', Validators.required],
       department: [data.department || '', Validators.required],
       assignedUserId: [data.assignedUserId || null],
-      deliveryDate: [data.deliveryDate ? new Date(data.deliveryDate) : null, Validators.required],
       observations: [data.observations || ''],
       status: [data.status || 'request', Validators.required],
 
-      // Step 2: Customer Information
       customerData: this.fb.group({
         clientAgency: [data.customerData?.clientAgency || '', Validators.required],
         requesterName: [data.customerData?.requesterName || '', Validators.required],
         requesterEmail: [data.customerData?.requesterEmail || '', [Validators.required, Validators.email]],
         requesterPhone: [data.customerData?.requesterPhone || ''],
         businessName: [data.customerData?.businessName || '', Validators.required],
-        nit: [data.customerData?.nit || '', Validators.required],
-        serviceStrategy: [data.customerData?.serviceStrategy || false],
-        serviceTactical: [data.customerData?.serviceTactical || false],
-        serviceProduction: [data.customerData?.serviceProduction || false],
-        serviceData: [data.customerData?.serviceData || false]
+        nit: [data.customerData?.nit || '', Validators.required]
       }),
 
-      // Step 3: Audience Details
       audienceData: this.fb.group({
         genderId: [data.audienceData?.genderId || null, Validators.required],
         geo: [data.audienceData?.geo || '', Validators.required],
@@ -147,7 +137,6 @@ export class ProductionDialogComponent implements OnInit {
         assets: [data.audienceData?.assets || '']
       }),
 
-      // Step 4: Campaign Details
       campaignDetail: this.fb.group({
         budget: [data.campaignDetail?.budget || '', Validators.required],
         brand: [data.campaignDetail?.brand || ''],
@@ -156,7 +145,6 @@ export class ProductionDialogComponent implements OnInit {
         campaignProducts: this.fb.array([])
       }),
 
-      // Step 5: Production Info
       productionInfo: this.fb.group({
         formatTypeId: [data.productionInfo?.formatTypeId || null, Validators.required],
         rightsDurationId: [data.productionInfo?.rightsDurationId || null, Validators.required],
@@ -171,29 +159,23 @@ export class ProductionDialogComponent implements OnInit {
 
     this.loadTeams();
 
-    // Auto-fill for new requests
     if (!this.isEditMode) {
       const currentUser = this.authService.currentUser();
       if (currentUser) {
-        // Set Assigned User (User Creator)
         if (currentUser.id) {
           this.form.patchValue({ assignedUserId: currentUser.id });
         }
 
-        // Set Department (Team) - Auto-select user's team and make it read-only
-        // Requirement: Always use current user's team for new requests
         const userTeams = (currentUser as any).teams as string[];
         if (userTeams && userTeams.length > 0) {
           const teamName = userTeams[0];
           this.form.patchValue({ department: teamName });
-          // We disable it since it's not selectable in UI anymore, but value is preserved in getRawValue()
           this.form.get('department')?.disable();
         }
       }
     }
 
     this.teams$.subscribe(teams => {
-      // Teams loaded
     });
 
     this.loadProducts();
@@ -208,7 +190,6 @@ export class ProductionDialogComponent implements OnInit {
             this.form.disable();
           }
 
-          // Convert dates
           if (fullData.deliveryDate) fullData.deliveryDate = new Date(fullData.deliveryDate);
           if (fullData.productionInfo?.campaignEmissionDate) {
             fullData.productionInfo.campaignEmissionDate = new Date(fullData.productionInfo.campaignEmissionDate);
@@ -216,13 +197,8 @@ export class ProductionDialogComponent implements OnInit {
 
           this.form.patchValue(fullData);
 
-          // Disable read-only fields (AC5)
-          // Department should be editable for reassignment
-          // this.form.get('department')?.disable();
-
           this.checkPermissions(fullData);
 
-          // Handle FormArray for campaignProducts
           this.campaignProducts.clear();
           if (fullData.campaignDetail?.campaignProducts && fullData.campaignDetail.campaignProducts.length > 0) {
             fullData.campaignDetail.campaignProducts.forEach((cp: any) => this.addCampaignProduct(cp));
@@ -232,7 +208,6 @@ export class ProductionDialogComponent implements OnInit {
 
           if (fullData.files) {
             if (this.existingFiles.length === 0) {
-              // Wrap in setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
               setTimeout(() => {
                 this.existingFiles = fullData.files;
                 this.cd.detectChanges();
@@ -363,7 +338,6 @@ export class ProductionDialogComponent implements OnInit {
   }
 
   setupValueChanges() {
-    // No specific value changes logic needed for now
   }
 
   loadTeams() {
@@ -420,7 +394,7 @@ export class ProductionDialogComponent implements OnInit {
     } else {
       switch (this.currentStep) {
         case 0:
-          const mainControls = ['name', 'department', 'deliveryDate'];
+          const mainControls = ['name', 'department'];
           isValid = mainControls.every(key => {
             const control = this.form.get(key);
             return control?.valid || control?.disabled;
@@ -497,7 +471,7 @@ export class ProductionDialogComponent implements OnInit {
     this.form.disable();
     this.form.get('observations')?.enable();
     this.form.get('status')?.enable();
-    this.form.get('department')?.enable(); // Allow reassignment
+    this.form.get('department')?.enable();
     this.form.get('assignedUserId')?.enable();
 
     const productionInfo = this.form.get('productionInfo') as FormGroup;
@@ -507,7 +481,7 @@ export class ProductionDialogComponent implements OnInit {
     }
   }
 
-  saveData(closeOnComplete: boolean = false) {
+  async saveData(closeOnComplete: boolean = false) {
     if (this.isUploading$.value) {
       return;
     }
@@ -542,20 +516,11 @@ export class ProductionDialogComponent implements OnInit {
 
     let forcedStage: string | undefined;
 
-    // Ensure status is set for new requests based on Budget logic
     if (!this.isEditMode) {
-      // First creation (Step 0 -> 1)
-      // User requirement: Status must be "quotation"
       const targetStageCode = 'quotation';
-
       forcedStage = targetStageCode;
       formValue.status = targetStageCode;
-      console.log('Setting initial status to quotation');
     } else if (this.currentStep === 2) {
-      // Saving Campaign Step (Step 2 -> 3)
-      // User requirement: Update based on budget
-      // Budget < 50M -> create_proposal
-      // Budget >= 50M -> get_data
       const budgetStr = formValue.campaignDetail?.budget || '0';
       const cleanBudget = String(budgetStr).replace(/[^0-9]/g, '');
       const budget = parseFloat(cleanBudget);
@@ -565,17 +530,58 @@ export class ProductionDialogComponent implements OnInit {
         targetStageCode = 'get_data';
       }
 
-      // Only apply if we are in an early stage (or if explicitly creating/updating early info)
+      let currentDate = new Date();
+      let daysToAdd = 0;
+
+      if (budget < 50000000) {
+        daysToAdd = 2;
+      } else if (budget >= 50000000 && budget <= 100000000) {
+        daysToAdd = 3;
+      } else if (budget > 100000000 && budget <= 200000000) {
+        daysToAdd = 4;
+      } else {
+        daysToAdd = 7;
+      }
+
+      let holidays: string[] = [];
+      try {
+        holidays = await this.holidayService.getHolidaysForDateRange(currentDate);
+      } catch (error) {
+        console.error(error);
+      }
+
+      const isHoliday = (date: Date) => this.holidayService.isHoliday(date, holidays);
+
+      const currentHour = currentDate.getHours();
+      if (currentHour >= 17) {
+        currentDate.setDate(currentDate.getDate() + 1);
+        currentDate.setHours(7, 0, 0, 0);
+      } else if (currentHour < 7) {
+        currentDate.setHours(7, 0, 0, 0);
+      }
+
+      while (currentDate.getDay() === 0 || currentDate.getDay() === 6 || isHoliday(currentDate)) {
+        currentDate.setDate(currentDate.getDate() + 1);
+        currentDate.setHours(7, 0, 0, 0);
+      }
+
+      while (daysToAdd > 0) {
+        currentDate.setDate(currentDate.getDate() + 1);
+        if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6 && !isHoliday(currentDate)) {
+          daysToAdd--;
+        }
+      }
+
+      formValue.deliveryDate = currentDate;
+
       const currentStatus = this.loadedRequest?.status || formValue.status;
       const earlyStages = ['request', 'quotation', 'inicio', 'in_sell', 'get_data', 'create_proposal'];
 
       if (!currentStatus || earlyStages.includes(currentStatus)) {
         forcedStage = targetStageCode;
         formValue.status = targetStageCode;
-        console.log(`Updating status to '${targetStageCode}' based on budget: ${budget}`);
       }
     } else if (!formValue.status) {
-      // If edit mode but status missing, default to 'request'
       formValue.status = 'request';
     }
 
@@ -588,18 +594,15 @@ export class ProductionDialogComponent implements OnInit {
       ...this.loadedRequest,
       ...this.config.data,
       ...formValue,
-      deliveryDate: formValue.deliveryDate ? formValue.deliveryDate.toISOString() : undefined,
+      deliveryDate: formValue.deliveryDate ? (formValue.deliveryDate instanceof Date ? formValue.deliveryDate.toISOString() : new Date(formValue.deliveryDate).toISOString()) : undefined,
       productionInfo: productionInfo
     };
 
-    // Explicitly set stage if calculated locally, to ensure backend gets the intent
-    // even if the statusId maps to 'request' (fallback) or if backend logic relies on stage string
     if (forcedStage) {
       fullPayload.stage = forcedStage;
     }
 
     if (fullPayload.campaignDetail?.campaignProducts) {
-      // Filter out invalid products (missing productId)
       const validProducts = fullPayload.campaignDetail.campaignProducts.filter((p: any) => p.productId !== null && p.productId !== undefined);
 
       fullPayload.campaignDetail.campaignProducts = validProducts.map((p: any) => {
@@ -713,22 +716,21 @@ export class ProductionDialogComponent implements OnInit {
     if (this.isEditMode && this.config.data?.id) {
       const requestId = this.config.data.id;
       switch (this.currentStep) {
-        case 0: // General
+        case 0:
           const generalData = {
             name: formValue.name,
             department: formValue.department,
             contactPerson: formValue.contactPerson,
             assignedUserId: formValue.assignedUserId,
-            deliveryDate: formValue.deliveryDate ? formValue.deliveryDate.toISOString() : null,
             observations: formValue.observations,
             statusId: formValue.statusId
           };
           request$ = this.productionService.updateStepGeneral(requestId, generalData);
           break;
-        case 1: // Customer
+        case 1:
           request$ = this.productionService.updateStepCustomer(requestId, formValue.customerData);
           break;
-        case 2: // Campaign
+        case 2:
           const campaignDetail = { ...formValue.campaignDetail };
           if (campaignDetail.campaignProducts) {
             campaignDetail.campaignProducts = campaignDetail.campaignProducts.map((p: any) => {
@@ -737,12 +739,12 @@ export class ProductionDialogComponent implements OnInit {
               return cleanP;
             });
           }
-          request$ = this.productionService.updateStepCampaign(requestId, campaignDetail, formValue.status);
+          request$ = this.productionService.updateStepCampaign(requestId, campaignDetail, formValue.status, formValue.deliveryDate ? (formValue.deliveryDate instanceof Date ? formValue.deliveryDate.toISOString() : new Date(formValue.deliveryDate).toISOString()) : undefined);
           break;
-        case 3: // Audience
+        case 3:
           request$ = this.productionService.updateStepAudience(requestId, formValue.audienceData);
           break;
-        case 4: // Production
+        case 4:
           request$ = this.productionService.updateStepProduction(requestId, productionInfo);
           break;
         default:

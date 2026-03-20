@@ -43,8 +43,8 @@ export class ProductionService {
     return this.http.put<ProductionRequest>(`${this.apiUrl}/${id}/customer`, { customerData: data });
   }
 
-  updateStepCampaign(id: number, data: any, status?: string): Observable<ProductionRequest> {
-    return this.http.put<ProductionRequest>(`${this.apiUrl}/${id}/campaign`, { campaignDetail: data, status });
+  updateStepCampaign(id: number, data: any, status?: string, deliveryDate?: string): Observable<ProductionRequest> {
+    return this.http.put<ProductionRequest>(`${this.apiUrl}/${id}/campaign`, { campaignDetail: data, status, deliveryDate });
   }
 
   updateStepAudience(id: number, data: any): Observable<ProductionRequest> {

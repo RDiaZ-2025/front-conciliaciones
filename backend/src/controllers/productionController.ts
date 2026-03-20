@@ -552,7 +552,9 @@ const updateProductionRequestPartial = async (req: Request, res: Response): Prom
     if (body.name) existingRequest.name = body.name;
     if (body.department) existingRequest.department = body.department;
     if (body.assignedUserId) existingRequest.assignedUserId = body.assignedUserId;
-    if (body.deliveryDate) existingRequest.deliveryDate = new Date(body.deliveryDate);
+    if (body.deliveryDate !== undefined) {
+      existingRequest.deliveryDate = body.deliveryDate ? new Date(body.deliveryDate) : null;
+    }
     if (body.observations) existingRequest.observations = body.observations;
     if (body.status) existingRequest.status = body.status;
     if (body.stage) {
@@ -603,7 +605,56 @@ export const deleteProductionRequest = async (req: Request, res: Response): Prom
 export const moveProductionRequest = updateProductionRequestPartial;
 export const updateStepGeneral = updateProductionRequestPartial;
 export const updateStepCustomer = updateProductionRequestPartial;
-export const updateStepCampaign = updateProductionRequestPartial;
+export const updateStepCampaign = async (req: Request, res: Response): Promise<Response | void> => {
+  try {
+    const { id } = req.params;
+    const { campaignDetail, status, deliveryDate } = req.body;
+
+    if (!AppDataSource.isInitialized) {
+      return res.status(503).json({ success: false, message: 'Base de datos no disponible' });
+    }
+
+    const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
+    const existingRequest = await productionRequestRepository.findOne({
+      where: { id: parseInt(id) },
+      relations: ['campaignDetail', 'campaignDetail.campaignProducts']
+    });
+
+    if (!existingRequest) {
+      return res.status(404).json({ message: 'Production request not found' });
+    }
+
+    if (campaignDetail) {
+      if (campaignDetail.budget !== undefined && campaignDetail.budget !== null) {
+        campaignDetail.budget = String(campaignDetail.budget);
+      }
+      existingRequest.campaignDetail = { ...existingRequest.campaignDetail, ...campaignDetail };
+    }
+
+    if (status) {
+      existingRequest.status = status;
+    }
+    
+    if (deliveryDate !== undefined) {
+      existingRequest.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
+    }
+
+    const updatedRequest = await productionRequestRepository.save(existingRequest);
+
+    if (req.user?.userId) {
+      await historyService.logDifferences(
+        existingRequest,
+        { campaignDetail, status, deliveryDate },
+        req.user.userId
+      );
+    }
+
+    return res.status(200).json(updatedRequest);
+  } catch (error) {
+    console.error('Error updating step campaign:', error);
+    return res.status(500).json({ message: 'Error updating step campaign', error });
+  }
+};
 export const updateStepAudience = updateProductionRequestPartial;
 export const updateStepProduction = updateProductionRequestPartial;
 export const updateMaterialData = updateProductionRequestPartial;

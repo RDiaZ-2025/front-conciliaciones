@@ -10,23 +10,6 @@
         </small>
     </div>
 
-
-    <div class="mb-2">
-        <p-floatlabel variant="in">
-            <ng-container *ngIf="!form.get('deliveryDate')?.disabled">
-                <p-datepicker id="deliveryDate" formControlName="deliveryDate" dateFormat="yy-mm-dd" [showIcon]="true"
-                    appendTo="body" styleClass="w-full" inputStyleClass="w-full" [minDate]="minDate" [showTime]="true"
-                    hourFormat="12"></p-datepicker>
-            </ng-container>
-            <input *ngIf="form.get('deliveryDate')?.disabled" pInputText id="deliveryDate"
-                [value]="form.get('deliveryDate')?.value | date:'yyyy-MM-dd hh:mm a'" class="w-full" disabled />
-            <label for="deliveryDate">Fecha de entrega</label>
-        </p-floatlabel>
-        <small class="p-error" *ngIf="form.get('deliveryDate')?.invalid && form.get('deliveryDate')?.dirty">
-            Fecha es requerida
-        </small>
-    </div>
-
     <div>
         <p-floatlabel variant="in">
             <textarea pTextarea id="observations" formControlName="observations" rows="3" autoResize="autoResize"

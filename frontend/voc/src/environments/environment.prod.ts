@@ -1,4 +1,5 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://voc-backend.azurewebsites.net/api'
+  apiUrl: 'https://voc-backend.azurewebsites.net/api',
+  festivosApiKey: 'fs_3mNHbhSyjhJyTtdhiKhQjtAC6LWj1MAc'
 };

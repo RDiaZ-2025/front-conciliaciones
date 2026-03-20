@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 import { FloatLabelModule } from 'primeng/floatlabel';
-import { CheckboxModule } from 'primeng/checkbox';
 import { SelectModule } from 'primeng/select';
 import { InputMaskModule } from 'primeng/inputmask';
 
@@ -15,7 +14,6 @@ import { InputMaskModule } from 'primeng/inputmask';
     ReactiveFormsModule,
     InputTextModule,
     FloatLabelModule,
-    CheckboxModule,
     SelectModule,
     InputMaskModule
   ],

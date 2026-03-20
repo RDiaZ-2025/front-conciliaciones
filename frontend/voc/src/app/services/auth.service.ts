@@ -41,6 +41,16 @@ export class AuthService {
 
   private initializeAuth() {
     const token = localStorage.getItem('auth_token');
+    const storedUser = localStorage.getItem('user');
+
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        this.currentUser.set(parsedUser);
+      } catch (e) {
+        console.error('Error parsing stored user', e);
+      }
+    }
 
     if (token) {
       this.verifyToken().subscribe({
@@ -51,15 +61,25 @@ export class AuthService {
               ? this.normalizePermissions(rawData.permissions)
               : (userData.permissions ? this.normalizePermissions(userData.permissions) : []);
 
+            // Try to preserve teamId from localStorage if backend doesn't send it in verify
+            let teamId = rawData.teamId;
+            if (teamId == null && storedUser) {
+              try {
+                const parsedUser = JSON.parse(storedUser);
+                teamId = parsedUser.teamId;
+              } catch (e) { }
+            }
+
             const normalizedUser: User = {
               id: rawData.id,
               name: rawData.name,
               email: rawData.email,
               permissions: permissions,
               teams: rawData.teams || [],
-              teamId: rawData.teamId
+              teamId: teamId
             };
             this.currentUser.set(normalizedUser);
+            localStorage.setItem('user', JSON.stringify(normalizedUser));
           } else {
             this.logout();
           }

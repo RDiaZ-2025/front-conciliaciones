@@ -5,7 +5,6 @@ import { InputTextModule } from 'primeng/inputtext';
 import { FloatLabelModule } from 'primeng/floatlabel';
 import { SelectModule } from 'primeng/select';
 import { TextareaModule } from 'primeng/textarea';
-import { DatePickerModule } from 'primeng/datepicker';
 import { FileUploadModule } from 'primeng/fileupload';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
@@ -22,7 +21,6 @@ import { User } from '../../../../../services/user.service';
     FloatLabelModule,
     SelectModule,
     TextareaModule,
-    DatePickerModule,
     FileUploadModule,
     ButtonModule,
     TooltipModule
