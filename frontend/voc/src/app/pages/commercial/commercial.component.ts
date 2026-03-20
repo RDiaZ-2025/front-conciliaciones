@@ -12,6 +12,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { TooltipModule } from 'primeng/tooltip';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { AzureStorageService } from '../../services/azure-storage.service';
 import { AuthService } from '../../services/auth.service';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
@@ -40,6 +41,7 @@ interface FileItem {
     IconFieldModule,
     InputIconModule,
     TooltipModule,
+    ProgressBarModule,
     PageHeaderComponent
   ],
   providers: [MessageService],
@@ -61,6 +63,10 @@ export class CommercialComponent implements OnInit {
   currentPath = signal<string>(this.ROOT_PATH);
   breadcrumbItems = signal<MenuItem[]>([]);
   searchValue = signal<string>('');
+
+  // Download State
+  downloadingFileId = signal<string | null>(null);
+  downloadProgress = signal<number>(0);
 
   filteredFiles = computed(() => {
     const term = this.searchValue().toLowerCase();
@@ -171,13 +177,38 @@ export class CommercialComponent implements OnInit {
       this.loadFiles();
     } else {
       // Download file on click since actions column is removed
-      this.azureService.downloadSingleFile(item.id, item.name, this.CONTAINER_NAME);
+      this.performDownload(item);
     }
   }
 
   downloadFile(item: FileItem, event: Event) {
     event.stopPropagation();
-    this.azureService.downloadSingleFile(item.id, item.name, this.CONTAINER_NAME);
+    this.performDownload(item);
+  }
+
+  private async performDownload(item: FileItem) {
+    if (this.downloadingFileId()) {
+      this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'Ya hay una descarga en curso.' });
+      return;
+    }
+
+    try {
+      this.downloadingFileId.set(item.id);
+      this.downloadProgress.set(0);
+      this.messageService.add({ severity: 'info', summary: 'Descargando', detail: `Iniciando descarga de ${item.name}...` });
+
+      await this.azureService.downloadSingleFile(item.id, item.name, this.CONTAINER_NAME, (progress) => {
+        this.downloadProgress.set(progress);
+      }, item.size);
+
+      this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Archivo descargado correctamente.' });
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo descargar el archivo.' });
+    } finally {
+      this.downloadingFileId.set(null);
+      this.downloadProgress.set(0);
+    }
   }
 
   updateBreadcrumb() {

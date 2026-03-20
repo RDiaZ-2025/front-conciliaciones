@@ -344,6 +344,11 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       }
     }
 
+    const isEmptyObject = (obj: any) => {
+      if (!obj) return true;
+      return Object.values(obj).every(val => val === null || val === undefined || val === '' || val === false || (Array.isArray(val) && val.length === 0));
+    };
+
     const newProductionRequest = productionRequestRepository.create({
       name,
       requestDate: new Date(),
@@ -353,10 +358,10 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
       observations,
       status: finalStatus,
-      customerData,
-      audienceData,
-      campaignDetail,
-      productionInfo
+      customerData: isEmptyObject(customerData) ? undefined : customerData,
+      audienceData: isEmptyObject(audienceData) ? undefined : audienceData,
+      campaignDetail: isEmptyObject(campaignDetail) ? undefined : campaignDetail,
+      productionInfo: isEmptyObject(productionInfo) ? undefined : productionInfo
     });
 
     const savedRequest = await productionRequestRepository.save(newProductionRequest);
@@ -530,7 +535,14 @@ const updateProductionRequestPartial = async (req: Request, res: Response): Prom
 
     const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
     const existingRequest = await productionRequestRepository.findOne({
-      where: { id: parseInt(id) }
+      where: { id: parseInt(id) },
+      relations: [
+        'customerData',
+        'audienceData',
+        'campaignDetail',
+        'campaignDetail.campaignProducts',
+        'productionInfo'
+      ]
     });
 
     if (!existingRequest) {

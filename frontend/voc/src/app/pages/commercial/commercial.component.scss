@@ -26,13 +26,25 @@
     position: relative;
     border: 1px solid transparent;
 
-    &:hover {
+    &:not(.disabled-item):hover {
         background-color: var(--surface-hover);
         border-color: var(--surface-border);
     }
 
-    &:active {
+    &:not(.disabled-item):active {
         background-color: var(--surface-ground);
+    }
+
+    &.disabled-item {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    &.downloading {
+        pointer-events: none;
+        background-color: var(--surface-hover);
+        border-color: var(--surface-border);
     }
 
     .file-icon-wrapper {

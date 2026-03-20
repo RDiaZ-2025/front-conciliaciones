@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { BlobServiceClient, ContainerClient } from '@azure/storage-blob';
 import { ShareServiceClient, ShareClient, ShareDirectoryClient } from '@azure/storage-file-share';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { HttpClient, HttpEventType, HttpRequest } from '@angular/common/http';
+import { firstValueFrom, filter, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface UploadOptions {
@@ -82,15 +82,15 @@ export class AzureStorageService {
       let client: ContainerClient | ShareClient;
 
       if (serviceType === 'file') {
-         const shareServiceClient = new ShareServiceClient(
-            `https://${response.data.accountName}.file.core.windows.net/${response.data.sasToken}`
-         );
-         client = shareServiceClient.getShareClient(response.data.containerName);
+        const shareServiceClient = new ShareServiceClient(
+          `https://${response.data.accountName}.file.core.windows.net/${response.data.sasToken}`
+        );
+        client = shareServiceClient.getShareClient(response.data.containerName);
       } else {
-         const blobServiceClient = new BlobServiceClient(
-            `https://${response.data.accountName}.blob.core.windows.net/${response.data.sasToken}`
-         );
-         client = blobServiceClient.getContainerClient(response.data.containerName);
+        const blobServiceClient = new BlobServiceClient(
+          `https://${response.data.accountName}.blob.core.windows.net/${response.data.sasToken}`
+        );
+        client = blobServiceClient.getContainerClient(response.data.containerName);
       }
 
       // Store in cache
@@ -109,7 +109,7 @@ export class AzureStorageService {
         console.warn(`Azure Storage not configured: ${error.error.message}`);
         throw new Error('Azure Storage not configured');
       }
-      
+
       console.error(`Error initializing Azure Storage client for container ${containerName}:`, error);
       throw error;
     }
@@ -117,15 +117,15 @@ export class AzureStorageService {
 
   // Backwards compatibility alias
   private async getContainerClient(containerName: string = 'private'): Promise<ContainerClient> {
-      const client = await this.getClient(containerName);
-      if (this.isShareClient(client)) {
-          throw new Error('Expected Blob ContainerClient but got ShareClient');
-      }
-      return client;
+    const client = await this.getClient(containerName);
+    if (this.isShareClient(client)) {
+      throw new Error('Expected Blob ContainerClient but got ShareClient');
+    }
+    return client;
   }
 
   private isShareClient(client: any): client is ShareClient {
-      return (client as ShareClient).getDirectoryClient !== undefined;
+    return (client as ShareClient).getDirectoryClient !== undefined;
   }
 
 
@@ -213,7 +213,7 @@ export class AzureStorageService {
     try {
       const containerClient = await this.getContainerClient(containerName);
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-      
+
       const uploadOptions: any = {};
       if (options?.blobHTTPHeaders) {
         uploadOptions.blobHTTPHeaders = options.blobHTTPHeaders;
@@ -332,32 +332,32 @@ export class AzureStorageService {
   }
 
   private async getCommercialFiles(folderPath: string): Promise<any[]> {
-      try {
-        const response = await firstValueFrom(
-            this.http.get<{success: boolean, data: any[]}>(`${environment.apiUrl}/storage/commercial/files`, {
-                params: { path: folderPath }
-            })
-        );
-        
-        if (!response.success) throw new Error('Failed to load commercial files');
-        
-        return response.data.map(item => {
-            const normalizedPath = folderPath.endsWith('/') ? folderPath.slice(0, -1) : folderPath;
-            const fullPath = normalizedPath ? `${normalizedPath}/${item.name}` : item.name;
-            
-            return {
-                id: fullPath,
-                name: item.name,
-                size: item.size,
-                type: item.kind === 'directory' ? 'directory' : this.getMimeType(item.name.split('.').pop()?.toLowerCase() || ''),
-                url: '', 
-                uploadDate: item.lastModified || new Date().toISOString()
-            };
-        });
-      } catch (error) {
-          console.error('Error fetching commercial files via proxy:', error);
-          throw error;
-      }
+    try {
+      const response = await firstValueFrom(
+        this.http.get<{ success: boolean, data: any[] }>(`${environment.apiUrl}/storage/commercial/files`, {
+          params: { path: folderPath }
+        })
+      );
+
+      if (!response.success) throw new Error('Failed to load commercial files');
+
+      return response.data.map(item => {
+        const normalizedPath = folderPath.endsWith('/') ? folderPath.slice(0, -1) : folderPath;
+        const fullPath = normalizedPath ? `${normalizedPath}/${item.name}` : item.name;
+
+        return {
+          id: fullPath,
+          name: item.name,
+          size: item.size,
+          type: item.kind === 'directory' ? 'directory' : this.getMimeType(item.name.split('.').pop()?.toLowerCase() || ''),
+          url: '',
+          uploadDate: item.lastModified || new Date().toISOString()
+        };
+      });
+    } catch (error) {
+      console.error('Error fetching commercial files via proxy:', error);
+      throw error;
+    }
   }
 
   /**
@@ -373,7 +373,7 @@ export class AzureStorageService {
   }>> {
     // If commercial container, use proxy to avoid CORS issues
     if (containerName === 'autoconsumoshared') {
-        return this.getCommercialFiles(folderPath);
+      return this.getCommercialFiles(folderPath);
     }
 
     try {
@@ -391,68 +391,68 @@ export class AzureStorageService {
       }> = [];
 
       if (this.isShareClient(client)) {
-          // Share Logic
-          // Remove trailing slash for Share Directory Client
-          let searchPath = folderPath;
-          if (searchPath.endsWith('/')) searchPath = searchPath.slice(0, -1);
-          
-          const directoryClient = searchPath ? client.getDirectoryClient(searchPath) : client.rootDirectoryClient;
+        // Share Logic
+        // Remove trailing slash for Share Directory Client
+        let searchPath = folderPath;
+        if (searchPath.endsWith('/')) searchPath = searchPath.slice(0, -1);
 
-          // Check existence (only if not root, root always exists in valid share)
-          if (searchPath && !await directoryClient.exists()) {
-             return [];
-          }
+        const directoryClient = searchPath ? client.getDirectoryClient(searchPath) : client.rootDirectoryClient;
 
-          try {
-            for await (const entity of directoryClient.listFilesAndDirectories()) {
-               const entityPath = searchPath ? `${searchPath}/${entity.name}` : entity.name;
-               
-               if (entity.kind === 'directory') {
-                    files.push({
-                        id: entityPath,
-                        name: entity.name,
-                        size: 0,
-                        type: 'directory',
-                        url: '',
-                        uploadDate: new Date().toISOString()
-                    });
-               } else {
-                    files.push({
-                        id: entityPath,
-                        name: entity.name,
-                        size: entity.properties.contentLength || 0,
-                        type: this.getMimeType(entity.name.split('.').pop()?.toLowerCase() || ''),
-                        // Generate URL with SAS token
-                        url: `https://${accountName}.file.core.windows.net/${containerName}/${entityPath}${session?.sasToken}`,
-                        uploadDate: entity.properties.lastModified?.toISOString() || new Date().toISOString()
-                    });
-               }
+        // Check existence (only if not root, root always exists in valid share)
+        if (searchPath && !await directoryClient.exists()) {
+          return [];
+        }
+
+        try {
+          for await (const entity of directoryClient.listFilesAndDirectories()) {
+            const entityPath = searchPath ? `${searchPath}/${entity.name}` : entity.name;
+
+            if (entity.kind === 'directory') {
+              files.push({
+                id: entityPath,
+                name: entity.name,
+                size: 0,
+                type: 'directory',
+                url: '',
+                uploadDate: new Date().toISOString()
+              });
+            } else {
+              files.push({
+                id: entityPath,
+                name: entity.name,
+                size: entity.properties.contentLength || 0,
+                type: this.getMimeType(entity.name.split('.').pop()?.toLowerCase() || ''),
+                // Generate URL with SAS token
+                url: `https://${accountName}.file.core.windows.net/${containerName}/${entityPath}${session?.sasToken}`,
+                uploadDate: entity.properties.lastModified?.toISOString() || new Date().toISOString()
+              });
             }
-          } catch (e) {
-             console.error('Error listing share files:', e);
-             throw e;
           }
+        } catch (e) {
+          console.error('Error listing share files:', e);
+          throw e;
+        }
       } else {
-          // Blob Logic
-          const searchPath = folderPath.endsWith('/') ? folderPath : `${folderPath}/`;
+        // Blob Logic
+        const searchPath = folderPath.endsWith('/') ? folderPath : `${folderPath}/`;
 
-          for await (const blob of client.listBlobsFlat({
-            prefix: searchPath,
-            includeMetadata: true
-          })) {
-            const fileName = blob.name.split('/').pop() || blob.name;
-            const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
-            const mimeType = this.getMimeType(fileExtension);
+        for await (const blob of client.listBlobsFlat({
+          prefix: searchPath,
+          includeMetadata: true
+        })) {
+          const fileName = blob.name.split('/').pop() || blob.name;
+          const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
+          const mimeType = this.getMimeType(fileExtension);
 
-            files.push({
-              id: blob.name,
-              name: fileName,
-              size: blob.properties.contentLength || 0,
-              type: mimeType,
-              url: `https://${accountName}.blob.core.windows.net/${containerName}/${blob.name}`,
-              uploadDate: blob.properties.lastModified?.toISOString() || new Date().toISOString()
-            });
-          }
+          files.push({
+            id: blob.name,
+            name: fileName,
+            size: blob.properties.contentLength || 0,
+            type: mimeType,
+            url: `https://${accountName}.blob.core.windows.net/${containerName}/${blob.name}`,
+            uploadDate: blob.properties.lastModified?.toISOString() || new Date().toISOString()
+          });
+        }
       }
 
       return files;
@@ -535,33 +535,55 @@ export class AzureStorageService {
   /**
    * Download a single file by its blob name
    */
-  async downloadSingleFile(blobName: string, fileName?: string, containerName: string = 'private'): Promise<void> {
+  async downloadSingleFile(blobName: string, fileName?: string, containerName: string = 'private', onProgress?: (progress: number) => void, fileSize?: number): Promise<void> {
     if (containerName === 'autoconsumoshared') {
-        // Use proxy download
-        const url = `${environment.apiUrl}/storage/commercial/download?path=${encodeURIComponent(blobName)}`;
-        try {
-            const blob = await firstValueFrom(
-                this.http.get(url, { responseType: 'blob' })
-            );
-            
-            const objectUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = objectUrl;
-            a.download = fileName || blobName.split('/').pop() || 'download';
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(objectUrl);
-            return;
-        } catch (error) {
-            console.error('Error downloading commercial file:', error);
-            throw error;
+      // Use proxy download
+      const url = `${environment.apiUrl}/storage/commercial/download?path=${encodeURIComponent(blobName)}`;
+      try {
+        let blob: Blob;
+        if (onProgress) {
+          const req = new HttpRequest('GET', url, {
+            reportProgress: true,
+            responseType: 'blob'
+          });
+          const response: any = await firstValueFrom(
+            this.http.request(req).pipe(
+              tap(event => {
+                if (event.type === HttpEventType.DownloadProgress) {
+                  // Some backends might not send Content-Length, so total could be undefined
+                  const total = event.total || fileSize;
+                  const percentDone = total ? Math.round(100 * event.loaded / total) : 0;
+                  onProgress(percentDone);
+                }
+              }),
+              filter(event => event.type === HttpEventType.Response)
+            )
+          );
+          blob = response.body;
+        } else {
+          blob = await firstValueFrom(
+            this.http.get(url, { responseType: 'blob' })
+          );
         }
+
+        const objectUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = objectUrl;
+        a.download = fileName || blobName.split('/').pop() || 'download';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(objectUrl);
+        return;
+      } catch (error) {
+        console.error('Error downloading commercial file:', error);
+        throw error;
+      }
     }
 
     try {
       const client = await this.getClient(containerName);
-      
+
       // Allow passing a full URL; extract blob path if needed
       let resolvedBlobName = blobName;
       if (/^https?:\/\//i.test(blobName)) {
@@ -574,22 +596,51 @@ export class AzureStorageService {
       let blobData: Blob | undefined;
 
       if (this.isShareClient(client)) {
-         // Share Logic
-         // resolvedBlobName is the full path relative to the share (e.g. "Folder/file.txt")
-         const lastSlashIndex = resolvedBlobName.lastIndexOf('/');
-         const directoryPath = lastSlashIndex > -1 ? resolvedBlobName.substring(0, lastSlashIndex) : '';
-         const name = lastSlashIndex > -1 ? resolvedBlobName.substring(lastSlashIndex + 1) : resolvedBlobName;
-         
-         const directoryClient = directoryPath ? client.getDirectoryClient(directoryPath) : client.rootDirectoryClient;
-         const fileClient = directoryClient.getFileClient(name);
-         
-         const downloadResponse = await fileClient.download();
-         blobData = await downloadResponse.blobBody;
+        // Share Logic
+        // resolvedBlobName is the full path relative to the share (e.g. "Folder/file.txt")
+        const lastSlashIndex = resolvedBlobName.lastIndexOf('/');
+        const directoryPath = lastSlashIndex > -1 ? resolvedBlobName.substring(0, lastSlashIndex) : '';
+        const name = lastSlashIndex > -1 ? resolvedBlobName.substring(lastSlashIndex + 1) : resolvedBlobName;
+
+        const directoryClient = directoryPath ? client.getDirectoryClient(directoryPath) : client.rootDirectoryClient;
+        const fileClient = directoryClient.getFileClient(name);
+
+        let totalSize = fileSize;
+        if (onProgress && !totalSize) {
+          try {
+            const props = await fileClient.getProperties();
+            totalSize = props.contentLength;
+          } catch (e) { }
+        }
+
+        const downloadResponse = await fileClient.download(0, undefined, {
+          onProgress: onProgress ? (ev) => {
+            if (totalSize) {
+              onProgress(Math.round(100 * ev.loadedBytes / totalSize));
+            }
+          } : undefined
+        });
+        blobData = await downloadResponse.blobBody;
       } else {
-         // Blob Logic
-         const blockBlobClient = client.getBlockBlobClient(resolvedBlobName);
-         const downloadResponse = await blockBlobClient.download();
-         blobData = await downloadResponse.blobBody;
+        // Blob Logic
+        const blockBlobClient = client.getBlockBlobClient(resolvedBlobName);
+
+        let totalSize = fileSize;
+        if (onProgress && !totalSize) {
+          try {
+            const props = await blockBlobClient.getProperties();
+            totalSize = props.contentLength;
+          } catch (e) { }
+        }
+
+        const downloadResponse = await blockBlobClient.download(0, undefined, {
+          onProgress: onProgress ? (ev) => {
+            if (totalSize) {
+              onProgress(Math.round(100 * ev.loadedBytes / totalSize));
+            }
+          } : undefined
+        });
+        blobData = await downloadResponse.blobBody;
       }
 
       if (blobData) {

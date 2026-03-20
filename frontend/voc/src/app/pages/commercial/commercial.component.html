@@ -38,13 +38,27 @@
         <ng-container *ngIf="!loading()">
             <!-- Grid View -->
             <div class="file-grid" *ngIf="filteredFiles().length > 0; else emptyState">
-                <div *ngFor="let file of filteredFiles()" class="file-item" (click)="onItemClick(file)">
-                    <div class="file-icon-wrapper">
+                <div *ngFor="let file of filteredFiles()" 
+                     class="file-item" 
+                     [class.disabled-item]="downloadingFileId() && downloadingFileId() !== file.id"
+                     [class.downloading]="downloadingFileId() === file.id"
+                     (click)="onItemClick(file)">
+                    <div class="file-icon-wrapper relative">
                          <img *ngIf="file.isFolder" src="assets/folder.svg" alt="Folder" class="w-4rem h-4rem">
                          <i *ngIf="!file.isFolder" [class]="getFileIcon(file)"></i>
+                         
+                         <!-- Loader Overlay -->
+                         <div *ngIf="downloadingFileId() === file.id" class="absolute top-0 left-0 w-full h-full flex align-items-center justify-content-center bg-white-alpha-80 border-round z-1">
+                             <i class="pi pi-spin pi-spinner text-primary" style="font-size: 2rem"></i>
+                         </div>
                     </div>
                     <span class="file-name" [pTooltip]="file.name" tooltipPosition="bottom" [showDelay]="500">{{ file.name }}</span>
                     <span *ngIf="!file.isFolder" class="file-meta">{{ formatSize(file.size) }}</span>
+                    
+                    <div *ngIf="downloadingFileId() === file.id" class="w-full mt-2 px-2">
+                        <p-progressBar [value]="downloadProgress()" [style]="{'height': '6px'}" [showValue]="false"></p-progressBar>
+                        <div class="text-xs text-center text-600 mt-1 font-medium">{{ downloadProgress() }}%</div>
+                    </div>
                 </div>
             </div>
 
