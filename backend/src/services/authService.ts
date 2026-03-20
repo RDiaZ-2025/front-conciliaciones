@@ -103,7 +103,8 @@ export class AuthService {
         name: user.name,
         email: user.email,
         permissions,
-        teams
+        teams,
+        teamId: user.team?.id
       },
       token
     };

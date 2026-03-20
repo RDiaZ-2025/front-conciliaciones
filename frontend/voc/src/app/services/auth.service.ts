@@ -10,6 +10,7 @@ export interface User {
   email: string;
   permissions: string[];
   teams?: string[];
+  teamId?: number;
 }
 
 export interface LoginResponse {
@@ -40,55 +41,57 @@ export class AuthService {
 
   private initializeAuth() {
     const token = localStorage.getItem('auth_token');
-    
+
     if (token) {
-        this.verifyToken().subscribe({
-            next: (userData) => {
-                if (userData) {
-                     const rawData = userData.data || userData;
-                     const permissions = rawData.permissions 
-                        ? this.normalizePermissions(rawData.permissions) 
-                        : (userData.permissions ? this.normalizePermissions(userData.permissions) : []);
-                     
-                     const normalizedUser: User = {
-                        id: rawData.id,
-                        name: rawData.name,
-                        email: rawData.email,
-                        permissions: permissions,
-                        teams: rawData.teams || []
-                     };
-                     this.currentUser.set(normalizedUser);
-                } else {
-                    this.logout();
-                }
-            },
-            error: () => this.logout()
-        });
+      this.verifyToken().subscribe({
+        next: (userData) => {
+          if (userData) {
+            const rawData = userData.data || userData;
+            const permissions = rawData.permissions
+              ? this.normalizePermissions(rawData.permissions)
+              : (userData.permissions ? this.normalizePermissions(userData.permissions) : []);
+
+            const normalizedUser: User = {
+              id: rawData.id,
+              name: rawData.name,
+              email: rawData.email,
+              permissions: permissions,
+              teams: rawData.teams || [],
+              teamId: rawData.teamId
+            };
+            this.currentUser.set(normalizedUser);
+          } else {
+            this.logout();
+          }
+        },
+        error: () => this.logout()
+      });
     }
   }
 
-  login(credentials: {email: string, password: string}): Observable<LoginResponse> {
+  login(credentials: { email: string, password: string }): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/login`, credentials).pipe(
       tap(response => {
         if (response.success) {
           const rawUser = response.user || response.data;
-          
+
           if (response.token) {
             localStorage.setItem('auth_token', response.token);
           }
-          
+
           if (rawUser) {
-             const permissions = rawUser.permissions ? this.normalizePermissions(rawUser.permissions) : [];
-             const userData: User = {
-                id: rawUser.id,
-                name: rawUser.name,
-                email: rawUser.email,
-                permissions: permissions,
-                teams: rawUser.teams || []
-             };
-             
-             localStorage.setItem('user', JSON.stringify(userData));
-             this.currentUser.set(userData);
+            const permissions = rawUser.permissions ? this.normalizePermissions(rawUser.permissions) : [];
+            const userData: User = {
+              id: rawUser.id,
+              name: rawUser.name,
+              email: rawUser.email,
+              permissions: permissions,
+              teams: rawUser.teams || [],
+              teamId: rawUser.teamId
+            };
+
+            localStorage.setItem('user', JSON.stringify(userData));
+            this.currentUser.set(userData);
           }
         }
       })

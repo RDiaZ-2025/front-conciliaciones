@@ -9,7 +9,7 @@
                 [outlined]="true" (click)="showHistorical.set(true)"></p-button>
             <p-button *ngIf="showHistorical()" label="Volver al Tablero" icon="pi pi-arrow-left" [outlined]="true"
                 (click)="showHistorical.set(false)"></p-button>
-            <p-button *ngIf="!showHistorical()" label="Nueva Solicitud" icon="pi pi-plus"
+            <p-button *ngIf="!showHistorical() && canCreateRequest()" label="Nueva Solicitud" icon="pi pi-plus"
                 (click)="openDialog()"></p-button>
         </div>
     </app-page-header>
@@ -100,13 +100,13 @@
                             pTooltip="Historial de Cambios" (click)="openHistory(request)"></p-button>
 
 
-                        <p-button *ngIf="request.stage === 'closed_won'"
-                            icon="pi pi-list" [rounded]="true" [text]="true" severity="help"
-                            pTooltip="Registros de Material" (click)="openMaterialRegisterListDialog(request)"></p-button>
+                        <p-button *ngIf="request.stage === 'closed_won'" icon="pi pi-list" [rounded]="true"
+                            [text]="true" severity="help" pTooltip="Registros de Material"
+                            (click)="openMaterialRegisterListDialog(request)"></p-button>
 
-                        <p-button *ngIf="request.stage !== 'completed'"
-                            icon="pi pi-arrow-right" [rounded]="true" [text]="true" severity="success"
-                            pTooltip="Avanzar etapa" (click)="moveRequest(request)"></p-button>
+                        <p-button *ngIf="request.stage !== 'completed'" icon="pi pi-arrow-right" [rounded]="true"
+                            [text]="true" severity="success" pTooltip="Avanzar etapa"
+                            (click)="moveRequest(request)"></p-button>
                     </div>
                 </ng-template>
             </p-card>

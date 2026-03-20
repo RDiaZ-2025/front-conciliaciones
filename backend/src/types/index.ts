@@ -33,6 +33,7 @@ export interface LoginResponse {
     permissions: string[];
     role?: string | null;
     teams?: string[];
+    teamId?: number | null;
   };
   token?: string;
   message?: string;

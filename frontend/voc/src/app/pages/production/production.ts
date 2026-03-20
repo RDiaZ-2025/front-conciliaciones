@@ -98,6 +98,11 @@ export class ProductionComponent implements OnInit, OnDestroy {
     ) ?? false;
   });
 
+  canCreateRequest = computed(() => {
+    const user = this.authService.currentUser();
+    return user?.teamId === 6;
+  });
+
   ref: DynamicDialogRef | undefined | null;
 
   // SLA Monitoring
