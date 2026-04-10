@@ -103,15 +103,9 @@ app.use('*', (req, res) => {
   });
 });
 
-// Middleware de manejo de errores
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error no manejado:', err);
+import { errorHandler } from './middleware/errorHandler';
 
-  res.status(500).json({
-    success: false,
-    message: 'Error interno del servidor',
-    ...(process.env.NODE_ENV === 'development' && { error: err.message })
-  });
-});
+// Middleware de manejo de errores global
+app.use(errorHandler);
 
 export default app;

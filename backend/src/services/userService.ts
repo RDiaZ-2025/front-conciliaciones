@@ -35,10 +35,10 @@ export interface UpdateUserRequest {
 }
 
 export class UserService {
-  private static readonly SALT_ROUNDS = 12;
+  private readonly SALT_ROUNDS = 12;
 
   // Crear nuevo usuario
-  static async createUser(userData: CreateUserRequest): Promise<CreateUserResponse> {
+  async createUser(userData: CreateUserRequest): Promise<CreateUserResponse> {
     try {
       if (!AppDataSource.isInitialized) {
         return {
@@ -142,7 +142,7 @@ export class UserService {
   }
 
   // Obtener todos los usuarios
-  static async getAllUsers(): Promise<any[]> {
+  async getAllUsers(): Promise<any[]> {
     try {
       if (!AppDataSource.isInitialized) {
         throw new Error('Base de datos no disponible');
@@ -184,7 +184,7 @@ export class UserService {
   }
 
   // Obtener usuario por ID
-  static async getUserById(userId: number): Promise<any | null> {
+  async getUserById(userId: number): Promise<any | null> {
     try {
       if (!AppDataSource.isInitialized) {
         return null;
@@ -230,7 +230,7 @@ export class UserService {
   }
 
   // Actualizar usuario
-  static async updateUser(userId: number, updateData: UpdateUserRequest): Promise<{ success: boolean; message?: string }> {
+  async updateUser(userId: number, updateData: UpdateUserRequest): Promise<{ success: boolean; message?: string }> {
     try {
       if (!AppDataSource.isInitialized) {
         return {
@@ -329,7 +329,7 @@ export class UserService {
     }
   }
 
-  static async toggleUserStatus(userId: number): Promise<{ success: boolean; message?: string; newStatus?: number }> {
+  async toggleUserStatus(userId: number): Promise<{ success: boolean; message?: string; newStatus?: number }> {
     try {
       if (!AppDataSource.isInitialized) {
         return {

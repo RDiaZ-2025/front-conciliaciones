@@ -7,18 +7,11 @@ import { LoginRequest, LoginResponse, JWTPayload } from '../types';
 // Servicio de autenticación usando base de datos
 
 export class AuthService {
-  private static readonly SALT_ROUNDS = 12;
-  private static readonly JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
-  private static readonly JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
+  private readonly SALT_ROUNDS = 12;
+  private readonly JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
+  private readonly JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
-  static {
-    // Debug: verificar que JWT_SECRET esté cargado
-    if (!process.env.JWT_SECRET) {
-      console.warn('⚠️ JWT_SECRET no encontrado en variables de entorno, usando fallback');
-    }
-  }
-
-  static async login(credentials: LoginRequest): Promise<LoginResponse> {
+  async login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
 
       if (!AppDataSource.isInitialized) {
@@ -41,7 +34,7 @@ export class AuthService {
     }
   }
 
-  private static async loginWithTypeORM(credentials: LoginRequest): Promise<LoginResponse> {
+  private async loginWithTypeORM(credentials: LoginRequest): Promise<LoginResponse> {
     const userRepository = AppDataSource.getRepository(User);
     const permissionByUserRepository = AppDataSource.getRepository(PermissionByUser);
 
@@ -112,7 +105,7 @@ export class AuthService {
 
 
 
-  static async getUserById(userId: number): Promise<User | null> {
+  async getUserById(userId: number): Promise<User | null> {
     try {
       if (!AppDataSource.isInitialized) {
         console.error('Base de datos no disponible');
@@ -132,7 +125,7 @@ export class AuthService {
     }
   }
 
-  static async getUserPermissions(userId: number): Promise<string[]> {
+  async getUserPermissions(userId: number): Promise<string[]> {
     try {
       if (!AppDataSource.isInitialized) {
         console.error('Base de datos no disponible para obtener permisos');
@@ -153,7 +146,7 @@ export class AuthService {
     }
   }
 
-  static async getUserTeams(userId: number): Promise<string[]> {
+  async getUserTeams(userId: number): Promise<string[]> {
     try {
       if (!AppDataSource.isInitialized) {
         return [];
@@ -170,7 +163,7 @@ export class AuthService {
     }
   }
 
-  static async updateUserLastLogin(userId: number): Promise<void> {
+  async updateUserLastLogin(userId: number): Promise<void> {
     try {
       if (!AppDataSource.isInitialized) {
         console.error('Base de datos no disponible para actualizar último login');
@@ -185,13 +178,13 @@ export class AuthService {
     }
   }
 
-  static generateToken(payload: JWTPayload): string {
+  generateToken(payload: JWTPayload): string {
     return jwt.sign(payload, this.JWT_SECRET, {
       expiresIn: this.JWT_EXPIRES_IN
     } as jwt.SignOptions);
   }
 
-  static async verifyToken(token: string): Promise<JWTPayload | null> {
+  async verifyToken(token: string): Promise<JWTPayload | null> {
     try {
       const decoded = jwt.verify(token, this.JWT_SECRET) as JWTPayload;
 
@@ -224,7 +217,16 @@ export class AuthService {
     }
   }
 
-  static async hashPassword(password: string): Promise<string> {
+  async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, this.SALT_ROUNDS);
   }
+
+    constructor() {
+
+            // Debug: verificar que JWT_SECRET esté cargado
+            if (!process.env.JWT_SECRET) {
+              console.warn('⚠️ JWT_SECRET no encontrado en variables de entorno, usando fallback');
+            }
+          
+    }
 }

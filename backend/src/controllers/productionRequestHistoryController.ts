@@ -1,12 +1,12 @@
 import { Request, Response } from 'express';
 import { ProductionRequestHistoryService } from '../services/productionRequestHistoryService';
 import { AppDataSource } from '../config/typeorm.config';
+import { asyncHandler } from "../utils/asyncHandler";
 
 const historyService = new ProductionRequestHistoryService();
 
-export const getProductionRequestHistory = async (req: Request, res: Response): Promise<Response | void> => {
-  try {
-    const { id } = req.params;
+export const getProductionRequestHistory = asyncHandler(async (req: Request, res: Response): Promise<Response | void> => {
+const { id } = req.params;
 
     if (!AppDataSource.isInitialized) {
       return res.status(503).json({
@@ -18,8 +18,4 @@ export const getProductionRequestHistory = async (req: Request, res: Response): 
     const history = await historyService.getHistoryByRequestId(parseInt(id));
     
     return res.status(200).json(history);
-  } catch (error) {
-    console.error('Error fetching production request history:', error);
-    return res.status(500).json({ message: 'Error fetching production request history', error });
-  }
-};
+});

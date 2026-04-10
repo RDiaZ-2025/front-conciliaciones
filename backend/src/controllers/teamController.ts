@@ -1,25 +1,17 @@
 import { Request, Response } from 'express';
 import { teamService } from '../services/teamService';
+import { asyncHandler } from "../utils/asyncHandler";
 
-export const getAllTeams = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const teams = await teamService.getAllTeams();
+export const getAllTeams = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+const teams = await teamService.getAllTeams();
     res.status(200).json({
       success: true,
       data: teams
     });
-  } catch (error) {
-    console.error('Error getting teams:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error retrieving teams'
-    });
-  }
-};
+});
 
-export const createTeam = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { name, description } = req.body;
+export const createTeam = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+const { name, description } = req.body;
 
     if (!name) {
       res.status(400).json({
@@ -39,18 +31,10 @@ export const createTeam = async (req: Request, res: Response): Promise<void> => 
       data: newTeam,
       message: 'Team created successfully'
     });
-  } catch (error) {
-    console.error('Error creating team:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error creating team'
-    });
-  }
-};
+});
 
-export const getUsersByTeam = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const teamId = parseInt(req.params.id);
+export const getUsersByTeam = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+const teamId = parseInt(req.params.id);
 
     if (isNaN(teamId)) {
       res.status(400).json({
@@ -66,18 +50,10 @@ export const getUsersByTeam = async (req: Request, res: Response): Promise<void>
       success: true,
       data: users
     });
-  } catch (error) {
-    console.error('Error getting users by team:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error retrieving users by team'
-    });
-  }
-};
+});
 
-export const updateTeam = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
+export const updateTeam = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+const { id } = req.params;
     const { name, description } = req.body;
 
     if (!name) {
@@ -103,18 +79,10 @@ export const updateTeam = async (req: Request, res: Response): Promise<void> => 
       data: updatedTeam,
       message: 'Team updated successfully'
     });
-  } catch (error) {
-    console.error('Error updating team:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error updating team'
-    });
-  }
-};
+});
 
-export const deleteTeam = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
+export const deleteTeam = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+const { id } = req.params;
     const success = await teamService.deleteTeam(parseInt(id));
 
     if (!success) {
@@ -129,18 +97,10 @@ export const deleteTeam = async (req: Request, res: Response): Promise<void> => 
       success: true,
       message: 'Team deleted successfully'
     });
-  } catch (error) {
-    console.error('Error deleting team:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error deleting team'
-    });
-  }
-};
+});
 
-export const updateTeamUsers = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
+export const updateTeamUsers = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+const { id } = req.params;
     const { userIds } = req.body;
 
     if (!Array.isArray(userIds)) {
@@ -157,11 +117,4 @@ export const updateTeamUsers = async (req: Request, res: Response): Promise<void
       success: true,
       message: 'Team users updated successfully'
     });
-  } catch (error) {
-    console.error('Error updating team users:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error updating team users'
-    });
-  }
-};
+});

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/authService';
 import { JWTPayload } from '../types';
+const authService = new AuthService();
 
 // Extender la interfaz Request para incluir user
 declare global {
@@ -24,7 +25,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
   }
 
   try {
-    const decoded = await AuthService.verifyToken(token);
+    const decoded = await authService.verifyToken(token);
 
     if (!decoded) {
       res.status(403).json({
@@ -51,7 +52,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
 
   if (token) {
     try {
-      const decoded = await AuthService.verifyToken(token);
+      const decoded = await authService.verifyToken(token);
       if (decoded) {
         req.user = decoded;
       }
@@ -79,7 +80,7 @@ export const requirePermission = (permission: string) => {
 
 
       // Obtener permisos del usuario desde la base de datos
-      const userPermissions = await AuthService.getUserPermissions(req.user.userId);
+      const userPermissions = await authService.getUserPermissions(req.user.userId);
 
 
       // Comparar directamente con los permisos de la base de datos
@@ -115,7 +116,7 @@ export const requireAnyPermission = (permissions: string[]) => {
       }
 
       // Obtener permisos del usuario desde la base de datos
-      const userPermissions = await AuthService.getUserPermissions(req.user.userId);
+      const userPermissions = await authService.getUserPermissions(req.user.userId);
 
       const hasPermission = permissions.some(permission => userPermissions.includes(permission));
 
@@ -151,7 +152,7 @@ export const requireAllPermissions = (permissions: string[]) => {
       }
 
       // Obtener permisos del usuario desde la base de datos
-      const userPermissions = await AuthService.getUserPermissions(req.user.userId);
+      const userPermissions = await authService.getUserPermissions(req.user.userId);
 
       const hasAllPermissions = permissions.every(permission => userPermissions.includes(permission));
 

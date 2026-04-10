@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { MenuItem } from '../models';
 import { AppDataSource } from '../config/typeorm.config';
+import { asyncHandler } from "../utils/asyncHandler";
 
 export interface MenuItemResponse {
   id: number;
@@ -64,9 +65,8 @@ const filterMenusByPermissions = (menus: MenuItemResponse[], userPermissions: st
   });
 };
 
-export const getAllMenuItems = async (req: Request, res: Response): Promise<void> => {
-  try {
-    if (!AppDataSource.isInitialized) {
+export const getAllMenuItems = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+if (!AppDataSource.isInitialized) {
       res.status(503).json({
         success: false,
         message: 'Base de datos no disponible'
@@ -100,19 +100,10 @@ export const getAllMenuItems = async (req: Request, res: Response): Promise<void
       success: true,
       data: hierarchicalMenus
     });
-  } catch (error) {
-    console.error('Error fetching menu items:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching menu items',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-};
+});
 
-export const getMenuItemsByPermissions = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { permissions } = req.body;
+export const getMenuItemsByPermissions = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+const { permissions } = req.body;
 
     if (!permissions || !Array.isArray(permissions)) {
       res.status(400).json({
@@ -157,21 +148,12 @@ export const getMenuItemsByPermissions = async (req: Request, res: Response): Pr
       success: true,
       data: filteredMenus
     });
-  } catch (error) {
-    console.error('Error fetching menu items by permissions:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching menu items by permissions',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-};
+});
 
 
 
-export const createMenuItem = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const {
+export const createMenuItem = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+const {
       label,
       icon,
       route,
@@ -223,19 +205,10 @@ export const createMenuItem = async (req: Request, res: Response): Promise<void>
       },
       message: 'Menu item created successfully'
     });
-  } catch (error) {
-    console.error('Error creating menu item:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error creating menu item',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-};
+});
 
-export const updateMenuItem = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
+export const updateMenuItem = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+const { id } = req.params;
     const {
       label,
       icon,
@@ -299,19 +272,10 @@ export const updateMenuItem = async (req: Request, res: Response): Promise<void>
       },
       message: 'Menu item updated successfully'
     });
-  } catch (error) {
-    console.error('Error updating menu item:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error updating menu item',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-};
+});
 
-export const deleteMenuItem = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
+export const deleteMenuItem = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+const { id } = req.params;
 
     if (!AppDataSource.isInitialized) {
       res.status(503).json({
@@ -352,12 +316,4 @@ export const deleteMenuItem = async (req: Request, res: Response): Promise<void>
       success: true,
       message: 'Menu item deleted successfully'
     });
-  } catch (error) {
-    console.error('Error deleting menu item:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error deleting menu item',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-};
+});

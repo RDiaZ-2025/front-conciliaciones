@@ -28,5 +28,9 @@
     "conciliaciones"
   ],
   "author": "VOC Team",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "dependencies": {
+    "reflect-metadata": "^0.2.2",
+    "tsyringe": "^4.10.0"
+  }
 }

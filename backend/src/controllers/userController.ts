@@ -3,310 +3,255 @@ import { User, Permission, PermissionByUser } from '../models';
 import { AppDataSource } from '../config/typeorm.config';
 import bcrypt from 'bcrypt';
 import { UserService } from '../services/userService';
+import { asyncHandler } from "../utils/asyncHandler";
 
 export class UserController {
-  static async getUsers(req: Request, res: Response): Promise<void> {
-    try {
-      if (!AppDataSource.isInitialized) {
-        res.status(503).json({
-          success: false,
-          message: 'Base de datos no disponible'
-        });
-        return;
-      }
-
-      const users = await UserService.getAllUsers();
-
-      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-      res.set('Pragma', 'no-cache');
-      res.set('Expires', '0');
-      res.status(200).json({
-        success: true,
-        data: users
-      });
-    } catch (error) {
-      console.error('Error obteniendo usuarios:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error interno del servidor'
-      });
-    }
-  }
-
-  static async getUserById(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-
-      if (!AppDataSource.isInitialized) {
-        res.status(503).json({
-          success: false,
-          message: 'Base de datos no disponible'
-        });
-        return;
-      }
-
-      const userRepository = AppDataSource.getRepository(User);
-
-      const user = await userRepository
-        .createQueryBuilder('user')
-        .leftJoinAndSelect('user.permissions', 'permissionsByUser')
-        .leftJoinAndSelect('permissionsByUser.permission', 'permission')
-        .where('user.id = :userId AND user.status = :status', { userId: parseInt(id), status: 1 })
-        .getOne();
-
-      if (!user) {
-        res.status(404).json({
-          success: false,
-          message: 'Usuario no encontrado'
-        });
-        return;
-      }
-
-      const permissions = user.permissions
-        ?.map((pbu: any) => pbu.permission?.name)
-        .filter((name: any): name is string => !!name) || [];
-
-      res.status(200).json({
-        success: true,
-        data: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          lastAccess: user.lastAccess,
-          status: user.status,
-          permissions
-        }
-      });
-    } catch (error) {
-      console.error('Error obteniendo usuario:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error interno del servidor'
-      });
-    }
-  }
-
-  static async updateUserPermissions(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-      const { permissions } = req.body;
-
-      if (!AppDataSource.isInitialized) {
-        res.status(503).json({
-          success: false,
-          message: 'Base de datos no disponible'
-        });
-        return;
-      }
-
-      const queryRunner = AppDataSource.createQueryRunner();
-      await queryRunner.connect();
-      await queryRunner.startTransaction();
-
-      try {
-        const permissionByUserRepository = queryRunner.manager.getRepository(PermissionByUser);
-        const permissionRepository = queryRunner.manager.getRepository(Permission);
-
-        await permissionByUserRepository.delete({ userId: parseInt(id) });
-
-        if (permissions && permissions.length > 0) {
-          for (const permissionName of permissions) {
-            const permission = await permissionRepository.findOne({
-              where: { name: permissionName.toUpperCase() }
+    private userService = new UserService();
+  getUsers = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    if (!AppDataSource.isInitialized) {
+            res.status(503).json({
+              success: false,
+              message: 'Base de datos no disponible'
             });
-
-            if (permission) {
-              const permissionByUser = new PermissionByUser();
-              permissionByUser.userId = parseInt(id);
-              permissionByUser.permissionId = permission.id;
-
-              await permissionByUserRepository.save(permissionByUser);
-            }
+            return;
           }
-        }
 
-        await queryRunner.commitTransaction();
+          const users = await this.userService.getAllUsers();
 
-        res.status(200).json({
-          success: true,
-          message: 'Permisos actualizados correctamente'
-        });
-      } catch (error) {
-        await queryRunner.rollbackTransaction();
-        throw error;
-      } finally {
-        await queryRunner.release();
-      }
-    } catch (error) {
-      console.error('Error actualizando permisos:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error interno del servidor'
-      });
-    }
-  }
+          res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+          res.set('Pragma', 'no-cache');
+          res.set('Expires', '0');
+          res.status(200).json({
+            success: true,
+            data: users
+          });
+    });
 
-  static async createUser(req: Request, res: Response): Promise<void> {
-    try {
-      const { name, email, password, permissions = [], teamId, bossId }: {
-        name: string;
-        email: string;
-        password: string;
-        permissions?: string[];
-        teamId?: number;
-        bossId?: number;
-      } = req.body;
+  getUserById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { id } = req.params;
 
-      if (!name || !email || !password) {
-        res.status(400).json({
-          success: false,
-          message: 'Nombre, email y contraseña son requeridos'
-        });
-        return;
-      }
+          if (!AppDataSource.isInitialized) {
+            res.status(503).json({
+              success: false,
+              message: 'Base de datos no disponible'
+            });
+            return;
+          }
 
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        res.status(400).json({
-          success: false,
-          message: 'Formato de email inválido'
-        });
-        return;
-      }
+          const userRepository = AppDataSource.getRepository(User);
 
-      const result = await UserService.createUser({
-        name,
-        email: email.toLowerCase(),
-        password,
-        permissions,
-        teamId,
-        bossId
-      });
+          const user = await userRepository
+            .createQueryBuilder('user')
+            .leftJoinAndSelect('user.permissions', 'permissionsByUser')
+            .leftJoinAndSelect('permissionsByUser.permission', 'permission')
+            .where('user.id = :userId AND user.status = :status', { userId: parseInt(id), status: 1 })
+            .getOne();
 
-      if (result.success) {
-        res.status(201).json(result);
-      } else {
-        res.status(400).json(result);
-      }
-    } catch (error) {
-      console.error('❌ Error creating user:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error interno del servidor'
-      });
-    }
-  }
+          if (!user) {
+            res.status(404).json({
+              success: false,
+              message: 'Usuario no encontrado'
+            });
+            return;
+          }
 
-  static async updateUser(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-      const { name, email, password, permissions, teamId, bossId } = req.body;
+          const permissions = user.permissions
+            ?.map((pbu: any) => pbu.permission?.name)
+            .filter((name: any): name is string => !!name) || [];
 
-      const result = await UserService.updateUser(parseInt(id), {
-        name,
-        email,
-        password,
-        permissions,
-        teamId,
-        bossId
-      });
+          res.status(200).json({
+            success: true,
+            data: {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              lastAccess: user.lastAccess,
+              status: user.status,
+              permissions
+            }
+          });
+    });
 
-      if (result.success) {
-        const updatedUser = await UserService.getUserById(parseInt(id));
-        res.status(200).json({ ...result, user: updatedUser });
-      } else {
-        res.status(400).json(result);
-      }
-    } catch (error) {
-      console.error('Error actualizando usuario:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error interno del servidor'
-      });
-    }
-  }
+  updateUserPermissions = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { id } = req.params;
+          const { permissions } = req.body;
 
-  static async toggleUserStatus(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
+          if (!AppDataSource.isInitialized) {
+            res.status(503).json({
+              success: false,
+              message: 'Base de datos no disponible'
+            });
+            return;
+          }
 
-      if (!AppDataSource.isInitialized) {
-        res.status(503).json({
-          success: false,
-          message: 'Base de datos no disponible'
-        });
-        return;
-      }
+          const queryRunner = AppDataSource.createQueryRunner();
+          await queryRunner.connect();
+          await queryRunner.startTransaction();
 
-      const userRepository = AppDataSource.getRepository(User);
+          try {
+            const permissionByUserRepository = queryRunner.manager.getRepository(PermissionByUser);
+            const permissionRepository = queryRunner.manager.getRepository(Permission);
 
-      const user = await userRepository.findOne({
-        where: { id: parseInt(id) },
-        select: ['id', 'status']
-      });
+            await permissionByUserRepository.delete({ userId: parseInt(id) });
 
-      if (!user) {
-        res.status(404).json({
-          success: false,
-          message: 'Usuario no encontrado'
-        });
-        return;
-      }
+            if (permissions && permissions.length > 0) {
+              for (const permissionName of permissions) {
+                const permission = await permissionRepository.findOne({
+                  where: { name: permissionName.toUpperCase() }
+                });
 
-      const currentStatus = user.status;
-      const newStatus = currentStatus === 1 ? 0 : 1;
+                if (permission) {
+                  const permissionByUser = new PermissionByUser();
+                  permissionByUser.userId = parseInt(id);
+                  permissionByUser.permissionId = permission.id;
 
-      await userRepository.update(
-        { id: parseInt(id) },
-        { status: newStatus }
-      );
+                  await permissionByUserRepository.save(permissionByUser);
+                }
+              }
+            }
 
-      res.status(200).json({
-        success: true,
-        message: `Usuario ${newStatus === 1 ? 'habilitado' : 'deshabilitado'} exitosamente`,
-        newStatus
-      });
-    } catch (error) {
-      console.error('Error cambiando estado del usuario:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error interno del servidor'
-      });
-    }
-  }
+            await queryRunner.commitTransaction();
 
-  static async getAllPermissions(req: Request, res: Response): Promise<void> {
-    try {
-      if (!AppDataSource.isInitialized) {
-        console.error('Database not initialized in getAllPermissions');
-        res.status(503).json({
-          success: false,
-          message: 'Base de datos no disponible'
-        });
-        return;
-      }
+            res.status(200).json({
+              success: true,
+              message: 'Permisos actualizados correctamente'
+            });
+          } catch (error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+          } finally {
+            await queryRunner.release();
+          }
+    });
 
-      const permissionRepository = AppDataSource.getRepository(Permission);
+  createUser = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { name, email, password, permissions = [], teamId, bossId }: {
+            name: string;
+            email: string;
+            password: string;
+            permissions?: string[];
+            teamId?: number;
+            bossId?: number;
+          } = req.body;
 
-      const permissions = await permissionRepository.find({
-        order: { name: 'ASC' }
-      });
+          if (!name || !email || !password) {
+            res.status(400).json({
+              success: false,
+              message: 'Nombre, email y contraseña son requeridos'
+            });
+            return;
+          }
 
-      res.status(200).json({
-        success: true,
-        data: permissions.map(permission => ({
-          id: permission.id,
-          name: permission.name,
-          description: permission.description
-        }))
-      });
-    } catch (error) {
-      console.error('Error obteniendo permisos:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error interno del servidor',
-        error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
-      });
-    }
-  }
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(email)) {
+            res.status(400).json({
+              success: false,
+              message: 'Formato de email inválido'
+            });
+            return;
+          }
+
+          const result = await this.userService.createUser({
+            name,
+            email: email.toLowerCase(),
+            password,
+            permissions,
+            teamId,
+            bossId
+          });
+
+          if (result.success) {
+            res.status(201).json(result);
+          } else {
+            res.status(400).json(result);
+          }
+    });
+
+  updateUser = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { id } = req.params;
+          const { name, email, password, permissions, teamId, bossId } = req.body;
+
+          const result = await this.userService.updateUser(parseInt(id), {
+            name,
+            email,
+            password,
+            permissions,
+            teamId,
+            bossId
+          });
+
+          if (result.success) {
+            const updatedUser = await this.userService.getUserById(parseInt(id));
+            res.status(200).json({ ...result, user: updatedUser });
+          } else {
+            res.status(400).json(result);
+          }
+    });
+
+  toggleUserStatus = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { id } = req.params;
+
+          if (!AppDataSource.isInitialized) {
+            res.status(503).json({
+              success: false,
+              message: 'Base de datos no disponible'
+            });
+            return;
+          }
+
+          const userRepository = AppDataSource.getRepository(User);
+
+          const user = await userRepository.findOne({
+            where: { id: parseInt(id) },
+            select: ['id', 'status']
+          });
+
+          if (!user) {
+            res.status(404).json({
+              success: false,
+              message: 'Usuario no encontrado'
+            });
+            return;
+          }
+
+          const currentStatus = user.status;
+          const newStatus = currentStatus === 1 ? 0 : 1;
+
+          await userRepository.update(
+            { id: parseInt(id) },
+            { status: newStatus }
+          );
+
+          res.status(200).json({
+            success: true,
+            message: `Usuario ${newStatus === 1 ? 'habilitado' : 'deshabilitado'} exitosamente`,
+            newStatus
+          });
+    });
+
+  getAllPermissions = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    if (!AppDataSource.isInitialized) {
+            console.error('Database not initialized in getAllPermissions');
+            res.status(503).json({
+              success: false,
+              message: 'Base de datos no disponible'
+            });
+            return;
+          }
+
+          const permissionRepository = AppDataSource.getRepository(Permission);
+
+          const permissions = await permissionRepository.find({
+            order: { name: 'ASC' }
+          });
+
+          res.status(200).json({
+            success: true,
+            data: permissions.map(permission => ({
+              id: permission.id,
+              name: permission.name,
+              description: permission.description
+            }))
+          });
+    });
 }

@@ -6,11 +6,13 @@ import { getProductionRequestHistory } from '../controllers/productionRequestHis
 import { authenticateToken, requirePermission } from '../middleware/auth';
 
 const router = Router();
+const productionController = new ProductionController();
+const requestsReportController = new RequestsReportController();
 
 // Public routes for production options
-router.get('/format-types', ProductionController.getFormatTypes);
-router.get('/rights-durations', ProductionController.getRightsDurations);
-router.get('/workflow-stages', ProductionController.getWorkflowStages);
+router.get('/format-types', productionController.getFormatTypes);
+router.get('/rights-durations', productionController.getRightsDurations);
+router.get('/workflow-stages', productionController.getWorkflowStages);
 
 // Protected routes
 router.use(authenticateToken);
@@ -19,7 +21,7 @@ router.use(authenticateToken);
 router.get('/products', getProducts);
 
 // Dashboard Stats
-router.get('/dashboard-stats', requirePermission('production_management'), RequestsReportController.getDashboardStats);
+router.get('/dashboard-stats', requirePermission('production_management'), requestsReportController.getDashboardStats);
 
 // Production Request routes
 router.get('/', getAllProductionRequests);

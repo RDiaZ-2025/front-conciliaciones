@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
 import { NotificationService } from '../services/notificationService';
+import { asyncHandler } from "../utils/asyncHandler";
 
 const notificationService = new NotificationService();
 
-export const getUserNotifications = async (req: Request, res: Response) => {
-    try {
-        const userId = req.user?.userId;
+export const getUserNotifications = asyncHandler(async (req: Request, res: Response) => {
+const userId = req.user?.userId;
         if (!userId) {
             return res.status(401).json({ success: false, message: 'Unauthorized' });
         }
@@ -20,15 +20,10 @@ export const getUserNotifications = async (req: Request, res: Response) => {
                 unreadCount
             }
         });
-    } catch (error) {
-        console.error('Error fetching notifications:', error);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-};
+});
 
-export const markAsRead = async (req: Request, res: Response) => {
-    try {
-        const userId = req.user?.userId;
+export const markAsRead = asyncHandler(async (req: Request, res: Response) => {
+const userId = req.user?.userId;
         const notificationId = parseInt(req.params.id);
 
         if (!userId) {
@@ -46,15 +41,10 @@ export const markAsRead = async (req: Request, res: Response) => {
         }
 
         return res.json({ success: true, data: notification });
-    } catch (error) {
-        console.error('Error marking notification as read:', error);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-};
+});
 
-export const markAllAsRead = async (req: Request, res: Response) => {
-    try {
-        const userId = req.user?.userId;
+export const markAllAsRead = asyncHandler(async (req: Request, res: Response) => {
+const userId = req.user?.userId;
         if (!userId) {
             return res.status(401).json({ success: false, message: 'Unauthorized' });
         }
@@ -62,8 +52,4 @@ export const markAllAsRead = async (req: Request, res: Response) => {
         await notificationService.markAllAsRead(userId);
 
         return res.json({ success: true, message: 'All notifications marked as read' });
-    } catch (error) {
-        console.error('Error marking all notifications as read:', error);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-};
+});

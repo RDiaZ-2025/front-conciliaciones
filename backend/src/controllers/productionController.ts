@@ -7,6 +7,9 @@ import { AuthService } from '../services/authService';
 import { WorkflowService } from '../services/workflowService';
 import { Not, In } from 'typeorm';
 import { WORKFLOW_STAGES } from '../constants/workflow';
+import { asyncHandler } from "../utils/asyncHandler";
+const authService = new AuthService();
+const workflowService = new WorkflowService();
 
 const notificationService = new NotificationService();
 const historyService = new ProductionRequestHistoryService();
@@ -56,55 +59,39 @@ const performSmartAssignment = async (department: string): Promise<{ assignedUse
 };
 
 export class ProductionController {
-  static async getFormatTypes(req: Request, res: Response): Promise<Response> {
-    try {
-      if (!AppDataSource.isInitialized) {
-        return res.status(503).json({
-          success: false,
-          message: 'Base de datos no disponible'
-        });
-      }
+  getFormatTypes = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    if (!AppDataSource.isInitialized) {
+            return res.status(503).json({
+              success: false,
+              message: 'Base de datos no disponible'
+            });
+          }
 
-      const formatTypeRepository = AppDataSource.getRepository(FormatType);
-      const formatTypes = await formatTypeRepository.find();
-      return res.json(formatTypes);
-    } catch (error) {
-      console.error('Error fetching format types:', error);
-      return res.status(500).json({ message: 'Error fetching format types', error });
-    }
-  }
+          const formatTypeRepository = AppDataSource.getRepository(FormatType);
+          const formatTypes = await formatTypeRepository.find();
+          return res.json(formatTypes);
+    });
 
-  static async getRightsDurations(req: Request, res: Response): Promise<Response> {
-    try {
-      if (!AppDataSource.isInitialized) {
-        return res.status(503).json({
-          success: false,
-          message: 'Base de datos no disponible'
-        });
-      }
+  getRightsDurations = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    if (!AppDataSource.isInitialized) {
+            return res.status(503).json({
+              success: false,
+              message: 'Base de datos no disponible'
+            });
+          }
 
-      const rightsDurationRepository = AppDataSource.getRepository(RightsDuration);
-      const rightsDurations = await rightsDurationRepository.find();
-      return res.json(rightsDurations);
-    } catch (error) {
-      console.error('Error fetching rights durations:', error);
-      return res.status(500).json({ message: 'Error fetching rights durations', error });
-    }
-  }
+          const rightsDurationRepository = AppDataSource.getRepository(RightsDuration);
+          const rightsDurations = await rightsDurationRepository.find();
+          return res.json(rightsDurations);
+    });
 
-  static async getWorkflowStages(req: Request, res: Response): Promise<Response> {
-    try {
-      return res.json(WORKFLOW_STAGES);
-    } catch (error) {
-      console.error('Error fetching workflow stages:', error);
-      return res.status(500).json({ message: 'Error fetching workflow stages', error });
-    }
-  }
+  getWorkflowStages = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    return res.json(WORKFLOW_STAGES);
+    });
 }
 
-export const getAllProductionRequests = async (req: Request, res: Response): Promise<Response | void> => {
-  try {
-    if (!AppDataSource.isInitialized) {
+export const getAllProductionRequests = asyncHandler(async (req: Request, res: Response): Promise<Response | void> => {
+if (!AppDataSource.isInitialized) {
       return res.status(503).json({
         success: false,
         message: 'Base de datos no disponible'
@@ -143,18 +130,10 @@ export const getAllProductionRequests = async (req: Request, res: Response): Pro
     const productionRequests = await query.getMany();
 
     return res.status(200).json(productionRequests);
-  } catch (error) {
-    console.error('Error fetching production requests:', error);
-    if ((error as any).code) console.error('Error code:', (error as any).code);
-    if ((error as any).message) console.error('Error message:', (error as any).message);
+});
 
-    return res.status(500).json({ message: 'Error fetching production requests', error });
-  }
-};
-
-export const getProducts = async (req: Request, res: Response): Promise<Response | void> => {
-  try {
-    if (!AppDataSource.isInitialized) {
+export const getProducts = asyncHandler(async (req: Request, res: Response): Promise<Response | void> => {
+if (!AppDataSource.isInitialized) {
       return res.status(503).json({
         success: false,
         message: 'Base de datos no disponible'
@@ -165,15 +144,10 @@ export const getProducts = async (req: Request, res: Response): Promise<Response
     const products = await productRepository.find();
 
     return res.status(200).json(products);
-  } catch (error) {
-    console.error('Error fetching products:', error);
-    return res.status(500).json({ message: 'Error fetching products', error });
-  }
-};
+});
 
-export const getProductionRequestById = async (req: Request, res: Response): Promise<Response | void> => {
-  try {
-    const { id } = req.params;
+export const getProductionRequestById = asyncHandler(async (req: Request, res: Response): Promise<Response | void> => {
+const { id } = req.params;
 
     if (!AppDataSource.isInitialized) {
       return res.status(503).json({
@@ -209,15 +183,10 @@ export const getProductionRequestById = async (req: Request, res: Response): Pro
     }
 
     return res.status(200).json(productionRequest);
-  } catch (error) {
-    console.error('Error fetching production request:', error);
-    return res.status(500).json({ message: 'Error fetching production request', error });
-  }
-};
+});
 
-export const createProductionRequest = async (req: Request, res: Response): Promise<Response | void> => {
-  try {
-    let {
+export const createProductionRequest = asyncHandler(async (req: Request, res: Response): Promise<Response | void> => {
+let {
       name,
       department,
       assignedUserId,
@@ -240,7 +209,7 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       if (currentUser) {
         userCreatorId = currentUser.id;
 
-        const userTeams = await AuthService.getUserTeams(currentUser.id);
+        const userTeams = await authService.getUserTeams(currentUser.id);
         if (userTeams.length > 0) {
           if (!userTeams.includes(department)) {
             department = userTeams[0];
@@ -286,7 +255,7 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
       tempRequest.status = 'quotation';
     }
 
-    const rulesResult = await WorkflowService.advanceStage(tempRequest, { budget: budgetValue });
+    const rulesResult = await workflowService.advanceStage(tempRequest, { budget: budgetValue });
     if (rulesResult.newStage) {
       finalStatus = rulesResult.newStage;
     }
@@ -362,15 +331,10 @@ export const createProductionRequest = async (req: Request, res: Response): Prom
     }
 
     return res.status(201).json(savedRequest);
-  } catch (error) {
-    console.error('Error creating production request:', error);
-    return res.status(500).json({ message: 'Error creating production request', error });
-  }
-};
+});
 
-export const updateProductionRequest = async (req: Request, res: Response): Promise<Response | void> => {
-  try {
-    const { id } = req.params;
+export const updateProductionRequest = asyncHandler(async (req: Request, res: Response): Promise<Response | void> => {
+const { id } = req.params;
     let {
       name,
       department,
@@ -455,7 +419,7 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
         // If frontend passes a target status, we can pass it as a hint in additionalData,
         // or just let advanceStage decide. Since the user said advanceStage must NOT receive newStage
         // and must calculate it via getNextStage, we call it with additionalData (req.body).
-        const rulesResult = await WorkflowService.advanceStage(existingRequest, {
+        const rulesResult = await workflowService.advanceStage(existingRequest, {
           ...req.body,
           targetStage,
           budget: campaignDetail?.budget ? parseInt(String(campaignDetail.budget).replace(/[^0-9]/g, '')) : undefined,
@@ -507,11 +471,7 @@ export const updateProductionRequest = async (req: Request, res: Response): Prom
     }
 
     return res.status(200).json(updatedRequest);
-  } catch (error) {
-    console.error('Error updating production request:', error);
-    return res.status(500).json({ message: 'Error updating production request', error });
-  }
-};
+});
 
 const updateProductionRequestPartial = async (req: Request, res: Response): Promise<Response | void> => {
   try {
@@ -555,7 +515,7 @@ const updateProductionRequestPartial = async (req: Request, res: Response): Prom
     if (body.status || body.stage) {
       const targetStage = body.status || body.stage;
       if (targetStage && targetStage !== existingRequest.status) {
-        const rulesResult = await WorkflowService.advanceStage(existingRequest, {
+        const rulesResult = await workflowService.advanceStage(existingRequest, {
           ...body,
           targetStage,
           budget: body.campaignDetail?.budget ? parseInt(String(body.campaignDetail.budget).replace(/[^0-9]/g, '')) : undefined,
@@ -617,9 +577,8 @@ const updateProductionRequestPartial = async (req: Request, res: Response): Prom
 export const moveProductionRequest = updateProductionRequestPartial;
 export const updateStepGeneral = updateProductionRequestPartial;
 export const updateStepCustomer = updateProductionRequestPartial;
-export const updateStepCampaign = async (req: Request, res: Response): Promise<Response | void> => {
-  try {
-    const { id } = req.params;
+export const updateStepCampaign = asyncHandler(async (req: Request, res: Response): Promise<Response | void> => {
+const { id } = req.params;
     const { campaignDetail, status, deliveryDate } = req.body;
 
     if (!AppDataSource.isInitialized) {
@@ -648,7 +607,7 @@ export const updateStepCampaign = async (req: Request, res: Response): Promise<R
     let oldAssignedUserId = existingRequest.assignedUserId;
 
     if (status && status !== existingRequest.status) {
-      const rulesResult = await WorkflowService.advanceStage(existingRequest, {
+      const rulesResult = await workflowService.advanceStage(existingRequest, {
         campaignDetail,
         status,
         targetStage: status,
@@ -700,11 +659,7 @@ export const updateStepCampaign = async (req: Request, res: Response): Promise<R
     }
 
     return res.status(200).json(updatedRequest);
-  } catch (error) {
-    console.error('Error updating step campaign:', error);
-    return res.status(500).json({ message: 'Error updating step campaign', error });
-  }
-};
+});
 export const updateStepAudience = updateProductionRequestPartial;
 export const updateStepProduction = updateProductionRequestPartial;
 export const updateMaterialData = updateProductionRequestPartial;

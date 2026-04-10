@@ -4,17 +4,17 @@ import { Team } from '../models/Team';
 import { User } from '../models/User';
 
 export class WorkflowService {
-    public static readonly TEAM_OPERACIONES = 2;
-    public static readonly TEAM_ESTRATEGIA = 3;
-    public static readonly TEAM_PRODUCCION = 4;
-    public static readonly TEAM_DATA = 5;
-    public static readonly TEAM_COMERCIAL = 6;
-    public static readonly TEAM_ADMINISTRACION = 7;
-    public static readonly TEAM_MMK = 8;
-    public static readonly TEAM_MERCADO_DINAMICO = 9;
-    public static readonly TEAM_ATL = 10;
+    public readonly TEAM_OPERACIONES = 2;
+    public readonly TEAM_ESTRATEGIA = 3;
+    public readonly TEAM_PRODUCCION = 4;
+    public readonly TEAM_DATA = 5;
+    public readonly TEAM_COMERCIAL = 6;
+    public readonly TEAM_ADMINISTRACION = 7;
+    public readonly TEAM_MMK = 8;
+    public readonly TEAM_MERCADO_DINAMICO = 9;
+    public readonly TEAM_ATL = 10;
 
-    public static readonly STAGE_TEAM_MAP: Record<string, number> = {
+    public readonly STAGE_TEAM_MAP: Record<string, number> = {
         'quotation': this.TEAM_COMERCIAL,
         'create_proposal': this.TEAM_ESTRATEGIA,
         'get_data': this.TEAM_DATA,
@@ -31,7 +31,7 @@ export class WorkflowService {
      * Determine the next stage based on the current stage and request data (e.g., budget, sales outcome).
      * Based on rules from workflow.md
      */
-    public static getNextStage(currentStage: string, request: ProductionRequest, additionalData?: any): string | null {
+    public getNextStage(currentStage: string, request: ProductionRequest, additionalData?: any): string | null {
         if (additionalData?.targetStage === 'cancelled') return 'cancelled';
         if (additionalData?.targetStage === 'completed' && currentStage !== 'in_sell' && currentStage !== 'customer_review') return 'completed';
 
@@ -71,7 +71,7 @@ export class WorkflowService {
         }
     }
 
-    public static async advanceStage(request: ProductionRequest, additionalData?: any): Promise<{ assignmentMethod: string; oldAssignedUserId: number | null; newStage: string | null }> {
+    public async advanceStage(request: ProductionRequest, additionalData?: any): Promise<{ assignmentMethod: string; oldAssignedUserId: number | null; newStage: string | null }> {
         let assignmentMethod = 'Manual';
         const oldAssignedUserId = request.assignedUserId;
 

@@ -3,13 +3,14 @@ import { StorageController } from '../controllers/storageController';
 import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
+const storageController = new StorageController();
 
 // Endpoint to get SAS token
 // Protected by authentication middleware to ensure only authorized users can upload
-router.get('/sas-token', authenticateToken, StorageController.generateSasToken);
+router.get('/sas-token', authenticateToken, storageController.generateSasToken);
 
 // Commercial endpoints (Proxy to avoid CORS)
-router.get('/commercial/files', authenticateToken, StorageController.listCommercialFiles);
-router.get('/commercial/download', authenticateToken, StorageController.downloadCommercialFile);
+router.get('/commercial/files', authenticateToken, storageController.listCommercialFiles);
+router.get('/commercial/download', authenticateToken, storageController.downloadCommercialFile);
 
 export default router;

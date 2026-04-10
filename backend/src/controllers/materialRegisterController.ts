@@ -2,12 +2,12 @@ import { Request, Response } from 'express';
 import { MaterialRegisterService } from '../services/materialRegister.service';
 import { AppDataSource } from '../config/typeorm.config';
 import { ProductionRequest } from '../models/ProductionRequest';
+import { asyncHandler } from "../utils/asyncHandler";
 
 const materialRegisterService = new MaterialRegisterService();
 
-export const addMaterialRegister = async (req: Request, res: Response): Promise<Response | void> => {
-    try {
-        const { id } = req.params; 
+export const addMaterialRegister = asyncHandler(async (req: Request, res: Response): Promise<Response | void> => {
+const { id } = req.params; 
         const { category, type, solution, jsonRequest } = req.body;
         const userId = req.user?.userId;
 
@@ -36,15 +36,10 @@ export const addMaterialRegister = async (req: Request, res: Response): Promise<
         });
 
         return res.status(201).json(newRegister);
-    } catch (error) {
-        console.error('Error adding material register:', error);
-        return res.status(500).json({ message: 'Error adding material register', error });
-    }
-};
+});
 
-export const getMaterialRegisters = async (req: Request, res: Response): Promise<Response | void> => {
-    try {
-        const { id } = req.params; 
+export const getMaterialRegisters = asyncHandler(async (req: Request, res: Response): Promise<Response | void> => {
+const { id } = req.params; 
 
         if (!AppDataSource.isInitialized) {
             return res.status(503).json({ success: false, message: 'Database not available' });
@@ -52,8 +47,4 @@ export const getMaterialRegisters = async (req: Request, res: Response): Promise
 
         const registers = await materialRegisterService.findByProductionRequestId(parseInt(id));
         return res.status(200).json(registers);
-    } catch (error) {
-        console.error('Error fetching material registers:', error);
-        return res.status(500).json({ message: 'Error fetching material registers', error });
-    }
-};
+});

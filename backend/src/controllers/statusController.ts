@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
+import { asyncHandler } from "../utils/asyncHandler";
 
-export const getAllStatuses = async (req: Request, res: Response) => {
-  try {
-    const statuses = [
+export const getAllStatuses = asyncHandler(async (req: Request, res: Response) => {
+const statuses = [
       { id: 1, name: 'Solicitud', code: 'request', order: 1 },
       { id: 11, name: 'En Venta', code: 'in_sell', order: 2 },
       { id: 12, name: 'Obtener Datos', code: 'get_data', order: 3 },
@@ -18,8 +18,4 @@ export const getAllStatuses = async (req: Request, res: Response) => {
     ];
 
     res.json(statuses);
-  } catch (error) {
-    console.error('Error fetching statuses:', error);
-    res.status(500).json({ message: 'Error fetching statuses' });
-  }
-};
+});
