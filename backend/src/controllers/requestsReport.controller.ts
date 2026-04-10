@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { RequestsReportService } from '../services/requestsReportService';
+import { RequestsReportService } from '../services/requestsReport.service';
 import { asyncHandler } from "../utils/asyncHandler";
 
 export class RequestsReportController {

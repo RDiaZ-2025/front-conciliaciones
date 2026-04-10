@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ObjectiveService } from '../services/objectiveService';
+import { ObjectiveService } from '../services/objective.service';
 import { asyncHandler } from "../utils/asyncHandler";
 
 export const getObjectives = asyncHandler(async (req: Request, res: Response) => {

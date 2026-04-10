@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { AuthService } from '../services/authService';
+import { AuthService } from '../services/auth.service';
 import { JWTPayload } from '../types';
 const authService = new AuthService();
 

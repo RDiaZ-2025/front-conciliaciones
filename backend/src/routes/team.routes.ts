@@ -6,7 +6,7 @@ import {
   updateTeam, 
   deleteTeam, 
   updateTeamUsers 
-} from '../controllers/teamController';
+} from '../controllers/team.controller';
 import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();

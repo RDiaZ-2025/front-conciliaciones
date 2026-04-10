@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { teamService } from '../services/teamService';
+import { teamService } from '../services/team.service';
 import { asyncHandler } from "../utils/asyncHandler";
 
 export const getAllTeams = asyncHandler(async (req: Request, res: Response): Promise<void> => {

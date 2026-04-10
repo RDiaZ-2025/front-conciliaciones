@@ -8,18 +8,18 @@ import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 
 // Importar rutas
-import authRoutes from './routes/auth';
-import userRoutes from './routes/users';
-import productionRoutes from './routes/productionRoutes';
-import teamRoutes from './routes/teamRoutes';
-import menuRoutes from './routes/menuRoutes';
-import permissionRoutes from './routes/permissionRoutes';
-import cover15MinuteRoutes from './routes/cover15MinuteRoutes';
-import storageRoutes from './routes/storageRoutes';
-import notificationRoutes from './routes/notificationRoutes';
-import objectiveRoutes from './routes/objectiveRoutes';
-import audienceRoutes from './routes/audienceRoutes';
-import statusRoutes from './routes/statusRoutes';
+import authRoutes from './routes/auth.routes';
+import userRoutes from './routes/user.routes';
+import productionRoutes from './routes/production.routes';
+import teamRoutes from './routes/team.routes';
+import menuRoutes from './routes/menu.routes';
+import permissionRoutes from './routes/permission.routes';
+import cover15MinuteRoutes from './routes/cover15Minute.routes';
+import storageRoutes from './routes/storage.routes';
+import notificationRoutes from './routes/notification.routes';
+import objectiveRoutes from './routes/objective.routes';
+import audienceRoutes from './routes/audience.routes';
+import statusRoutes from './routes/status.routes';
 import campaignRoutes from './routes/campaign.routes';
 
 import { actionLogger, skipLogging } from './middleware/actionLogger';

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { NotificationService } from '../services/notificationService';
+import { NotificationService } from '../services/notification.service';
 import { asyncHandler } from "../utils/asyncHandler";
 
 const notificationService = new NotificationService();

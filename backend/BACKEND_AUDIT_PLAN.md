@@ -23,11 +23,11 @@ This document outlines the necessary improvements, cleanups, and architectural c
 
 ## 4. Naming Conventions & Consistency
 
-- [ ] **Standardize File Names**:
-  - Controllers: Rename `Cover15MinuteController.ts` and `campaign.controller.ts` to standard camelCase (`cover15MinuteController.ts`, `campaignController.ts`).
-  - Routes: Rename `campaign.routes.ts` to `campaignRoutes.ts`.
-  - Services: Ensure all service files follow camelCase (e.g., `Cover15MinuteService.ts` -> `cover15MinuteService.ts`).
-- [ ] **Enforce Entity Naming**: Ensure all TypeORM models follow `PascalCase.ts` and do not mix conventions.
+- [x] **Standardize File Names**:
+  - Controllers: Renamed all controllers to standard camelCase with type suffix (e.g., `cover15Minute.controller.ts`, `campaign.controller.ts`).
+  - Routes: Renamed all routes to standard camelCase with type suffix (e.g., `campaign.routes.ts`).
+  - Services: Ensured all service files follow standard camelCase with type suffix (e.g., `cover15Minute.service.ts`).
+- [x] **Enforce Entity Naming**: Ensure all TypeORM models follow `PascalCase.ts` and do not mix conventions.
 
 ## 5. Code Quality & Types
 

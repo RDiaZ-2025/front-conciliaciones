@@ -1,9 +1,9 @@
 import { ProductionRequest, Product, User, FormatType, RightsDuration, Team } from "../models";
 import { AppDataSource } from "../config/typeorm.config";
-import { NotificationService } from "./notificationService";
-import { ProductionRequestHistoryService } from "./productionRequestHistoryService";
-import { AuthService } from "./authService";
-import { WorkflowService } from "./workflowService";
+import { NotificationService } from './notification.service';
+import { ProductionRequestHistoryService } from './productionRequestHistory.service';
+import { AuthService } from './auth.service';
+import { WorkflowService } from './workflow.service';
 import { Not, In } from "typeorm";
 import { WORKFLOW_STAGES } from "../constants/workflow";
 

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler';
-import { AuthService } from '../services/authService';
+import { AuthService } from '../services/auth.service';
 import { LoginRequest } from '../types';
 
 export class AuthController {

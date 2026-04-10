@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PermissionService } from '../services/permissionService';
+import { PermissionService } from '../services/permission.service';
 import { asyncHandler } from "../utils/asyncHandler";
 
 const permissionService = new PermissionService();

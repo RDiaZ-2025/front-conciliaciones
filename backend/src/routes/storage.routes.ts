@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { StorageController } from '../controllers/storageController';
+import { StorageController } from '../controllers/storage.controller';
 import { authenticateToken } from '../middleware/auth';
 
 const router = Router();

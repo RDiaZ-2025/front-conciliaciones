@@ -5,7 +5,7 @@ import {
   createMenuItem,
   updateMenuItem,
   deleteMenuItem
-} from '../controllers/menuController';
+} from '../controllers/menu.controller';
 import { authenticateToken } from '../middleware/auth';
 
 const router = Router();

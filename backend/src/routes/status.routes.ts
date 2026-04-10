@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllStatuses } from '../controllers/statusController';
+import { getAllStatuses } from '../controllers/status.controller';
 import { authenticateToken } from '../middleware/auth';
 
 const router = Router();

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { MenuService } from '../services/menuService';
+import { MenuService } from '../services/menu.service';
 import { asyncHandler } from "../utils/asyncHandler";
 
 const menuService = new MenuService();

@@ -4,7 +4,7 @@ import {
   createPermission, 
   updatePermission, 
   deletePermission 
-} from '../controllers/permissionController';
+} from '../controllers/permission.controller';
 import { authenticateToken } from '../middleware/auth';
 
 const router = Router();

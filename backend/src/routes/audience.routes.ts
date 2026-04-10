@@ -1,5 +1,5 @@
 import express from 'express';
-import { getGenders, getAgeRanges, getSocioeconomicLevels } from '../controllers/audienceController';
+import { getGenders, getAgeRanges, getSocioeconomicLevels } from '../controllers/audience.controller';
 
 const router = express.Router();
 

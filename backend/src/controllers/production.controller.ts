@@ -1,6 +1,6 @@
 
 import { Request, Response } from 'express';
-import { ProductionService } from '../services/productionService';
+import { ProductionService } from '../services/production.service';
 import { asyncHandler } from "../utils/asyncHandler";
 
 const productionService = new ProductionService();

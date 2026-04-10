@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { AudienceService } from '../services/audienceService';
+import { AudienceService } from '../services/audience.service';
 import { asyncHandler } from "../utils/asyncHandler";
 
 export const getGenders = asyncHandler(async (req: Request, res: Response) => {

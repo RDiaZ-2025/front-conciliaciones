@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { ProductionController, getAllProductionRequests, getProductionRequestById, createProductionRequest, updateProductionRequest, getProducts, moveProductionRequest, updateStepGeneral, updateStepCustomer, updateStepCampaign, updateStepAudience, updateStepProduction, updateMaterialData } from '../controllers/productionController';
-import { addMaterialRegister, getMaterialRegisters } from '../controllers/materialRegisterController';
-import { RequestsReportController } from '../controllers/requestsReportController';
-import { getProductionRequestHistory } from '../controllers/productionRequestHistoryController';
+import { ProductionController, getAllProductionRequests, getProductionRequestById, createProductionRequest, updateProductionRequest, getProducts, moveProductionRequest, updateStepGeneral, updateStepCustomer, updateStepCampaign, updateStepAudience, updateStepProduction, updateMaterialData } from '../controllers/production.controller';
+import { addMaterialRegister, getMaterialRegisters } from '../controllers/materialRegister.controller';
+import { RequestsReportController } from '../controllers/requestsReport.controller';
+import { getProductionRequestHistory } from '../controllers/productionRequestHistory.controller';
 import { authenticateToken, requirePermission } from '../middleware/auth';
 
 const router = Router();
