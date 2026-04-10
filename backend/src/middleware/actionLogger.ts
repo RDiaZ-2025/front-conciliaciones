@@ -21,7 +21,7 @@ export const actionLogger = async (req: LoggingRequest, res: Response, next: Nex
     let responseBody: any = null;
     let responseSent = false;
 
-    res.send = function(body: any) {
+    res.send = function (body: any) {
         if (!responseSent) {
             responseBody = body;
             responseSent = true;
@@ -30,7 +30,7 @@ export const actionLogger = async (req: LoggingRequest, res: Response, next: Nex
         return originalSend.call(this, body);
     };
 
-    res.json = function(body: any) {
+    res.json = function (body: any) {
         if (!responseSent) {
             responseBody = body;
             responseSent = true;
@@ -114,9 +114,9 @@ function determineAction(method: string, path: string): string {
 /**
  * Extract resource type and ID from the request path and body
  */
-function extractResourceInfo(path: string, body: any): { type: string | null; id: string | null } {
+function extractResourceInfo(path: string, body: Record<string, unknown> | null | undefined): { type: string | null; id: string | null } {
     const pathSegments = path.split('/').filter(segment => segment);
-    
+
     if (pathSegments.length < 2) {
         return { type: null, id: null };
     }
@@ -216,12 +216,12 @@ function shouldLogResponseBody(req: Request, res: Response): boolean {
 /**
  * Sanitize request body to remove sensitive information
  */
-function sanitizeRequestBody(body: any): any {
+function sanitizeRequestBody(body: unknown): unknown {
     if (!body || typeof body !== 'object') {
         return body;
     }
 
-    const sanitized = { ...body };
+    const sanitized = { ...(body as Record<string, unknown>) };
     const sensitiveFields = ['password', 'passwordHash', 'token', 'secret', 'key', 'authorization'];
 
     for (const field of sensitiveFields) {
@@ -236,17 +236,22 @@ function sanitizeRequestBody(body: any): any {
 /**
  * Sanitize response body to remove sensitive information
  */
-function sanitizeResponseBody(body: any): any {
-    if (!body || typeof body !== 'object') {
+function sanitizeResponseBody(body: unknown): unknown {
+    if (!body) {
         return body;
     }
 
     try {
         const parsed = typeof body === 'string' ? JSON.parse(body) : body;
-        const sanitized = { ...parsed };
-        
+
+        if (typeof parsed !== 'object' || parsed === null) {
+            return parsed;
+        }
+
+        const sanitized = { ...(parsed as Record<string, unknown>) };
+
         const sensitiveFields = ['password', 'passwordHash', 'token', 'secret', 'key'];
-        
+
         for (const field of sensitiveFields) {
             if (sanitized[field]) {
                 sanitized[field] = '[REDACTED]';
@@ -254,9 +259,10 @@ function sanitizeResponseBody(body: any): any {
         }
 
         if (sanitized.data && typeof sanitized.data === 'object') {
+            const sanitizedData = sanitized.data as Record<string, unknown>;
             for (const field of sensitiveFields) {
-                if (sanitized.data[field]) {
-                    sanitized.data[field] = '[REDACTED]';
+                if (sanitizedData[field]) {
+                    sanitizedData[field] = '[REDACTED]';
                 }
             }
         }
@@ -270,7 +276,7 @@ function sanitizeResponseBody(body: any): any {
 /**
  * Extract metadata from request and response
  */
-function extractMetadata(req: Request, res: Response): any {
+function extractMetadata(req: Request, res: Response): Record<string, unknown> {
     return {
         contentType: req.get('Content-Type'),
         contentLength: req.get('Content-Length'),
@@ -284,12 +290,12 @@ function extractMetadata(req: Request, res: Response): any {
 /**
  * Extract error message from response body
  */
-function extractErrorMessage(responseBody: any): string | null {
+function extractErrorMessage(responseBody: unknown): string | null {
     if (!responseBody) return null;
 
     try {
         const parsed = typeof responseBody === 'string' ? JSON.parse(responseBody) : responseBody;
-        return parsed.message || parsed.error || parsed.details || null;
+        return (parsed as any).message || (parsed as any).error || (parsed as any).details || null;
     } catch (error) {
         return responseBody.toString();
     }
@@ -299,7 +305,7 @@ function extractErrorMessage(responseBody: any): string | null {
  * Middleware to skip logging for specific routes
  */
 export const skipLogging = (req: Request, res: Response, next: NextFunction): void => {
-    (req as any).skipLogging = true;
+    (req as Request & { skipLogging?: boolean }).skipLogging = true;
     next();
 };
 
@@ -307,5 +313,5 @@ export const skipLogging = (req: Request, res: Response, next: NextFunction): vo
  * Check if logging should be skipped for this request
  */
 export const shouldSkipLogging = (req: Request): boolean => {
-    return (req as any).skipLogging === true;
+    return (req as Request & { skipLogging?: boolean }).skipLogging === true;
 };

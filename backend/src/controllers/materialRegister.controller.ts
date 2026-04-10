@@ -14,23 +14,15 @@ export const addMaterialRegister = asyncHandler(async (req: Request, res: Respon
         return;
     }
 
-    try {
-        const newRegister = await materialRegisterService.create({
-            productionRequestId: parseInt(id),
-            category,
-            type,
-            solution,
-            jsonRequest: typeof jsonRequest === 'string' ? jsonRequest : JSON.stringify(jsonRequest),
-            createdBy: userId
-        });
-        res.status(201).json(newRegister);
-    } catch (error: any) {
-        if (error.message === 'Production request not found') {
-            res.status(404).json({ message: error.message });
-        } else {
-            throw error;
-        }
-    }
+    const newRegister = await materialRegisterService.create({
+        productionRequestId: parseInt(id),
+        category,
+        type,
+        solution,
+        jsonRequest: typeof jsonRequest === 'string' ? jsonRequest : JSON.stringify(jsonRequest),
+        createdBy: userId
+    });
+    res.status(201).json(newRegister);
 });
 
 export const getMaterialRegisters = asyncHandler(async (req: Request, res: Response): Promise<void> => {

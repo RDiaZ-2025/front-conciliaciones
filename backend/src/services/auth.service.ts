@@ -12,26 +12,16 @@ export class AuthService {
   private readonly JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    try {
-
-      if (!AppDataSource.isInitialized) {
-        console.error('❌ Base de datos no disponible');
-        return {
-          success: false,
-          message: 'Servicio de autenticación no disponible'
-        };
-      }
-
-      const result = await this.loginWithTypeORM(credentials);
-      return result;
-
-    } catch (error) {
-      console.error('Error en login:', error);
+    if (!AppDataSource.isInitialized) {
+      console.error('❌ Base de datos no disponible');
       return {
         success: false,
-        message: 'Error interno del servidor'
+        message: 'Servicio de autenticación no disponible'
       };
     }
+
+    const result = await this.loginWithTypeORM(credentials);
+    return result;
   }
 
   private async loginWithTypeORM(credentials: LoginRequest): Promise<LoginResponse> {
@@ -99,76 +89,60 @@ export class AuthService {
 
 
   async getUserById(userId: number): Promise<User | null> {
-    try {
-      if (!AppDataSource.isInitialized) {
-        console.error('Base de datos no disponible');
-        return null;
-      }
-
-      const userRepository = AppDataSource.getRepository(User);
-
-      const user = await userRepository.findOne({
-        where: { id: userId, status: 1 }
-      });
-
-      return user;
-    } catch (error) {
-      console.error('Error obteniendo usuario:', error);
+    if (!AppDataSource.isInitialized) {
+      console.error('Base de datos no disponible');
       return null;
     }
+
+    const userRepository = AppDataSource.getRepository(User);
+
+    const user = await userRepository.findOne({
+      where: { id: userId, status: 1 }
+    });
+
+    return user;
   }
 
   async getUserPermissions(userId: number): Promise<string[]> {
-    try {
-      if (!AppDataSource.isInitialized) {
-        console.error('Base de datos no disponible para obtener permisos');
-        return [];
-      }
-
-      const permissionByUserRepository = AppDataSource.getRepository(PermissionByUser);
-
-      const userPermissions = await permissionByUserRepository.find({
-        where: { userId: userId },
-        relations: ['permission']
-      });
-
-      return userPermissions.map(up => up.permission.name);
-    } catch (error) {
-      console.error('Error obteniendo permisos:', error);
+    if (!AppDataSource.isInitialized) {
+      console.error('Base de datos no disponible para obtener permisos');
       return [];
     }
+
+    const permissionByUserRepository = AppDataSource.getRepository(PermissionByUser);
+
+    const userPermissions = await permissionByUserRepository.find({
+      where: { userId: userId },
+      relations: ['permission']
+    });
+
+    return userPermissions.map(up => up.permission.name);
   }
 
   async getUserTeams(userId: number): Promise<string[]> {
-    try {
-      if (!AppDataSource.isInitialized) {
-        return [];
-      }
-      const userRepository = AppDataSource.getRepository(User);
-      const user = await userRepository.findOne({
-        where: { id: userId },
-        relations: ['team']
-      });
-      return user?.team ? [user.team.name] : [];
-    } catch (error) {
-      console.error('Error getting user teams:', error);
+    if (!AppDataSource.isInitialized) {
+      console.error('Database not available to get teams');
       return [];
     }
+
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOne({
+      where: { id: userId },
+      relations: ['team']
+    });
+
+    return user?.team ? [user.team.name] : [];
   }
 
   async updateUserLastLogin(userId: number): Promise<void> {
-    try {
-      if (!AppDataSource.isInitialized) {
-        console.error('Base de datos no disponible para actualizar último login');
-        return;
-      }
-
-      const userRepository = AppDataSource.getRepository(User);
-
-      await userRepository.update(userId, { lastAccess: new Date() });
-    } catch (error) {
-      console.error('Error actualizando último acceso:', error);
+    if (!AppDataSource.isInitialized) {
+      console.error('Base de datos no disponible para actualizar último login');
+      return;
     }
+
+    const userRepository = AppDataSource.getRepository(User);
+
+    await userRepository.update(userId, { lastAccess: new Date() });
   }
 
   generateToken(payload: JWTPayload): string {

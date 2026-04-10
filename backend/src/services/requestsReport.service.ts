@@ -1,10 +1,12 @@
 import { AppDataSource } from '../config/typeorm.config';
+import { DashboardStatsResponse } from '../types';
+import { FindOptionsWhere } from 'typeorm';
 import { ProductionRequest } from '../models/ProductionRequest';
 import { User } from '../models/User';
 import { LessThan, MoreThan, Between, Not, In } from 'typeorm';
 
 export class RequestsReportService {
-  async getDashboardStats(userId: number): Promise<any> {
+  async getDashboardStats(userId: number): Promise<{success: boolean, data: DashboardStatsResponse}> {
     if (!AppDataSource.isInitialized) {
       throw new Error('Database not available');
     }
@@ -19,7 +21,7 @@ export class RequestsReportService {
 
     const subordinateIds = subordinates.map(u => u.id);
 
-    let whereClause: any = {};
+    let whereClause: FindOptionsWhere<ProductionRequest> = {};
     if (subordinateIds.length > 0) {
       whereClause = { assignedUserId: In(subordinateIds) };
     } else {
@@ -92,12 +94,12 @@ export class RequestsReportService {
         atRisk,
         inProgress: inProgressCount,
         pending: pendingCount,
-        users: allUsers
+        users: allUsers.map(u => ({ id: u.id, name: u.name, email: u.email }))
       }
     };
   }
 
-  async getMyRequestsStats(userId: number): Promise<any> {
+  async getMyRequestsStats(userId: number): Promise<{success: boolean, data: DashboardStatsResponse}> {
     if (!AppDataSource.isInitialized) {
       throw new Error('Database not available');
     }

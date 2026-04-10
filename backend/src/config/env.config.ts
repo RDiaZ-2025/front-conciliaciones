@@ -57,7 +57,7 @@ export const validateEnv = (): EnvConfig => {
     }
 
     return parsedEnv;
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       console.error('❌ Error de validación de Variables de Entorno:');
       error.issues.forEach((err) => {

@@ -44,7 +44,7 @@ export const connectDB = async (): Promise<void> => {
     });
   } catch (error) {
     console.error('❌ Error conectando a la base de datos:', error);
-    if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as any).message === 'string' && (error as any).message.includes('ECONNCLOSED')) {
+    if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as {message: string}).message === 'string' && (error as {message: string}).message.includes('ECONNCLOSED')) {
       console.error('🔎 ECONNCLOSED: La conexión con SQL Server se cerró inesperadamente. Verifica credenciales, firewall y disponibilidad de Azure SQL.');
     }
     console.warn('⚠️ Continuando sin conexión a la base de datos para desarrollo');

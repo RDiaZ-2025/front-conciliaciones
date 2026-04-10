@@ -6,7 +6,7 @@ export class RequestsReportController {
   private reportService = new RequestsReportService();
 
   getDashboardStats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ message: 'Unauthorized' });
       return;
@@ -16,7 +16,7 @@ export class RequestsReportController {
   });
 
   getMyRequestsStats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ message: 'Unauthorized' });
       return;

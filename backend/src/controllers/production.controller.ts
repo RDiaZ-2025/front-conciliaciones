@@ -25,7 +25,7 @@ export class ProductionController {
 export const getAllProductionRequests = asyncHandler(async (req: Request, res: Response): Promise<Response | void> => {
     const userId = req.user?.userId;
     const hasManagementPermission = req.user?.permissions?.includes('production_management');
-    const requests = await productionService.getAllProductionRequests(userId, hasManagementPermission, req.query.view);
+    const requests = await productionService.getAllProductionRequests(userId, hasManagementPermission, req.query.view as string | undefined);
     return res.status(200).json(requests);
 });
 
@@ -36,15 +36,8 @@ export const getProducts = asyncHandler(async (req: Request, res: Response): Pro
 
 export const getProductionRequestById = asyncHandler(async (req: Request, res: Response): Promise<Response | void> => {
     const { id } = req.params;
-    try {
-        const request = await productionService.getProductionRequestById(parseInt(id));
-        return res.status(200).json(request);
-    } catch (error: any) {
-        if (error.message === 'Production request not found') {
-            return res.status(404).json({ message: error.message });
-        }
-        throw error;
-    }
+    const request = await productionService.getProductionRequestById(parseInt(id));
+    return res.status(200).json(request);
 });
 
 export const createProductionRequest = asyncHandler(async (req: Request, res: Response): Promise<Response | void> => {
@@ -54,28 +47,14 @@ export const createProductionRequest = asyncHandler(async (req: Request, res: Re
 
 export const updateProductionRequest = asyncHandler(async (req: Request, res: Response): Promise<Response | void> => {
     const { id } = req.params;
-    try {
-        const request = await productionService.updateProductionRequest(parseInt(id), req.body, req.user?.userId);
-        return res.status(200).json(request);
-    } catch (error: any) {
-        if (error.message === 'Production request not found') {
-            return res.status(404).json({ message: error.message });
-        }
-        throw error;
-    }
+    const request = await productionService.updateProductionRequest(parseInt(id), req.body, req.user?.userId);
+    return res.status(200).json(request);
 });
 
 export const updateProductionRequestPartial = asyncHandler(async (req: Request, res: Response): Promise<Response | void> => {
     const { id } = req.params;
-    try {
-        const request = await productionService.updateProductionRequestPartial(parseInt(id), req.body, req.user?.userId);
-        return res.status(200).json(request);
-    } catch (error: any) {
-        if (error.message === 'Production request not found') {
-            return res.status(404).json({ message: error.message });
-        }
-        throw error;
-    }
+    const request = await productionService.updateProductionRequestPartial(parseInt(id), req.body, req.user?.userId);
+    return res.status(200).json(request);
 });
 
 export const moveProductionRequest = updateProductionRequestPartial;
@@ -83,15 +62,8 @@ export const updateStepGeneral = updateProductionRequestPartial;
 export const updateStepCustomer = updateProductionRequestPartial;
 export const updateStepCampaign = asyncHandler(async (req: Request, res: Response): Promise<Response | void> => {
     const { id } = req.params;
-    try {
-        const request = await productionService.updateStepCampaign(parseInt(id), req.body, req.user?.userId);
-        return res.status(200).json(request);
-    } catch (error: any) {
-        if (error.message === 'Production request not found') {
-            return res.status(404).json({ message: error.message });
-        }
-        throw error;
-    }
+    const request = await productionService.updateStepCampaign(parseInt(id), req.body, req.user?.userId);
+    return res.status(200).json(request);
 });
 export const updateStepAudience = updateProductionRequestPartial;
 export const updateStepProduction = updateProductionRequestPartial;

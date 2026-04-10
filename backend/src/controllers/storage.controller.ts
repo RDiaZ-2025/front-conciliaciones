@@ -30,7 +30,7 @@ export class StorageController {
     }
 
     if (containerName === 'autoconsumoshared') {
-      const user = (req as any).user;
+      const user = req.user;
       if (!user || !user.permissions || !user.permissions.includes('view_commercial')) {
         return res.status(403).json({
           success: false,
@@ -103,7 +103,7 @@ export class StorageController {
   });
 
   listCommercialFiles = asyncHandler(async (req: Request, res: Response) => {
-    const user = (req as any).user;
+    const user = req.user;
     if (!user || !user.permissions || !user.permissions.includes('view_commercial')) {
       return res.status(403).json({ success: false, message: 'Access denied: view_commercial permission required' });
     }
@@ -143,7 +143,7 @@ export class StorageController {
   });
 
   downloadCommercialFile = asyncHandler(async (req: Request, res: Response) => {
-    const user = (req as any).user;
+    const user = req.user;
     if (!user || !user.permissions || !user.permissions.includes('view_commercial')) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }

@@ -39,11 +39,54 @@ export interface LoginResponse {
   message?: string;
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   message?: string;
   error?: string;
+}
+
+export interface UserResponseDTO {
+  id: number;
+  name: string;
+  email: string;
+  lastAccess?: Date | null;
+  status: number;
+  permissions?: string[];
+  teamId?: number | null;
+  teamName?: string | null;
+  bossId?: number | null;
+  bossName?: string | null;
+  role?: string | null;
+  teams?: string[];
+}
+
+export interface DashboardStatsResponse {
+  total: number;
+  active: number;
+  completed: number;
+  cancelled: number;
+  overdue: number;
+  atRisk: number;
+  inProgress: number;
+  pending: number;
+  users?: Partial<UserResponseDTO>[];
+}
+
+export interface ProductionRequestDTO {
+  name?: string;
+  department?: string;
+  assignedUserId?: number;
+  deliveryDate?: string | Date;
+  observations?: string;
+  status?: string;
+  stage?: string;
+  customerData?: Record<string, unknown>;
+  audienceData?: Record<string, unknown>;
+  campaignDetail?: Record<string, unknown> & { budget?: string | number };
+  productionInfo?: Record<string, unknown>;
+  unitAssigned?: number;
+  [key: string]: unknown;
 }
 
 export interface JWTPayload {

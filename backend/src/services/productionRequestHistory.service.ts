@@ -16,8 +16,8 @@ export class ProductionRequestHistoryService {
   async logChange(
     productionRequestId: number,
     changeField: string,
-    oldValue: any,
-    newValue: any,
+    oldValue: unknown,
+    newValue: unknown,
     changedBy: number,
     changeType: 'create' | 'update' | 'delete' | 'status_change'
   ): Promise<ProductionRequestHistory> {
@@ -81,7 +81,7 @@ export class ProductionRequestHistoryService {
     }
   }
 
-  private isDifferent(val1: any, val2: any): boolean {
+  private isDifferent(val1: unknown, val2: unknown): boolean {
     if (val1 instanceof Date && val2 instanceof Date) {
       return val1.getTime() !== val2.getTime();
     }

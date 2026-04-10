@@ -121,7 +121,7 @@ export class ActionLogService {
     /**
      * Get action statistics
      */
-    async getActionStatistics(filters: ActionLogFilters = {}): Promise<any> {
+    async getActionStatistics(filters: ActionLogFilters = {}): Promise<Record<string, unknown>> {
         const queryBuilder = this.actionLogRepository
             .createQueryBuilder('log');
 
@@ -186,7 +186,7 @@ export class ActionLogService {
      * Apply filters to query builder
      */
     private applyFilters(
-        queryBuilder: SelectQueryBuilder<UserActionLog>, 
+        queryBuilder: SelectQueryBuilder<UserActionLog>,
         filters: ActionLogFilters,
         excludeFields: string[] = []
     ): void {

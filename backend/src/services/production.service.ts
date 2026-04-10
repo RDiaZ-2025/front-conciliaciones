@@ -6,54 +6,60 @@ import { AuthService } from './auth.service';
 import { WorkflowService } from './workflow.service';
 import { Not, In } from "typeorm";
 import { WORKFLOW_STAGES } from "../constants/workflow";
+import { ProductionRequestDTO } from '../types';
+import { CustomerData } from '../models/CustomerData';
+import { AudienceData } from '../models/AudienceData';
+import { CampaignDetail } from '../models/CampaignDetail';
+import { ProductionInfo } from '../models/ProductionInfo';
+import { DeepPartial } from 'typeorm';
 
 const authService = new AuthService();
 const workflowService = new WorkflowService();
 const notificationService = new NotificationService();
 const historyService = new ProductionRequestHistoryService();
 const performSmartAssignment = async (department: string): Promise<{ assignedUserId: number, userName: string, activeRequestsCount: number } | null> => {
-      try {
+    try {
         const teamRepository = AppDataSource.getRepository(Team);
         const team = await teamRepository.findOne({ where: { name: department } });
 
         if (team) {
-          const userRepository = AppDataSource.getRepository(User);
-          const users = await userRepository.find({ where: { teamId: team.id, status: 1 } });
+            const userRepository = AppDataSource.getRepository(User);
+            const users = await userRepository.find({ where: { teamId: team.id, status: 1 } });
 
-          if (users && users.length > 0) {
-            const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
+            if (users && users.length > 0) {
+                const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
 
-            const userWorkloads = await Promise.all(users.map(async (user) => {
-              const activeRequestsCount = await productionRequestRepository.count({
-                where: {
-                  assignedUserId: user.id,
-                  status: Not(In(['completed', 'cancelled']))
-                }
-              });
-              return { user, count: activeRequestsCount };
-            }));
+                const userWorkloads = await Promise.all(users.map(async (user) => {
+                    const activeRequestsCount = await productionRequestRepository.count({
+                        where: {
+                            assignedUserId: user.id,
+                            status: Not(In(['completed', 'cancelled']))
+                        }
+                    });
+                    return { user, count: activeRequestsCount };
+                }));
 
-            userWorkloads.sort((a, b) => a.count - b.count);
+                userWorkloads.sort((a, b) => a.count - b.count);
 
-            const minWorkload = userWorkloads[0].count;
-            const candidates = userWorkloads.filter(uw => uw.count === minWorkload);
+                const minWorkload = userWorkloads[0].count;
+                const candidates = userWorkloads.filter(uw => uw.count === minWorkload);
 
-            const randomIndex = Math.floor(Math.random() * candidates.length);
-            const selectedCandidate = candidates[randomIndex];
+                const randomIndex = Math.floor(Math.random() * candidates.length);
+                const selectedCandidate = candidates[randomIndex];
 
-            return {
-              assignedUserId: selectedCandidate.user.id,
-              userName: selectedCandidate.user.name,
-              activeRequestsCount: selectedCandidate.count
-            };
-          }
+                return {
+                    assignedUserId: selectedCandidate.user.id,
+                    userName: selectedCandidate.user.name,
+                    activeRequestsCount: selectedCandidate.count
+                };
+            }
         }
         return null;
-      } catch (error) {
+    } catch (error) {
         console.error('Error in smart assignment:', error);
         return null;
-      }
-    };
+    }
+};
 
 export class ProductionService {
     async getFormatTypes() {
@@ -70,19 +76,19 @@ export class ProductionService {
         return WORKFLOW_STAGES;
     }
 
-    async getAllProductionRequests(userId: number | undefined, hasManagementPermission: boolean | undefined, view: any) {
+    async getAllProductionRequests(userId: number | undefined, hasManagementPermission: boolean | undefined, view: string | undefined) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const query = AppDataSource.getRepository(ProductionRequest).createQueryBuilder('request')
             .leftJoinAndSelect('request.customerData', 'customerData')
             .leftJoinAndSelect('request.assignedUser', 'assignedUser')
             .leftJoinAndSelect('request.materialRegisters', 'materialRegisters')
             .orderBy('request.requestDate', 'DESC');
-            
+
         let filterByAssignedUser = true;
         if (hasManagementPermission && view === 'all') filterByAssignedUser = false;
         if (filterByAssignedUser) query.where('request.assignedUserId = :userId', { userId });
         if (!hasManagementPermission) query.andWhere('request.status NOT IN (:...closedStatuses)', { closedStatuses: ['completed', 'cancelled'] });
-        
+
         return await query.getMany();
     }
 
@@ -96,10 +102,10 @@ export class ProductionService {
         const request = await AppDataSource.getRepository(ProductionRequest).findOne({
             where: { id },
             relations: [
-                'customerData', 'audienceData', 'audienceData.gender', 'audienceData.ageRange', 
-                'audienceData.socioEconomicLevel', 'campaignDetail', 'campaignDetail.objective', 
-                'campaignDetail.campaignProducts', 'campaignDetail.campaignProducts.product', 
-                'productionInfo', 'productionInfo.formatType', 'productionInfo.rightsDuration', 
+                'customerData', 'audienceData', 'audienceData.gender', 'audienceData.ageRange',
+                'audienceData.socioEconomicLevel', 'campaignDetail', 'campaignDetail.objective',
+                'campaignDetail.campaignProducts', 'campaignDetail.campaignProducts.product',
+                'productionInfo', 'productionInfo.formatType', 'productionInfo.rightsDuration',
                 'assignedUser', 'materialRegisters', 'materialRegisters.creator'
             ]
         });
@@ -107,7 +113,7 @@ export class ProductionService {
         return request;
     }
 
-    async createProductionRequest(data: any, userId: number | undefined) {
+    async createProductionRequest(data: ProductionRequestDTO, userId: number | undefined) {
         let { name, department, assignedUserId, deliveryDate, observations, status, stage, customerData, audienceData, campaignDetail, productionInfo, unitAssigned } = data;
         let userCreatorId: number | null = null;
 
@@ -116,7 +122,7 @@ export class ProductionService {
             if (currentUser) {
                 userCreatorId = currentUser.id;
                 const userTeams = await authService.getUserTeams(currentUser.id);
-                if (userTeams.length > 0 && !userTeams.includes(department)) {
+                if (department && userTeams.length > 0 && !userTeams.includes(department)) {
                     department = userTeams[0];
                 }
             }
@@ -134,39 +140,43 @@ export class ProductionService {
         }
 
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
-        
+
         let finalStatus = status || stage || 'quotation';
         const tempRequest = new ProductionRequest();
         tempRequest.status = finalStatus === 'quotation' ? '' : 'quotation';
-        tempRequest.department = department;
-        tempRequest.assignedUserId = assignedUserId;
-        tempRequest.userCreatorId = userCreatorId;
-        
+        tempRequest.department = department || '';
+        tempRequest.assignedUserId = assignedUserId || null;
+        tempRequest.userCreatorId = userCreatorId || null;
+
         const budgetValue = campaignDetail?.budget ? parseInt(String(campaignDetail.budget).replace(/[^0-9]/g, '')) : 0;
         if (finalStatus === 'quotation' && budgetValue > 0) tempRequest.status = 'quotation';
-        
+
         const rulesResult = await workflowService.advanceStage(tempRequest, { budget: budgetValue });
         if (rulesResult.newStage) finalStatus = rulesResult.newStage;
         if (rulesResult.assignmentMethod !== 'Manual') {
             assignmentMethod = rulesResult.assignmentMethod;
-            department = tempRequest.department;
-            assignedUserId = tempRequest.assignedUserId;
+            department = tempRequest.department || undefined;
+            assignedUserId = tempRequest.assignedUserId || undefined;
         }
 
         if (campaignDetail && campaignDetail.budget !== undefined && campaignDetail.budget !== null) {
             campaignDetail.budget = String(campaignDetail.budget);
+            campaignDetail.budget = String(campaignDetail.budget);
+            campaignDetail.budget = String(campaignDetail.budget);
         }
 
-        const isEmptyObject = (obj: any) => !obj || Object.values(obj).every(val => val === null || val === undefined || val === '' || val === false || (Array.isArray(val) && val.length === 0));
+        const isEmptyObject = (obj: Record<string, unknown> | undefined) => !obj || Object.values(obj).every(val => val === null || val === undefined || val === '' || val === false || (Array.isArray(val) && val.length === 0));
 
         const repo = AppDataSource.getRepository(ProductionRequest);
         const newRequest = repo.create({
-            name, requestDate: new Date(), department, userCreatorId, assignedUserId,
-            deliveryDate: deliveryDate ? new Date(deliveryDate) : null, observations, status: finalStatus, unitAssigned,
-            customerData: isEmptyObject(customerData) ? undefined : customerData,
-            audienceData: isEmptyObject(audienceData) ? undefined : audienceData,
-            campaignDetail: isEmptyObject(campaignDetail) ? undefined : campaignDetail,
-            productionInfo: isEmptyObject(productionInfo) ? undefined : productionInfo
+            ...({
+                name, requestDate: new Date(), department, userCreatorId, assignedUserId,
+                deliveryDate: deliveryDate ? new Date(deliveryDate) : null, observations, status: finalStatus, unitAssigned,
+                customerData: isEmptyObject(customerData) ? undefined : (customerData as unknown as CustomerData),
+                audienceData: isEmptyObject(audienceData) ? undefined : (audienceData as unknown as AudienceData),
+                campaignDetail: isEmptyObject(campaignDetail) ? undefined : (campaignDetail as unknown as CampaignDetail),
+                productionInfo: isEmptyObject(productionInfo) ? undefined : (productionInfo as unknown as ProductionInfo)
+            } as unknown as DeepPartial<ProductionRequest>)
         });
 
         const savedRequest = await repo.save(newRequest);
@@ -187,7 +197,7 @@ export class ProductionService {
         return savedRequest;
     }
 
-    async updateProductionRequest(id: number, data: any, userId: number | undefined) {
+    async updateProductionRequest(id: number, data: ProductionRequestDTO, userId: number | undefined) {
         let { name, department, assignedUserId, deliveryDate, observations, status, stage, customerData, audienceData, campaignDetail, productionInfo, unitAssigned } = data;
         if (!name || !department) throw new Error('Missing required fields');
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
@@ -211,26 +221,26 @@ export class ProductionService {
         }
 
         existingRequest.name = name;
-        existingRequest.department = department;
-        existingRequest.assignedUserId = assignedUserId;
+        existingRequest.department = department !== undefined ? department : existingRequest.department;
+        existingRequest.assignedUserId = assignedUserId || null;
         existingRequest.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
-        existingRequest.observations = observations;
+        existingRequest.observations = observations || null;
         let oldAssignedUserId = existingRequest.assignedUserId;
 
         const targetStage = status || stage;
         if (targetStage && targetStage !== existingRequest.status) {
-            const rulesResult = await workflowService.advanceStage(existingRequest, { ...data, targetStage, budget: campaignDetail?.budget ? parseInt(String(campaignDetail.budget).replace(/[^0-9]/g, '')) : undefined, saleClosed: targetStage === 'completed' ? false : true });
+            const rulesResult = await workflowService.advanceStage(existingRequest, { ...data, targetStage, budget: campaignDetail?.budget ? parseInt(String(campaignDetail.budget).replace(/[^0-9]/g, '')) : undefined, saleClosed: targetStage === 'completed' ? false : true } as Record<string, unknown>);
             if (rulesResult.assignmentMethod !== 'Manual') assignmentMethod = rulesResult.assignmentMethod;
-            assignedUserId = existingRequest.assignedUserId;
+            assignedUserId = existingRequest.assignedUserId || undefined;
         }
 
-        if (customerData) existingRequest.customerData = { ...existingRequest.customerData, ...customerData };
-        if (audienceData) existingRequest.audienceData = { ...existingRequest.audienceData, ...audienceData };
-        if (productionInfo) existingRequest.productionInfo = { ...existingRequest.productionInfo, ...productionInfo };
-        if (unitAssigned !== undefined) existingRequest.unitAssigned = unitAssigned;
+        if (customerData) existingRequest.customerData = { ...existingRequest.customerData, ...(customerData as unknown as CustomerData) };
+        if (audienceData) existingRequest.audienceData = { ...existingRequest.audienceData, ...(audienceData as unknown as AudienceData) };
+        if (productionInfo) existingRequest.productionInfo = { ...existingRequest.productionInfo, ...(productionInfo as unknown as ProductionInfo) };
+        if (unitAssigned !== undefined) existingRequest.unitAssigned = unitAssigned !== undefined ? String(unitAssigned) : (existingRequest.unitAssigned || null);
         if (campaignDetail) {
             if (campaignDetail.budget !== undefined && campaignDetail.budget !== null) campaignDetail.budget = String(campaignDetail.budget);
-            existingRequest.campaignDetail = { ...existingRequest.campaignDetail, ...campaignDetail };
+            existingRequest.campaignDetail = { ...existingRequest.campaignDetail, ...(campaignDetail as unknown as CampaignDetail), budget: campaignDetail.budget !== undefined && campaignDetail.budget !== null ? String(campaignDetail.budget) : existingRequest.campaignDetail?.budget } as unknown as CampaignDetail;
         }
 
         const updatedRequest = await repo.save(existingRequest);
@@ -246,7 +256,7 @@ export class ProductionService {
         return updatedRequest;
     }
 
-    async updateProductionRequestPartial(id: number, data: any, userId: number | undefined) {
+    async updateProductionRequestPartial(id: number, data: Partial<ProductionRequestDTO>, userId: number | undefined) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const repo = AppDataSource.getRepository(ProductionRequest);
         const existingRequest = await repo.findOne({ where: { id }, relations: ['customerData', 'audienceData', 'campaignDetail', 'campaignDetail.campaignProducts', 'productionInfo'] });
@@ -265,34 +275,34 @@ export class ProductionService {
         }
 
         if (data.department && data.department !== existingRequest.department && !data.assignedUserId) {
-             const assignment = await performSmartAssignment(data.department);
-             if (assignment) {
-                 assignedUserId = assignment.assignedUserId;
-                 assignmentMethod = 'Smart Workload Distribution';
-             }
+            const assignment = await performSmartAssignment(data.department);
+            if (assignment) {
+                assignedUserId = assignment.assignedUserId;
+                assignmentMethod = 'Smart Workload Distribution';
+            }
         } else if (data.assignedUserId !== undefined) {
-             assignedUserId = data.assignedUserId;
+            assignedUserId = data.assignedUserId;
         }
 
         if (data.name !== undefined) existingRequest.name = data.name;
         if (data.department !== undefined) existingRequest.department = data.department;
         existingRequest.assignedUserId = assignedUserId;
         if (data.deliveryDate !== undefined) existingRequest.deliveryDate = data.deliveryDate ? new Date(data.deliveryDate) : null;
-        if (data.observations !== undefined) existingRequest.observations = data.observations;
-        if (data.unitAssigned !== undefined) existingRequest.unitAssigned = data.unitAssigned;
+        if (data.observations !== undefined) existingRequest.observations = data.observations || null;
+        if (data.unitAssigned !== undefined) existingRequest.unitAssigned = data.unitAssigned ? String(data.unitAssigned) : null;
 
-        if (data.customerData) existingRequest.customerData = { ...existingRequest.customerData, ...data.customerData };
-        if (data.audienceData) existingRequest.audienceData = { ...existingRequest.audienceData, ...data.audienceData };
-        if (data.productionInfo) existingRequest.productionInfo = { ...existingRequest.productionInfo, ...data.productionInfo };
+        if (data.customerData) existingRequest.customerData = { ...existingRequest.customerData, ...data.customerData } as unknown as CustomerData;
+        if (data.audienceData) existingRequest.audienceData = { ...existingRequest.audienceData, ...data.audienceData } as unknown as AudienceData;
+        if (data.productionInfo) existingRequest.productionInfo = { ...existingRequest.productionInfo, ...data.productionInfo } as unknown as ProductionInfo;
         if (data.campaignDetail) {
             if (data.campaignDetail.budget !== undefined && data.campaignDetail.budget !== null) data.campaignDetail.budget = String(data.campaignDetail.budget);
-            existingRequest.campaignDetail = { ...existingRequest.campaignDetail, ...data.campaignDetail };
+            existingRequest.campaignDetail = { ...existingRequest.campaignDetail, ...data.campaignDetail, budget: data.campaignDetail.budget ? String(data.campaignDetail.budget) : existingRequest.campaignDetail?.budget } as unknown as CampaignDetail;
         }
 
         const updatedRequest = await repo.save(existingRequest);
 
         if (userId) {
-            await historyService.logDifferences(existingRequest, { ...data, assignedUserId: existingRequest.assignedUserId, department: existingRequest.department }, userId);
+            await historyService.logDifferences(existingRequest, { ...data, assignedUserId: existingRequest.assignedUserId || undefined, department: existingRequest.department } as unknown as Partial<ProductionRequest>, userId);
             if (assignmentMethod !== 'Manual' && existingRequest.assignedUserId) {
                 await historyService.logChange(updatedRequest.id, 'AssignmentMethod', null, `${assignmentMethod}: Auto-assigned to user ID ${existingRequest.assignedUserId}`, userId, 'update');
             }
@@ -305,7 +315,7 @@ export class ProductionService {
         return updatedRequest;
     }
 
-    async updateStepCampaign(id: number, data: any, userId: number | undefined) {
+    async updateStepCampaign(id: number, data: Partial<ProductionRequestDTO>, userId: number | undefined) {
         return this.updateProductionRequestPartial(id, data, userId);
     }
 }

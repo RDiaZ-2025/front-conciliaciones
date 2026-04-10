@@ -127,9 +127,9 @@ export class UserActionLog {
         statusCode: number;
         ipAddress?: string | null;
         userAgent?: string | null;
-        requestBody?: any;
-        responseBody?: any;
-        metadata?: any;
+        requestBody?: unknown;
+        responseBody?: unknown;
+        metadata?: unknown;
         duration?: number | null;
         errorMessage?: string | null;
     }): UserActionLog {

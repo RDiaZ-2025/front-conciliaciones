@@ -10,7 +10,7 @@ export class CampaignService {
         this.campaignRepository = AppDataSource.getRepository(Campaign);
     }
 
-    async findAll(): Promise<any[]> {
+    async findAll(): Promise<Campaign[]> {
         const campaigns = await this.campaignRepository.find({
             relations: ['team', 'creator'],
             order: { createdAt: 'DESC' }
@@ -21,7 +21,7 @@ export class CampaignService {
         }));
     }
 
-    async findById(id: number): Promise<any | null> {
+    async findById(id: number): Promise<Campaign | null> {
         const campaign = await this.campaignRepository.findOne({
             where: { id },
             relations: ['team', 'creator']

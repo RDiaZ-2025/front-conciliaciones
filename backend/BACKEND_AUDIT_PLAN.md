@@ -31,7 +31,7 @@ This document outlines the necessary improvements, cleanups, and architectural c
 
 ## 5. Code Quality & Types
 
-- [ ] **Eliminate** **`any`**: The codebase has widespread usage of `any` across 69 files (e.g., controllers, models, services). Replace `any` with strict TypeScript interfaces or types defined in `src/types/`.
+- [x] **Eliminate** **`any`**: The codebase has widespread usage of `any` across 69 files (e.g., controllers, models, services). Replace `any` with strict TypeScript interfaces or types defined in `src/types/`.
 - [ ] **Clean Up Imports**: Run an automated pass to organize imports and remove unused variables/imports across the `src/` directory.
 - [ ] **Remove Dead Code**: Clear out commented-out logic blocks found in `src/app.ts` (e.g., old rate limiting) and other controllers to keep the production code clean.
 

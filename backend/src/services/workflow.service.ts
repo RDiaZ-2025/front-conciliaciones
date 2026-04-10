@@ -31,20 +31,20 @@ export class WorkflowService {
      * Determine the next stage based on the current stage and request data (e.g., budget, sales outcome).
      * Based on rules from workflow.md
      */
-    public getNextStage(currentStage: string, request: ProductionRequest, additionalData?: any): string | null {
+    public getNextStage(currentStage: string, request: ProductionRequest, additionalData?: Record<string, unknown>): string | null {
         if (additionalData?.targetStage === 'cancelled') return 'cancelled';
         if (additionalData?.targetStage === 'completed' && currentStage !== 'in_sell' && currentStage !== 'customer_review') return 'completed';
 
         switch (currentStage) {
             case 'quotation':
-                const budget = additionalData?.budget || (request.campaignDetail?.budget ? parseInt(String(request.campaignDetail.budget).replace(/[^0-9]/g, '')) : 0);
+                const budget = Number(additionalData?.budget) || (request.campaignDetail?.budget ? parseInt(String(request.campaignDetail.budget).replace(/[^0-9]/g, '')) : 0);
                 return budget > 50000000 ? 'create_proposal' : 'get_data';
 
             case 'create_proposal':
                 return 'get_data';
 
             case 'get_data':
-                const dataBudget = additionalData?.budget || (request.campaignDetail?.budget ? parseInt(String(request.campaignDetail.budget).replace(/[^0-9]/g, '')) : 0);
+                const dataBudget = Number(additionalData?.budget) || (request.campaignDetail?.budget ? parseInt(String(request.campaignDetail.budget).replace(/[^0-9]/g, '')) : 0);
                 return dataBudget > 50000000 ? 'validate_proposal' : 'in_sell';
 
             case 'validate_proposal':
@@ -71,7 +71,7 @@ export class WorkflowService {
         }
     }
 
-    public async advanceStage(request: ProductionRequest, additionalData?: any): Promise<{ assignmentMethod: string; oldAssignedUserId: number | null; newStage: string | null }> {
+    public async advanceStage(request: ProductionRequest, additionalData?: Record<string, unknown>): Promise<{ assignmentMethod: string; oldAssignedUserId: number | null; newStage: string | null }> {
         let assignmentMethod = 'Manual';
         const oldAssignedUserId = request.assignedUserId;
 
@@ -89,33 +89,29 @@ export class WorkflowService {
             return { assignmentMethod, oldAssignedUserId, newStage };
         }
 
-        try {
-            const teamRepository = AppDataSource.getRepository(Team);
-            const userRepository = AppDataSource.getRepository(User);
+        const teamRepository = AppDataSource.getRepository(Team);
+        const userRepository = AppDataSource.getRepository(User);
 
-            const team = await teamRepository.findOne({ where: { id: targetTeamId } });
-            if (team) {
-                request.department = team.name;
+        const team = await teamRepository.findOne({ where: { id: targetTeamId } });
+        if (team) {
+            request.department = team.name;
 
-                if (targetTeamId === this.TEAM_COMERCIAL) {
-                    if (request.userCreatorId) {
-                        request.assignedUserId = request.userCreatorId;
-                        assignmentMethod = `Auto-assigned back to Creator in ${team.name}`;
-                    }
-                } else if (additionalData?.assignedUserId) {
-                    request.assignedUserId = additionalData.assignedUserId;
-                    assignmentMethod = `Manually assigned to user ID ${additionalData.assignedUserId} in ${team.name}`;
-                } else {
-                    const teamUsers = await userRepository.find({ where: { teamId: targetTeamId, status: 1 } });
-                    if (teamUsers.length > 0) {
-                        const randomUser = teamUsers[Math.floor(Math.random() * teamUsers.length)];
-                        request.assignedUserId = randomUser.id;
-                        assignmentMethod = `Auto-assigned to random user in ${team.name}`;
-                    }
+            if (targetTeamId === this.TEAM_COMERCIAL) {
+                if (request.userCreatorId) {
+                    request.assignedUserId = request.userCreatorId;
+                    assignmentMethod = `Auto-assigned back to Creator in ${team.name}`;
+                }
+            } else if (additionalData?.assignedUserId) {
+                request.assignedUserId = Number(additionalData.assignedUserId);
+                assignmentMethod = `Manually assigned to user ID ${additionalData.assignedUserId} in ${team.name}`;
+            } else {
+                const teamUsers = await userRepository.find({ where: { teamId: targetTeamId, status: 1 } });
+                if (teamUsers.length > 0) {
+                    const randomUser = teamUsers[Math.floor(Math.random() * teamUsers.length)];
+                    request.assignedUserId = randomUser.id;
+                    assignmentMethod = `Auto-assigned to random user in ${team.name}`;
                 }
             }
-        } catch (error) {
-            console.error(`Error applying assignment rules for stage ${newStage}:`, error);
         }
 
         return { assignmentMethod, oldAssignedUserId, newStage };

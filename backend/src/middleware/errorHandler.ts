@@ -1,19 +1,39 @@
 import { Request, Response, NextFunction } from 'express';
 
-export const errorHandler = (
-  err: any,
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  console.error(`[Error] ${err.message}`, err.stack);
+export const errorHandler = (err: Error | unknown, req: Request, res: Response, next: NextFunction) => {
+    console.error('Error:', err);
 
-  const statusCode = err.statusCode || 500;
-  const message = err.isOperational ? err.message : 'Internal Server Error';
+    if (err instanceof Error && err.name === 'ValidationError') {
+        return res.status(400).json({
+            success: false,
+            message: 'Validation Error',
+            error: err.message
+        });
+    }
 
-  res.status(statusCode).json({
-    success: false,
-    message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-  });
+    if (err instanceof Error && err.name === 'UnauthorizedError') {
+        return res.status(401).json({
+            success: false,
+            message: 'Unauthorized',
+            error: err.message
+        });
+    }
+
+    const message = err instanceof Error ? err.message : String(err);
+
+    if (message === 'Production request not found') {
+        return res.status(404).json({
+            success: false,
+            message: message
+        });
+    }
+
+    const stack = err instanceof Error ? err.stack : undefined;
+
+    return res.status(500).json({
+        success: false,
+        message: 'Internal Server Error',
+        error: process.env.NODE_ENV === 'development' ? message : 'An unexpected error occurred',
+        stack: process.env.NODE_ENV === 'development' ? stack : undefined
+    });
 };
