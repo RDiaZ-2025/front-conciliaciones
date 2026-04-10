@@ -11,18 +11,18 @@ export class Cover15MinuteController {
 
   saveCover = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { uploaderLog, url } = req.body;
-          
-          if (!uploaderLog || !url) {
-            res.status(400).json({ success: false, message: 'Missing required fields' });
-            return;
-          }
 
-          const cover = await this.service.saveCover(uploaderLog, url);
-          res.status(201).json({ success: true, data: cover });
-    });
+    if (!uploaderLog || !url) {
+      res.status(400).json({ success: false, message: 'Missing required fields' });
+      return;
+    }
+
+    const cover = await this.service.saveCover(uploaderLog, url);
+    res.status(201).json({ success: true, data: cover });
+  });
 
   getAllCovers = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const covers = await this.service.getAllCovers();
-          res.status(200).json({ success: true, data: covers });
-    });
+    res.status(200).json({ success: true, data: covers });
+  });
 }

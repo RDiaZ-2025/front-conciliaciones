@@ -371,4 +371,55 @@ export class UserService {
       };
     }
   }
+
+  async getAllPermissions(): Promise<any[]> {
+    if (!AppDataSource.isInitialized) {
+      throw new Error('Base de datos no disponible');
+    }
+    const permissionRepository = AppDataSource.getRepository(Permission);
+    return permissionRepository.find();
+  }
+
+  async updateUserPermissions(userId: number, permissions: string[]): Promise<boolean> {
+
+    if (!AppDataSource.isInitialized) {
+      throw new Error('Base de datos no disponible');
+    }
+
+    const queryRunner = AppDataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const permissionByUserRepository = queryRunner.manager.getRepository(PermissionByUser);
+      const permissionRepository = queryRunner.manager.getRepository(Permission);
+
+      await permissionByUserRepository.delete({ userId });
+
+      if (permissions && permissions.length > 0) {
+        for (const permissionName of permissions) {
+          const permission = await permissionRepository.findOne({
+            where: { name: permissionName.toUpperCase() }
+          });
+
+          if (permission) {
+            const permissionByUser = new PermissionByUser();
+            permissionByUser.userId = userId;
+            permissionByUser.permissionId = permission.id;
+
+            await permissionByUserRepository.save(permissionByUser);
+          }
+        }
+      }
+
+      await queryRunner.commitTransaction();
+      return true;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+
+  }
 }

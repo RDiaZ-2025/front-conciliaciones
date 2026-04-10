@@ -36,6 +36,10 @@ export class ProductionRequestHistoryService {
    * Get history for a specific production request
    */
   async getHistoryByRequestId(requestId: number): Promise<ProductionRequestHistory[]> {
+    if (!AppDataSource.isInitialized) {
+      throw new Error('Base de datos no disponible');
+    }
+
     return await this.historyRepository.find({
       where: { productionRequestId: requestId },
       relations: ['changedByUser'],

@@ -221,6 +221,85 @@ export class AuthService {
     return bcrypt.hash(password, this.SALT_ROUNDS);
   }
 
+  async initializeUsers(): Promise<string[]> {
+    if (!AppDataSource.isInitialized) {
+      throw new Error('Base de datos no disponible');
+    }
+
+    const passwordHash = await bcrypt.hash('admin123', 12);
+    const managerHash = await bcrypt.hash('manager123', 12);
+    const userHash = await bcrypt.hash('user123', 12);
+    const uploadHash = await bcrypt.hash('upload123', 12);
+    const dashboardHash = await bcrypt.hash('dashboard123', 12);
+
+    const queryRunner = AppDataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const userRepository = queryRunner.manager.getRepository(User);
+      const permissionRepository = queryRunner.manager.getRepository(Permission);
+      const permissionByUserRepository = queryRunner.manager.getRepository(PermissionByUser);
+
+      const users = [
+        { name: 'Administrador Test', email: 'admin@test.com', hash: passwordHash, permissions: ['document_upload', 'management_dashboard', 'admin_panel'] },
+        { name: 'Manager Test', email: 'manager@test.com', hash: managerHash, permissions: ['document_upload', 'management_dashboard'] },
+        { name: 'Usuario Test', email: 'user@test.com', hash: userHash, permissions: ['management_dashboard'] },
+        { name: 'Administrador Sistema Legacy', email: 'admin@claromedia.com', hash: passwordHash, permissions: ['document_upload', 'management_dashboard', 'admin_panel'] },
+        { name: 'Usuario Carga Legacy', email: 'upload@claromedia.com', hash: uploadHash, permissions: ['document_upload'] },
+        { name: 'Usuario Dashboard Legacy', email: 'dashboard@claromedia.com', hash: dashboardHash, permissions: ['management_dashboard'] }
+      ];
+
+      for (const userData of users) {
+        const existingUser = await userRepository.findOne({
+          where: { email: userData.email }
+        });
+
+        if (!existingUser) {
+          const newUser = userRepository.create({
+            name: userData.name,
+            email: userData.email,
+            passwordHash: userData.hash,
+            status: 1
+          });
+
+          const savedUser = await userRepository.save(newUser);
+
+          for (const permissionName of userData.permissions) {
+            const permission = await permissionRepository.findOne({
+              where: { name: permissionName }
+            });
+
+            if (permission) {
+              const permissionByUser = permissionByUserRepository.create({
+                userId: savedUser.id,
+                permissionId: permission.id
+              });
+
+              await permissionByUserRepository.save(permissionByUser);
+            }
+          }
+        }
+      }
+
+      await queryRunner.commitTransaction();
+
+      return [
+        'admin@claromedia.com / admin123 (Administrador completo)',
+        'admin@test.com / admin123 (Administrador test)',
+        'manager@test.com / manager123 (Manager)',
+        'user@test.com / user123 (Usuario básico)',
+        'upload@claromedia.com / upload123 (Solo carga)',
+        'dashboard@claromedia.com / dashboard123 (Solo dashboard)'
+      ];
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
     constructor() {
 
             // Debug: verificar que JWT_SECRET esté cargado

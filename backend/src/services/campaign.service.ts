@@ -10,18 +10,27 @@ export class CampaignService {
         this.campaignRepository = AppDataSource.getRepository(Campaign);
     }
 
-    async findAll(): Promise<Campaign[]> {
-        return await this.campaignRepository.find({
+    async findAll(): Promise<any[]> {
+        const campaigns = await this.campaignRepository.find({
             relations: ['team', 'creator'],
             order: { createdAt: 'DESC' }
         });
+        return campaigns.map(c => ({
+            ...c,
+            impacts: c.impacts ? JSON.parse(c.impacts) : []
+        }));
     }
 
-    async findById(id: number): Promise<Campaign | null> {
-        return await this.campaignRepository.findOne({
+    async findById(id: number): Promise<any | null> {
+        const campaign = await this.campaignRepository.findOne({
             where: { id },
             relations: ['team', 'creator']
         });
+        if (!campaign) return null;
+        return {
+            ...campaign,
+            impacts: campaign.impacts ? JSON.parse(campaign.impacts) : []
+        };
     }
 
     async create(data: Partial<Campaign>, userId: number): Promise<Campaign> {

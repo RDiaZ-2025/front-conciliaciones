@@ -6,8 +6,8 @@ This document outlines the necessary improvements, cleanups, and architectural c
 
 - [x] **Implement Centralized Error Handling**: Remove repetitive `try/catch` blocks from all controllers. Create a global error-handling middleware (`src/middleware/errorHandler.ts`) to intercept `next(error)` and format consistent HTTP responses.
 - [x] **Refactor Static Classes to Dependency Injection**: Services like `AuthService`, `UserService`, `WorkflowService`, and controllers like `ProductionController`, `UserController` are heavily relying on `static` methods. Introduce a DI container (like `tsyringe` or `InversifyJS`) or simply pass class instances to improve unit testability and decoupling.
-- [ ] **Thin Controllers**: Review controllers (e.g., `productionController.ts`, `campaign.controller.ts`). Ensure they only handle HTTP concerns (extracting `req.body`, returning `res.status`) and move all core business logic and database interactions to the `services/` layer.
-- [ ] **Environment Variable Validation**: Introduce `Zod` or `Joi` in `src/server.ts` or `src/config/` to parse and validate all required environment variables at startup. Fail fast (`process.exit(1)`) if critical secrets (like `JWT_SECRET` or DB credentials) are missing.
+- [x] **Thin Controllers**: Review controllers (e.g., `productionController.ts`, `campaign.controller.ts`). Ensure they only handle HTTP concerns (extracting `req.body`, returning `res.status`) and move all core business logic and database interactions to the `services/` layer.
+- [x] **Environment Variable Validation**: Introduce `Zod` or `Joi` in `src/server.ts` or `src/config/` to parse and validate all required environment variables at startup. Fail fast (`process.exit(1)`) if critical secrets (like `JWT_SECRET` or DB credentials) are missing.
 
 ## 2. Security & Performance
 

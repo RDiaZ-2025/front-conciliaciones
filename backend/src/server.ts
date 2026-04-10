@@ -1,8 +1,8 @@
 import 'reflect-metadata';
-import dotenv from 'dotenv';
+import { validateEnv } from './config/env.config';
 
-// Cargar variables de entorno
-dotenv.config();
+// Cargar y validar variables de entorno antes de importar otros módulos
+validateEnv();
 
 import app from './app';
 import { AppDataSource } from './config/typeorm.config';

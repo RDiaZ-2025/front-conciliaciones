@@ -16,6 +16,7 @@ import { DialogModule } from 'primeng/dialog';
 import { RippleModule } from 'primeng/ripple';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
 import { ProductionService } from '../../services/production.service';
 import { AuthService } from '../../services/auth.service';
@@ -49,6 +50,7 @@ import { MaterialRegisterListDialogComponent } from './components/material-regis
     BadgeModule,
     DialogModule,
     RippleModule,
+    ProgressSpinnerModule,
     FilePreviewComponent,
     PageHeaderComponent,
     AnsDialogComponent,
@@ -112,6 +114,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
 
   // Local Logic State
   campaignTypeSelectionVisible = signal<boolean>(false);
+  isProcessingMove = signal<boolean>(false);
   currentRequestProcessing: ProductionRequest | null = null;
 
   ngOnInit() {
@@ -591,8 +594,10 @@ export class ProductionComponent implements OnInit, OnDestroy {
   }
 
   performMove(request: ProductionRequest, nextStageId: string, data?: any) {
+    this.isProcessingMove.set(true);
     this.productionService.moveRequest(request.id, nextStageId, data).subscribe({
       next: (updatedRequest) => {
+        this.isProcessingMove.set(false);
         const stage = (typeof updatedRequest.status === 'string' ? updatedRequest.status : (updatedRequest.status as any)?.code) || updatedRequest.stage || 'request';
         const mappedRequest = { ...updatedRequest, stage };
 
@@ -601,6 +606,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
         this.messageService.add({ severity: 'success', summary: 'Success', detail: `Moved to ${nextStageLabel}` });
       },
       error: () => {
+        this.isProcessingMove.set(false);
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to move request' });
       }
     });
