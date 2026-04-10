@@ -1,0 +1,268 @@
+<div
+    class="chat-dialog-container flex flex-column md:flex-row bg-white dark:bg-gray-900 border-round-xl overflow-hidden shadow-2">
+    <!-- Left Column: Summary and File Upload (Desktop) -->
+    <div
+        class="hidden md:flex w-full md:w-4 flex-column border-right-1 surface-border p-4 bg-gray-50 dark:bg-gray-800 left-column-responsive">
+
+        <!-- Summary Section -->
+        <div class="flex-1 min-h-0 flex flex-column mb-3 overflow-hidden">
+            <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-2 flex align-items-center gap-2 m-0">
+                <i class="pi pi-list text-primary"></i>
+                Resumen de la Solicitud
+            </h3>
+
+            <div
+                class="flex-1 min-h-0 bg-white dark:bg-gray-900 border-1 surface-border border-round-xl p-3 overflow-y-auto shadow-sm">
+                <p class="text-gray-500 dark:text-gray-400 text-sm line-height-3 m-0" *ngIf="!summary()">
+                    El resumen de los datos proporcionados se generará automáticamente a medida que converses con el
+                    asistente.
+                </p>
+                <div class="text-gray-700 dark:text-gray-300 text-sm line-height-3" *ngIf="summary()">
+                    <div [innerHTML]="summary()"></div>
+
+                </div>
+                <div class="flex-none">
+                    <h4
+                        class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 mt-0 uppercase tracking-wider">
+                        Archivos Adjuntos</h4>
+
+                    <!-- Drag and Drop Zone -->
+                    <div class="border-2 border-dashed border-round-xl p-3 text-center cursor-pointer transition-colors transition-duration-200"
+                        [ngClass]="{'border-primary bg-primary-50 dark:bg-primary-900': isDragging(), 'surface-border bg-white dark:bg-gray-900 hover:surface-hover': !isDragging()}"
+                        (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)"
+                        (click)="fileInput.click()">
+                        <input type="file" #fileInput class="hidden" (change)="onFileSelected($event)" multiple
+                            accept="audio/*,.txt,.pdf" />
+                        <i class="pi pi-cloud-upload text-2xl text-400 mb-1 transition-colors transition-duration-200"
+                            [ngClass]="{'text-primary': isDragging()}"></i>
+                        <p class="m-0 text-sm text-600 dark:text-400">
+                            <span class="font-semibold text-primary">Haz clic para subir</span> o arrastra y suelta
+                        </p>
+                        <p class="m-0 mt-1 text-xs text-500">Audio, TXT, PDF (Máx. 10MB)</p>
+                    </div>
+
+                    <!-- Uploaded Files List -->
+                    <div class="mt-3 flex flex-column gap-2 max-h-10rem overflow-y-auto pr-1"
+                        *ngIf="files().length > 0">
+                        <div *ngFor="let file of files(); let i = index"
+                            class="flex align-items-center justify-content-between p-2 surface-100 dark:surface-800 border-round-lg">
+                            <div class="flex align-items-center gap-2 overflow-hidden w-full">
+                                <i class="pi text-primary"
+                                    [ngClass]="{'pi-file-pdf': file.type.includes('pdf'), 'pi-file-word': file.type.includes('text'), 'pi-volume-up': file.type.includes('audio'), 'pi-file': !file.type.includes('pdf') && !file.type.includes('text') && !file.type.includes('audio')}"></i>
+                                <span
+                                    class="text-sm text-overflow-ellipsis white-space-nowrap overflow-hidden flex-grow-1"
+                                    [title]="file.name">{{ file.name }}</span>
+                                <span class="text-xs text-500 flex-none">{{ (file.size / 1024 / 1024).toFixed(2) }}
+                                    MB</span>
+                            </div>
+                            <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="danger" size="small"
+                                (click)="removeFile(i)"></p-button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="mt-3 pt-3 border-top-1 surface-border flex justify-content-end">
+                    <p-button label="Crear Solicitud" icon="pi pi-check" (onClick)="submitRequest()"
+                        [disabled]="!isRequestReady()" [loading]="isSubmitting()"></p-button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Chat Interface -->
+    <div class="w-full md:w-8 flex flex-column relative bg-white dark:bg-gray-900 right-column-responsive">
+
+        <!-- Chat Header -->
+        <div
+            class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border bg-white dark:bg-gray-900 z-10 shadow-1">
+            <div class="flex align-items-center gap-3">
+                <!-- Mobile Sidebar Toggle -->
+                <p-button icon="pi pi-bars" [text]="true" [rounded]="true" styleClass="md:hidden text-primary"
+                    (click)="toggleMobileSidebar()" pTooltip="Opciones" tooltipPosition="bottom"></p-button>
+
+                <div
+                    class="hidden md:flex w-3rem h-3rem border-circle bg-teal-100 dark:bg-teal-900 align-items-center justify-content-center">
+                    <i class="pi pi-sparkles text-xl text-teal-600 dark:text-teal-400"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 m-0">Asistente de
+                        Producción</h2>
+                    <p class="hidden md:block text-sm text-gray-500 dark:text-gray-400 m-0">Estoy aquí para
+                        ayudarte a
+                        crear tu
+                        solicitud rápidamente.</p>
+                </div>
+            </div>
+            <p-button icon="pi pi-refresh" [text]="true" [rounded]="true" pTooltip="Reiniciar chat"
+                tooltipPosition="left" (click)="resetChat()"></p-button>
+        </div>
+
+        <!-- Messages Area -->
+        <div class="messages-area flex-1 min-h-0 p-4 overflow-y-auto flex flex-column gap-4 bg-gray-50 dark:bg-gray-900"
+            #scrollPanel>
+
+            <!-- Empty State -->
+            <div *ngIf="messages().length === 0"
+                class="h-full flex flex-column align-items-center justify-content-center text-center p-5 fadein">
+                <div
+                    class="w-5rem h-5rem border-circle bg-teal-50 dark:bg-teal-900/30 flex align-items-center justify-content-center mb-4">
+                    <i class="pi pi-comments text-4xl text-teal-500"></i>
+                </div>
+                <h3 class="text-xl font-medium text-gray-700 dark:text-gray-300 m-0 mb-2">¡Hola! ¿En qué te
+                    puedo ayudar
+                    hoy?</h3>
+                <p class="text-gray-500 dark:text-gray-400 max-w-sm line-height-3">Dime qué necesitas producir.
+                    Puedes
+                    escribir los detalles o adjuntar un audio/documento en el panel izquierdo.</p>
+            </div>
+
+            <!-- Messages List -->
+            <ng-container *ngFor="let msg of messages()">
+                <!-- User Message -->
+                <div *ngIf="msg.role === 'user'"
+                    class="flex w-full justify-content-end fadein-right animation-duration-200">
+                    <div class="flex gap-3 flex-row-reverse" style="max-width: 45rem;">
+                        <div
+                            class="w-2rem h-2rem border-circle flex-shrink-0 flex align-items-center justify-content-center mt-1 bg-primary">
+                            <i class="pi pi-user text-sm text-white"></i>
+                        </div>
+                        <div class="p-3 border-round-2xl bg-primary text-white border-noround-top-right shadow-1">
+                            <p class="m-0 line-height-3 text-sm white-space-pre-wrap">{{ msg.content }}</p>
+                            <span class="text-xs opacity-60 mt-2 block text-right">{{ msg.timestamp |
+                                date:'shortTime'
+                                }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Assistant Message -->
+                <div *ngIf="msg.role === 'assistant'"
+                    class="flex w-full justify-content-start fadein-left animation-duration-200">
+                    <div class="flex gap-3" style="max-width: 45rem;">
+                        <div
+                            class="w-2rem h-2rem border-circle flex-shrink-0 flex align-items-center justify-content-center mt-1 bg-teal-100 dark:bg-teal-900">
+                            <i class="pi pi-sparkles text-sm text-teal-600 dark:text-teal-400"></i>
+                        </div>
+                        <div
+                            class="p-3 border-round-2xl surface-100 dark:surface-800 text-gray-800 dark:text-gray-100 border-noround-top-left shadow-1">
+                            <div class="m-0 line-height-3 text-sm" [innerHTML]="msg.content | markdown"></div>
+                            <span class="text-xs text-500 dark:text-400 mt-2 block">{{ msg.timestamp |
+                                date:'shortTime'
+                                }}</span>
+                        </div>
+                    </div>
+                </div>
+            </ng-container>
+
+            <!-- Typing Indicator -->
+            <div *ngIf="isTyping()" class="flex w-full justify-content-start fadein">
+                <div class="flex gap-3" style="max-width: 45rem;">
+                    <div
+                        class="w-2rem h-2rem border-circle flex-shrink-0 flex align-items-center justify-content-center mt-1 bg-teal-100 dark:bg-teal-900">
+                        <i class="pi pi-sparkles text-sm text-teal-600 dark:text-teal-400"></i>
+                    </div>
+                    <div
+                        class="p-3 border-round-2xl surface-100 dark:surface-800 border-noround-top-left flex align-items-center gap-2 h-3rem shadow-1">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot" style="animation-delay: 0.2s"></div>
+                        <div class="typing-dot" style="animation-delay: 0.4s"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="p-3 surface-0 dark:surface-900 border-top-1 surface-border mt-auto shadow-2 z-10">
+            <div
+                class="flex align-items-end gap-2 bg-white dark:bg-gray-800 border-1 surface-border border-round-3xl p-1 pr-2 focus-within:border-primary transition-colors transition-duration-200 shadow-sm">
+                <textarea #chatInput
+                    class="chat-input flex-grow-1 border-none outline-none bg-transparent p-3 text-gray-800 dark:text-gray-100 text-base font-family-sans line-height-3"
+                    rows="1" style="min-height: 44px; max-height: 120px;" placeholder="Escribe tu mensaje aquí..."
+                    (input)="autoResize(chatInput)" (keydown)="onKeyDown($event, chatInput)"
+                    [(ngModel)]="inputText"></textarea>
+                <p-button icon="pi pi-send" [rounded]="true" [disabled]="!inputText.trim() || isTyping()"
+                    (onClick)="sendMessage()" styleClass="w-3rem h-3rem mb-1 flex-shrink-0"></p-button>
+            </div>
+            <div class="text-center mt-2">
+                <span class="text-xs text-500 dark:text-400">Presiona <kbd
+                        class="font-semibold font-family-sans border-1 surface-border border-round px-1">Enter</kbd>
+                    para enviar, <kbd
+                        class="font-semibold font-family-sans border-1 surface-border border-round px-1">Shift</kbd>
+                    +
+                    <kbd class="font-semibold font-family-sans border-1 surface-border border-round px-1">Enter</kbd>
+                    para nueva línea</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mobile Sidebar for Options (Summary, File Upload, Submit) -->
+<p-drawer [(visible)]="showMobileSidebar" position="left" styleClass="w-full sm:w-25rem bg-gray-50 dark:bg-gray-800"
+    [modal]="true" appendTo="body" (onHide)="showMobileSidebar.set(false)">
+    <ng-template pTemplate="header">
+        <div class="flex align-items-center gap-2">
+            <i class="pi pi-bars text-xl text-primary"></i>
+            <h2 class="text-lg font-semibold m-0">Opciones</h2>
+        </div>
+    </ng-template>
+
+    <div class="flex flex-column h-full justify-content-between">
+        <!-- Summary Section (Mobile) -->
+        <div class="flex-none mb-4">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2 flex align-items-center gap-2 m-0">
+                <i class="pi pi-list text-primary"></i>
+                Resumen
+            </h3>
+            <div class="bg-white dark:bg-gray-900 border-1 surface-border border-round-xl p-3 shadow-sm"
+                style="max-height: 250px; overflow-y: auto;">
+                <p class="text-gray-500 dark:text-gray-400 text-sm line-height-3 m-0" *ngIf="!summary()">
+                    El resumen se generará automáticamente a medida que converses.
+                </p>
+                <div class="text-gray-700 dark:text-gray-300 text-sm line-height-3" *ngIf="summary()">
+                    <div [innerHTML]="summary()"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Upload Section (Mobile) -->
+        <div class="flex-grow-1 overflow-y-auto mb-3">
+            <h4 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 mt-0 uppercase tracking-wider">
+                Archivos Adjuntos</h4>
+
+            <div class="border-2 border-dashed border-round-xl p-3 text-center cursor-pointer transition-colors transition-duration-200"
+                [ngClass]="{'border-primary bg-primary-50 dark:bg-primary-900': isDragging(), 'surface-border bg-white dark:bg-gray-900 hover:surface-hover': !isDragging()}"
+                (click)="fileInputMobile.click()">
+                <input type="file" #fileInputMobile class="hidden" (change)="onFileSelected($event)" multiple
+                    accept="audio/*,.txt,.pdf" />
+                <i class="pi pi-cloud-upload text-2xl text-400 mb-1 transition-colors transition-duration-200"></i>
+                <p class="m-0 text-sm text-600 dark:text-400">
+                    <span class="font-semibold text-primary">Toca para subir</span>
+                </p>
+                <p class="m-0 mt-1 text-xs text-500">Audio, TXT, PDF</p>
+            </div>
+
+            <!-- Uploaded Files List (Mobile) -->
+            <div class="mt-3 flex flex-column gap-2 pr-1" *ngIf="files().length > 0">
+                <div *ngFor="let file of files(); let i = index"
+                    class="flex align-items-center justify-content-between p-2 surface-100 dark:surface-800 border-round-lg">
+                    <div class="flex align-items-center gap-2 overflow-hidden w-full">
+                        <i class="pi text-primary"
+                            [ngClass]="{'pi-file-pdf': file.type.includes('pdf'), 'pi-file-word': file.type.includes('text'), 'pi-volume-up': file.type.includes('audio'), 'pi-file': !file.type.includes('pdf') && !file.type.includes('text') && !file.type.includes('audio')}"></i>
+                        <span class="text-sm text-overflow-ellipsis white-space-nowrap overflow-hidden flex-grow-1"
+                            [title]="file.name">{{ file.name }}</span>
+                    </div>
+                    <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="danger" size="small"
+                        (click)="removeFile(i)"></p-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Button (Mobile) -->
+        <div class="flex-none pt-3 border-top-1 surface-border">
+            <p-button label="Crear Solicitud" icon="pi pi-check"
+                (onClick)="submitRequest(); showMobileSidebar.set(false);" [disabled]="!isRequestReady()"
+                [loading]="isSubmitting()" styleClass="w-full"></p-button>
+        </div>
+    </div>
+</p-drawer>

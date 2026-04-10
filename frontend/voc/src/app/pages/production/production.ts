@@ -22,6 +22,7 @@ import { ProductionService } from '../../services/production.service';
 import { AuthService } from '../../services/auth.service';
 import { ProductionRequest } from './production.models';
 import { ProductionDialogComponent } from './components/production-dialog/production-dialog';
+import { ProductionChatDialogComponent } from './components/production-chat-dialog/production-chat-dialog.component';
 import { ProductionDetailDialogComponent } from './components/production-detail-dialog/production-detail-dialog';
 import { StageTransitionUploadDialogComponent } from './components/stage-transition-upload-dialog/stage-transition-upload-dialog.component';
 import { AnsDialogComponent } from './components/ans-dialog/ans-dialog';
@@ -287,18 +288,36 @@ export class ProductionComponent implements OnInit, OnDestroy {
   authService = inject(AuthService);
 
   openDialog(request?: ProductionRequest, readonly: boolean = false) {
-    this.ref = this.dialogService.open(ProductionDialogComponent, {
-      header: request ? (readonly ? 'Detalles de Solicitud' : 'Editar Solicitud') : 'Nueva Solicitud',
-      width: '70%',
-      contentStyle: { overflow: 'auto' },
-      baseZIndex: 10000,
-      maximizable: true,
-      breakpoints: {
-        '960px': '75vw',
-        '640px': '90vw'
-      },
-      data: request ? { id: request.id, readonly } : {}
-    });
+    if (!request) {
+      // Open new Chat Dialog for new requests
+      this.ref = this.dialogService.open(ProductionChatDialogComponent, {
+        header: 'Nueva Solicitud (Asistente Inteligente)',
+        width: '90%',
+        contentStyle: { padding: '0', overflow: 'hidden', height: '85vh', 'max-height': '90vh' },
+        baseZIndex: 10000,
+        maximizable: true,
+        styleClass: 'chat-dialog',
+        breakpoints: {
+          '960px': '95vw',
+          '640px': '100vw'
+        },
+        data: {}
+      });
+    } else {
+      // Open traditional form dialog for editing/viewing
+      this.ref = this.dialogService.open(ProductionDialogComponent, {
+        header: readonly ? 'Detalles de Solicitud' : 'Editar Solicitud',
+        width: '70%',
+        contentStyle: { overflow: 'auto' },
+        baseZIndex: 10000,
+        maximizable: true,
+        breakpoints: {
+          '960px': '75vw',
+          '640px': '90vw'
+        },
+        data: { id: request.id, readonly }
+      });
+    }
 
     if (this.ref) {
       this.ref.onClose.subscribe((result: Partial<ProductionRequest>) => {

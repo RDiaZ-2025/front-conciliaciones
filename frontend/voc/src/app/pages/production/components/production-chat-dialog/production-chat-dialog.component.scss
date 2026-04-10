@@ -1,0 +1,87 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.chat-dialog-container {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: var(--font-family);
+}
+
+.left-column-responsive {
+  @media screen and (min-width: 768px) {
+    flex: none; /* Let Tailwind w-4 handle the width */
+    max-height: none;
+    overflow-y: hidden;
+  }
+}
+
+.right-column-responsive {
+  flex: 1 1 0;
+  min-height: 0; /* Ensures inner scrolling works inside flex container */
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--teal-500);
+  animation: typing 1.4s infinite ease-in-out both;
+}
+
+@keyframes typing {
+
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+  }
+
+  40% {
+    transform: scale(1);
+  }
+}
+
+.messages-area {
+  scroll-behavior: smooth;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--surface-300);
+    border-radius: 20px;
+  }
+
+  :host-context(.dark) &::-webkit-scrollbar-thumb {
+    background-color: var(--surface-700);
+  }
+}
+
+.chat-input {
+  resize: none;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--surface-300);
+    border-radius: 10px;
+  }
+}
