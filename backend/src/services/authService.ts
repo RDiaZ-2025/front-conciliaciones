@@ -36,12 +36,11 @@ export class AuthService {
 
   private async loginWithTypeORM(credentials: LoginRequest): Promise<LoginResponse> {
     const userRepository = AppDataSource.getRepository(User);
-    const permissionByUserRepository = AppDataSource.getRepository(PermissionByUser);
 
     // Buscar usuario por email
     const user = await userRepository.findOne({
       where: { email: credentials.email },
-      relations: ['team']
+      relations: ['team', 'permissions', 'permissions.permission']
     });
 
     if (!user) {
@@ -68,14 +67,8 @@ export class AuthService {
       };
     }
 
-    // Obtener permisos del usuario
-    const userPermissions = await permissionByUserRepository.find({
-      where: { userId: user.id },
-      relations: ['permission']
-    });
-
     // Combinar permisos del rol y permisos directos
-    const permissions = userPermissions.map(up => up.permission.name);
+    const permissions = user.permissions?.map(up => up.permission.name) || [];
 
     // Obtener equipos del usuario
     const teams = user.team ? [user.team.name] : [];
@@ -300,12 +293,12 @@ export class AuthService {
     }
   }
 
-    constructor() {
+  constructor() {
 
-            // Debug: verificar que JWT_SECRET esté cargado
-            if (!process.env.JWT_SECRET) {
-              console.warn('⚠️ JWT_SECRET no encontrado en variables de entorno, usando fallback');
-            }
-          
+    // Debug: verificar que JWT_SECRET esté cargado
+    if (!process.env.JWT_SECRET) {
+      console.warn('⚠️ JWT_SECRET no encontrado en variables de entorno, usando fallback');
     }
+
+  }
 }

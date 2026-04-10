@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { User, Permission, PermissionByUser, Team } from '../models';
 import { AppDataSource } from '../config/typeorm.config';
+import { In } from 'typeorm';
 
 export interface CreateUserRequest {
   name: string;
@@ -191,25 +192,18 @@ export class UserService {
       }
 
       const userRepository = AppDataSource.getRepository(User);
-      const permissionByUserRepository = AppDataSource.getRepository(PermissionByUser);
 
       // Buscar el usuario por ID y status activo
       const user = await userRepository.findOne({
         where: { id: userId, status: 1 },
-        relations: ['team', 'boss']
+        relations: ['team', 'boss', 'permissions', 'permissions.permission']
       });
 
       if (!user) {
         return null;
       }
 
-      // Obtener permisos del usuario
-      const userPermissions = await permissionByUserRepository.find({
-        where: { userId: user.id },
-        relations: ['permission']
-      });
-
-      const directPermissions = userPermissions.map(up => up.permission.name);
+      const permissions = user.permissions?.map((p: any) => p.permission.name) || [];
 
       return {
         id: user.id,
@@ -217,11 +211,11 @@ export class UserService {
         email: user.email,
         lastAccess: user.lastAccess,
         status: user.status,
-        permissions: directPermissions,
+        permissions: permissions,
         teamId: user.teamId,
-        teamName: user.team?.name,
+        teamName: user.team?.name || null,
         bossId: user.bossId,
-        bossName: user.boss?.name
+        bossName: user.boss?.name || null
       };
     } catch (error) {
       console.error('❌ Error getting user by ID:', error);
@@ -277,30 +271,26 @@ export class UserService {
       await userRepository.save(user);
 
       // Actualizar permisos si se proporcionaron
-      if (updateData.permissions) {
+      if (updateData.permissions && updateData.permissions.length > 0) {
         // Eliminar permisos existentes
         await permissionByUserRepository.delete({ userId: userId });
 
-        // Asignar nuevos permisos
-        for (const permissionName of updateData.permissions) {
-          try {
-            const permission = await permissionRepository.findOne({
-              where: { name: permissionName }
-            });
+        const permissions = await permissionRepository.find({
+          where: { name: In(updateData.permissions) }
+        });
 
-            if (permission) {
-              const permissionByUser = permissionByUserRepository.create({
-                userId: userId,
-                permissionId: permission.id,
-                assignedAt: new Date()
-              });
+        const newPermissions = permissions.map(permission => {
+          const permissionByUser = new PermissionByUser();
+          permissionByUser.userId = user.id;
+          permissionByUser.permissionId = permission.id;
+          return permissionByUser;
+        });
 
-              await permissionByUserRepository.save(permissionByUser);
-            }
-          } catch (permError) {
-            console.warn(`Warning: Could not assign permission ${permissionName}:`, permError);
-          }
+        if (newPermissions.length > 0) {
+          await permissionByUserRepository.save(newPermissions);
         }
+      } else if (updateData.permissions && updateData.permissions.length === 0) {
+        await permissionByUserRepository.delete({ userId: userId });
       }
 
       // Actualizar equipo si se proporcionó (aunque sea null)

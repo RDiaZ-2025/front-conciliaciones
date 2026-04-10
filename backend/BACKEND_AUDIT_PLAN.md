@@ -19,7 +19,7 @@ This document outlines the necessary improvements, cleanups, and architectural c
 
 - [ ] **Connection Pooling**: Verify the pool configuration in `src/config/typeorm.config.ts`. The current max is `10`, which may cause bottlenecks under high load. Increase based on the Azure SQL instance limits.
 - [ ] **Explicit Transactions**: Audit operations that touch multiple tables (e.g., creating a Production Request with files and relations). Ensure they are wrapped in explicit TypeORM `queryRunner` transactions to prevent partial data persistence.
-- [ ] **N+1 Query Audits**: Review `find` and `findOne` methods in services to ensure `relations` are explicitly defined where needed to avoid lazy-loading N+1 performance issues.
+- [x] **N+1 Query Audits**: Review `find` and `findOne` methods in services to ensure `relations` are explicitly defined where needed to avoid lazy-loading N+1 performance issues.
 
 ## 4. Naming Conventions & Consistency
 
