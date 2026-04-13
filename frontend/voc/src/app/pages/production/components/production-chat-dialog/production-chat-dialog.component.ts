@@ -80,6 +80,11 @@ export class ProductionChatDialogComponent {
     this.showMobileSidebar.update(v => !v);
   }
 
+  // --- Modal Logic ---
+  closeDialog() {
+    this.ref.close();
+  }
+
   // --- Chat Logic ---
 
   sendMessage() {

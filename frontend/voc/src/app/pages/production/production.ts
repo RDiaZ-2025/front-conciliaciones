@@ -292,6 +292,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
       // Open new Chat Dialog for new requests
       this.ref = this.dialogService.open(ProductionChatDialogComponent, {
         header: 'Nueva Solicitud (Asistente Inteligente)',
+        showHeader: false,
         width: '90%',
         contentStyle: { padding: '0', overflow: 'hidden', height: '85vh', 'max-height': '90vh' },
         baseZIndex: 10000,
