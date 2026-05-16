@@ -117,6 +117,10 @@ export class ProductionChatDialogComponent implements OnDestroy {
         );
         this.conversations.set(sorted);
         this.conversationsLoading.set(false);
+        // Si no hay conversación seleccionada (chat nuevo), seleccionar la más reciente
+        if (!this.selectedConversationId() && sorted.length > 0) {
+          this.selectedConversationId.set(sorted[0]._id);
+        }
       },
       error: () => {
         this.conversationsLoading.set(false);
@@ -350,6 +354,7 @@ export class ProductionChatDialogComponent implements OnDestroy {
         }
 
         this.scrollToBottom();
+        this.loadConversations();
       },
       error: (err) => {
         this.isTyping.set(false);
