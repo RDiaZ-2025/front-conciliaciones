@@ -53,6 +53,14 @@ export class ProductionChatDialogComponent {
   // Mobile Sidebar State
   showMobileSidebar = signal<boolean>(false);
 
+  // Attach panel and summary drawer
+  attachPanelVisible = signal<boolean>(false);
+  showSummaryDrawer = signal<boolean>(false);
+
+  toggleAttachPanel(): void {
+    this.attachPanelVisible.update(v => !v);
+  }
+
   // Unique ID for the conversation session
   private memoryUniqueId: string;
 
