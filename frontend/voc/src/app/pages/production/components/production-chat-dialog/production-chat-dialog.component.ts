@@ -253,6 +253,7 @@ export class ProductionChatDialogComponent {
 
     const payload = {
       async: false,
+      forceNewConversation: this.selectedConversationId() === null,
       object: 'channel_chat',
       entry: [
         {
