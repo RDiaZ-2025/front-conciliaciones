@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, signal, computed, inject, Output, EventEmitter } from '@angular/core';
+import { Component, ElementRef, ViewChild, signal, computed, inject, Output, EventEmitter, OnDestroy } from '@angular/core';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -8,6 +8,8 @@ import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { DrawerModule } from 'primeng/drawer';
 import { HttpClient, HttpParams } from '@angular/common/http';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { MarkdownPipe } from '../../../../pipes/markdown.pipe';
 import { AuthService } from '../../../../services/auth.service';
 import { environment } from '../../../../../environments/environment';
@@ -54,7 +56,7 @@ interface ConversationMessage {
   templateUrl: './production-chat-dialog.component.html',
   styleUrls: ['./production-chat-dialog.component.scss']
 })
-export class ProductionChatDialogComponent {
+export class ProductionChatDialogComponent implements OnDestroy {
   @ViewChild('scrollPanel') scrollPanel!: ElementRef;
   @ViewChild('chatInput') chatInput!: ElementRef;
 
@@ -89,6 +91,10 @@ export class ProductionChatDialogComponent {
 
   private readonly AGENT_ID = 'drWvQYWbVmoG8rRTxseV';
 
+  // Cancels any in-flight assistant or conversation-load request
+  private cancelPending$ = new Subject<void>();
+  private destroy$ = new Subject<void>();
+
   toggleAttachPanel(): void {
     this.attachPanelVisible.update(v => !v);
   }
@@ -121,6 +127,8 @@ export class ProductionChatDialogComponent {
   selectConversation(conv: ConversationItem): void {
     const email = this.authService.currentUser()?.email;
     if (!email) return;
+    // Cancel any pending request before starting a new one
+    this.cancelPending$.next();
     this.selectedConversationId.set(conv._id);
     this.conversationMessagesLoading.set(true);
     this.messages.set([]);
@@ -131,10 +139,12 @@ export class ProductionChatDialogComponent {
     this.http.get<{ messages: ConversationMessage[] }>(
       `${environment.chatGetMessagesUrl}/${conv._id}`,
       { params }
-    ).subscribe({
+    ).pipe(takeUntil(this.cancelPending$)).subscribe({
       next: (data) => {
         const list = Array.isArray(data?.messages) ? data.messages : [];
-        const sorted = list.sort(
+        // Deduplicate by _id, then sort ascending by timestamp
+        const unique = list.filter((m, i, arr) => arr.findIndex(x => x._id === m._id) === i);
+        const sorted = unique.sort(
           (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
         );
         const mapped: ChatMessage[] = sorted.map(m => ({
@@ -236,13 +246,22 @@ export class ProductionChatDialogComponent {
   }
 
   resetChat() {
+    this.cancelPending$.next();
     this.messages.set([]);
     this.summary.set('');
     this.files.set([]);
     this.inputText = '';
+    this.selectedConversationId.set(null);
     if (this.chatInput) {
       this.chatInput.nativeElement.style.height = '44px';
     }
+  }
+
+  ngOnDestroy(): void {
+    this.cancelPending$.next();
+    this.cancelPending$.complete();
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   // Call the AI assistant API
@@ -294,7 +313,7 @@ export class ProductionChatDialogComponent {
     this.http.post<any>(
       environment.chatSendMessageUrl,
       payload
-    ).subscribe({
+    ).pipe(takeUntil(this.cancelPending$)).subscribe({
       next: (response) => {
         this.isTyping.set(false);
 
