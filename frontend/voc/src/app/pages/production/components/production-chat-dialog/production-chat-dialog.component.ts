@@ -7,13 +7,28 @@ import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { DrawerModule } from 'primeng/drawer';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { MarkdownPipe } from '../../../../pipes/markdown.pipe';
+import { AuthService } from '../../../../services/auth.service';
+import { environment } from '../../../../../environments/environment';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+}
+
+interface ConversationItem {
+  _id: string;
+  _createTime: string;
+  _updateTime: string;
+  lastMessage: string;
+  createdAt: string;
+  updatedAt?: string;
+  messageCount: string;
+  unreadCount: string;
+  status: string;
+  assignedTo: string;
 }
 
 @Component({
@@ -38,6 +53,7 @@ export class ProductionChatDialogComponent {
   ref = inject(DynamicDialogRef, { optional: true }) as DynamicDialogRef | null;
   messageService = inject(MessageService);
   http = inject(HttpClient);
+  private authService = inject(AuthService);
 
   @Output() requestCreated = new EventEmitter<any>();
 
@@ -57,8 +73,38 @@ export class ProductionChatDialogComponent {
   attachPanelVisible = signal<boolean>(false);
   showSummaryDrawer = signal<boolean>(false);
 
+  // Conversations history
+  conversations = signal<ConversationItem[]>([]);
+  conversationsLoading = signal<boolean>(false);
+  selectedConversationId = signal<string | null>(null);
+
   toggleAttachPanel(): void {
     this.attachPanelVisible.update(v => !v);
+  }
+
+  loadConversations(): void {
+    const email = this.authService.currentUser()?.email;
+    if (!email) return;
+    this.conversationsLoading.set(true);
+    const params = new HttpParams()
+      .set('chatAccessToken', environment.chatAccessToken)
+      .set('contact', email);
+    this.http.get<{ conversations: ConversationItem[] }>(
+      'https://n8n.srv865978.hstgr.cloud/webhook/chat_web_connectror/get_chats',
+      { params }
+    ).subscribe({
+      next: (data) => {
+        const list = Array.isArray(data?.conversations) ? data.conversations : [];
+        const sorted = list.sort(
+          (a, b) => new Date(b.updatedAt ?? b._updateTime).getTime() - new Date(a.updatedAt ?? a._updateTime).getTime()
+        );
+        this.conversations.set(sorted);
+        this.conversationsLoading.set(false);
+      },
+      error: () => {
+        this.conversationsLoading.set(false);
+      }
+    });
   }
 
   // Unique ID for the conversation session
@@ -73,7 +119,7 @@ export class ProductionChatDialogComponent {
   constructor() {
     // Generate a unique GUID for this conversation
     this.memoryUniqueId = this.generateGuid();
-    // Add initial greeting (optional, currently handled by empty state in HTML)
+    this.loadConversations();
   }
 
   private generateGuid(): string {
