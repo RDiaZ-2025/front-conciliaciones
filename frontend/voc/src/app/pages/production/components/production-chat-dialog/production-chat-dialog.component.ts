@@ -248,30 +248,64 @@ export class ProductionChatDialogComponent {
   // Call the AI assistant API
   private askAssistant(userText: string) {
     this.isTyping.set(true);
+    const email = this.authService.currentUser()?.email ?? '';
+    const now = Math.floor(Date.now() / 1000).toString();
 
     const payload = {
-      data: {
-        agentId: 'drWvQYWbVmoG8rRTxseV',
-        memoryUniqueId: this.memoryUniqueId,
-        messagesData: {
-          finalMessage: userText
+      async: false,
+      object: 'channel_chat',
+      entry: [
+        {
+          id: environment.chatAccessToken,
+          changes: [
+            {
+              value: {
+                messaging_product: 'web',
+                metadata: {
+                  display_phone_number: '',
+                  phone_number_id: ''
+                },
+                contacts: [
+                  {
+                    profile: { name: email },
+                    wa_id: email,
+                    user_id: ''
+                  }
+                ],
+                messages: [
+                  {
+                    from: environment.chatAccessToken,
+                    from_user_id: '',
+                    id: '',
+                    timestamp: now,
+                    text: { body: userText },
+                    type: 'text'
+                  }
+                ]
+              },
+              field: 'messages'
+            }
+          ]
         }
-      }
+      ]
     };
 
-    this.http.post<any>('https://api.azemblia.ai/Ai/ask-assistant', payload).subscribe({
+    this.http.post<any>(
+      'https://n8n.srv865978.hstgr.cloud/webhook/azemblia-receive-whatsapp-message',
+      payload
+    ).subscribe({
       next: (response) => {
         this.isTyping.set(false);
 
         let responseText = '';
-        if (Array.isArray(response) && response.length > 0 && response[0].output && response[0].output.response) {
+        if (response && response.response) {
+          responseText = response.response;
+        } else if (Array.isArray(response) && response.length > 0 && response[0].output && response[0].output.response) {
           responseText = response[0].output.response;
         } else if (typeof response === 'string') {
           responseText = response;
         } else if (response && response.message) {
           responseText = response.message;
-        } else if (response && response.response) {
-          responseText = response.response;
         } else if (response && response.text) {
           responseText = response.text;
         } else if (response && response.answer) {
