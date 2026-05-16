@@ -7,7 +7,7 @@ import { environment } from '../../environments/environment';
 export class HolidayService {
   async getHolidays(year: number): Promise<string[]> {
     try {
-      const response = await fetch(`https://festivos.com.co/api/v1/festivos?year=${year}`, {
+      const response = await fetch(`${environment.festivosApiUrl}?year=${year}`, {
         headers: {
           'Authorization': `Bearer ${environment.festivosApiKey}`
         }

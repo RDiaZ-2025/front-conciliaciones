@@ -101,7 +101,7 @@ export class ProductionChatDialogComponent {
       .set('chatAccessToken', environment.chatAccessToken)
       .set('contact', email);
     this.http.get<{ conversations: ConversationItem[] }>(
-      'https://n8n.srv865978.hstgr.cloud/webhook/chat_web_connectror/get_chats',
+      environment.chatGetConversationsUrl,
       { params }
     ).subscribe({
       next: (data) => {
@@ -129,7 +129,7 @@ export class ProductionChatDialogComponent {
       .set('chatAccessToken', environment.chatAccessToken)
       .set('contact', email);
     this.http.get<{ messages: ConversationMessage[] }>(
-      `https://n8n.srv865978.hstgr.cloud/webhook/493e72f3-1aae-4dd4-92f5-84c8924e812d/chat_web_connectror/get_chats/${conv._id}`,
+      `${environment.chatGetMessagesUrl}/${conv._id}`,
       { params }
     ).subscribe({
       next: (data) => {
@@ -291,7 +291,7 @@ export class ProductionChatDialogComponent {
     };
 
     this.http.post<any>(
-      'https://n8n.srv865978.hstgr.cloud/webhook/azemblia-receive-whatsapp-message',
+      environment.chatSendMessageUrl,
       payload
     ).subscribe({
       next: (response) => {

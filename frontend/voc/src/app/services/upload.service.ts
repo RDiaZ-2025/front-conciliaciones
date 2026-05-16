@@ -137,7 +137,7 @@ export class UploadService {
 
   async notifyN8N(payload: any): Promise<boolean> {
     try {
-      const response = await fetch("https://renediaz2025.app.n8n.cloud/webhook/a4784977-134a-4f09-9ea3-04c85c5ba3b7", {
+      const response = await fetch(environment.uploadNotifyUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
