@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, signal, computed, inject } from '@angular/core';
+import { Component, ElementRef, ViewChild, signal, computed, inject, Output, EventEmitter } from '@angular/core';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -35,9 +35,11 @@ export class ProductionChatDialogComponent {
   @ViewChild('scrollPanel') scrollPanel!: ElementRef;
   @ViewChild('chatInput') chatInput!: ElementRef;
 
-  ref = inject(DynamicDialogRef);
+  ref = inject(DynamicDialogRef, { optional: true }) as DynamicDialogRef | null;
   messageService = inject(MessageService);
   http = inject(HttpClient);
+
+  @Output() requestCreated = new EventEmitter<any>();
 
   // State
   messages = signal<ChatMessage[]>([]);
@@ -82,7 +84,11 @@ export class ProductionChatDialogComponent {
 
   // --- Modal Logic ---
   closeDialog() {
-    this.ref.close();
+    if (this.ref) {
+      this.ref.close();
+    } else {
+      this.resetChat();
+    }
   }
 
   // --- Chat Logic ---
@@ -317,12 +323,18 @@ export class ProductionChatDialogComponent {
       this.isSubmitting.set(false);
       this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Solicitud creada correctamente.' });
 
-      // Return a mock result to the parent component
-      this.ref.close({
+      const result = {
         name: 'Nueva Solicitud via Chat',
         description: this.summary(),
         // other mapped fields...
-      });
+      };
+
+      if (this.ref) {
+        this.ref.close(result);
+      } else {
+        this.requestCreated.emit(result);
+        this.resetChat();
+      }
     }, 1500);
   }
 }

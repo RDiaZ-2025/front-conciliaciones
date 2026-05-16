@@ -54,8 +54,9 @@ import { MaterialRegisterListDialogComponent } from './components/material-regis
     ProgressSpinnerModule,
     FilePreviewComponent,
     PageHeaderComponent,
+    ProductionChatDialogComponent,
     AnsDialogComponent,
-    // Dynamic components do not strictly need to be in imports if opened via DialogService, 
+    // Dynamic components do not strictly need to be in imports if opened via DialogService,
     // but good practice if used in template or for standalone verification
   ],
   providers: [DialogService, ConfirmationService, MessageService],
