@@ -31,6 +31,14 @@ interface ConversationItem {
   assignedTo: string;
 }
 
+interface ConversationMessage {
+  _id: string;
+  sender: string;
+  text: string;
+  timestamp: string;
+  type: string;
+}
+
 @Component({
   selector: 'app-production-chat-dialog',
   standalone: true,
@@ -76,7 +84,10 @@ export class ProductionChatDialogComponent {
   // Conversations history
   conversations = signal<ConversationItem[]>([]);
   conversationsLoading = signal<boolean>(false);
+  conversationMessagesLoading = signal<boolean>(false);
   selectedConversationId = signal<string | null>(null);
+
+  private readonly AGENT_ID = 'drWvQYWbVmoG8rRTxseV';
 
   toggleAttachPanel(): void {
     this.attachPanelVisible.update(v => !v);
@@ -103,6 +114,40 @@ export class ProductionChatDialogComponent {
       },
       error: () => {
         this.conversationsLoading.set(false);
+      }
+    });
+  }
+
+  selectConversation(conv: ConversationItem): void {
+    const email = this.authService.currentUser()?.email;
+    if (!email) return;
+    this.selectedConversationId.set(conv._id);
+    this.conversationMessagesLoading.set(true);
+    this.messages.set([]);
+    this.summary.set('');
+    const params = new HttpParams()
+      .set('chatAccessToken', environment.chatAccessToken)
+      .set('contact', email);
+    this.http.get<{ messages: ConversationMessage[] }>(
+      `https://n8n.srv865978.hstgr.cloud/webhook/493e72f3-1aae-4dd4-92f5-84c8924e812d/chat_web_connectror/get_chats/${conv._id}`,
+      { params }
+    ).subscribe({
+      next: (data) => {
+        const list = Array.isArray(data?.messages) ? data.messages : [];
+        const sorted = list.sort(
+          (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
+        const mapped: ChatMessage[] = sorted.map(m => ({
+          role: m.sender === email ? 'user' : 'assistant',
+          content: m.text,
+          timestamp: new Date(m.timestamp)
+        }));
+        this.messages.set(mapped);
+        this.conversationMessagesLoading.set(false);
+        setTimeout(() => this.scrollToBottom(), 50);
+      },
+      error: () => {
+        this.conversationMessagesLoading.set(false);
       }
     });
   }

@@ -35,7 +35,7 @@
                 class="p-3 cursor-pointer border-bottom-1 surface-border transition-colors transition-duration-150"
                 [ngClass]="{'bg-primary-50 dark:bg-primary-900': selectedConversationId() === conv._id,
                             'hover:surface-hover': selectedConversationId() !== conv._id}"
-                (click)="selectedConversationId.set(conv._id)">
+                (click)="selectConversation(conv)">
                 <div class="flex align-items-start justify-content-between gap-2 mb-1">
                     <span class="text-xs text-500 flex-none">
                         {{ conv.createdAt | date:'dd/MM/yy HH:mm' }}
@@ -101,8 +101,15 @@
         <div class="messages-area flex-1 min-h-0 p-4 overflow-y-auto flex flex-column gap-1 bg-gray-50 dark:bg-gray-900"
             #scrollPanel>
 
+            <!-- Loading conversation messages -->
+            <div *ngIf="conversationMessagesLoading()"
+                class="h-full flex flex-column align-items-center justify-content-center gap-3">
+                <i class="pi pi-spin pi-spinner text-3xl text-primary"></i>
+                <span class="text-sm text-500">Cargando conversación...</span>
+            </div>
+
             <!-- Empty State -->
-            <div *ngIf="messages().length === 0"
+            <div *ngIf="!conversationMessagesLoading() && messages().length === 0"
                 class="h-full flex flex-column align-items-center justify-content-center text-center p-5 fadein">
                 <div
                     class="w-5rem h-5rem border-circle bg-teal-50 dark:bg-teal-900/30 flex align-items-center justify-content-center mb-4">
@@ -116,6 +123,7 @@
             </div>
 
             <!-- Messages List -->
+            <ng-container *ngIf="!conversationMessagesLoading()">
             <ng-container *ngFor="let msg of messages()">
                 <!-- User Message -->
                 <div *ngIf="msg.role === 'user'"
@@ -151,6 +159,7 @@
                         </div>
                     </div>
                 </div>
+            </ng-container>
             </ng-container>
 
             <!-- Typing Indicator -->
