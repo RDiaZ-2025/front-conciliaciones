@@ -5,10 +5,18 @@
 
 .chat-dialog-container {
   display: flex;
-  height: 100%;
+  height: calc(100dvh - 280px);
+  min-height: 400px;
   width: 100%;
   overflow: hidden;
   font-family: var(--font-family);
+
+  @media screen and (max-width: 767px) {
+    height: calc(100dvh - 260px);
+    max-height: calc(100dvh - 260px);
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
 }
 
 .left-column-responsive {

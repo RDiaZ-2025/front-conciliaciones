@@ -69,9 +69,9 @@
         <div
             class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border bg-white dark:bg-gray-900 z-10 shadow-1">
             <div class="flex align-items-center gap-3">
-                <!-- Mobile Sidebar Toggle -->
+                <!-- Mobile History Toggle -->
                 <p-button icon="pi pi-bars" [text]="true" [rounded]="true" styleClass="md:hidden text-primary"
-                    (click)="toggleMobileSidebar()" pTooltip="Opciones" tooltipPosition="bottom"></p-button>
+                    (click)="showHistoryDrawer.set(true)" pTooltip="Historial" tooltipPosition="bottom"></p-button>
 
                 <div
                     class="hidden md:flex w-3rem h-3rem border-circle bg-teal-100 dark:bg-teal-900 align-items-center justify-content-center">
@@ -92,6 +92,10 @@
                 <p-button label="Crear Solicitud" icon="pi pi-check" (onClick)="submitRequest()"
                     [disabled]="!isRequestReady()" [loading]="isSubmitting()"
                     styleClass="hidden md:inline-flex"></p-button>
+                <!-- Mobile Crear Solicitud -->
+                <p-button icon="pi pi-check" [rounded]="true" (onClick)="submitRequest()"
+                    [disabled]="!isRequestReady()" [loading]="isSubmitting()"
+                    styleClass="md:hidden w-2rem h-2rem" pTooltip="Crear Solicitud" tooltipPosition="bottom"></p-button>
                 <p-button icon="pi pi-times" [text]="true" [rounded]="true" pTooltip="Cerrar modal"
                     tooltipPosition="left" (click)="closeDialog()"></p-button>
             </div>
@@ -300,6 +304,66 @@
             <p-button label="Crear Solicitud" icon="pi pi-check"
                 (onClick)="submitRequest(); showMobileSidebar.set(false);" [disabled]="!isRequestReady()"
                 [loading]="isSubmitting()" styleClass="w-full"></p-button>
+        </div>
+    </div>
+</p-drawer>
+
+<!-- History Drawer (Mobile) -->
+<p-drawer [(visible)]="showHistoryDrawer" position="left" styleClass="w-screen sm:w-22rem bg-gray-50 dark:bg-gray-800"
+    [modal]="true" appendTo="body" (onHide)="showHistoryDrawer.set(false)">
+    <ng-template pTemplate="header">
+        <div class="flex align-items-center justify-content-between w-full">
+            <div class="flex align-items-center gap-2">
+                <i class="pi pi-history text-xl text-primary"></i>
+                <h2 class="text-lg font-semibold m-0">Conversaciones</h2>
+            </div>
+            <p-button icon="pi pi-refresh" [text]="true" [rounded]="true" size="small"
+                pTooltip="Recargar" tooltipPosition="bottom"
+                (onClick)="loadConversations()"></p-button>
+        </div>
+    </ng-template>
+
+    <!-- Loading -->
+    <div *ngIf="conversationsLoading()" class="flex align-items-center justify-content-center p-4">
+        <i class="pi pi-spin pi-spinner text-2xl text-primary"></i>
+    </div>
+
+    <!-- Empty -->
+    <div *ngIf="!conversationsLoading() && conversations().length === 0"
+        class="flex flex-column align-items-center justify-content-center p-4 text-center">
+        <i class="pi pi-comments text-3xl text-300 mb-2"></i>
+        <p class="text-sm text-500 m-0">Sin conversaciones previas</p>
+    </div>
+
+    <!-- List -->
+    <div *ngIf="!conversationsLoading() && conversations().length > 0">
+        <div *ngFor="let conv of conversations()"
+            class="p-3 cursor-pointer border-bottom-1 surface-border transition-colors transition-duration-150"
+            [ngClass]="{'bg-primary-50 dark:bg-primary-900': selectedConversationId() === conv._id,
+                        'hover:surface-hover': selectedConversationId() !== conv._id}"
+            (click)="selectConversation(conv); showHistoryDrawer.set(false)">
+            <div class="flex align-items-start justify-content-between gap-2 mb-1">
+                <span class="text-xs text-500 flex-none">
+                    {{ conv.createdAt | date:'dd/MM/yy HH:mm' }}
+                </span>
+                <span *ngIf="+conv.unreadCount > 0"
+                    class="bg-primary border-circle text-white text-xs font-bold flex align-items-center justify-content-center flex-none"
+                    style="min-width:1.25rem; height:1.25rem; padding: 0 0.25rem;">
+                    {{ conv.unreadCount }}
+                </span>
+            </div>
+            <p class="text-sm text-gray-700 dark:text-gray-300 m-0 white-space-nowrap overflow-hidden text-overflow-ellipsis"
+                [title]="conv.lastMessage">
+                {{ conv.lastMessage }}
+            </p>
+            <div class="flex align-items-center gap-1 mt-1">
+                <span class="text-xs"
+                    [ngClass]="conv.status === 'Active' ? 'text-green-500' : 'text-500'">
+                    <i class="pi pi-circle-fill" style="font-size: 0.5rem;"></i>
+                    {{ conv.status === 'Active' ? 'Activa' : conv.status }}
+                </span>
+                <span class="text-xs text-400 ml-auto">{{ conv.messageCount }} msgs</span>
+            </div>
         </div>
     </div>
 </p-drawer>

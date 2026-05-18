@@ -82,6 +82,7 @@ export class ProductionChatDialogComponent implements OnDestroy {
   // Attach panel and summary drawer
   attachPanelVisible = signal<boolean>(false);
   showSummaryDrawer = signal<boolean>(false);
+  showHistoryDrawer = signal<boolean>(false);
 
   // Conversations history
   conversations = signal<ConversationItem[]>([]);
