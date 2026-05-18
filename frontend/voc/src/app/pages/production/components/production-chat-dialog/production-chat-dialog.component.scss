@@ -12,8 +12,7 @@
   font-family: var(--font-family);
 
   @media screen and (max-width: 767px) {
-    // 4rem navbar + 1rem layout padding top (p-4)
-    height: calc(100dvh - 5rem);
+    height: calc(100dvh - 6rem);
   }
 }
 
