@@ -5,17 +5,15 @@
 
 .chat-dialog-container {
   display: flex;
-  height: calc(100dvh - 280px);
-  min-height: 400px;
+  // 4rem navbar + 2rem layout padding (p-4 top+bottom)
+  height: calc(100dvh - 6rem);
   width: 100%;
   overflow: hidden;
   font-family: var(--font-family);
 
   @media screen and (max-width: 767px) {
-    height: calc(100dvh - 260px);
-    max-height: calc(100dvh - 260px);
-    border-radius: 0 !important;
-    box-shadow: none !important;
+    // 4rem navbar + 1rem layout padding top (p-4)
+    height: calc(100dvh - 5rem);
   }
 }
 

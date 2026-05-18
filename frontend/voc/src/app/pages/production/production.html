@@ -1,5 +1,5 @@
-<div class="flex flex-column gap-4 p-2 md:p-4 fadein animation-duration-300">
-    <div *ngIf="showHistorical()" class="flex gap-2">
+<div class="fadein animation-duration-300">
+    <div *ngIf="showHistorical()" class="flex gap-2 p-3">
         <p-button label="Volver al Tablero" icon="pi pi-arrow-left" [outlined]="true"
             (click)="showHistorical.set(false)"></p-button>
     </div>
