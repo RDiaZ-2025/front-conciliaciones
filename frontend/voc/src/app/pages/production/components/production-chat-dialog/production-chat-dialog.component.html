@@ -89,15 +89,6 @@
             <div class="flex align-items-center gap-2">
                 <p-button icon="pi pi-refresh" [text]="true" [rounded]="true" pTooltip="Reiniciar chat"
                     tooltipPosition="left" (click)="resetChat()"></p-button>
-                <p-button label="Crear Solicitud" icon="pi pi-check" (onClick)="submitRequest()"
-                    [disabled]="!isRequestReady()" [loading]="isSubmitting()"
-                    styleClass="hidden md:inline-flex"></p-button>
-                <!-- Mobile Crear Solicitud -->
-                <p-button icon="pi pi-check" [rounded]="true" (onClick)="submitRequest()"
-                    [disabled]="!isRequestReady()" [loading]="isSubmitting()"
-                    styleClass="md:hidden w-2rem h-2rem" pTooltip="Crear Solicitud" tooltipPosition="bottom"></p-button>
-                <p-button icon="pi pi-times" [text]="true" [rounded]="true" pTooltip="Cerrar modal"
-                    tooltipPosition="left" (click)="closeDialog()"></p-button>
             </div>
         </div>
 
