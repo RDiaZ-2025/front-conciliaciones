@@ -38,7 +38,17 @@ export class StorageController {
         });
       }
 
-      const sharedKeyCredential = new ShareSharedKeyCredential(accountName, accountKey);
+      const commAccountName = process.env.AZURE_AUTOCONSUMO_ACCOUNT_NAME || 'autoconsumofileserver';
+      const commAccountKey = process.env.AZURE_AUTOCONSUMO_ACCOUNT_KEY;
+
+      if (!commAccountKey) {
+        return res.status(500).json({
+          success: false,
+          message: 'Commercial storage configuration missing'
+        });
+      }
+
+      const sharedKeyCredential = new ShareSharedKeyCredential(commAccountName, commAccountKey);
 
       const startDate = new Date();
       startDate.setMinutes(startDate.getMinutes() - 5);
@@ -60,8 +70,8 @@ export class StorageController {
         success: true,
         data: {
           sasToken: `?${sasToken}`,
-          url: `https://${accountName}.file.core.windows.net/${containerName}?${sasToken}`,
-          accountName,
+          url: `https://${commAccountName}.file.core.windows.net/${containerName}?${sasToken}`,
+          accountName: commAccountName,
           containerName,
           expiresOn: expiryDate,
           serviceType: 'file'

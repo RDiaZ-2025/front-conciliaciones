@@ -195,6 +195,18 @@ export class AzureStorageService {
    * Download a blob as a Blob object
    */
   async downloadBlob(blobName: string, containerName: string = 'private'): Promise<Blob | undefined> {
+    if (containerName === 'autoconsumoshared') {
+      const url = `${environment.apiUrl}/storage/commercial/download?path=${encodeURIComponent(blobName)}`;
+      try {
+        return await firstValueFrom(
+          this.http.get(url, { responseType: 'blob' })
+        );
+      } catch (error) {
+        console.error('Error downloading commercial blob:', error);
+        return undefined;
+      }
+    }
+
     try {
       const containerClient = await this.getContainerClient(containerName);
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
@@ -511,9 +523,42 @@ export class AzureStorageService {
    * Get file URL for preview/download
    */
   async getFileUrl(blobName: string, containerName: string = 'private'): Promise<string> {
-    const containerClient = await this.getContainerClient(containerName);
-    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-    return blockBlobClient.url;
+    await this.getClient(containerName); // Ensure session is loaded
+    const session = this.sessions.get(containerName);
+    
+    if (!session) {
+      throw new Error(`No session found for container ${containerName}`);
+    }
+
+    const client = session.client;
+    
+    if (this.isShareClient(client)) {
+      // Share Logic
+      const lastSlashIndex = blobName.lastIndexOf('/');
+      const directoryPath = lastSlashIndex > -1 ? blobName.substring(0, lastSlashIndex) : '';
+      const fileName = lastSlashIndex > -1 ? blobName.substring(lastSlashIndex + 1) : blobName;
+
+      const directoryClient = directoryPath ? client.getDirectoryClient(directoryPath) : client.rootDirectoryClient;
+      const fileClient = directoryClient.getFileClient(fileName);
+      
+      // Append SAS token if not already present
+      let url = fileClient.url;
+      if (session.sasToken && !url.includes('sig=')) {
+        url += (url.includes('?') ? '&' : '?') + session.sasToken.replace(/^\?/, '');
+      }
+      return url;
+    } else {
+      // Blob Logic
+      const blobClient = client as ContainerClient;
+      const blockBlobClient = blobClient.getBlockBlobClient(blobName);
+      let url = blockBlobClient.url;
+      
+      // Append SAS token if not already present
+      if (session.sasToken && !url.includes('sig=')) {
+        url += (url.includes('?') ? '&' : '?') + session.sasToken.replace(/^\?/, '');
+      }
+      return url;
+    }
   }
 
   /**

@@ -72,4 +72,13 @@
             </ng-template>
         </ng-container>
     </div>
+
+    <!-- File Preview Component -->
+    <app-file-preview #filePreview
+        [(visible)]="previewVisible" 
+        [file]="previewFile()" 
+        [fileName]="previewFileName()"
+        [fileSize]="previewFileSize()"
+        (onDownload)="downloadFileFromPreview()">
+    </app-file-preview>
 </div>

@@ -1,8 +1,7 @@
 
-import { Component, OnInit, signal, inject, computed } from '@angular/core';
+import { Component, OnInit, signal, inject, computed, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { MessageService, MenuItem } from 'primeng/api';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -14,8 +13,8 @@ import { InputIconModule } from 'primeng/inputicon';
 import { TooltipModule } from 'primeng/tooltip';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { AzureStorageService } from '../../services/azure-storage.service';
-import { AuthService } from '../../services/auth.service';
 import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
+import { FilePreviewComponent } from '../../components/file-preview/file-preview';
 
 interface FileItem {
   id: string;
@@ -42,7 +41,8 @@ interface FileItem {
     InputIconModule,
     TooltipModule,
     ProgressBarModule,
-    PageHeaderComponent
+    PageHeaderComponent,
+    FilePreviewComponent
   ],
   providers: [MessageService],
   templateUrl: './commercial.component.html',
@@ -51,6 +51,8 @@ interface FileItem {
 export class CommercialComponent implements OnInit {
   private azureService = inject(AzureStorageService);
   private messageService = inject(MessageService);
+
+  @ViewChild('filePreview') filePreview!: FilePreviewComponent;
 
   // Configuration
   private readonly CONTAINER_NAME = 'autoconsumoshared';
@@ -67,6 +69,12 @@ export class CommercialComponent implements OnInit {
   // Download State
   downloadingFileId = signal<string | null>(null);
   downloadProgress = signal<number>(0);
+
+  // Preview State
+  previewVisible = signal<boolean>(false);
+  previewFile = signal<File | string | null>(null);
+  previewFileName = signal<string>('');
+  previewFileSize = signal<number>(0);
 
   filteredFiles = computed(() => {
     const term = this.searchValue().toLowerCase();
@@ -176,18 +184,129 @@ export class CommercialComponent implements OnInit {
       this.updateBreadcrumb();
       this.loadFiles();
     } else {
-      // Download file on click since actions column is removed
-      this.performDownload(item);
+      if (this.isPreviewable(item.name)) {
+        this.previewDocument(item);
+      } else {
+        // Download file on click since actions column is removed
+        this.performDownload(item);
+      }
     }
   }
 
-  downloadFile(item: FileItem, event: Event) {
+  private isPreviewable(fileName: string): boolean {
+    const extension = fileName.toLowerCase().split('.').pop() || '';
+    return ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'pptx', 'ppt'].includes(extension);
+  }
+
+  private getMimeTypeFromExtension(extension: string): string {
+    const mimeTypes: { [key: string]: string } = {
+      'pdf': 'application/pdf',
+      'png': 'image/png',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+      'bmp': 'image/bmp',
+      'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'ppt': 'application/vnd.ms-powerpoint'
+    };
+    return mimeTypes[extension] || 'application/octet-stream';
+  }
+
+  private async previewDocument(item: FileItem) {
+    if (this.downloadingFileId()) return;
+
+    try {
+      this.downloadingFileId.set(item.id);
+      this.downloadProgress.set(0);
+
+      const extension = item.name.toLowerCase().split('.').pop() || '';
+      this.previewFileSize.set(item.size);
+
+      // Try to get a direct URL with SAS token first for efficiency
+      // This is much better than downloading the entire blob to memory
+      try {
+        const directUrl = await this.azureService.getFileUrl(item.id, this.CONTAINER_NAME);
+        if (directUrl) {
+          this.previewFile.set(directUrl);
+          this.previewFileName.set(item.name);
+          this.previewVisible.set(true);
+          return;
+        }
+      } catch (e) {
+        console.warn('Could not get direct URL for preview, falling back to blob download', e);
+      }
+
+      // Fallback: download as blob (only for small files or if direct URL fails)
+      const blob = await this.azureService.downloadBlob(item.id, this.CONTAINER_NAME);
+
+      if (blob) {
+        // Ensure we have a correct MIME type for the preview
+        const mimeType = blob.type && blob.type !== 'application/octet-stream' 
+          ? blob.type 
+          : this.getMimeTypeFromExtension(extension);
+
+        this.previewFile.set(new File([blob], item.name, { type: mimeType }));
+        this.previewFileName.set(item.name);
+        this.previewVisible.set(true);
+      } else {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'No se pudo cargar la vista previa del archivo.'
+        });
+      }
+    } catch (error) {
+      console.error('Error loading preview:', error);
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Ocurrió un error al intentar previsualizar el archivo.'
+      });
+    } finally {
+       this.downloadingFileId.set(null);
+     }
+   }
+ 
+   downloadFileFromPreview() {
+     const file = this.previewFile();
+     const fileName = this.previewFileName();
+     const fileSize = this.previewFileSize();
+     const fileId = Array.isArray(this.files()) ? this.files().find(f => f.name === fileName)?.id : null;
+
+     if (file instanceof File) {
+       // It's already a local File object from a previous blob download
+       const url = URL.createObjectURL(file);
+       const a = document.createElement('a');
+       a.href = url;
+       a.download = file.name;
+       document.body.appendChild(a);
+       a.click();
+       a.remove();
+       URL.revokeObjectURL(url);
+       this.filePreview?.setDownloadProgress(100);
+     } else if (typeof file === 'string' && fileId) {
+       // It's a direct URL, we should use performDownload to show progress
+       this.performDownload({ id: fileId, name: fileName, size: fileSize } as FileItem, true);
+     } else {
+       // Fallback for string URL without ID
+       const a = document.createElement('a');
+       a.href = file as string;
+       a.download = fileName;
+       document.body.appendChild(a);
+       a.click();
+       a.remove();
+       this.filePreview?.setDownloadProgress(100);
+     }
+   }
+
+   downloadFile(item: FileItem, event: Event) {
     event.stopPropagation();
     this.performDownload(item);
   }
 
-  private async performDownload(item: FileItem) {
-    if (this.downloadingFileId()) {
+  private async performDownload(item: FileItem, fromPreview: boolean = false) {
+    if (this.downloadingFileId() && !fromPreview) {
       this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'Ya hay una descarga en curso.' });
       return;
     }
@@ -195,15 +314,25 @@ export class CommercialComponent implements OnInit {
     try {
       this.downloadingFileId.set(item.id);
       this.downloadProgress.set(0);
-      this.messageService.add({ severity: 'info', summary: 'Descargando', detail: `Iniciando descarga de ${item.name}...` });
+      if (!fromPreview) {
+        this.messageService.add({ severity: 'info', summary: 'Descargando', detail: `Iniciando descarga de ${item.name}...` });
+      }
 
       await this.azureService.downloadSingleFile(item.id, item.name, this.CONTAINER_NAME, (progress) => {
         this.downloadProgress.set(progress);
+        if (fromPreview) {
+          this.filePreview?.setDownloadProgress(progress);
+        }
       }, item.size);
 
-      this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Archivo descargado correctamente.' });
+      if (!fromPreview) {
+        this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Archivo descargado correctamente.' });
+      }
     } catch (error) {
       console.error('Error downloading file:', error);
+      if (fromPreview) {
+        this.filePreview?.resetDownloadState();
+      }
       this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo descargar el archivo.' });
     } finally {
       this.downloadingFileId.set(null);
