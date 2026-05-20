@@ -37,7 +37,7 @@
                 (click)="selectConversation(conv)">
                 <div class="flex align-items-start justify-content-between gap-2 mb-1">
                     <span class="text-xs text-500 flex-none">
-                        {{ conv.createdAt | date:'dd/MM/yy HH:mm' }}
+                        {{ conv._updateTime | date:'dd/MM/yy HH:mm' }}
                     </span>
                     <span *ngIf="+conv.unreadCount > 0"
                         class="bg-primary border-circle text-white text-xs font-bold flex align-items-center justify-content-center flex-none"
@@ -334,7 +334,7 @@
             (click)="selectConversation(conv); showHistoryDrawer.set(false)">
             <div class="flex align-items-start justify-content-between gap-2 mb-1">
                 <span class="text-xs text-500 flex-none">
-                    {{ conv.createdAt | date:'dd/MM/yy HH:mm' }}
+                    {{ conv._updateTime | date:'dd/MM/yy HH:mm' }}
                 </span>
                 <span *ngIf="+conv.unreadCount > 0"
                     class="bg-primary border-circle text-white text-xs font-bold flex align-items-center justify-content-center flex-none"
