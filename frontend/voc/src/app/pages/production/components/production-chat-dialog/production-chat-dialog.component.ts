@@ -274,11 +274,13 @@ export class ProductionChatDialogComponent implements OnDestroy {
     this.isTyping.set(true);
     const email = this.authService.currentUser()?.email ?? '';
 
+    const conversationId = this.selectedConversationId();
     const payload = {
       async: false,
       data: {
         contact: email,
-        forceNewConversation: this.selectedConversationId() === null,
+        forceNewConversation: conversationId === null,
+        conversationId: conversationId ?? null,
         text: userText
       }
     };
