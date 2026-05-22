@@ -273,51 +273,20 @@ export class ProductionChatDialogComponent implements OnDestroy {
   private askAssistant(userText: string) {
     this.isTyping.set(true);
     const email = this.authService.currentUser()?.email ?? '';
-    const now = Math.floor(Date.now() / 1000).toString();
 
     const payload = {
       async: false,
-      forceNewConversation: this.selectedConversationId() === null,
-      object: 'channel_chat',
-      entry: [
-        {
-          id: environment.chatAccessToken,
-          changes: [
-            {
-              value: {
-                messaging_product: 'web',
-                metadata: {
-                  display_phone_number: '',
-                  phone_number_id: ''
-                },
-                contacts: [
-                  {
-                    profile: { name: email },
-                    wa_id: email,
-                    user_id: ''
-                  }
-                ],
-                messages: [
-                  {
-                    from: environment.chatAccessToken,
-                    from_user_id: '',
-                    id: '',
-                    timestamp: now,
-                    text: { body: userText },
-                    type: 'text'
-                  }
-                ]
-              },
-              field: 'messages'
-            }
-          ]
-        }
-      ]
+      data: {
+        contact: email,
+        forceNewConversation: this.selectedConversationId() === null,
+        text: userText
+      }
     };
 
     this.http.post<any>(
       environment.chatSendMessageUrl,
-      payload
+      payload,
+      { headers: { 'sweetmesoft-access-token': environment.chatAccessToken } }
     ).pipe(takeUntil(this.cancelPending$)).subscribe({
       next: (response) => {
         this.isTyping.set(false);

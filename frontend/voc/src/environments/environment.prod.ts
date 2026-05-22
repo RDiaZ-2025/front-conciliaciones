@@ -7,5 +7,5 @@ export const environment = {
   chatAccessToken: '6f3YnUiTZAuZz2rbHeNSz4uJFJCG88Oscl7SyW9wueE',
   chatGetConversationsUrl: 'https://n8n.srv865978.hstgr.cloud/webhook/chat_web_connectror/get_chats',
   chatGetMessagesUrl: 'https://n8n.srv865978.hstgr.cloud/webhook/493e72f3-1aae-4dd4-92f5-84c8924e812d/chat_web_connectror/get_chats',
-  chatSendMessageUrl: 'https://n8n.srv865978.hstgr.cloud/webhook/azemblia-receive-whatsapp-message'
+  chatSendMessageUrl: 'https://n8n.srv865978.hstgr.cloud/webhook/chat_web_connectror/chat'
 };
