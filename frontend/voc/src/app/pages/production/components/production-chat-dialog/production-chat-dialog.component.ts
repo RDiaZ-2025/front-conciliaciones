@@ -33,6 +33,7 @@ interface ConversationItem {
   unreadCount: string;
   status: string;
   assignedTo: string;
+  metadata?: { ppt?: string | null; [key: string]: any };
 }
 
 interface ConversationMessage {
@@ -41,6 +42,7 @@ interface ConversationMessage {
   text: string;
   timestamp: string;
   type: string;
+  metadata?: { ppt?: string | null; [key: string]: any };
 }
 
 @Component({
@@ -163,8 +165,19 @@ export class ProductionChatDialogComponent implements OnDestroy {
         const mapped: ChatMessage[] = sorted.map(m => ({
           role: m.sender === email ? 'user' : 'assistant',
           content: m.text,
-          timestamp: new Date(m.timestamp)
+          timestamp: new Date(m.timestamp),
+          ppt: m.metadata?.ppt ?? null
         }));
+
+        // Si la conversación tiene ppt en su metadata, adjuntarlo al último mensaje del asistente
+        const convPpt = conv.metadata?.ppt;
+        if (convPpt) {
+          const lastAssistantIdx = mapped.map(m => m.role).lastIndexOf('assistant');
+          if (lastAssistantIdx !== -1 && !mapped[lastAssistantIdx].ppt) {
+            mapped[lastAssistantIdx] = { ...mapped[lastAssistantIdx], ppt: convPpt };
+          }
+        }
+
         this.messages.set(mapped);
         this.conversationMessagesLoading.set(false);
         setTimeout(() => this.scrollToBottom(), 50);
