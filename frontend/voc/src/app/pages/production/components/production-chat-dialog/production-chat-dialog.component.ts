@@ -10,6 +10,7 @@ import { DrawerModule } from 'primeng/drawer';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MarkdownPipe } from '../../../../pipes/markdown.pipe';
 import { AuthService } from '../../../../services/auth.service';
 import { environment } from '../../../../../environments/environment';
@@ -18,6 +19,7 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  ppt?: string | null;
 }
 
 interface ConversationItem {
@@ -64,6 +66,7 @@ export class ProductionChatDialogComponent implements OnDestroy {
   messageService = inject(MessageService);
   http = inject(HttpClient);
   private authService = inject(AuthService);
+  private sanitizer = inject(DomSanitizer);
 
   @Output() requestCreated = new EventEmitter<any>();
 
@@ -95,6 +98,11 @@ export class ProductionChatDialogComponent implements OnDestroy {
   // Cancels any in-flight assistant or conversation-load request
   private cancelPending$ = new Subject<void>();
   private destroy$ = new Subject<void>();
+
+  getPptViewerUrl(pptUrl: string): SafeResourceUrl {
+    const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pptUrl)}&embedded=true`;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(viewerUrl);
+  }
 
   toggleAttachPanel(): void {
     this.attachPanelVisible.update(v => !v);
@@ -314,10 +322,13 @@ export class ProductionChatDialogComponent implements OnDestroy {
           }
         }
 
+        const pptUrl: string | null = (response && response.ppt) ? response.ppt : null;
+
         this.messages.update(m => [...m, {
           role: 'assistant',
           content: responseText,
-          timestamp: new Date()
+          timestamp: new Date(),
+          ppt: pptUrl
         }]);
 
         // Si el API devuelve un resumen actualizado, lo usamos
