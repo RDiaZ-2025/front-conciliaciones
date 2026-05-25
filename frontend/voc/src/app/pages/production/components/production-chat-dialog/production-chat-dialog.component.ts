@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, signal, computed, inject, Output, EventEmitter, OnDestroy } from '@angular/core';
+import { Component, ElementRef, ViewChild, signal, computed, inject, Output, EventEmitter, OnDestroy, AfterViewInit } from '@angular/core';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -60,7 +60,7 @@ interface ConversationMessage {
   templateUrl: './production-chat-dialog.component.html',
   styleUrls: ['./production-chat-dialog.component.scss']
 })
-export class ProductionChatDialogComponent implements OnDestroy {
+export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   @ViewChild('scrollPanel') scrollPanel!: ElementRef;
   @ViewChild('chatInput') chatInput!: ElementRef;
 
@@ -69,6 +69,10 @@ export class ProductionChatDialogComponent implements OnDestroy {
   http = inject(HttpClient);
   private authService = inject(AuthService);
   private sanitizer = inject(DomSanitizer);
+  private hostEl = inject(ElementRef);
+
+  // Keeps a reference to the layout scroll container so we can restore it on destroy
+  private scrollContainer: HTMLElement | null = null;
 
   @Output() requestCreated = new EventEmitter<any>();
 
@@ -95,11 +99,74 @@ export class ProductionChatDialogComponent implements OnDestroy {
   conversationMessagesLoading = signal<boolean>(false);
   selectedConversationId = signal<string | null>(null);
 
+  // Search & grouping
+  searchQuery = signal<string>('');
+
+  filteredConversations = computed(() => {
+    const q = this.searchQuery().toLowerCase().trim();
+    if (!q) return this.conversations();
+    return this.conversations().filter(c =>
+      c.lastMessage?.toLowerCase().includes(q)
+    );
+  });
+
+  groupedConversations = computed(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    const weekAgoStart = new Date(todayStart);
+    weekAgoStart.setDate(weekAgoStart.getDate() - 7);
+
+    const groups: { label: string; items: ConversationItem[] }[] = [
+      { label: 'HOY', items: [] },
+      { label: 'AYER', items: [] },
+      { label: 'ESTA SEMANA', items: [] },
+      { label: 'MÁS ANTIGUO', items: [] }
+    ];
+
+    for (const conv of this.filteredConversations()) {
+      const d = new Date(conv.updatedAt ?? conv._updateTime);
+      const convDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      if (convDay >= todayStart) {
+        groups[0].items.push(conv);
+      } else if (convDay >= yesterdayStart) {
+        groups[1].items.push(conv);
+      } else if (d >= weekAgoStart) {
+        groups[2].items.push(conv);
+      } else {
+        groups[3].items.push(conv);
+      }
+    }
+
+    return groups.filter(g => g.items.length > 0);
+  });
+
   private readonly AGENT_ID = 'drWvQYWbVmoG8rRTxseV';
 
   // Cancels any in-flight assistant or conversation-load request
   private cancelPending$ = new Subject<void>();
   private destroy$ = new Subject<void>();
+
+  getConvTitle(conv: ConversationItem): string {
+    const words = (conv.lastMessage ?? '').split(' ');
+    const title = words.slice(0, 5).join(' ');
+    return title + (words.length > 5 ? '...' : '');
+  }
+
+  getConvRelativeTime(conv: ConversationItem): string {
+    const d = new Date(conv.updatedAt ?? conv._updateTime);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'ahora';
+    if (diffMin < 60) return `${diffMin}m`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `${diffH}h`;
+    const diffD = Math.floor(diffH / 24);
+    if (diffD < 7) return `${diffD}d`;
+    return d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
+  }
 
   getPptViewerUrl(pptUrl: string): SafeResourceUrl {
     const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pptUrl)}&embedded=true`;
@@ -140,6 +207,7 @@ export class ProductionChatDialogComponent implements OnDestroy {
   }
 
   selectConversation(conv: ConversationItem): void {
+    if (this.isTyping()) return;
     const email = this.authService.currentUser()?.email;
     if (!email) return;
     // Cancel any pending request before starting a new one
@@ -283,7 +351,26 @@ export class ProductionChatDialogComponent implements OnDestroy {
     }
   }
 
+  ngAfterViewInit(): void {
+    // Walk up the DOM to find the nearest scrollable layout wrapper and disable its
+    // scroll so the page never shifts — only this component disables it and restores on destroy.
+    let p: HTMLElement | null = (this.hostEl.nativeElement as HTMLElement).parentElement;
+    while (p) {
+      const ov = getComputedStyle(p).overflowY;
+      if (ov === 'auto' || ov === 'scroll') {
+        this.scrollContainer = p;
+        p.style.overflowY = 'hidden';
+        break;
+      }
+      p = p.parentElement;
+    }
+  }
+
   ngOnDestroy(): void {
+    if (this.scrollContainer) {
+      this.scrollContainer.style.overflowY = '';
+      this.scrollContainer = null;
+    }
     this.cancelPending$.next();
     this.cancelPending$.complete();
     this.destroy$.next();

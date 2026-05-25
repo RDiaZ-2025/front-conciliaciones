@@ -1,396 +1,345 @@
-<div class="chat-dialog-container flex flex-column md:flex-row bg-white dark:bg-gray-900 overflow-hidden">
+<div class="mia-chat-container">
 
-    <!-- Left Panel: Conversation History -->
-    <div
-        class="hidden md:flex w-full md:w-3 flex-column border-right-1 surface-border bg-gray-50 dark:bg-gray-800 h-full">
+  <!-- ===================== LEFT PANEL: SIDEBAR ===================== -->
+  <div class="mia-sidebar hidden md:flex">
 
-        <!-- History Header -->
-        <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border flex-none">
-            <div class="flex align-items-center gap-2">
-                <i class="pi pi-history text-primary"></i>
-                <span class="font-semibold text-gray-800 dark:text-gray-100 text-sm">Conversaciones</span>
-            </div>
-            <p-button icon="pi pi-refresh" [text]="true" [rounded]="true" size="small"
-                pTooltip="Recargar" tooltipPosition="bottom"
-                (onClick)="loadConversations()"></p-button>
-        </div>
-
-        <!-- Loading State -->
-        <div *ngIf="conversationsLoading()" class="flex-1 flex align-items-center justify-content-center p-4">
-            <i class="pi pi-spin pi-spinner text-2xl text-primary"></i>
-        </div>
-
-        <!-- Empty State -->
-        <div *ngIf="!conversationsLoading() && conversations().length === 0"
-            class="flex-1 flex flex-column align-items-center justify-content-center p-4 text-center">
-            <i class="pi pi-comments text-3xl text-300 mb-2"></i>
-            <p class="text-sm text-500 m-0">Sin conversaciones previas</p>
-        </div>
-
-        <!-- Conversations List -->
-        <div *ngIf="!conversationsLoading() && conversations().length > 0"
-            class="flex-1 overflow-y-auto">
-            <div *ngFor="let conv of conversations()"
-                class="p-3 cursor-pointer border-bottom-1 surface-border transition-colors transition-duration-150"
-                [ngClass]="{'bg-primary-50 dark:bg-primary-900': selectedConversationId() === conv._id,
-                            'hover:surface-hover': selectedConversationId() !== conv._id}"
-                (click)="selectConversation(conv)">
-                <div class="flex align-items-start justify-content-between gap-2 mb-1">
-                    <span class="text-xs text-500 flex-none">
-                        {{ conv._updateTime | date:'dd/MM/yy HH:mm' }}
-                    </span>
-                    <span *ngIf="+conv.unreadCount > 0"
-                        class="bg-primary border-circle text-white text-xs font-bold flex align-items-center justify-content-center flex-none"
-                        style="min-width:1.25rem; height:1.25rem; padding: 0 0.25rem;">
-                        {{ conv.unreadCount }}
-                    </span>
-                </div>
-                <p class="text-sm text-gray-700 dark:text-gray-300 m-0 white-space-nowrap overflow-hidden text-overflow-ellipsis"
-                    [title]="conv.lastMessage">
-                    {{ conv.lastMessage }}
-                </p>
-                <div class="flex align-items-center gap-1 mt-1">
-                    <span class="text-xs"
-                        [ngClass]="conv.status === 'Active' ? 'text-green-500' : 'text-500'">
-                        <i class="pi pi-circle-fill" style="font-size: 0.5rem;"></i>
-                        {{ conv.status === 'Active' ? 'Activa' : conv.status }}
-                    </span>
-                    <span class="text-xs text-400 ml-auto">{{ conv.messageCount }} msgs</span>
-                </div>
-            </div>
-        </div>
+    <!-- Sidebar Header -->
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <div class="sidebar-logo">M</div>
+        <span class="sidebar-title">MIA WORKSPACE</span>
+      </div>
+      <button class="icon-btn" pTooltip="Recargar historial" tooltipPosition="right" (click)="loadConversations()">
+        <i class="pi pi-refresh"></i>
+      </button>
     </div>
 
-    <!-- Chat Interface -->
-    <div class="w-full flex flex-column relative bg-white dark:bg-gray-900 right-column-responsive">
-
-        <!-- Chat Header -->
-        <div
-            class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border bg-white dark:bg-gray-900 z-10 shadow-1">
-            <div class="flex align-items-center gap-3">
-                <!-- Mobile History Toggle -->
-                <p-button icon="pi pi-bars" [text]="true" [rounded]="true" styleClass="md:hidden text-primary"
-                    (click)="showHistoryDrawer.set(true)" pTooltip="Historial" tooltipPosition="bottom"></p-button>
-
-                <div
-                    class="hidden md:flex w-3rem h-3rem border-circle bg-teal-100 dark:bg-teal-900 align-items-center justify-content-center">
-                    <i class="pi pi-sparkles text-xl text-teal-600 dark:text-teal-400"></i>
-                </div>
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 m-0">Asistente de
-                        Producción</h2>
-                    <p class="hidden md:block text-sm text-gray-500 dark:text-gray-400 m-0">Estoy aquí para
-                        ayudarte a
-                        crear tu
-                        solicitud rápidamente.</p>
-                </div>
-            </div>
-            <div class="flex align-items-center gap-2">
-                <p-button icon="pi pi-plus" [text]="true" [rounded]="true" pTooltip="Nuevo Chat"
-                    tooltipPosition="left" (click)="resetChat()"></p-button>
-            </div>
-        </div>
-
-        <!-- Messages Area -->
-        <div class="messages-area flex-1 min-h-0 p-4 overflow-y-auto flex flex-column gap-1 bg-gray-50 dark:bg-gray-900"
-            #scrollPanel>
-
-            <!-- Loading conversation messages -->
-            <div *ngIf="conversationMessagesLoading()"
-                class="h-full flex flex-column align-items-center justify-content-center gap-3">
-                <i class="pi pi-spin pi-spinner text-3xl text-primary"></i>
-                <span class="text-sm text-500">Cargando conversación...</span>
-            </div>
-
-            <!-- Empty State -->
-            <div *ngIf="!conversationMessagesLoading() && messages().length === 0"
-                class="h-full flex flex-column align-items-center justify-content-center text-center p-5 fadein">
-                <div
-                    class="w-5rem h-5rem border-circle bg-teal-50 dark:bg-teal-900/30 flex align-items-center justify-content-center mb-4">
-                    <i class="pi pi-comments text-4xl text-teal-500"></i>
-                </div>
-                <h3 class="text-xl font-medium text-gray-700 dark:text-gray-300 m-0 mb-2">¡Hola! ¿En qué te
-                    puedo ayudar
-                    hoy?</h3>
-                <p class="text-gray-500 dark:text-gray-400 max-w-sm line-height-3">Dime qué necesitas producir.
-                    Puedes escribir los detalles o adjuntar un audio/documento con el botón <i class="pi pi-paperclip"></i>.</p>
-            </div>
-
-            <!-- Messages List -->
-            <ng-container *ngIf="!conversationMessagesLoading()">
-            <ng-container *ngFor="let msg of messages()">
-                <!-- User Message -->
-                <div *ngIf="msg.role === 'user'"
-                    class="flex w-full justify-content-end fadein-right animation-duration-200">
-                    <div class="flex gap-3 flex-row-reverse" style="max-width: 45rem;">
-                        <div
-                            class="w-2rem h-2rem border-circle flex-shrink-0 flex align-items-center justify-content-center mt-1 bg-primary">
-                            <i class="pi pi-user text-sm text-white"></i>
-                        </div>
-                        <div class="p-2 border-round-2xl bg-primary text-white border-noround-top-right shadow-1">
-                            <p class="m-0 line-height-2 text-sm white-space-pre-wrap">{{ msg.content }}</p>
-                            <span class="text-xs opacity-60 mt-2 block text-right">{{ msg.timestamp |
-                                date:'shortTime'
-                                }}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Assistant Message -->
-                <div *ngIf="msg.role === 'assistant'"
-                    class="flex w-full justify-content-start fadein-left animation-duration-200">
-                    <div class="flex gap-3" style="max-width: 45rem;">
-                        <div
-                            class="w-2rem h-2rem border-circle flex-shrink-0 flex align-items-center justify-content-center mt-1 bg-teal-100 dark:bg-teal-900">
-                            <i class="pi pi-sparkles text-sm text-teal-600 dark:text-teal-400"></i>
-                        </div>
-                        <div
-                            class="p-2 border-round-2xl surface-100 dark:surface-800 text-gray-800 dark:text-gray-100 border-noround-top-left shadow-1">
-                            <div class="m-0 line-height-2 text-sm" [innerHTML]="msg.content | markdown"></div>
-                            <!-- PPT Preview -->
-                            <div *ngIf="msg.ppt" class="mt-3">
-                                <div class="flex align-items-center gap-2 mb-2">
-                                    <i class="pi pi-file text-orange-500"></i>
-                                    <span class="text-xs font-semibold text-500">Presentación adjunta</span>
-                                    <a [href]="msg.ppt" target="_blank" rel="noopener noreferrer"
-                                        class="ml-auto text-xs text-primary no-underline hover:underline">
-                                        <i class="pi pi-download mr-1"></i>Descargar
-                                    </a>
-                                </div>
-                                <iframe
-                                    [src]="getPptViewerUrl(msg.ppt)"
-                                    width="100%" height="320"
-                                    frameborder="0"
-                                    class="border-round border-1 surface-border"
-                                    style="min-width: 280px; display: block;">
-                                </iframe>
-                            </div>
-                            <span class="text-xs text-500 dark:text-400 mt-2 block">{{ msg.timestamp |
-                                date:'shortTime'
-                                }}</span>
-                        </div>
-                    </div>
-                </div>
-            </ng-container>
-            </ng-container>
-
-            <!-- Typing Indicator -->
-            <div *ngIf="isTyping()" class="flex w-full justify-content-start fadein">
-                <div class="flex gap-3" style="max-width: 45rem;">
-                    <div
-                        class="w-2rem h-2rem border-circle flex-shrink-0 flex align-items-center justify-content-center mt-1 bg-teal-100 dark:bg-teal-900">
-                        <i class="pi pi-sparkles text-sm text-teal-600 dark:text-teal-400"></i>
-                    </div>
-                    <div
-                        class="px-3 py-2 border-round-2xl surface-100 dark:surface-800 border-noround-top-left flex align-items-center justify-content-center gap-2 shadow-1" style="height: 38px;">
-                        <div class="typing-dot" style="animation-delay: 0s"></div>
-                        <div class="typing-dot" style="animation-delay: 0.2s"></div>
-                        <div class="typing-dot" style="animation-delay: 0.4s"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Input Area -->
-        <div class="p-3 surface-0 dark:surface-900 border-top-1 surface-border mt-auto shadow-2 z-10 relative">
-            <!-- Hidden file input for inline attachment -->
-            <input type="file" #inlineFileInput class="hidden" (change)="onFileSelected($event)" multiple accept="audio/*,.txt,.pdf" />
-
-            <!-- Backdrop to close attach panel -->
-            <div *ngIf="attachPanelVisible()" class="fixed top-0 left-0 w-full h-full z-4"
-                (click)="attachPanelVisible.set(false)"></div>
-
-            <!-- Floating attach options panel -->
-            <div *ngIf="attachPanelVisible()"
-                class="absolute left-3 bg-white dark:bg-gray-800 border-1 surface-border border-round-xl shadow-4 p-2 flex flex-column gap-1 z-5"
-                style="bottom: calc(100% - 0.5rem); min-width: 200px;">
-                <button
-                    class="flex align-items-center gap-2 p-2 border-round-lg cursor-pointer border-none bg-transparent text-left w-full hover:surface-hover"
-                    (click)="inlineFileInput.click(); attachPanelVisible.set(false)">
-                    <i class="pi pi-paperclip text-primary"></i>
-                    <span class="text-sm text-800">Adjuntar archivo</span>
-                </button>
-                <button
-                    class="flex align-items-center gap-2 p-2 border-round-lg cursor-pointer border-none bg-transparent text-left w-full hover:surface-hover"
-                    (click)="showSummaryDrawer.set(true); attachPanelVisible.set(false)">
-                    <i class="pi pi-list text-primary"></i>
-                    <span class="text-sm text-800">Ver resumen</span>
-                </button>
-            </div>
-
-            <div
-                class="flex align-items-end gap-2 bg-white dark:bg-gray-800 border-1 surface-border border-round-3xl p-1 pr-2 focus-within:border-primary transition-colors transition-duration-200 shadow-sm">
-                <!-- Clip button -->
-                <p-button icon="pi pi-paperclip" [rounded]="true" [text]="true"
-                    (onClick)="toggleAttachPanel()"
-                    styleClass="w-3rem h-3rem mb-1 flex-shrink-0"
-                    pTooltip="Adjuntar / Resumen" tooltipPosition="top"></p-button>
-                <textarea #chatInput
-                    class="chat-input flex-grow-1 border-none outline-none bg-transparent p-3 text-gray-800 dark:text-gray-100 text-base font-family-sans line-height-3"
-                    rows="1" style="min-height: 44px; max-height: 120px;" placeholder="Escribe tu mensaje aquí..."
-                    (input)="autoResize(chatInput)" (keydown)="onKeyDown($event, chatInput)"
-                    [(ngModel)]="inputText"></textarea>
-                <p-button icon="pi pi-send" [rounded]="true" [disabled]="!inputText.trim() || isTyping()"
-                    (onClick)="sendMessage()" styleClass="w-3rem h-3rem mb-1 flex-shrink-0"></p-button>
-            </div>
-            <div class="text-center mt-2">
-                <span class="text-xs text-500 dark:text-400">Presiona <kbd
-                        class="font-semibold font-family-sans border-1 surface-border border-round px-1">Enter</kbd>
-                    para enviar, <kbd
-                        class="font-semibold font-family-sans border-1 surface-border border-round px-1">Shift</kbd>
-                    +
-                    <kbd class="font-semibold font-family-sans border-1 surface-border border-round px-1">Enter</kbd>
-                    para nueva línea</span>
-            </div>
-        </div>
+    <!-- Search Bar -->
+    <div class="sidebar-search-wrapper">
+      <i class="pi pi-search sidebar-search-icon"></i>
+      <input
+        class="sidebar-search-input"
+        placeholder="Buscar hilos..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event)" />
     </div>
-</div>
-
-<!-- Mobile Sidebar for Options (Summary, File Upload, Submit) -->
-<p-drawer [(visible)]="showMobileSidebar" position="left" styleClass="w-full sm:w-25rem bg-gray-50 dark:bg-gray-800"
-    [modal]="true" appendTo="body" (onHide)="showMobileSidebar.set(false)">
-    <ng-template pTemplate="header">
-        <div class="flex align-items-center gap-2">
-            <i class="pi pi-bars text-xl text-primary"></i>
-            <h2 class="text-lg font-semibold m-0">Opciones</h2>
-        </div>
-    </ng-template>
-
-    <div class="flex flex-column h-full justify-content-between">
-        <!-- Summary Section (Mobile) -->
-        <div class="flex-none mb-4">
-            <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2 flex align-items-center gap-2 m-0">
-                <i class="pi pi-list text-primary"></i>
-                Resumen
-            </h3>
-            <div class="bg-white dark:bg-gray-900 border-1 surface-border border-round-xl p-3 shadow-sm"
-                style="max-height: 250px; overflow-y: auto;">
-                <p class="text-gray-500 dark:text-gray-400 text-sm line-height-3 m-0" *ngIf="!summary()">
-                    El resumen se generará automáticamente a medida que converses.
-                </p>
-                <div class="text-gray-700 dark:text-gray-300 text-sm line-height-3" *ngIf="summary()">
-                    <div [innerHTML]="summary()"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- File Upload Section (Mobile) -->
-        <div class="flex-grow-1 overflow-y-auto mb-3">
-            <h4 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 mt-0 uppercase tracking-wider">
-                Archivos Adjuntos</h4>
-
-            <div class="border-2 border-dashed border-round-xl p-3 text-center cursor-pointer transition-colors transition-duration-200"
-                [ngClass]="{'border-primary bg-primary-50 dark:bg-primary-900': isDragging(), 'surface-border bg-white dark:bg-gray-900 hover:surface-hover': !isDragging()}"
-                (click)="fileInputMobile.click()">
-                <input type="file" #fileInputMobile class="hidden" (change)="onFileSelected($event)" multiple
-                    accept="audio/*,.txt,.pdf" />
-                <i class="pi pi-cloud-upload text-2xl text-400 mb-1 transition-colors transition-duration-200"></i>
-                <p class="m-0 text-sm text-600 dark:text-400">
-                    <span class="font-semibold text-primary">Toca para subir</span>
-                </p>
-                <p class="m-0 mt-1 text-xs text-500">Audio, TXT, PDF</p>
-            </div>
-
-            <!-- Uploaded Files List (Mobile) -->
-            <div class="mt-3 flex flex-column gap-2 pr-1" *ngIf="files().length > 0">
-                <div *ngFor="let file of files(); let i = index"
-                    class="flex align-items-center justify-content-between p-2 surface-100 dark:surface-800 border-round-lg">
-                    <div class="flex align-items-center gap-2 overflow-hidden w-full">
-                        <i class="pi text-primary"
-                            [ngClass]="{'pi-file-pdf': file.type.includes('pdf'), 'pi-file-word': file.type.includes('text'), 'pi-volume-up': file.type.includes('audio'), 'pi-file': !file.type.includes('pdf') && !file.type.includes('text') && !file.type.includes('audio')}"></i>
-                        <span class="text-sm text-overflow-ellipsis white-space-nowrap overflow-hidden flex-grow-1"
-                            [title]="file.name">{{ file.name }}</span>
-                    </div>
-                    <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="danger" size="small"
-                        (click)="removeFile(i)"></p-button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Submit Button (Mobile) -->
-        <div class="flex-none pt-3 border-top-1 surface-border">
-            <p-button label="Crear Solicitud" icon="pi pi-check"
-                (onClick)="submitRequest(); showMobileSidebar.set(false);" [disabled]="!isRequestReady()"
-                [loading]="isSubmitting()" styleClass="w-full"></p-button>
-        </div>
-    </div>
-</p-drawer>
-
-<!-- History Drawer (Mobile) -->
-<p-drawer [(visible)]="showHistoryDrawer" position="left" styleClass="w-screen sm:w-22rem bg-gray-50 dark:bg-gray-800"
-    [modal]="true" appendTo="body" (onHide)="showHistoryDrawer.set(false)">
-    <ng-template pTemplate="header">
-        <div class="flex align-items-center justify-content-between w-full">
-            <div class="flex align-items-center gap-2">
-                <i class="pi pi-history text-xl text-primary"></i>
-                <h2 class="text-lg font-semibold m-0">Conversaciones</h2>
-            </div>
-            <p-button icon="pi pi-refresh" [text]="true" [rounded]="true" size="small"
-                pTooltip="Recargar" tooltipPosition="bottom"
-                (onClick)="loadConversations()"></p-button>
-        </div>
-    </ng-template>
 
     <!-- Loading -->
-    <div *ngIf="conversationsLoading()" class="flex align-items-center justify-content-center p-4">
-        <i class="pi pi-spin pi-spinner text-2xl text-primary"></i>
+    <div *ngIf="conversationsLoading()" class="sidebar-state-center">
+      <i class="pi pi-spin pi-spinner"></i>
     </div>
 
-    <!-- Empty -->
-    <div *ngIf="!conversationsLoading() && conversations().length === 0"
-        class="flex flex-column align-items-center justify-content-center p-4 text-center">
-        <i class="pi pi-comments text-3xl text-300 mb-2"></i>
-        <p class="text-sm text-500 m-0">Sin conversaciones previas</p>
+    <!-- Empty State -->
+    <div *ngIf="!conversationsLoading() && filteredConversations().length === 0" class="sidebar-state-center sidebar-empty">
+      <i class="pi pi-comments"></i>
+      <p>Sin conversaciones previas</p>
     </div>
 
-    <!-- List -->
-    <div *ngIf="!conversationsLoading() && conversations().length > 0">
-        <div *ngFor="let conv of conversations()"
-            class="p-3 cursor-pointer border-bottom-1 surface-border transition-colors transition-duration-150"
-            [ngClass]="{'bg-primary-50 dark:bg-primary-900': selectedConversationId() === conv._id,
-                        'hover:surface-hover': selectedConversationId() !== conv._id}"
-            (click)="selectConversation(conv); showHistoryDrawer.set(false)">
-            <div class="flex align-items-start justify-content-between gap-2 mb-1">
-                <span class="text-xs text-500 flex-none">
-                    {{ conv._updateTime | date:'dd/MM/yy HH:mm' }}
-                </span>
-                <span *ngIf="+conv.unreadCount > 0"
-                    class="bg-primary border-circle text-white text-xs font-bold flex align-items-center justify-content-center flex-none"
-                    style="min-width:1.25rem; height:1.25rem; padding: 0 0.25rem;">
-                    {{ conv.unreadCount }}
-                </span>
-            </div>
-            <p class="text-sm text-gray-700 dark:text-gray-300 m-0 white-space-nowrap overflow-hidden text-overflow-ellipsis"
-                [title]="conv.lastMessage">
-                {{ conv.lastMessage }}
-            </p>
-            <div class="flex align-items-center gap-1 mt-1">
-                <span class="text-xs"
-                    [ngClass]="conv.status === 'Active' ? 'text-green-500' : 'text-500'">
-                    <i class="pi pi-circle-fill" style="font-size: 0.5rem;"></i>
-                    {{ conv.status === 'Active' ? 'Activa' : conv.status }}
-                </span>
-                <span class="text-xs text-400 ml-auto">{{ conv.messageCount }} msgs</span>
-            </div>
+    <!-- Grouped Conversations List -->
+    <div *ngIf="!conversationsLoading()" class="sidebar-list">
+      <ng-container *ngFor="let group of groupedConversations()">
+        <div class="sidebar-group-label">{{ group.label }}</div>
+        <div
+          *ngFor="let conv of group.items"
+          class="sidebar-item"
+          [class.sidebar-item--active]="selectedConversationId() === conv._id"
+          [class.sidebar-item--disabled]="isTyping()"
+          (click)="selectConversation(conv)">
+          <div class="sidebar-item-row">
+            <span class="sidebar-item-title">{{ getConvTitle(conv) }}</span>
+            <span class="sidebar-item-time">{{ getConvRelativeTime(conv) }}</span>
+          </div>
+          <p class="sidebar-item-subtitle">{{ conv.lastMessage }}</p>
+          <span *ngIf="conv.status === 'Active'" class="sidebar-item-badge">MIA Active</span>
         </div>
+      </ng-container>
     </div>
+
+  </div>
+  <!-- end sidebar -->
+
+  <!-- ===================== MAIN CHAT ===================== -->
+  <div class="mia-chat-main">
+
+    <!-- Chat Header -->
+    <div class="chat-header">
+      <div class="chat-header-left">
+        <!-- Mobile menu toggle -->
+        <button class="icon-btn md:hidden" (click)="showHistoryDrawer.set(true)">
+          <i class="pi pi-bars"></i>
+        </button>
+        <div class="bot-avatar-wrap">
+          <i class="pi pi-sparkles"></i>
+        </div>
+        <div class="chat-header-info">
+          <div class="chat-header-name">
+            <span>MIA Assistant</span>
+            <span class="online-dot"></span>
+            <span class="online-label">Online</span>
+          </div>
+          <span class="chat-header-subtitle hidden md:block">Especialista en flujos de conversión de usuario</span>
+        </div>
+      </div>
+      <div class="chat-header-actions">
+        <button class="icon-btn" pTooltip="Nuevo chat" tooltipPosition="left" (click)="resetChat()">
+          <i class="pi pi-plus"></i>
+        </button>
+        <button class="icon-btn icon-btn--danger" *ngIf="ref" (click)="closeDialog()">
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Messages Area -->
+    <div class="messages-area" #scrollPanel>
+
+      <!-- Loading conversation -->
+      <div *ngIf="conversationMessagesLoading()" class="messages-state-center">
+        <i class="pi pi-spin pi-spinner text-2xl"></i>
+        <span>Cargando conversación...</span>
+      </div>
+
+      <!-- Empty state -->
+      <div *ngIf="!conversationMessagesLoading() && messages().length === 0" class="messages-state-center messages-empty">
+        <div class="empty-icon">
+          <i class="pi pi-sparkles"></i>
+        </div>
+        <h3>¡Hola! ¿En qué te puedo ayudar hoy?</h3>
+        <p>Dime qué necesitas producir. Puedes escribir los detalles o adjuntar un audio/documento con el botón <i class="pi pi-paperclip"></i>.</p>
+      </div>
+
+      <!-- Messages -->
+      <ng-container *ngIf="!conversationMessagesLoading()">
+
+        <div *ngIf="messages().length > 0" class="date-separator">
+          <span>HOY</span>
+        </div>
+
+        <ng-container *ngFor="let msg of messages()">
+
+          <!-- User Message -->
+          <div *ngIf="msg.role === 'user'" class="msg-row msg-row--user fadein animation-duration-200">
+            <div class="msg-bubble msg-bubble--user">
+              <p class="msg-content">{{ msg.content }}</p>
+              <span class="msg-time">{{ msg.timestamp | date:'HH:mm' }}</span>
+            </div>
+          </div>
+
+          <!-- Bot Message -->
+          <div *ngIf="msg.role === 'assistant'" class="msg-row msg-row--bot fadein animation-duration-200">
+            <div class="msg-avatar msg-avatar--bot">
+              <i class="pi pi-sparkles"></i>
+            </div>
+            <div class="msg-bubble msg-bubble--bot">
+              <div class="msg-content" [innerHTML]="msg.content | markdown"></div>
+              <!-- PPT Preview -->
+              <div *ngIf="msg.ppt" class="msg-ppt">
+                <div class="msg-ppt-header">
+                  <i class="pi pi-file text-orange-500"></i>
+                  <span>Presentación adjunta</span>
+                  <a [href]="msg.ppt" target="_blank" rel="noopener noreferrer">
+                    <i class="pi pi-download"></i> Descargar
+                  </a>
+                </div>
+                <iframe
+                  [src]="getPptViewerUrl(msg.ppt)"
+                  width="100%" height="320"
+                  frameborder="0"
+                  style="min-width:280px;display:block;border-radius:8px;border:1px solid #e5e7eb;">
+                </iframe>
+              </div>
+              <span class="msg-time">{{ msg.timestamp | date:'HH:mm' }}</span>
+            </div>
+          </div>
+
+        </ng-container>
+      </ng-container>
+
+      <!-- Typing Indicator -->
+      <div *ngIf="isTyping()" class="msg-row msg-row--bot fadein">
+        <div class="msg-avatar msg-avatar--bot">
+          <i class="pi pi-sparkles"></i>
+        </div>
+        <div class="typing-bubble">
+          <span class="typing-label">MIA está pensando</span>
+          <div class="typing-dots">
+            <div class="typing-dot" style="animation-delay:0s"></div>
+            <div class="typing-dot" style="animation-delay:0.2s"></div>
+            <div class="typing-dot" style="animation-delay:0.4s"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- end messages-area -->
+
+    <!-- Input Area -->
+    <div class="input-area">
+
+      <!-- Hidden file input -->
+      <input type="file" #inlineFileInput class="hidden" (change)="onFileSelected($event)" multiple accept="audio/*,.txt,.pdf" />
+
+      <!-- Backdrop to close attach panel -->
+      <div *ngIf="attachPanelVisible()" class="attach-backdrop" (click)="attachPanelVisible.set(false)"></div>
+
+      <!-- Floating attach options panel -->
+      <div *ngIf="attachPanelVisible()" class="attach-panel">
+        <button class="attach-option" (click)="inlineFileInput.click(); attachPanelVisible.set(false)">
+          <i class="pi pi-paperclip"></i>
+          <span>Adjuntar archivo</span>
+        </button>
+        <button class="attach-option" (click)="showSummaryDrawer.set(true); attachPanelVisible.set(false)">
+          <i class="pi pi-list"></i>
+          <span>Ver resumen</span>
+        </button>
+      </div>
+
+      <div class="input-row">
+        <button class="input-plus-btn" (click)="toggleAttachPanel()">
+          <i class="pi pi-plus"></i>
+        </button>
+        <textarea
+          #chatInput
+          class="input-textarea"
+          rows="1"
+          placeholder="Escribe aquí..."
+          [disabled]="isTyping()"
+          (input)="autoResize(chatInput)"
+          (keydown)="onKeyDown($event, chatInput)"
+          [(ngModel)]="inputText">
+        </textarea>
+        <button class="input-mic-btn">
+          <i class="pi pi-microphone"></i>
+        </button>
+        <button
+          class="input-send-btn"
+          [disabled]="!inputText.trim() || isTyping()"
+          (click)="sendMessage()">
+          Send <i class="pi pi-send"></i>
+        </button>
+      </div>
+
+    </div>
+    <!-- end input-area -->
+
+  </div>
+  <!-- end mia-chat-main -->
+
+</div>
+<!-- end mia-chat-container -->
+
+
+<!-- ===================== MOBILE: Options Drawer ===================== -->
+<p-drawer [(visible)]="showMobileSidebar" position="left" styleClass="w-full sm:w-25rem"
+  [modal]="true" appendTo="body" (onHide)="showMobileSidebar.set(false)">
+  <ng-template pTemplate="header">
+    <div class="flex align-items-center gap-2">
+      <i class="pi pi-bars text-xl" style="color:#e53e3e"></i>
+      <h2 class="text-lg font-semibold m-0">Opciones</h2>
+    </div>
+  </ng-template>
+  <div class="flex flex-column h-full justify-content-between">
+    <div class="flex-none mb-4">
+      <h3 class="text-base font-semibold mb-2 flex align-items-center gap-2 m-0">
+        <i class="pi pi-list" style="color:#e53e3e"></i> Resumen
+      </h3>
+      <div class="bg-white border-1 surface-border border-round-xl p-3" style="max-height:250px;overflow-y:auto;">
+        <p class="text-sm text-500 line-height-3 m-0" *ngIf="!summary()">El resumen se generará automáticamente.</p>
+        <div class="text-sm line-height-3" *ngIf="summary()"><div [innerHTML]="summary()"></div></div>
+      </div>
+    </div>
+    <div class="flex-grow-1 overflow-y-auto mb-3">
+      <h4 class="text-sm font-semibold text-500 mb-2 mt-0 uppercase">Archivos Adjuntos</h4>
+      <div class="border-2 border-dashed border-round-xl p-3 text-center cursor-pointer"
+        [ngClass]="{'border-primary bg-primary-50': isDragging(), 'surface-border bg-white': !isDragging()}"
+        (click)="fileInputMobile.click()">
+        <input type="file" #fileInputMobile class="hidden" (change)="onFileSelected($event)" multiple accept="audio/*,.txt,.pdf" />
+        <i class="pi pi-cloud-upload text-2xl text-400 mb-1"></i>
+        <p class="m-0 text-sm text-600"><span class="font-semibold" style="color:#e53e3e">Toca para subir</span></p>
+        <p class="m-0 mt-1 text-xs text-500">Audio, TXT, PDF</p>
+      </div>
+      <div class="mt-3 flex flex-column gap-2 pr-1" *ngIf="files().length > 0">
+        <div *ngFor="let file of files(); let i = index"
+          class="flex align-items-center justify-content-between p-2 surface-100 border-round-lg">
+          <div class="flex align-items-center gap-2 overflow-hidden w-full">
+            <i class="pi" style="color:#e53e3e"
+              [ngClass]="{'pi-file-pdf':file.type.includes('pdf'),'pi-file-word':file.type.includes('text'),'pi-volume-up':file.type.includes('audio'),'pi-file':!file.type.includes('pdf')&&!file.type.includes('text')&&!file.type.includes('audio')}"></i>
+            <span class="text-sm text-overflow-ellipsis white-space-nowrap overflow-hidden flex-grow-1" [title]="file.name">{{ file.name }}</span>
+          </div>
+          <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="danger" size="small" (click)="removeFile(i)"></p-button>
+        </div>
+      </div>
+    </div>
+    <div class="flex-none pt-3 border-top-1 surface-border">
+      <p-button label="Crear Solicitud" icon="pi pi-check"
+        (onClick)="submitRequest(); showMobileSidebar.set(false);"
+        [disabled]="!isRequestReady()" [loading]="isSubmitting()" styleClass="w-full"></p-button>
+    </div>
+  </div>
 </p-drawer>
 
-<!-- Summary Drawer -->
-<p-drawer [(visible)]="showSummaryDrawer" position="right" styleClass="w-full sm:w-25rem bg-white dark:bg-gray-900"
-    [modal]="true" appendTo="body" (onHide)="showSummaryDrawer.set(false)">
-    <ng-template pTemplate="header">
-        <div class="flex align-items-center gap-2">
-            <i class="pi pi-list text-xl text-primary"></i>
-            <h2 class="text-lg font-semibold m-0">Resumen de la Solicitud</h2>
-        </div>
-    </ng-template>
-    <div class="p-3">
-        <p class="text-gray-500 dark:text-gray-400 text-sm line-height-3 m-0" *ngIf="!summary()">
-            El resumen se generará automáticamente a medida que converses con el asistente.
-        </p>
-        <div class="text-gray-700 dark:text-gray-300 text-sm line-height-3" *ngIf="summary()">
-            <div [innerHTML]="summary()"></div>
-        </div>
+
+<!-- ===================== MOBILE: History Drawer ===================== -->
+<p-drawer [(visible)]="showHistoryDrawer" position="left" styleClass="w-screen sm:w-22rem"
+  [modal]="true" appendTo="body" (onHide)="showHistoryDrawer.set(false)">
+  <ng-template pTemplate="header">
+    <div class="flex align-items-center justify-content-between w-full">
+      <div class="flex align-items-center gap-2">
+        <div class="sidebar-logo">M</div>
+        <h2 class="text-base font-semibold m-0">MIA WORKSPACE</h2>
+      </div>
+      <p-button icon="pi pi-refresh" [text]="true" [rounded]="true" size="small"
+        pTooltip="Recargar" tooltipPosition="bottom" (onClick)="loadConversations()"></p-button>
     </div>
+  </ng-template>
+  <div class="sidebar-search-wrapper" style="margin:0 0 0.75rem 0;">
+    <i class="pi pi-search sidebar-search-icon"></i>
+    <input class="sidebar-search-input" placeholder="Buscar hilos..."
+      [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
+  </div>
+  <div *ngIf="conversationsLoading()" class="sidebar-state-center">
+    <i class="pi pi-spin pi-spinner"></i>
+  </div>
+  <div *ngIf="!conversationsLoading() && filteredConversations().length === 0" class="sidebar-state-center sidebar-empty">
+    <i class="pi pi-comments"></i><p>Sin conversaciones</p>
+  </div>
+  <div *ngIf="!conversationsLoading()" class="sidebar-list">
+    <ng-container *ngFor="let group of groupedConversations()">
+      <div class="sidebar-group-label">{{ group.label }}</div>
+      <div *ngFor="let conv of group.items"
+        class="sidebar-item"
+        [class.sidebar-item--active]="selectedConversationId() === conv._id"
+        [class.sidebar-item--disabled]="isTyping()"
+        (click)="selectConversation(conv); showHistoryDrawer.set(false)">
+        <div class="sidebar-item-row">
+          <span class="sidebar-item-title">{{ getConvTitle(conv) }}</span>
+          <span class="sidebar-item-time">{{ getConvRelativeTime(conv) }}</span>
+        </div>
+        <p class="sidebar-item-subtitle">{{ conv.lastMessage }}</p>
+        <span *ngIf="conv.status === 'Active'" class="sidebar-item-badge">MIA Active</span>
+      </div>
+    </ng-container>
+  </div>
 </p-drawer>
+
+
+<!-- ===================== Summary Drawer ===================== -->
+<p-drawer [(visible)]="showSummaryDrawer" position="right" styleClass="w-full sm:w-25rem bg-white"
+  [modal]="true" appendTo="body" (onHide)="showSummaryDrawer.set(false)">
+  <ng-template pTemplate="header">
+    <div class="flex align-items-center gap-2">
+      <i class="pi pi-list text-xl" style="color:#e53e3e"></i>
+      <h2 class="text-lg font-semibold m-0">Resumen de la Solicitud</h2>
+    </div>
+  </ng-template>
+  <div class="p-3">
+    <p class="text-500 text-sm line-height-3 m-0" *ngIf="!summary()">
+      El resumen se generará automáticamente a medida que converses con el asistente.
+    </p>
+    <div class="text-sm line-height-3" *ngIf="summary()">
+      <div [innerHTML]="summary()"></div>
+    </div>
+  </div>
+</p-drawer>
+
+<p-toast></p-toast>
