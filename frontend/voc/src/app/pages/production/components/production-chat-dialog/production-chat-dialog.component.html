@@ -81,7 +81,9 @@
         </div>
       </div>
       <div class="chat-header-actions">
-        <button class="icon-btn" pTooltip="Nuevo chat" tooltipPosition="left" (click)="resetChat()">
+        <button class="icon-btn" pTooltip="Nuevo chat" tooltipPosition="left"
+          [disabled]="isTyping()"
+          (click)="resetChat()">
           <i class="pi pi-plus"></i>
         </button>
         <button class="icon-btn icon-btn--danger" *ngIf="ref" (click)="closeDialog()">
@@ -195,7 +197,7 @@
       </div>
 
       <div class="input-row">
-        <button class="input-plus-btn" (click)="toggleAttachPanel()">
+        <button class="input-plus-btn" [disabled]="isTyping()" (click)="toggleAttachPanel()">
           <i class="pi pi-plus"></i>
         </button>
         <textarea

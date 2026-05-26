@@ -677,6 +677,11 @@
 
   &::placeholder { color: #9ca3af; }
 
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   &::-webkit-scrollbar { width: 4px; }
   &::-webkit-scrollbar-thumb {
     background: #d1d5db;
