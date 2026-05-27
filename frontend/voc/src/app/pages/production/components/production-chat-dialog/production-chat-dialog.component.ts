@@ -516,25 +516,18 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
 
     const conversationId = this.selectedConversationId();
     const payload = {
-      agentId: environment.chatAgentId,
-      conversationId: conversationId,
-      contactId: email || null,
-      channelId: environment.chatChannelId,
-      statusConversation: 'open',
-      finishConversation: false,
-      Sender: {
-        id: email || null,
-        phone: null,
-        name: user?.name ?? null,
-        email: email || null,
-        address: null,
-        urlPhotoProfile: null
-      },
-      message: {
-        text: userText,
-        type: 'text',
-        timestamp: String(Math.floor(Date.now() / 1000)),
-        metadata: null
+      async: false,
+      data: {
+        agentId: environment.chatAgentId,
+        conversationId: conversationId,
+        contactId: email || null,
+        channelId: environment.chatChannelId,
+        message: {
+          text: userText,
+          type: 'text',
+          timestamp: String(Math.floor(Date.now() / 1000)),
+          metadata: null
+        }
       }
     };
 
@@ -547,17 +540,20 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         this.isTyping.set(false);
 
         let responseText = '';
-        if (response && response.response) {
-          responseText = response.response;
-        } else if (Array.isArray(response) && response.length > 0 && response[0].output && response[0].output.response) {
+        // Primary: new format { output: { response: "..." }, metadata: {...} }
+        if (response?.output?.response) {
+          responseText = response.output.response;
+        } else if (Array.isArray(response) && response.length > 0 && response[0].output?.response) {
           responseText = response[0].output.response;
+        } else if (response?.response) {
+          responseText = response.response;
         } else if (typeof response === 'string') {
           responseText = response;
-        } else if (response && response.message) {
+        } else if (response?.message) {
           responseText = response.message;
-        } else if (response && response.text) {
+        } else if (response?.text) {
           responseText = response.text;
-        } else if (response && response.answer) {
+        } else if (response?.answer) {
           responseText = response.answer;
         } else {
           try {
@@ -567,7 +563,11 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
           }
         }
 
-        const pptUrl: string | null = (response && response.ppt) ? response.ppt : null;
+        const pptUrl: string | null =
+          response?.metadata?.connector_ppt ??
+          response?.output?.ppt ??
+          response?.ppt ??
+          null;
 
         this.messages.update(m => [...m, {
           role: 'assistant',
