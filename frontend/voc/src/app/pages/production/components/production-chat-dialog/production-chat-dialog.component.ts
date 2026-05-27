@@ -22,6 +22,7 @@ interface ChatMessageAttachment {
   path: string;
   blobUrl: string | null;
   loading: boolean;
+  downloading?: boolean;
 }
 
 interface ChatMessage {
@@ -209,6 +210,35 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     return d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
   }
 
+  downloadDocument(attachment: ChatMessageAttachment, msgIndex: number): void {
+    if (attachment.downloading) return;
+    this.messages.update(msgs =>
+      msgs.map((m, i) => i === msgIndex ? { ...m, attachment: { ...m.attachment!, downloading: true } } : m)
+    );
+    const headers = new HttpHeaders({ 'x-api-key': environment.chatApiKey });
+    const body = { agentId: environment.chatAgentId, channelId: environment.chatChannelId, path: attachment.path };
+    this.http.post(environment.chatDownloadFileUrl, body, { headers, responseType: 'blob' })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob) => {
+          const url = URL.createObjectURL(blob as Blob);
+          this.blobUrls.push(url);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = attachment.name;
+          a.click();
+          this.messages.update(msgs =>
+            msgs.map((m, i) => i === msgIndex ? { ...m, attachment: { ...m.attachment!, downloading: false } } : m)
+          );
+        },
+        error: () => {
+          this.messages.update(msgs =>
+            msgs.map((m, i) => i === msgIndex ? { ...m, attachment: { ...m.attachment!, downloading: false } } : m)
+          );
+        }
+      });
+  }
+
   getPptViewerUrl(pptUrl: string): SafeResourceUrl {
     const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pptUrl)}&embedded=true`;
     return this.sanitizer.bypassSecurityTrustResourceUrl(viewerUrl);
@@ -285,12 +315,22 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
           let attachment: ChatMessageAttachment | null = null;
           if (meta?.path && meta?.name) {
             const mimeType = meta.mimeType || meta.contentType || '';
+            const apiType = m.messageContent.type?.toLowerCase() ?? '';
             let attType: ChatMessageAttachment['type'] = 'document';
-            if (mimeType.startsWith('image/')) attType = 'image';
-            else if (mimeType.startsWith('audio/')) attType = 'audio';
-            else if (mimeType.startsWith('video/')) attType = 'video';
+            // API type "file" always means document — takes absolute priority
+            if (apiType === 'file') {
+              attType = 'document';
+            } else if (mimeType.startsWith('image/') || apiType === 'image') {
+              attType = 'image';
+            } else if (mimeType.startsWith('audio/') || apiType === 'audio') {
+              attType = 'audio';
+            } else if (mimeType.startsWith('video/') || apiType === 'video') {
+              attType = 'video';
+            }
+            // application/, text/, font/, or unknown → document (default)
             const fullPath = meta.path.endsWith('/') ? meta.path + meta.name : meta.path + '/' + meta.name;
-            attachment = { type: attType, name: meta.name, mimeType, path: fullPath, blobUrl: null, loading: true };
+            const isMedia = attType !== 'document';
+            attachment = { type: attType, name: meta.name, mimeType, path: fullPath, blobUrl: null, loading: isMedia };
           }
           return {
             role: m.sender.id === email ? 'user' : 'assistant',
@@ -305,16 +345,24 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
 
         this.messages.set(mapped);
 
-        // Download files for messages that have attachments
+        // Download media (images, audio, video) for messages that have attachments
         mapped.forEach((msg, index) => {
-          if (!msg.attachment) return;
+          if (!msg.attachment || msg.attachment.type === 'document') return;
           const dlHeaders = new HttpHeaders({ 'x-api-key': environment.chatApiKey });
           const dlBody = { agentId: environment.chatAgentId, channelId: environment.chatChannelId, path: msg.attachment.path };
           this.http.post(environment.chatDownloadFileUrl, dlBody, { headers: dlHeaders, responseType: 'blob' })
             .pipe(takeUntil(this.cancelPending$))
             .subscribe({
               next: (blob) => {
-                const blobUrl = URL.createObjectURL(blob as Blob);
+                const b = blob as Blob;
+                if (b.size === 0) {
+                  // Empty response: file not found — degrade to document widget
+                  this.messages.update(msgs =>
+                    msgs.map((m, i) => i === index ? { ...m, attachment: { ...m.attachment!, type: 'document', loading: false } } : m)
+                  );
+                  return;
+                }
+                const blobUrl = URL.createObjectURL(b);
                 this.blobUrls.push(blobUrl);
                 this.messages.update(msgs =>
                   msgs.map((m, i) => i === index ? { ...m, attachment: { ...m.attachment!, blobUrl, loading: false } } : m)

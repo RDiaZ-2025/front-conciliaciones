@@ -117,7 +117,7 @@
           <span>HOY</span>
         </div>
 
-        <ng-container *ngFor="let msg of messages()">
+        <ng-container *ngFor="let msg of messages(); let i = index">
 
           <!-- User Message -->
           <div *ngIf="msg.role === 'user'" class="msg-row msg-row--user fadein animation-duration-200">
@@ -134,15 +134,16 @@
                   [src]="msg.attachment.blobUrl" controls class="msg-attachment-audio"></audio>
                 <video *ngIf="!msg.attachment.loading && msg.attachment.type === 'video' && msg.attachment.blobUrl"
                   [src]="msg.attachment.blobUrl" controls class="msg-attachment-video"></video>
-                <div *ngIf="!msg.attachment.loading && msg.attachment.type === 'document' && msg.attachment.blobUrl"
+                <div *ngIf="!msg.attachment.loading && msg.attachment.type === 'document'"
                   class="msg-attachment-doc">
                   <i class="pi pi-file"></i>
                   <span>{{ msg.attachment.name }}</span>
-                  <a [href]="msg.attachment.blobUrl" [download]="msg.attachment.name" title="Descargar">
-                    <i class="pi pi-download"></i>
-                  </a>
+                  <button class="msg-attachment-download-btn" (click)="downloadDocument(msg.attachment, i)"
+                    [disabled]="msg.attachment.downloading" title="Descargar">
+                    <i [class]="msg.attachment.downloading ? 'pi pi-spin pi-spinner' : 'pi pi-download'"></i>
+                  </button>
                 </div>
-                <div *ngIf="!msg.attachment.loading && !msg.attachment.blobUrl" class="msg-attachment-error">
+                <div *ngIf="!msg.attachment.loading && !msg.attachment.blobUrl && msg.attachment.type !== 'document'" class="msg-attachment-error">
                   <i class="pi pi-exclamation-circle"></i> <span>No se pudo cargar el archivo</span>
                 </div>
               </div>
@@ -168,15 +169,16 @@
                   [src]="msg.attachment.blobUrl" controls class="msg-attachment-audio"></audio>
                 <video *ngIf="!msg.attachment.loading && msg.attachment.type === 'video' && msg.attachment.blobUrl"
                   [src]="msg.attachment.blobUrl" controls class="msg-attachment-video"></video>
-                <div *ngIf="!msg.attachment.loading && msg.attachment.type === 'document' && msg.attachment.blobUrl"
+                <div *ngIf="!msg.attachment.loading && msg.attachment.type === 'document'"
                   class="msg-attachment-doc">
                   <i class="pi pi-file"></i>
                   <span>{{ msg.attachment.name }}</span>
-                  <a [href]="msg.attachment.blobUrl" [download]="msg.attachment.name" title="Descargar">
-                    <i class="pi pi-download"></i>
-                  </a>
+                  <button class="msg-attachment-download-btn" (click)="downloadDocument(msg.attachment, i)"
+                    [disabled]="msg.attachment.downloading" title="Descargar">
+                    <i [class]="msg.attachment.downloading ? 'pi pi-spin pi-spinner' : 'pi pi-download'"></i>
+                  </button>
                 </div>
-                <div *ngIf="!msg.attachment.loading && !msg.attachment.blobUrl" class="msg-attachment-error">
+                <div *ngIf="!msg.attachment.loading && !msg.attachment.blobUrl && msg.attachment.type !== 'document'" class="msg-attachment-error">
                   <i class="pi pi-exclamation-circle"></i> <span>No se pudo cargar el archivo</span>
                 </div>
               </div>
