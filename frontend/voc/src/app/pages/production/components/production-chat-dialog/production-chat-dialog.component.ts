@@ -333,7 +333,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
             attachment = { type: attType, name: meta.name, mimeType, path: fullPath, blobUrl: null, loading: isMedia };
           }
           return {
-            role: m.sender.id === email ? 'user' : 'assistant',
+            role: m.sender.id === m.agentId ? 'assistant' : 'user',
             content: m.messageContent.text,
             timestamp: new Date(m.messageContent.timestamp * 1000),
             ppt: (m.messageContent.type === 'File' && meta?.extension?.toLowerCase() === '.pptx')
@@ -511,23 +511,37 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   // Call the AI assistant API
   private askAssistant(userText: string) {
     this.isTyping.set(true);
-    const email = this.authService.currentUser()?.email ?? '';
+    const user = this.authService.currentUser();
+    const email = user?.email ?? '';
 
     const conversationId = this.selectedConversationId();
     const payload = {
-      async: false,
-      data: {
-        contact: email,
-        forceNewConversation: conversationId === null,
-        conversationId: conversationId ?? null,
-        text: userText
+      agentId: environment.chatAgentId,
+      conversationId: conversationId,
+      contactId: email || null,
+      channelId: environment.chatChannelId,
+      statusConversation: 'open',
+      finishConversation: false,
+      Sender: {
+        id: email || null,
+        phone: null,
+        name: user?.name ?? null,
+        email: email || null,
+        address: null,
+        urlPhotoProfile: null
+      },
+      message: {
+        text: userText,
+        type: 'text',
+        timestamp: String(Math.floor(Date.now() / 1000)),
+        metadata: null
       }
     };
 
     this.http.post<any>(
       environment.chatSendMessageUrl,
       payload,
-      { headers: { 'sweetmesoft-access-token': environment.chatAccessToken } }
+      { headers: { 'x-api-key': environment.chatApiKey } }
     ).pipe(takeUntil(this.cancelPending$)).subscribe({
       next: (response) => {
         this.isTyping.set(false);

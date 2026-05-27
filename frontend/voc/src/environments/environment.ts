@@ -11,5 +11,5 @@ export const environment = {
   chatGetConversationsUrl: 'http://localhost:5137/Agents/contact-conversations',
   chatGetMessagesUrl: 'http://localhost:5137/Agents/conversation-messages',
   chatDownloadFileUrl: 'http://localhost:5137/Files/download',
-  chatSendMessageUrl: 'https://n8n.srv865978.hstgr.cloud/webhook/chat_web_connectror/chat'
+  chatSendMessageUrl: 'https://n8n.srv865978.hstgr.cloud/webhook-test/chat/web'
 };
