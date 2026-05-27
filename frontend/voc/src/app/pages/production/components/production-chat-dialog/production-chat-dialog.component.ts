@@ -7,7 +7,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { DrawerModule } from 'primeng/drawer';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -23,26 +23,56 @@ interface ChatMessage {
 }
 
 interface ConversationItem {
-  _id: string;
-  _createTime: string;
-  _updateTime: string;
+  id: string;
   lastMessage: string;
   createdAt: string;
-  updatedAt?: string;
-  messageCount: string;
-  unreadCount: string;
+  updatedAt: string;
+  messageCount: number;
+  unreadCount: number;
   status: string;
   assignedTo: string;
-  metadata?: { ppt?: string | null; [key: string]: any };
+  humanAgentId: string | null;
+  secondsProcessed: number;
+  escalated: boolean;
+  solved: boolean;
+  tags: string[];
+  rating: string | null;
+  feeling: string | null;
+  summary: string | null;
+}
+
+interface ConversationMessageSender {
+  id: string;
+  phone: string;
+  name: string;
+  email: string;
+  address: string;
+  urlPhotoProfile: string | null;
+}
+
+interface ConversationMessageContent {
+  text: string;
+  type: string;
+  timestamp: number;
+  metadata: {
+    name: string;
+    extension: string;
+    size: number;
+    contentType: string;
+    mimeType: string;
+    duration: number | null;
+    path: string;
+  } | null;
 }
 
 interface ConversationMessage {
-  _id: string;
-  sender: string;
-  text: string;
-  timestamp: string;
-  type: string;
-  metadata?: { ppt?: string | null; [key: string]: any };
+  id: string;
+  agentId: string;
+  conversationId: string;
+  contactId: string;
+  channelId: string;
+  sender: ConversationMessageSender;
+  messageContent: ConversationMessageContent;
 }
 
 @Component({
@@ -126,7 +156,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     ];
 
     for (const conv of this.filteredConversations()) {
-      const d = new Date(conv.updatedAt ?? conv._updateTime);
+      const d = new Date(conv.updatedAt);
       const convDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
       if (convDay >= todayStart) {
         groups[0].items.push(conv);
@@ -155,7 +185,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   getConvRelativeTime(conv: ConversationItem): string {
-    const d = new Date(conv.updatedAt ?? conv._updateTime);
+    const d = new Date(conv.updatedAt);
     const now = new Date();
     const diffMs = now.getTime() - d.getTime();
     const diffMin = Math.floor(diffMs / 60000);
@@ -181,23 +211,27 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     const email = this.authService.currentUser()?.email;
     if (!email) return;
     this.conversationsLoading.set(true);
-    const params = new HttpParams()
-      .set('chatAccessToken', environment.chatAccessToken)
-      .set('contact', email);
-    this.http.get<{ conversations: ConversationItem[] }>(
+    const headers = new HttpHeaders({ 'x-api-key': environment.chatApiKey });
+    const body = {
+      agentId: environment.chatAgentId,
+      channelId: environment.chatChannelId,
+      contactId: email
+    };
+    this.http.post<ConversationItem[]>(
       environment.chatGetConversationsUrl,
-      { params }
+      body,
+      { headers }
     ).subscribe({
       next: (data) => {
-        const list = Array.isArray(data?.conversations) ? data.conversations : [];
+        const list = Array.isArray(data) ? data : [];
         const sorted = list.sort(
-          (a, b) => new Date(b.updatedAt ?? b._updateTime).getTime() - new Date(a.updatedAt ?? a._updateTime).getTime()
+          (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
         );
         this.conversations.set(sorted);
         this.conversationsLoading.set(false);
         // Si no hay conversación seleccionada (chat nuevo), seleccionar la más reciente
         if (!this.selectedConversationId() && sorted.length > 0) {
-          this.selectedConversationId.set(sorted[0]._id);
+          this.selectedConversationId.set(sorted[0].id);
         }
       },
       error: () => {
@@ -212,39 +246,37 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     if (!email) return;
     // Cancel any pending request before starting a new one
     this.cancelPending$.next();
-    this.selectedConversationId.set(conv._id);
+    this.selectedConversationId.set(conv.id);
     this.conversationMessagesLoading.set(true);
     this.messages.set([]);
     this.summary.set('');
-    const params = new HttpParams()
-      .set('chatAccessToken', environment.chatAccessToken)
-      .set('contact', email);
-    this.http.get<{ messages: ConversationMessage[] }>(
-      `${environment.chatGetMessagesUrl}/${conv._id}`,
-      { params }
+    const headers = new HttpHeaders({ 'x-api-key': environment.chatApiKey });
+    const body = {
+      agentId: environment.chatAgentId,
+      channelId: environment.chatChannelId,
+      contactId: email,
+      conversationId: conv.id
+    };
+    this.http.post<ConversationMessage[]>(
+      environment.chatGetMessagesUrl,
+      body,
+      { headers }
     ).pipe(takeUntil(this.cancelPending$)).subscribe({
       next: (data) => {
-        const list = Array.isArray(data?.messages) ? data.messages : [];
-        // Deduplicate by _id, then sort ascending by timestamp
-        const unique = list.filter((m, i, arr) => arr.findIndex(x => x._id === m._id) === i);
+        const list = Array.isArray(data) ? data : [];
+        // Deduplicate by id, then sort ascending by timestamp
+        const unique = list.filter((m, i, arr) => arr.findIndex(x => x.id === m.id) === i);
         const sorted = unique.sort(
-          (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          (a, b) => a.messageContent.timestamp - b.messageContent.timestamp
         );
         const mapped: ChatMessage[] = sorted.map(m => ({
-          role: m.sender === email ? 'user' : 'assistant',
-          content: m.text,
-          timestamp: new Date(m.timestamp),
-          ppt: m.metadata?.ppt ?? null
+          role: m.sender.id === email ? 'user' : 'assistant',
+          content: m.messageContent.text,
+          timestamp: new Date(m.messageContent.timestamp * 1000),
+          ppt: (m.messageContent.type === 'File' && m.messageContent.metadata?.extension?.toLowerCase() === '.pptx')
+            ? m.messageContent.metadata.path
+            : null
         }));
-
-        // Si la conversación tiene ppt en su metadata, adjuntarlo al último mensaje del asistente
-        const convPpt = conv.metadata?.ppt;
-        if (convPpt) {
-          const lastAssistantIdx = mapped.map(m => m.role).lastIndexOf('assistant');
-          if (lastAssistantIdx !== -1 && !mapped[lastAssistantIdx].ppt) {
-            mapped[lastAssistantIdx] = { ...mapped[lastAssistantIdx], ppt: convPpt };
-          }
-        }
 
         this.messages.set(mapped);
         this.conversationMessagesLoading.set(false);

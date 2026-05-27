@@ -42,7 +42,7 @@
         <div
           *ngFor="let conv of group.items"
           class="sidebar-item"
-          [class.sidebar-item--active]="selectedConversationId() === conv._id"
+          [class.sidebar-item--active]="selectedConversationId() === conv.id"
           [class.sidebar-item--disabled]="isTyping()"
           (click)="selectConversation(conv)">
           <div class="sidebar-item-row">
@@ -310,7 +310,7 @@
       <div class="sidebar-group-label">{{ group.label }}</div>
       <div *ngFor="let conv of group.items"
         class="sidebar-item"
-        [class.sidebar-item--active]="selectedConversationId() === conv._id"
+        [class.sidebar-item--active]="selectedConversationId() === conv.id"
         [class.sidebar-item--disabled]="isTyping()"
         (click)="selectConversation(conv); showHistoryDrawer.set(false)">
         <div class="sidebar-item-row">
