@@ -53,7 +53,6 @@ import { MaterialRegisterListDialogComponent } from './components/material-regis
     RippleModule,
     ProgressSpinnerModule,
     FilePreviewComponent,
-    PageHeaderComponent,
     ProductionChatDialogComponent,
     AnsDialogComponent,
     // Dynamic components do not strictly need to be in imports if opened via DialogService,
