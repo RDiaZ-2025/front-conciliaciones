@@ -15,11 +15,21 @@ import { MarkdownPipe } from '../../../../pipes/markdown.pipe';
 import { AuthService } from '../../../../services/auth.service';
 import { environment } from '../../../../../environments/environment';
 
+interface ChatMessageAttachment {
+  type: 'image' | 'audio' | 'video' | 'document';
+  name: string;
+  mimeType: string;
+  path: string;
+  blobUrl: string | null;
+  loading: boolean;
+}
+
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
   ppt?: string | null;
+  attachment?: ChatMessageAttachment | null;
 }
 
 interface ConversationItem {
@@ -177,6 +187,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   // Cancels any in-flight assistant or conversation-load request
   private cancelPending$ = new Subject<void>();
   private destroy$ = new Subject<void>();
+  private blobUrls: string[] = [];
 
   getConvTitle(conv: ConversationItem): string {
     const words = (conv.lastMessage ?? '').split(' ');
@@ -269,16 +280,54 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         const sorted = unique.sort(
           (a, b) => a.messageContent.timestamp - b.messageContent.timestamp
         );
-        const mapped: ChatMessage[] = sorted.map(m => ({
-          role: m.sender.id === email ? 'user' : 'assistant',
-          content: m.messageContent.text,
-          timestamp: new Date(m.messageContent.timestamp * 1000),
-          ppt: (m.messageContent.type === 'File' && m.messageContent.metadata?.extension?.toLowerCase() === '.pptx')
-            ? m.messageContent.metadata.path
-            : null
-        }));
+        const mapped: ChatMessage[] = sorted.map(m => {
+          const meta = m.messageContent.metadata;
+          let attachment: ChatMessageAttachment | null = null;
+          if (meta?.path && meta?.name) {
+            const mimeType = meta.mimeType || meta.contentType || '';
+            let attType: ChatMessageAttachment['type'] = 'document';
+            if (mimeType.startsWith('image/')) attType = 'image';
+            else if (mimeType.startsWith('audio/')) attType = 'audio';
+            else if (mimeType.startsWith('video/')) attType = 'video';
+            const fullPath = meta.path.endsWith('/') ? meta.path + meta.name : meta.path + '/' + meta.name;
+            attachment = { type: attType, name: meta.name, mimeType, path: fullPath, blobUrl: null, loading: true };
+          }
+          return {
+            role: m.sender.id === email ? 'user' : 'assistant',
+            content: m.messageContent.text,
+            timestamp: new Date(m.messageContent.timestamp * 1000),
+            ppt: (m.messageContent.type === 'File' && meta?.extension?.toLowerCase() === '.pptx')
+              ? meta.path
+              : null,
+            attachment
+          };
+        });
 
         this.messages.set(mapped);
+
+        // Download files for messages that have attachments
+        mapped.forEach((msg, index) => {
+          if (!msg.attachment) return;
+          const dlHeaders = new HttpHeaders({ 'x-api-key': environment.chatApiKey });
+          const dlBody = { agentId: environment.chatAgentId, channelId: environment.chatChannelId, path: msg.attachment.path };
+          this.http.post(environment.chatDownloadFileUrl, dlBody, { headers: dlHeaders, responseType: 'blob' })
+            .pipe(takeUntil(this.cancelPending$))
+            .subscribe({
+              next: (blob) => {
+                const blobUrl = URL.createObjectURL(blob as Blob);
+                this.blobUrls.push(blobUrl);
+                this.messages.update(msgs =>
+                  msgs.map((m, i) => i === index ? { ...m, attachment: { ...m.attachment!, blobUrl, loading: false } } : m)
+                );
+              },
+              error: () => {
+                this.messages.update(msgs =>
+                  msgs.map((m, i) => i === index ? { ...m, attachment: { ...m.attachment!, loading: false } } : m)
+                );
+              }
+            });
+        });
+
         this.conversationMessagesLoading.set(false);
         setTimeout(() => this.scrollToBottom(), 50);
       },
@@ -399,6 +448,8 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
+    this.blobUrls.forEach(url => URL.revokeObjectURL(url));
+    this.blobUrls = [];
     if (this.scrollContainer) {
       this.scrollContainer.style.overflowY = '';
       this.scrollContainer = null;

@@ -10,5 +10,6 @@ export const environment = {
   chatApiKey: 'az_ca561523a37440f3b634d7c1cf2a5cfe',
   chatGetConversationsUrl: 'http://localhost:5137/Agents/contact-conversations',
   chatGetMessagesUrl: 'http://localhost:5137/Agents/conversation-messages',
+  chatDownloadFileUrl: 'http://localhost:5137/Files/download',
   chatSendMessageUrl: 'https://n8n.srv865978.hstgr.cloud/webhook/chat_web_connectror/chat'
 };

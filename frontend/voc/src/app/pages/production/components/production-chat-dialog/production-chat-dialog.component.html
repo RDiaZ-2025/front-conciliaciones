@@ -122,7 +122,30 @@
           <!-- User Message -->
           <div *ngIf="msg.role === 'user'" class="msg-row msg-row--user fadein animation-duration-200">
             <div class="msg-bubble msg-bubble--user">
-              <p class="msg-content">{{ msg.content }}</p>
+              <p *ngIf="msg.content" class="msg-content">{{ msg.content }}</p>
+              <!-- Attachment -->
+              <div *ngIf="msg.attachment" class="msg-attachment">
+                <div *ngIf="msg.attachment.loading" class="msg-attachment-loading">
+                  <i class="pi pi-spin pi-spinner"></i> <span>Cargando...</span>
+                </div>
+                <img *ngIf="!msg.attachment.loading && msg.attachment.type === 'image' && msg.attachment.blobUrl"
+                  [src]="msg.attachment.blobUrl" class="msg-attachment-image" [alt]="msg.attachment.name" />
+                <audio *ngIf="!msg.attachment.loading && msg.attachment.type === 'audio' && msg.attachment.blobUrl"
+                  [src]="msg.attachment.blobUrl" controls class="msg-attachment-audio"></audio>
+                <video *ngIf="!msg.attachment.loading && msg.attachment.type === 'video' && msg.attachment.blobUrl"
+                  [src]="msg.attachment.blobUrl" controls class="msg-attachment-video"></video>
+                <div *ngIf="!msg.attachment.loading && msg.attachment.type === 'document' && msg.attachment.blobUrl"
+                  class="msg-attachment-doc">
+                  <i class="pi pi-file"></i>
+                  <span>{{ msg.attachment.name }}</span>
+                  <a [href]="msg.attachment.blobUrl" [download]="msg.attachment.name" title="Descargar">
+                    <i class="pi pi-download"></i>
+                  </a>
+                </div>
+                <div *ngIf="!msg.attachment.loading && !msg.attachment.blobUrl" class="msg-attachment-error">
+                  <i class="pi pi-exclamation-circle"></i> <span>No se pudo cargar el archivo</span>
+                </div>
+              </div>
               <span class="msg-time">{{ msg.timestamp | date:'HH:mm' }}</span>
             </div>
           </div>
@@ -133,7 +156,30 @@
               <i class="pi pi-sparkles"></i>
             </div>
             <div class="msg-bubble msg-bubble--bot">
-              <div class="msg-content" [innerHTML]="msg.content | markdown"></div>
+              <div *ngIf="msg.content" class="msg-content" [innerHTML]="msg.content | markdown"></div>
+              <!-- Attachment -->
+              <div *ngIf="msg.attachment" class="msg-attachment">
+                <div *ngIf="msg.attachment.loading" class="msg-attachment-loading">
+                  <i class="pi pi-spin pi-spinner"></i> <span>Cargando...</span>
+                </div>
+                <img *ngIf="!msg.attachment.loading && msg.attachment.type === 'image' && msg.attachment.blobUrl"
+                  [src]="msg.attachment.blobUrl" class="msg-attachment-image" [alt]="msg.attachment.name" />
+                <audio *ngIf="!msg.attachment.loading && msg.attachment.type === 'audio' && msg.attachment.blobUrl"
+                  [src]="msg.attachment.blobUrl" controls class="msg-attachment-audio"></audio>
+                <video *ngIf="!msg.attachment.loading && msg.attachment.type === 'video' && msg.attachment.blobUrl"
+                  [src]="msg.attachment.blobUrl" controls class="msg-attachment-video"></video>
+                <div *ngIf="!msg.attachment.loading && msg.attachment.type === 'document' && msg.attachment.blobUrl"
+                  class="msg-attachment-doc">
+                  <i class="pi pi-file"></i>
+                  <span>{{ msg.attachment.name }}</span>
+                  <a [href]="msg.attachment.blobUrl" [download]="msg.attachment.name" title="Descargar">
+                    <i class="pi pi-download"></i>
+                  </a>
+                </div>
+                <div *ngIf="!msg.attachment.loading && !msg.attachment.blobUrl" class="msg-attachment-error">
+                  <i class="pi pi-exclamation-circle"></i> <span>No se pudo cargar el archivo</span>
+                </div>
+              </div>
               <!-- PPT Preview -->
               <div *ngIf="msg.ppt" class="msg-ppt">
                 <div class="msg-ppt-header">
