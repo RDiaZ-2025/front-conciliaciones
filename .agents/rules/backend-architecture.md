@@ -1,7 +1,8 @@
 ---
-alwaysApply: false
-description: 
+trigger: glob
+globs: backend/**
 ---
+
 # Backend Architecture & Patterns Rules
 
 - Keep controllers thin: Controllers should only handle HTTP concerns (req/res, status codes). Move all business logic to `services/`.

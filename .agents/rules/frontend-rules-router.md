@@ -1,7 +1,8 @@
 ---
-alwaysApply: false
+trigger: glob
 globs: frontend/*
 ---
+
 # Frontend Rules Router
 
 Follow these specific rules based on your current task in the frontend project:

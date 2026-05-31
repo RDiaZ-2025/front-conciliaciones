@@ -1,7 +1,8 @@
 ---
-alwaysApply: false
+trigger: glob
 globs: frontend/*
 ---
+
 # Frontend UI & Components
 
 ### Use PrimeNG Components

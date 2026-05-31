@@ -1,7 +1,7 @@
 ---
-alwaysApply: false
-description: 
+trigger: always_on
 ---
+
 # Backend Project Structure Rules
 
 `src/app.ts` -> Express application configuration, middlewares, and route registration
