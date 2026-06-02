@@ -1,7 +1,8 @@
 ---
-alwaysApply: false
+trigger: glob
 globs: backend/*
 ---
+
 # Backend Naming Conventions Rules
 
 - Use `snake.case` for file names in controllers, services, and routes (e.g., `auth.controller.ts`).

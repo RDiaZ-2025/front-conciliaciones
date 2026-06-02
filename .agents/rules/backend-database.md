@@ -1,7 +1,8 @@
 ---
-alwaysApply: false
-description: 
+trigger: glob
+globs: backend/**
 ---
+
 # Backend Database & TypeORM Rules
 
 - All changes over the models must be reflected in the database by creating a migration and running it. NEVER use `synchronize: true` in production.

@@ -1,7 +1,8 @@
 ---
-alwaysApply: false
+trigger: glob
 globs: frontend/*
 ---
+
 # Frontend Architecture & Code Reusability
 
 ### Code Organization

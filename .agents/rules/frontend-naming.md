@@ -1,7 +1,8 @@
 ---
-alwaysApply: false
+trigger: glob
 globs: frontend/*
 ---
+
 # Frontend Naming Conventions
 
 ### Naming Conventions

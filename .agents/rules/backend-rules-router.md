@@ -1,7 +1,8 @@
 ---
-alwaysApply: false
+trigger: glob
 globs: backend/*
 ---
+
 # Backend Rules Router
 
 Follow these specific rules based on your current task:

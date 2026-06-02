@@ -1,7 +1,8 @@
 ---
-alwaysApply: false
+trigger: glob
 globs: backend/*
 ---
+
 # Backend Code Quality Rules
 
 - Write clear, self-documenting code. Do not leave commented-out code blocks in production.

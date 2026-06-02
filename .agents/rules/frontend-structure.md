@@ -1,7 +1,8 @@
 ---
-alwaysApply: false
+trigger: always_on
 globs: frontend/*
 ---
+
 # Frontend Project Structure
 
 `public/assets` -> images
