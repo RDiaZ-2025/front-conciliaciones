@@ -7,7 +7,7 @@ export const environment = {
   chatAccessToken: 'SgJhjtMN78E3EmJWrczj-qhCHY9wOovZfquv2g8e8',
   chatAgentId: 'drWvQYWbVmoG8rRTxseV',
   chatChannelId: 'qhCHY9wOovZfquv2g8e8',
-  chatApiKey: 'az_ca561523a37440f3b634d7c1cf2a5cfe',
+  chatApiKey: 'qhCHY9wOovZfquv2g8e8',
   chatGetConversationsUrl: 'https://apiqa.azemblia.ai/Agents/contact-conversations',
   chatGetMessagesUrl: 'https://apiqa.azemblia.ai/Agents/conversation-messages',
   chatDownloadFileUrl: 'https://apiqa.azemblia.ai/Files/download',

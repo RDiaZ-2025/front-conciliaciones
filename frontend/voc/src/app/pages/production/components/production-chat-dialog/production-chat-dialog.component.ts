@@ -540,8 +540,10 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         this.isTyping.set(false);
 
         let responseText = '';
-        // Primary: new format { output: { response: "..." }, metadata: {...} }
-        if (response?.output?.response) {
+        // Primary: new format { genericChat: { response: "..." }, conversationId: "..." }
+        if (response?.genericChat?.response) {
+          responseText = response.genericChat.response;
+        } else if (response?.output?.response) {
           responseText = response.output.response;
         } else if (Array.isArray(response) && response.length > 0 && response[0].output?.response) {
           responseText = response[0].output.response;
@@ -564,10 +566,16 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         }
 
         const pptUrl: string | null =
+          response?.genericChat?.ppt ??
           response?.metadata?.connector_ppt ??
           response?.output?.ppt ??
           response?.ppt ??
           null;
+
+        // Update conversationId if the API returns one
+        if (response?.conversationId) {
+          this.selectedConversationId.set(response.conversationId);
+        }
 
         this.messages.update(m => [...m, {
           role: 'assistant',
