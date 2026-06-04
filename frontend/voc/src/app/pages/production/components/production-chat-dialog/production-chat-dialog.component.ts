@@ -566,6 +566,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         }
 
         const pptUrl: string | null =
+          response?.genericChat?.metadata?.connector_ppt ??
           response?.genericChat?.ppt ??
           response?.metadata?.connector_ppt ??
           response?.output?.ppt ??
