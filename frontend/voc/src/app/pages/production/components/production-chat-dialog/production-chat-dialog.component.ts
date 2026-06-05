@@ -117,6 +117,28 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
 
   @Output() requestCreated = new EventEmitter<any>();
 
+  // Typing status messages rotation
+  private readonly typingMessages = [
+    'MIA está pensando',
+    'MIA está procesando tu solicitud',
+    'MIA está reuniendo la información necesaria',
+    'MIA está analizando los datos',
+    'MIA está consultando las bases de datos',
+    'MIA está revisando la información disponible',
+    'MIA está buscando en los registros',
+    'MIA está organizando los resultados',
+    'MIA está verificando los detalles',
+    'MIA está generando la respuesta',
+    'MIA está consultando fuentes de información',
+    'MIA está elaborando una solución',
+    'MIA está sintetizando la información',
+    'MIA está validando los datos',
+    'MIA está preparando todo para ti'
+  ];
+
+  typingStatusText = signal<string>('MIA está pensando');
+  private typingMessageInterval: ReturnType<typeof setInterval> | null = null;
+
   // State
   messages = signal<ChatMessage[]>([]);
   isTyping = signal<boolean>(false);
@@ -470,6 +492,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
 
   resetChat() {
     this.cancelPending$.next();
+    this.stopTypingMessageRotation();
     this.messages.set([]);
     this.summary.set('');
     this.files.set([]);
@@ -506,11 +529,32 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     this.cancelPending$.complete();
     this.destroy$.next();
     this.destroy$.complete();
+    this.stopTypingMessageRotation();
+  }
+
+  // --- Typing status rotation ---
+
+  private startTypingMessageRotation(): void {
+    let index = 0;
+    this.typingStatusText.set(this.typingMessages[0]);
+    this.typingMessageInterval = setInterval(() => {
+      index = (index + 1) % this.typingMessages.length;
+      this.typingStatusText.set(this.typingMessages[index]);
+    }, 15000);
+  }
+
+  private stopTypingMessageRotation(): void {
+    if (this.typingMessageInterval) {
+      clearInterval(this.typingMessageInterval);
+      this.typingMessageInterval = null;
+    }
+    this.typingStatusText.set('MIA está pensando');
   }
 
   // Call the AI assistant API
   private askAssistant(userText: string) {
     this.isTyping.set(true);
+    this.startTypingMessageRotation();
     const user = this.authService.currentUser();
     const email = user?.email ?? '';
 
@@ -537,6 +581,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       { headers: { 'x-api-key': environment.chatApiKey } }
     ).pipe(takeUntil(this.cancelPending$)).subscribe({
       next: (response) => {
+        this.stopTypingMessageRotation();
         this.isTyping.set(false);
 
         let responseText = '';
@@ -594,6 +639,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         this.loadConversations();
       },
       error: (err) => {
+        this.stopTypingMessageRotation();
         this.isTyping.set(false);
         console.error('Error asking assistant:', err);
 
