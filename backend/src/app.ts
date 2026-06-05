@@ -21,6 +21,7 @@ import objectiveRoutes from './routes/objective.routes';
 import audienceRoutes from './routes/audience.routes';
 import statusRoutes from './routes/status.routes';
 import campaignRoutes from './routes/campaign.routes';
+import nocRoutes from './routes/noc.routes';
 
 import { actionLogger, skipLogging } from './middleware/actionLogger';
 
@@ -94,6 +95,7 @@ app.use('/api/objectives', objectiveRoutes);
 app.use('/api/audience', audienceRoutes);
 app.use('/api/statuses', statusRoutes);
 app.use('/api/campaigns', campaignRoutes);
+app.use('/api', nocRoutes);
 
 // Ruta 404
 app.use('*', (req, res) => {

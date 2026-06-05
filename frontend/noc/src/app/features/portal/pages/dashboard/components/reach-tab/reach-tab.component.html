@@ -1,0 +1,74 @@
+<div *ngIf="data" class="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up">
+
+    <!-- Users by Section -->
+    <div class="glass-effect rounded-2xl border border-main p-4 flex flex-col shadow-2xl">
+        <div class="mb-5">
+            <h3 class="font-bold text-main text-lg flex items-center">
+                <span class="w-2 h-6 bg-primary rounded-full mr-3 shadow-[0_0_15px_var(--primary-glow)]"></span>
+                Usuarios por Sección
+            </h3>
+            <p class="text-[10px] text-muted font-bold uppercase tracking-wider mt-1">Alcance único</p>
+        </div>
+        <div class="space-y-4 overflow-y-auto max-h-[400px] scroll-premium pr-2">
+            <div *ngFor="let item of data.users_by_section; let i = index" (click)="onSectionClick(item.section)"
+                class="group cursor-pointer hover:bg-premium-card p-2 rounded-xl transition-all">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-semibold text-main group-hover:text-primary transition-colors">{{
+                        item.section }}</span>
+                    <span class="text-[10px] font-semibold text-muted group-hover:text-main transition-colors">{{
+                        item.users | number }}</span>
+                </div>
+                <div class="w-full bg-premium-card rounded-full h-1.5 overflow-hidden">
+                    <div class="bg-primary h-full rounded-full group-hover:shadow-[0_0_10px_var(--primary-glow)] transition-all"
+                        [style.width.%]="(item.users / data.users_by_section[0].users) * 100"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page Views by Topic -->
+    <div class="glass-effect rounded-2xl border border-main p-4 flex flex-col shadow-2xl">
+        <div class="mb-5">
+            <h3 class="font-bold text-main text-lg flex items-center">
+                <span class="w-2 h-6 bg-orange-500 rounded-full mr-3 shadow-[0_0_15px_rgba(249,115,22,0.4)]"></span>
+                Vistas por Tema
+            </h3>
+            <p class="text-[10px] text-muted font-bold uppercase tracking-wider mt-1">Volumen de consumo</p>
+        </div>
+        <div class="space-y-2 overflow-y-auto max-h-[400px] scroll-premium pr-2">
+            <div *ngFor="let item of data.views_by_topic; let i = index"
+                class="flex items-center justify-between p-3 hover:bg-premium-card rounded-xl transition-all group">
+                <div class="flex items-center gap-4">
+                    <span class="text-[10px] font-semibold text-muted group-hover:text-orange-500 w-5">{{ i + 1
+                        }}</span>
+                    <span class="text-sm font-semibold text-main truncate max-w-[150px]">{{ item.topic }}</span>
+                </div>
+                <span class="text-xs font-bold text-orange-500">{{ item.views | number }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Depth Ratio -->
+    <div class="glass-effect rounded-2xl border border-main p-4 flex flex-col shadow-2xl">
+        <div class="mb-5">
+            <h3 class="font-bold text-main text-lg flex items-center">
+                <span class="w-2 h-6 bg-emerald-400 rounded-full mr-3 shadow-[0_0_15px_rgba(52,211,153,0.4)]"></span>
+                Profundidad (Vistas/Sesión)
+            </h3>
+            <p class="text-[10px] text-muted font-bold uppercase tracking-wider mt-1">¿Qué tanto consumen en una
+                visita?</p>
+        </div>
+        <div class="space-y-4 overflow-y-auto max-h-[400px] scroll-premium pr-2">
+            <div *ngFor="let item of data.depth_by_section"
+                class="flex items-center justify-between border-b border-muted pb-3 last:border-0 hover:bg-premium-card p-2 rounded-xl transition-all group">
+                <span class="text-sm font-semibold text-main group-hover:text-emerald-400 transition-colors">{{
+                    item.section }}</span>
+                <span
+                    class="text-[11px] font-bold text-emerald-400 bg-emerald-400/10 px-3 py-1.5 rounded-lg border border-emerald-400/20 shadow-lg">{{
+                    item.depth_ratio
+                    | number:'1.2-2' }}</span>
+            </div>
+        </div>
+    </div>
+
+</div>

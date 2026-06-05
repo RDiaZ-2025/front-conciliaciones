@@ -55,4 +55,7 @@ router.put('/:id/toggle-status', requirePermission('admin_panel'), userControlle
 // Actualizar permisos de usuario - requiere permiso de gestión de permisos
 router.put('/:id/permissions', requirePermission('admin_panel'), userController.updateUserPermissions);
 
+// Eliminar usuario - requiere permiso de administración
+router.delete('/:id', requirePermission('admin_panel'), userController.deleteUser);
+
 export default router;

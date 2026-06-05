@@ -1,0 +1,59 @@
+/* Dashboard specific styles */
+:host {
+    display: block;
+}
+
+.tab-btn {
+    display: flex;
+    align-items: center;
+    padding: 12px 24px;
+    border-radius: 14px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    transition: var(--transition-premium);
+    border: none;
+    background: transparent;
+    cursor: pointer;
+
+    &:hover {
+        color: white;
+        background: rgba(255, 255, 255, 0.05);
+        transform: translateY(-2px);
+    }
+
+    svg {
+        transition: transform 0.3s ease;
+    }
+
+    &:hover svg {
+        transform: scale(1.1) rotate(5deg);
+    }
+}
+
+.tab-active {
+    background: var(--primary) !important;
+    color: white !important;
+    box-shadow: 0 10px 20px var(--primary-glow) !important;
+    transform: translateY(-2px);
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -468px 0;
+    }
+
+    100% {
+        background-position: 468px 0;
+    }
+}
+
+.skeleton {
+    background: rgba(255, 255, 255, 0.03);
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.08) 20%, rgba(255, 255, 255, 0.03) 40%, rgba(255, 255, 255, 0.03) 100%);
+    background-repeat: no-repeat;
+    background-size: 800px 104px;
+    display: inline-block;
+    position: relative;
+    animation: shimmer 1.5s linear infinite forwards;
+}

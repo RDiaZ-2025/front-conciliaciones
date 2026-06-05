@@ -73,7 +73,9 @@ export class UserService {
       name: userData.name,
       email: userData.email,
       passwordHash: passwordHash,
-      status: 1
+      status: 1,
+      role: (userData as any).role || 'user',
+      permissionsStr: userData.permissions ? userData.permissions.join(',') : ''
     });
 
     const savedUser = await userRepository.save(newUser);
@@ -250,6 +252,14 @@ export class UserService {
       user.status = updateData.status;
     }
 
+    if ((updateData as any).role !== undefined) {
+      user.role = (updateData as any).role;
+    }
+
+    if (updateData.permissions !== undefined) {
+      user.permissionsStr = updateData.permissions.join(',');
+    }
+
     // Guardar cambios del usuario
     await userRepository.save(user);
 
@@ -379,5 +389,40 @@ export class UserService {
       await queryRunner.release();
     }
 
+  }
+
+  // Eliminar usuario
+  async deleteUser(userId: number): Promise<{ success: boolean; message?: string }> {
+    if (!AppDataSource.isInitialized) {
+      return {
+        success: false,
+        message: 'Base de datos no disponible'
+      };
+    }
+
+    const userRepository = AppDataSource.getRepository(User);
+    const permissionByUserRepository = AppDataSource.getRepository(PermissionByUser);
+
+    const user = await userRepository.findOne({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      return {
+        success: false,
+        message: 'Usuario no encontrado'
+      };
+    }
+
+    // Eliminar permisos asociados
+    await permissionByUserRepository.delete({ userId: userId });
+
+    // Eliminar usuario
+    await userRepository.remove(user);
+
+    return {
+      success: true,
+      message: 'Usuario eliminado exitosamente'
+    };
   }
 }

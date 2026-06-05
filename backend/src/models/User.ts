@@ -48,6 +48,18 @@ export class User {
     status!: number;
 
     /**
+     * User's role (e.g., 'admin', 'user')
+     */
+    @Column({ name: 'Role', type: 'varchar', length: 255, nullable: true, default: 'user' })
+    role!: string;
+
+    /**
+     * User's permissions as a comma-separated string (for NOC compatibility)
+     */
+    @Column({ name: 'Permissions', type: 'varchar', length: 500, nullable: true, default: '' })
+    permissionsStr!: string;
+
+    /**
      * Foreign key to Team table
      */
     @Column({ name: 'TeamId', type: 'int', nullable: true })

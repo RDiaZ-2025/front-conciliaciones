@@ -1,1 +1,150 @@
-/* You can add global styles to this file, and also import other style files */
+/* Global Styles & Hyper-Modern Design System */
+@import "primeicons/primeicons.css";
+@import "primeflex/primeflex.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    /* Font Family from VOC */
+    --font-family: 'Alan Sans', sans-serif;
+
+    /* Fixed Branding Tokens */
+    --primary: #EE3829;
+    --primary-glow: rgba(238, 56, 41, 0.3);
+    --secondary: #ffa502;
+    --accent: #2ed573;
+
+    /* Transitions */
+    --transition-premium: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    --radius-sm: 12px;
+    --radius-md: 20px;
+    --radius-lg: 32px;
+
+    /* PrimeNG v18 design token mappings for PrimeFlex compatibility */
+    --surface-ground: var(--p-surface-50);
+    --surface-card: var(--p-surface-0);
+    --surface-hover: var(--p-surface-100);
+    --surface-border: var(--p-content-border-color);
+    --text-color: var(--p-text-color);
+    --text-muted-color: var(--p-text-muted-color);
+
+    /* Dynamic Mapping to PrimeNG v18+ CSS variables */
+    --bg-app: var(--surface-ground);
+    --bg-card: var(--surface-card);
+    --bg-hover: var(--surface-hover);
+    --glass-bg: var(--surface-card);
+    --glass-border: var(--surface-border);
+    --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    --text-main: var(--text-color);
+    --text-muted: var(--text-muted-color);
+    --login-overlay: radial-gradient(circle at center, rgba(15, 17, 21, 0.4) 0%, rgba(15, 17, 21, 0.95) 100%);
+    --border-main: var(--surface-border);
+    --border-muted: var(--surface-border);
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-family);
+    background-color: var(--surface-ground);
+    color: var(--text-color);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+/* Global Theme Utilities */
+@layer utilities {
+    .text-main {
+        color: var(--text-main) !important;
+    }
+
+    .text-muted {
+        color: var(--text-muted) !important;
+    }
+
+    .bg-premium-card {
+        background: var(--bg-card) !important;
+    }
+
+    .bg-premium-hover {
+        background: var(--bg-hover) !important;
+    }
+
+    .bg-premium-card-light {
+        background: var(--bg-card) !important;
+        opacity: 0.8;
+    }
+
+    .border-main {
+        border-color: var(--border-main) !important;
+    }
+
+    .border-muted {
+        border-color: var(--border-muted) !important;
+    }
+
+    /* Global Glass Utility */
+    .glass-effect {
+        background: var(--glass-bg) !important;
+        backdrop-filter: blur(25px) saturate(200%);
+        -webkit-backdrop-filter: blur(25px) saturate(200%);
+        border: 1px solid var(--glass-border) !important;
+        box-shadow: var(--glass-shadow) !important;
+    }
+}
+
+/* Animations Sets */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+@keyframes pulse-glow {
+    0% {
+        box-shadow: 0 0 0 0 var(--primary-glow);
+    }
+
+    70% {
+        box-shadow: 0 0 0 15px hsla(355, 100%, 60%, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 hsla(355, 100%, 60%, 0);
+    }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-app);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    border: 2px solid var(--bg-app);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+}
+
+svg {
+    display: block;
+}
