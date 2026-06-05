@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "ad-manager-carlos",
+  "private_key_id": "7e9c1f073df85934464441e6a273721c2c255f02",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDtdycBTrl3dY+1\nhM0rGfiL4qtv6k/vpmgqQ9G1PgdLPEJmSXhdFYZ4HFiZURa7W2xbLWGaXc2nyqmn\n+HF/l5yY5eBQFa3uQ0mQfkPB3RNZ+gXC0BXldgORgf0MkaMupgcqNS4PLJYmX+vp\nbxKsa/l5vFCU6ide4LItGzdMHDnGg4T1KtL4Iv67HqPtLyJyXEE8xjmjEu0v7YBY\n2z+r3XZzFOkrRcahEK6nuQDMlkIbw0UY0WaLkOnX9uRUGVrrVsx3BnUVsygwfNx8\n6/WPDyfwuSolAZklQlvJfBUSsT01ixVs1vzfsNtVxJeh0+Kt3L1ctX8BFDd7ybQu\nvI/po1AhAgMBAAECggEAHqF/CN55yAdZw+VfKGR6OLkYD3X0XQpkZ1ybgWXV6luE\niSMzASF/WKD3a2zCojpMbi/FZknGob008zN17dUbCxH5RFCiQJiyCuRuow7Rqd/k\nEa67vv82aJ+RilHYRcfUJsVOAqu9VofgVhp7bdL5DuiT+xF/20TgAYzVg4jPNGQ6\nX+OFALlKkHtJyDBW+qnLJ90sUiQmDQoCnwBg5oNbmpFlQP9bZrV8/4Il1pz7TSxN\noJr8P4k1lNuUUwj4u218BGgX9hjHYSwegBv3MpAzY08jE2rJ8hNgv3tf+Q0NuMqL\nTHKanAxY2gv1Fjn/cLPQmBIEBexfCF3GQP7xKsKjnQKBgQD6v7pIhyMXsXOcVWZy\na5IMXK+k6hu+FMiS8HqmxHc4gcr698MQpMnP4OSlKX45TADwmeH3NL0u69mpuipn\nZxVec5mMRzWQCYSbAZYaWuAwjjQfsRGilgwpdsB0lak0BFQJTlWZ7+e5O0+RbxgY\nJ8539FX+74NqzSSAWfxmXO72MwKBgQDycDYjiIpjAHyeU2l2q8RTu9RwGegRLld1\nlrhRtmd64jpryCZjEcK+2URsfdoCBgcRWgrgIGKUjVWhSA9mszKEZUaPclaLpZ3+\nL8k79heCQYvNapqyObvmbcghRyrwRjaMzP9Un5vDPGEqMExcXTys6uIYwYQ2nn2D\naTDJ9MMEWwKBgHfIXSnGfIoV9/9ngHAKWRNUt4dVWnlcHlCrVjwSQE2bGyb2cpWh\n0tJeQXtwrd6bIxvMtvhLllAy1KDS0Ozifn/HQ0OSxNCQ62rMwDLI1K39UIMPKDh9\n60Nnehp3YAP8SVTEufm2dAC1h5YW9vCbG3OMIgSN0D6VzukNk5gmrvSnAoGAZdGC\nq0G4/QNDUyss684P0irceYgn0q9nw9bc6lR0+ULxzjptBMZ8x7Jv7jCc0qS9aygp\n0R9Ix6LkB6w/653u5XOzQqN+fX+87vgax7f+/5GPqWHQPnHI3GnW10MQYYDbgB7I\nTT4LKN++3v0R1OjDhsvO0R7U7Ct8Ayi2eNr23GkCgYAbB2IT3WfPUf7kjSlXcMq/\nyl4/1nBPSxWGxJbUASx23xDamcK+thYAAitOkOGjmXCeKSAkdti7+I4bp6fwtEd/\nj2TTFIKsEwFVB1U7hKWCITT56ggCGUA+EZERnHV5akZO3fj1Hpnnybevyj5KO0+q\nxEHW08K9ESMJtjOxGRImNQ==\n-----END PRIVATE KEY-----\n",
+  "client_email": "admanager-backend@ad-manager-carlos.iam.gserviceaccount.com",
+  "client_id": "114030002703145520607",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/admanager-backend%40ad-manager-carlos.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

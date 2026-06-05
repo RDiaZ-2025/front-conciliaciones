@@ -1,0 +1,92 @@
+<div class="login-page-wrapper">
+  <!-- Background Image Overlay -->
+  <div class="bg-overlay"></div>
+
+  <div class="login-container animate-fade-in-up">
+    <div class="login-card glass-effect">
+      <!-- Theme Toggle -->
+      <div class="flex justify-end mb-4">
+        <button (click)="themeService.toggleTheme()"
+          class="w-10 h-10 flex items-center justify-center rounded-xl bg-premium-card border border-white/10 hover:bg-premium-hover transition-all text-muted hover:text-main"
+          [title]="themeService.isDarkMode ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'">
+          <svg *ngIf="themeService.isDarkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 3v1m0 16v1m9-9h-1M4 9h-1m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707m12.728 12.728L5.657 5.657">
+            </path>
+            <circle cx="12" cy="12" r="5"></circle>
+          </svg>
+          <svg *ngIf="!themeService.isDarkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="brand-logo">
+        <div class="logo-orb">
+          <img [src]="themeService.isDarkMode ? '/Oscuro.png' : '/Claro.png'" alt="Logo">
+        </div>
+      </div>
+
+      <div class="text-center mb-10">
+        <h2 class="text-3xl font-black text-main tracking-tight">Acceso Exclusivo</h2>
+        <p class="text-muted font-medium">Gestiona el futuro de la noticia</p>
+      </div>
+
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-6">
+
+        <div class="form-group">
+          <label class="premium-label">Identidad Digital</label>
+          <div class="input-wrapper">
+            <span class="icon">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207">
+                </path>
+              </svg>
+            </span>
+            <input type="email" formControlName="email" placeholder="usuario@redplus.com" class="premium-input">
+          </div>
+          <div *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched" class="error-msg">
+            Ingresa un correo electrónico corporativo
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="premium-label">Clave de Seguridad</label>
+          <div class="input-wrapper">
+            <span class="icon">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                </path>
+              </svg>
+            </span>
+            <input type="password" formControlName="password" placeholder="••••••••" class="premium-input">
+          </div>
+          <div *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched" class="error-msg">
+            La clave es obligatoria
+          </div>
+        </div>
+
+        <div *ngIf="errorMsg" class="alert-box-premium animate-pulse">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          {{ errorMsg }}
+        </div>
+
+        <button type="submit" class="btn-premium-login" [disabled]="loginForm.invalid || isLoading">
+          <span *ngIf="!isLoading">Autenticar Entrada</span>
+          <span *ngIf="isLoading" class="loader-premium"></span>
+        </button>
+
+      </form>
+
+      <div class="footer-meta">
+        <p>© 2026 Red+ Noticias. Todos los derechos reservados.</p>
+      </div>
+    </div>
+  </div>
+</div>

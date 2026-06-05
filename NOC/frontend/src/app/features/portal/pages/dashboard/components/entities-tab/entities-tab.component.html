@@ -1,0 +1,185 @@
+<div *ngIf="data" class="animate-fade-in-up space-y-8">
+    <!-- View 1: Main List -->
+    <div *ngIf="!selectedEntityDetail" class="space-y-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column: Entities Table -->
+            <div class="lg:col-span-2 glass-effect rounded-2xl border border-main p-8 shadow-2xl relative">
+                <!-- Loading Overlay - Optimizado para no bloquear -->
+                <div *ngIf="isDetailLoading"
+                    class="absolute inset-0 bg-black/40 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl pointer-events-none border border-primary/30">
+                    <div class="flex flex-col items-center">
+                        <div
+                            class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4">
+                        </div>
+                        <span
+                            class="text-[10px] font-black text-main uppercase tracking-widest bg-black/80 px-4 py-1 rounded-full">Analizando...</span>
+                    </div>
+                </div>
+
+                <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div class="flex-grow max-w-md">
+                        <h3 class="font-black text-main text-xl flex items-center mb-4">
+                            <span
+                                class="w-2 h-8 bg-primary rounded-full mr-4 shadow-[0_0_15px_var(--primary-glow)]"></span>
+                            Catálogo Editorial
+                        </h3>
+                        <!-- Search Bar Phase 2 -->
+                        <div class="relative group">
+                            <input type="text" [(ngModel)]="searchTerm"
+                                placeholder="Buscar entidad (p. ej: Petro, Colombia...)"
+                                class="w-full bg-white/5 border border-muted rounded-xl py-3 pl-12 pr-4 text-xs font-bold text-main placeholder-muted transition-all focus:border-primary/50 focus:bg-white/10 outline-none">
+                            <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted group-focus-within:text-primary transition-colors"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div
+                        class="bg-primary/10 px-6 py-3 rounded-2xl border border-primary/20 flex items-center gap-4 shadow-lg shrink-0 h-fit mb-0.5">
+                        <div class="text-[10px] font-black text-primary uppercase tracking-widest">Media
+                        </div>
+                        <div class="text-2xl font-black text-main">{{ data.section_avg | number:'1.1-1' }}%</div>
+                    </div>
+                </div>
+
+                <div class="overflow-hidden rounded-2xl border border-muted">
+                    <table class="w-full text-left border-separate border-spacing-0">
+                        <thead>
+                            <tr class="bg-premium-card text-center">
+                                <th class="p-4 w-12 text-center border-b border-muted"></th>
+                                <th
+                                    class="p-4 text-[10px] font-black text-muted uppercase tracking-widest text-left border-b border-muted">
+                                    Entidad</th>
+                                <th
+                                    class="p-4 text-[10px] font-black text-muted uppercase tracking-widest text-left border-b border-muted">
+                                    Tendencia (7d)</th>
+                                <th
+                                    class="p-4 text-[10px] font-black text-muted uppercase tracking-widest border-b border-muted">
+                                    Engagement</th>
+                                <th
+                                    class="p-4 text-[10px] font-black text-muted uppercase tracking-widest border-b border-muted">
+                                    Percentil</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            <tr *ngFor="let ent of filteredEntities" (click)="onEntityClick(ent.entity)"
+                                class="hover:bg-premium-card transition-all group cursor-pointer border-b border-muted">
+                                <!-- Semaphore -->
+                                <td class="p-4 text-center">
+                                    <span [title]="getSemaphore(ent).label" class="text-lg">{{ getSemaphore(ent).icon
+                                        }}</span>
+                                </td>
+                                <!-- Name -->
+                                <td class="p-4">
+                                    <div class="font-black text-main group-hover:text-primary transition-colors">{{
+                                        ent.entity }}</div>
+                                    <div class="text-[9px] text-muted font-bold uppercase tracking-tighter">
+                                        Q: {{ (ent.semantic_score + ent.syntactic_score) / 2 | number:'1.2-2' }}
+                                    </div>
+                                </td>
+                                <!-- Sparkline -->
+                                <td class="p-4">
+                                    <svg viewBox="0 0 100 30" width="100" height="30" class="overflow-visible">
+                                        <polyline fill="none"
+                                            [attr.stroke]="getSemaphore(ent).icon === '🔴' ? '#ef4444' : '#10b981'"
+                                            stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+                                            [attr.points]="getSparklinePoints(ent.sparkline)" />
+                                    </svg>
+                                </td>
+                                <!-- Engagement -->
+                                <td class="p-4 text-right">
+                                    <div class="font-black text-main">{{ ent.engagement_score }}%</div>
+                                    <div class="text-[9px] text-muted font-bold uppercase tracking-tighter"
+                                        [ngClass]="ent.dev_vs_avg > 0 ? 'text-emerald-400' : 'text-red-400'">
+                                        {{ ent.dev_vs_avg > 0 ? '+' : '' }}{{ ent.dev_vs_avg }}%
+                                    </div>
+                                </td>
+                                <!-- Percentile Bar -->
+                                <td class="p-4">
+                                    <div class="flex flex-col gap-1 w-24 ml-auto">
+                                        <div
+                                            class="flex justify-between text-[9px] font-black uppercase tracking-tighter">
+                                            <span class="text-muted">Rank</span>
+                                            <span class="text-primary">{{ ent.percentile }}%</span>
+                                        </div>
+                                        <div class="h-2 bg-muted rounded-full overflow-hidden">
+                                            <div class="h-full bg-primary shadow-[0_0_10px_var(--primary-glow)]"
+                                                [style.width.%]="ent.percentile"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Right Column: Strategy & Insights -->
+            <div class="flex flex-col gap-8">
+                <!-- Logic for low data -->
+                <div *ngIf="data.entities.length === 0" class="text-center py-20 opacity-30">
+                    <p class="font-black uppercase tracking-widest text-xs">Sin datos para la selección actual</p>
+                </div>
+
+                <!-- Best Combinations -->
+                <div *ngIf="data.best_combinations.length > 0"
+                    class="glass-effect rounded-2xl border border-main p-8 shadow-2xl relative overflow-hidden">
+                    <h4 class="font-black text-main text-lg mb-6 flex items-center uppercase tracking-tighter">
+                        <span class="w-1.5 h-6 bg-emerald-400 rounded-full mr-3"></span>
+                        Dúos Sugeridos
+                    </h4>
+                    <div class="space-y-4">
+                        <div *ngFor="let combo of data.best_combinations"
+                            class="bg-premium-card p-4 rounded-xl border border-muted hover:border-emerald-400/50 transition-colors group">
+                            <div class="text-sm font-black text-main group-hover:text-emerald-400 transition-colors">{{
+                                combo.pair }}</div>
+                            <div class="mt-2 text-[10px] text-muted font-bold tracking-tight">Potencial alto de
+                                viralidad</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Semaphore Glossary -->
+                <div class="glass-effect rounded-2xl border border-main p-6 shadow-2xl">
+                    <h4 class="font-black text-main text-sm mb-4 flex items-center uppercase tracking-widest">
+                        <span class="w-1.5 h-4 bg-primary rounded-full mr-3"></span>
+                        Glosario de Semáforo
+                    </h4>
+                    <div class="space-y-3 text-xs text-main">
+                        <div class="flex items-center gap-3">
+                            <span class="text-emerald-500 text-lg">🟢</span>
+                            <div>
+                                <span class="font-bold">Alto Engagement + Excelente Redacción</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-amber-400 text-lg">🟡</span>
+                            <div>
+                                <span class="font-bold">Bajo Engagement + Excelente Redacción</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-red-500 text-lg">🔴</span>
+                            <div>
+                                <span class="font-bold">Alto Engagement + Redacción a Mejorar</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-muted text-lg">⚪</span>
+                            <div>
+                                <span class="font-bold">Promedio en Engagement y Redacción</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- View 2: Entity Detail Guide -->
+    <app-entity-detail *ngIf="selectedEntityDetail" [data]="selectedEntityDetail"
+        (close)="closeDetail()"></app-entity-detail>
+</div>

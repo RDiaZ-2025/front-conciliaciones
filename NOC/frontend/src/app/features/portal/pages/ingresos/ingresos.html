@@ -1,0 +1,279 @@
+<div class="p-4 md:p-8 min-h-screen animate-fade-in-up">
+    <!-- Header Removed -->
+
+    <!-- Standard Loading State (for initial load) -->
+    <div *ngIf="isLoading" class="space-y-8 animate-pulse">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div *ngFor="let i of [1,2,3]" class="glass-effect rounded-3xl border border-muted p-6 h-32">
+                <div class="skeleton skeleton-title w-24 mb-4 bg-white/10 h-6 rounded-lg"></div>
+                <div class="skeleton skeleton-text w-48 bg-white/5 h-10 rounded-xl"></div>
+            </div>
+        </div>
+        <div class="glass-effect rounded-[32px] border border-muted p-8 h-[500px] flex flex-col justify-between">
+            <!-- Main Content Skeletons -->
+            <div class="skeleton skeleton-chart bg-white/5 h-[400px] rounded-3xl mt-auto"></div>
+        </div>
+    </div>
+
+    <!-- Tab Navigation - Premium Capsule -->
+    <div *ngIf="!isLoading && !hasError" class="flex flex-wrap items-center gap-2 mb-10 glass-effect p-2 rounded-2xl border border-muted max-w-fit shadow-xl m-auto lg:m-0">
+        <button (click)="setTab('chat')" [class.tab-active]="activeTab === 'chat'" class="tab-btn group border-b-0">
+            <svg class="w-5 h-5 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+            </svg>
+            Asistente Red+
+        </button>
+        <button (click)="setTab('admanager')" [class.tab-active]="activeTab === 'admanager'" class="tab-btn group border-b-0">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            Ad Manager
+        </button>
+        <button (click)="setTab('youtube')" [class.tab-active]="activeTab === 'youtube'" class="tab-btn group border-b-0">
+            <svg class="w-5 h-5 mr-2 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                 <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.376.55 9.376.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+            </svg>
+            YouTube
+        </button>
+        <button (click)="setTab('facebook')" [class.tab-active]="activeTab === 'facebook'" class="tab-btn group border-b-0">
+            <svg class="w-5 h-5 mr-2 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+            Facebook
+        </button>
+    </div>
+
+    <!-- Interface State -->
+    <ng-container *ngIf="!isLoading && !hasError">
+        <div class="animate-fade-in-up space-y-8">
+            
+            <ng-container *ngIf="activeTab !== 'chat'">
+                <!-- Filters & KPI Header -->
+                <div class="flex flex-col xl:flex-row items-center justify-between gap-4 bg-white/5 border border-white/10 p-2 md:pl-6 rounded-[2rem] md:rounded-full shadow-lg">
+                    <span class="text-muted font-bold tracking-wide">Resumen y Métricas ({{activeTab | titlecase}}):</span>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button (click)="setKpiFilter('7D')" [class.bg-white_10]="kpiFilter === '7D'" [class.text-white]="kpiFilter === '7D'" [class.text-muted]="kpiFilter !== '7D'" class="px-5 py-2 rounded-full font-bold text-sm transition-all hover:bg-white/10 hover:text-white" [ngClass]="{'bg-green-500/20 text-green-400 border border-green-500/30': kpiFilter === '7D'}">Último Mes</button>
+                        <button (click)="setKpiFilter('30D')" [class.bg-white_10]="kpiFilter === '30D'" [class.text-white]="kpiFilter === '30D'" [class.text-muted]="kpiFilter !== '30D'" class="px-5 py-2 rounded-full font-bold text-sm transition-all hover:bg-white/10 hover:text-white" [ngClass]="{'bg-green-500/20 text-green-400 border border-green-500/30': kpiFilter === '30D'}">Últimos 3 Meses</button>
+                        <button (click)="setKpiFilter('YTD')" [class.bg-white_10]="kpiFilter === 'YTD'" [class.text-white]="kpiFilter === 'YTD'" [class.text-muted]="kpiFilter !== 'YTD'" class="px-5 py-2 rounded-full font-bold text-sm transition-all hover:bg-white/10 hover:text-white" [ngClass]="{'bg-green-500/20 text-green-400 border border-green-500/30': kpiFilter === 'YTD'}">Año Actual</button>
+                        <button (click)="setKpiFilter('TOTAL')" [class.bg-white_10]="kpiFilter === 'TOTAL'" [class.text-white]="kpiFilter === 'TOTAL'" [class.text-muted]="kpiFilter !== 'TOTAL'" class="px-5 py-2 rounded-full font-bold text-sm transition-all hover:bg-white/10 hover:text-white" [ngClass]="{'bg-green-500/20 text-green-400 border border-green-500/30': kpiFilter === 'TOTAL'}">Global</button>
+                        
+                        <div class="w-px h-6 bg-white/20 mx-2 hidden xl:block"></div>
+                        
+                        <div class="flex items-center gap-2 bg-[#0a0f1a] border" [ngClass]="kpiFilter === 'CUSTOM' ? 'border-green-500/50 shadow-[0_0_10px_rgba(34,197,94,0.2)]' : 'border-white/10'" style="border-radius: 9999px; padding: 0.25rem 0.5rem;">
+                             <input type="date" [(ngModel)]="customStartDate" class="bg-transparent text-sm text-muted font-medium focus:outline-none focus:text-white" style="width: 110px;" />
+                             <span class="text-muted/50 text-xs">-</span>
+                             <input type="date" [(ngModel)]="customEndDate" class="bg-transparent text-sm text-muted font-medium focus:outline-none focus:text-white" style="width: 110px;" />
+                             <button (click)="aplicarFiltroFechas()" class="p-1.5 rounded-full hover:bg-white/10 transition-colors flex-shrink-0" [ngClass]="{'text-green-400': kpiFilter === 'CUSTOM', 'text-muted': kpiFilter !== 'CUSTOM'}" title="Filtrar por Fechas">
+                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                             </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Channel Filter (Only for Networks) -->
+                <div *ngIf="isYoutubeOrFacebook" class="flex flex-wrap items-center gap-2 bg-white/5 border border-white/10 p-2 px-6 rounded-[2rem] md:rounded-full shadow-lg mt-4 w-fit">
+                    <span class="text-muted font-bold text-sm tracking-wide mr-4">Filtro de Canal:</span>
+                    <button (click)="setChannelFilter('TOTAL')" [class.bg-white_10]="channelFilter === 'TOTAL'" [class.text-white]="channelFilter === 'TOTAL'" [class.text-muted]="channelFilter !== 'TOTAL'" class="px-4 py-1.5 rounded-full font-bold text-xs transition-all hover:bg-white/10 hover:text-white" [ngClass]="{'bg-blue-500/20 text-blue-400 border border-blue-500/30': channelFilter === 'TOTAL'}">Global</button>
+                    <button (click)="setChannelFilter('RED+ TV')" [class.bg-white_10]="channelFilter === 'RED+ TV'" [class.text-white]="channelFilter === 'RED+ TV'" [class.text-muted]="channelFilter !== 'RED+ TV'" class="px-4 py-1.5 rounded-full font-bold text-xs transition-all hover:bg-white/10 hover:text-white" [ngClass]="{'bg-blue-500/20 text-blue-400 border border-blue-500/30': channelFilter === 'RED+ TV'}">RED+ TV</button>
+                    <button (click)="setChannelFilter('RED+NOTICIAS')" [class.bg-white_10]="channelFilter === 'RED+NOTICIAS'" [class.text-white]="channelFilter === 'RED+NOTICIAS'" [class.text-muted]="channelFilter !== 'RED+NOTICIAS'" class="px-4 py-1.5 rounded-full font-bold text-xs transition-all hover:bg-white/10 hover:text-white" [ngClass]="{'bg-blue-500/20 text-blue-400 border border-blue-500/30': channelFilter === 'RED+NOTICIAS'}">Noticias</button>
+                    <button (click)="setChannelFilter('15 MINUTOS')" [class.bg-white_10]="channelFilter === '15 MINUTOS'" [class.text-white]="channelFilter === '15 MINUTOS'" [class.text-muted]="channelFilter !== '15 MINUTOS'" class="px-4 py-1.5 rounded-full font-bold text-xs transition-all hover:bg-white/10 hover:text-white" [ngClass]="{'bg-blue-500/20 text-blue-400 border border-blue-500/30': channelFilter === '15 MINUTOS'}">15 Min.</button>
+                    <button (click)="setChannelFilter('RADIOLATV')" [class.bg-white_10]="channelFilter === 'RADIOLATV'" [class.text-white]="channelFilter === 'RADIOLATV'" [class.text-muted]="channelFilter !== 'RADIOLATV'" class="px-4 py-1.5 rounded-full font-bold text-xs transition-all hover:bg-white/10 hover:text-white" [ngClass]="{'bg-blue-500/20 text-blue-400 border border-blue-500/30': channelFilter === 'RADIOLATV'}">RadiolaTV</button>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-8">
+                    <div class="glass-effect p-6 rounded-3xl border border-muted shadow-lg hover:shadow-green-500/10 transition-shadow">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="p-2 bg-green-500/10 rounded-lg">
+                                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                            <span class="text-muted font-bold tracking-wide text-sm">{{ isYoutubeOrFacebook ? 'Total Neto' : 'Revenue Total' }}</span>
+                        </div>
+                        <h3 class="text-3xl font-black text-main">{{ totalRevenue | currency:'USD':'symbol':'1.0-0' }}</h3>
+                    </div>
+                    
+                    <!-- Span Filler for Layout Grid when elements are hidden -->
+                    <div *ngIf="activeTab === 'facebook' || (isYoutubeOrFacebook && channelFilter !== 'TOTAL')" class="hidden md:block col-span-3"></div>
+                    
+                    <div *ngIf="activeTab !== 'facebook' && channelFilter === 'TOTAL'" class="glass-effect p-6 rounded-3xl border border-muted shadow-lg hover:shadow-orange-500/10 transition-shadow">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="p-2 bg-orange-500/10 rounded-lg">
+                                <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                            </div>
+                            <span class="text-muted font-bold tracking-wide text-sm">{{ isYoutubeOrFacebook ? 'Retención' : 'eCPM Promedio' }}</span>
+                        </div>
+                        <h3 class="text-3xl font-black text-main">{{ avgECPM | currency:'USD':'symbol': (isYoutubeOrFacebook ? '1.0-0' : '1.2-2') }}</h3>
+                    </div>
+                    
+                    <div *ngIf="activeTab !== 'facebook' && channelFilter === 'TOTAL'" class="glass-effect p-6 rounded-3xl border border-muted shadow-lg hover:shadow-blue-500/10 transition-shadow">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="p-2 bg-blue-500/10 rounded-lg">
+                                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            </div>
+                            <span class="text-muted font-bold tracking-wide text-sm">{{ isYoutubeOrFacebook ? 'Total Bruto' : 'Impresiones' }}</span>
+                        </div>
+                        <h3 class="text-3xl font-black text-main">{{ totalImpressions | number:'1.0-0' }}</h3>
+                    </div>
+
+                    <div *ngIf="activeTab === 'admanager'" class="glass-effect p-6 rounded-3xl border border-muted shadow-lg hover:shadow-red-500/10 transition-shadow">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="p-2 bg-red-500/10 rounded-lg">
+                                <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                            <span class="text-muted font-bold tracking-wide text-sm">Sin Rellenar</span>
+                        </div>
+                        <h3 class="text-3xl font-black text-red-400">{{ unfilledImpressions | number:'1.0-0' }}</h3>
+                    </div>
+                </div>
+
+                <!-- Chart State -->
+                <div class="glass-effect rounded-[32px] border border-muted p-4 md:p-8 h-[500px] flex flex-col shadow-2xl relative overflow-hidden">
+                    <!-- Decorative Background Glow -->
+                    <div class="absolute top-0 right-0 w-96 h-96 bg-green-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+                    
+                    <div class="mb-6 relative z-10 flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-main">Evolución Histórica ({{ activeTab | titlecase }})</h2>
+                    </div>
+                    
+                    <div class="flex-grow w-full relative z-10 overflow-x-auto overflow-y-hidden">
+                         <div class="min-w-[700px] md:min-w-full h-full relative">
+                              <canvas #tradingChart id="tradingChart"></canvas>
+                         </div>
+                    </div>
+                </div>
+            </ng-container>
+
+            <!-- Chat Tab State -->
+            <ng-container *ngIf="activeTab === 'chat'">
+                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[700px]">
+                      <!-- Informative Card / Panel -->
+                      <div class="glass-effect rounded-[32px] border border-muted p-8 shadow-2xl flex flex-col items-center justify-center text-center relative overflow-hidden">
+                           <div class="absolute -top-20 -left-20 w-64 h-64 bg-purple-600/20 rounded-full blur-[100px]"></div>
+                           
+                           <div class="w-24 h-24 mb-6 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center shadow-[0_0_50px_rgba(168,85,247,0.4)]">
+                               <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                               </svg>
+                           </div>
+                           
+                           <h2 class="text-3xl font-black text-main mb-2">Ingresos Globales</h2>
+                           <p class="text-muted font-medium mb-8">Todos los centros de costo y plataformas unificados</p>
+                           
+                           <h1 class="text-6xl font-[900] text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-600 drop-shadow-sm mb-4">
+                               {{ resumenData?.total_global_usd | currency:'USD':'symbol':'1.0-0' }}
+                           </h1>
+                           
+                           <div class="w-full space-y-3 mt-6 text-left">
+                               <div class="flex justify-between items-center p-4 bg-white/5 rounded-2xl">
+                                   <span class="text-muted font-bold flex items-center gap-2"><div class="w-2 h-2 bg-green-500 rounded-full"></div>Ad Manager</span>
+                                   <span class="text-main font-black text-lg">{{ resumenData?.admanager_total | currency:'USD':'symbol':'1.0-0' }}</span>
+                               </div>
+                               <div class="flex justify-between items-center p-4 bg-white/5 rounded-2xl">
+                                   <span class="text-muted font-bold flex items-center gap-2"><div class="w-2 h-2 bg-red-500 rounded-full"></div>YouTube</span>
+                                   <span class="text-main font-black text-lg">{{ resumenData?.youtube_total_neto | currency:'USD':'symbol':'1.0-0' }}</span>
+                               </div>
+                               <div class="flex justify-between items-center p-4 bg-white/5 rounded-2xl">
+                                   <span class="text-muted font-bold flex items-center gap-2"><div class="w-2 h-2 bg-blue-500 rounded-full"></div>Facebook</span>
+                                   <span class="text-main font-black text-lg">{{ resumenData?.facebook_total | currency:'USD':'symbol':'1.0-0' }}</span>
+                               </div>
+                           </div>
+
+                           <!-- Quick Suggestions -->
+                           <div class="w-full mt-6 space-y-2">
+                               <p class="text-xs text-muted font-bold uppercase tracking-widest mb-3">Preguntas rápidas</p>
+                               <button *ngFor="let s of quickSuggestions"
+                                   (click)="enviarMensajeChat(s)"
+                                   [disabled]="isChatLoading"
+                                   class="w-full text-left text-xs px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-muted hover:bg-purple-500/10 hover:border-purple-500/30 hover:text-purple-300 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                                   {{ s }}
+                               </button>
+                           </div>
+                      </div>
+                      
+                      <!-- Chat Interface -->
+                      <div class="lg:col-span-2 glass-effect rounded-[32px] border border-muted p-6 shadow-2xl flex flex-col h-full bg-[#0a0f1a]/80">
+                           <!-- Chat History -->
+                           <div class="chat-messages-container flex-grow overflow-y-auto pr-4 space-y-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent flex flex-col">
+                               <div *ngFor="let msg of chatMessages" class="flex w-full" [ngClass]="msg.role === 'user' ? 'justify-end' : 'justify-start'">
+                                   <div [ngClass]="msg.role === 'user' ? 'bg-gradient-to-r from-green-600 to-green-500 text-white rounded-br-none' : 'bg-white/10 border border-white/5 text-main rounded-bl-none'"
+                                        class="p-5 rounded-[24px] max-w-[85%] shadow-xl font-medium text-[15px] leading-relaxed">
+                                       <div *ngIf="msg.role === 'ai'" class="flex items-center gap-2 mb-2 opacity-70">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                            <span class="text-xs font-bold uppercase tracking-wider">Asistente AI</span>
+                                       </div>
+                                       <span style="white-space: pre-line;">{{ msg.text }}</span>
+                                   </div>
+                               </div>
+
+                               <!-- Typing Indicator -->
+                               <div *ngIf="isChatLoading" class="flex w-full justify-start">
+                                   <div class="bg-white/10 border border-white/5 text-main rounded-[24px] rounded-bl-none p-5 max-w-[85%] shadow-xl">
+                                       <div class="flex items-center gap-2 mb-2 opacity-70">
+                                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                           <span class="text-xs font-bold uppercase tracking-wider">Asistente AI</span>
+                                       </div>
+                                       <div class="flex items-center gap-1.5">
+                                           <div class="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+                                           <div class="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+                                           <div class="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+                                       </div>
+                                   </div>
+                               </div>
+                           </div>
+                           
+                           <!-- Chat Input -->
+                           <div class="mt-6 pt-6 border-t border-white/5 relative">
+                               <input type="text" [(ngModel)]="chatInput" (keyup.enter)="enviarMensajeChat()" placeholder="Pregúntame sobre ingresos, presupuesto o tendencias..."
+                                      [disabled]="isChatLoading"
+                                      class="w-full bg-[#111827] border-2 border-white/10 p-5 pr-16 rounded-[20px] text-main placeholder-muted focus:outline-none focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/10 transition-all font-medium disabled:opacity-50">
+                               <button (click)="enviarMensajeChat()" [disabled]="isChatLoading"
+                                       class="absolute right-4 top-1/2 -mt-[5px] w-12 h-12 bg-purple-600 rounded-xl flex items-center justify-center text-white hover:bg-purple-500 hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(168,85,247,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
+                                   <svg *ngIf="!isChatLoading" class="w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                                   <svg *ngIf="isChatLoading" class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                               </button>
+                           </div>
+                      </div>
+                 </div>
+            </ng-container>
+
+        </div>
+    </ng-container>
+
+    <!-- Error State -->
+    <div *ngIf="hasError && !isLoading"
+        class="glass-effect border-2 border-red-500/20 p-16 rounded-[40px] text-center max-w-2xl mx-auto my-20 shadow-2xl">
+        <div class="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-8 animate-bounce">
+            <svg class="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                </path>
+            </svg>
+        </div>
+        <h2 class="text-3xl font-black text-main mb-4">Error de Datos</h2>
+        <p class="text-muted font-medium mb-10 text-lg">{{ errorMessage }}</p>
+        <button (click)="cargarDatos()"
+            class="px-10 py-4 bg-gradient-to-r from-red-600 to-red-500 text-main font-black rounded-2xl shadow-xl shadow-red-500/30 hover:shadow-red-500/50 hover:scale-105 transition-all active:transform active:scale-95 text-lg">
+            Reintentar Conexión
+        </button>
+    </div>
+
+</div>
+
+<style>
+    .tab-btn {
+        @apply flex items-center justify-center px-5 py-3 rounded-xl text-sm font-black text-muted transition-all duration-300;
+    }
+
+    .tab-btn:hover {
+        @apply text-main bg-white/10;
+        transform: translateY(-2px);
+    }
+
+    .tab-active {
+        background: linear-gradient(135deg, var(--primary, #0f172a), var(--secondary, #1e293b)) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5) !important;
+        transform: scale(1.05);
+    }
+</style>

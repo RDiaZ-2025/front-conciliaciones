@@ -1,0 +1,8 @@
+.preset-btn-premium {
+    @apply w-full text-left px-4 py-2 text-xs font-black text-slate-400 hover:text-white hover:bg-primary/20 rounded-xl transition-all;
+}
+
+:host {
+    display: block;
+    width: 100%;
+}

@@ -1,0 +1,136 @@
+<div
+    class="w-full glass-effect rounded-2xl p-3 mb-8 flex flex-wrap items-center justify-between gap-3 transition-all hover:bg-white/[0.02] min-h-fit relative z-30">
+
+    <!-- Filters Container -->
+    <div class="flex flex-wrap items-center gap-2 flex-grow">
+
+        <!-- Date Range & Presets -->
+        <div *ngIf="visibleFilters.date" class="flex flex-wrap items-center gap-2">
+
+            <!-- Presets Trigger -->
+            <div class="relative">
+                <button (click)="togglePresets()"
+                    class="p-2.5 bg-premium-card hover:bg-premium-hover text-muted hover:text-main rounded-xl border border-white/10 hover:border-primary/30 transition-all flex items-center justify-center shadow-lg">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </button>
+
+                <!-- Presets Dropdown -->
+                <div *ngIf="showPresets"
+                    class="absolute top-full left-0 mt-3 z-50 glass-effect rounded-2xl p-2 w-48 origin-top-left animate-fade-in-up">
+                    <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest p-2 mb-1">Periodos
+                        Rápidos</div>
+                    <button (click)="applyPreset('today')" class="preset-btn-premium">Hoy</button>
+                    <button (click)="applyPreset('7d')" class="preset-btn-premium">Últimos 7 días</button>
+                    <button (click)="applyPreset('30d')" class="preset-btn-premium">Últimos 30 días</button>
+                    <button (click)="applyPreset('month')" class="preset-btn-premium">Mes Actual</button>
+                    <button (click)="applyPreset('year')" class="preset-btn-premium">Año Actual</button>
+                </div>
+            </div>
+
+            <div class="w-px h-6 bg-white/10 mx-1"></div>
+
+            <!-- Start Date Trigger -->
+            <div class="relative">
+                <button (click)="toggleStartCalendar()"
+                    class="bg-premium-card border border-white/10 hover:border-primary/50 text-main text-xs font-bold rounded-xl px-4 py-2.5 flex items-center gap-3 transition-all shadow-lg w-36 group">
+                    <svg class="w-4 h-4 text-muted group-hover:text-primary transition-colors" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    <span>{{ filters.start_date || 'Desde' }}</span>
+                </button>
+
+                <div *ngIf="showStartCalendar"
+                    class="absolute top-full left-0 mt-3 z-50 origin-top-left animate-fade-in-up">
+                    <app-calendar-picker [initialDate]="filters.start_date"
+                        (dateSelected)="onStartDateSelected($event)"></app-calendar-picker>
+                </div>
+            </div>
+
+            <span class="text-slate-600 font-bold">-</span>
+
+            <!-- End Date Trigger -->
+            <div class="relative">
+                <button (click)="toggleEndCalendar()"
+                    class="bg-white/5 border border-white/10 hover:border-primary/50 text-white text-xs font-bold rounded-xl px-4 py-2.5 flex items-center gap-3 transition-all shadow-lg w-36 group">
+                    <svg class="w-4 h-4 text-slate-500 group-hover:text-primary transition-colors" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    <span>{{ filters.end_date || 'Hasta' }}</span>
+                </button>
+
+                <div *ngIf="showEndCalendar"
+                    class="absolute top-full left-0 mt-3 z-50 origin-top-left animate-fade-in-up">
+                    <app-calendar-picker [initialDate]="filters.end_date"
+                        (dateSelected)="onEndDateSelected($event)"></app-calendar-picker>
+                </div>
+            </div>
+        </div>
+
+        <!-- Divider -->
+        <div *ngIf="visibleFilters.date && (visibleFilters.source || visibleFilters.section || visibleFilters.author || visibleFilters.topic || visibleFilters.category)"
+            class="hidden lg:block w-px h-8 bg-white/10 mx-2"></div>
+
+        <!-- Selects Group -->
+        <div class="flex flex-wrap gap-2">
+            <!-- Source (Fuente) -->
+            <div *ngIf="visibleFilters.source" class="w-40">
+                <app-multi-select [options]="options.sources" [(selectedValues)]="filters.source"
+                    (selectionChange)="onChange()" placeholder="Todas las Fuentes"
+                    labelPlural="Fuentes"></app-multi-select>
+            </div>
+
+            <!-- Section -->
+            <div *ngIf="visibleFilters.section" class="w-44">
+                <app-multi-select [options]="options.sections" [(selectedValues)]="filters.section"
+                    (selectionChange)="onChange()" placeholder="Todas las Secciones"
+                    labelPlural="Secciones"></app-multi-select>
+            </div>
+
+            <!-- Authors -->
+            <div *ngIf="visibleFilters.author" class="w-48">
+                <app-multi-select [options]="options.authors" [(selectedValues)]="filters.author"
+                    (selectionChange)="onChange()" placeholder="Todos los Autores"
+                    labelPlural="Autores"></app-multi-select>
+            </div>
+
+            <!-- Topics -->
+            <div *ngIf="visibleFilters.topic" class="w-48">
+                <app-multi-select [options]="options.topics" [(selectedValues)]="filters.topic"
+                    (selectionChange)="onChange()" placeholder="Todos los Temas" labelPlural="Temas"></app-multi-select>
+            </div>
+
+            <!-- Categories -->
+            <div *ngIf="visibleFilters.category" class="w-48">
+                <app-multi-select [options]="options.categories" [(selectedValues)]="filters.category"
+                    (selectionChange)="onChange()" placeholder="Todas las Categorías"
+                    labelPlural="Categorías"></app-multi-select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-3 w-full xl:w-auto justify-end shrink-0">
+        <button (click)="onClear()" title="Limpiar filtros"
+            class="p-2.5 rounded-xl text-slate-400 hover:text-primary hover:bg-primary/10 border border-transparent hover:border-primary/20 transition-all transform active:scale-95">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h18"></path>
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+        </button>
+    </div>
+</div>

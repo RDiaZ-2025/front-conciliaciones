@@ -1,0 +1,329 @@
+<div class="p-4 md:p-8 min-h-screen animate-fade-in-up">
+    <!-- Header Controls -->
+    <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+        <div>
+            <h1 class="text-4xl font-black text-main">Panel de Presupuesto</h1>
+            <p class="text-muted mt-2 font-medium">Análisis y cumplimiento presupuestal anual 2026</p>
+        </div>
+        <div class="flex gap-4">
+            <button (click)="importarPresupuesto()" [disabled]="isImporting"
+                class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] hover:scale-105 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none">
+                <svg *ngIf="!isImporting" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                <svg *ngIf="isImporting" class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>{{ isImporting ? 'Importando...' : 'Sincronizar Excel' }}</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Mensaje Exito -->
+    <div *ngIf="importSuccess" class="mb-8 p-4 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 font-bold flex items-center gap-3 animate-fade-in-up">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+        {{ importSuccess }}
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="space-y-8 animate-pulse">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div *ngFor="let i of [1,2,3,4]" class="glass-effect rounded-3xl border border-muted p-6 h-36">
+                <div class="w-12 h-12 rounded-full bg-white/10 mb-4"></div>
+                <div class="w-1/2 h-4 bg-white/10 rounded mb-2"></div>
+                <div class="w-3/4 h-8 bg-white/5 rounded"></div>
+            </div>
+        </div>
+        <div class="glass-effect rounded-[32px] border border-muted p-8 h-[400px]"></div>
+    </div>
+
+    <!-- Tab Navigation & Filters -->
+    <div *ngIf="!isLoading && !hasError && data" class="flex flex-col lg:flex-row justify-between items-center gap-4 mb-8">
+        
+        <!-- Tabs -->
+        <div class="flex flex-wrap items-center gap-2 glass-effect p-2 rounded-2xl border border-muted shadow-xl">
+            <button (click)="setTab('director')" [class.tab-active]="activeTab === 'director'" class="tab-btn group border-b-0">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+                Director (Resumen)
+            </button>
+            <button (click)="setTab('analitico')" [class.tab-active]="activeTab === 'analitico'" class="tab-btn group border-b-0">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                Analítico (Detalle)
+            </button>
+        </div>
+
+        <!-- Period Filter -->
+        <div class="flex flex-wrap items-center gap-2 bg-white/5 border border-white/10 p-2 pl-6 rounded-[2rem] md:rounded-full shadow-lg">
+            <span class="text-muted font-bold text-sm tracking-wide mr-2">Filtro de Tiempo:</span>
+            <button (click)="setPeriodFilter('LAST_MONTH')" [class.bg-white_10]="periodFilter === 'LAST_MONTH'" [class.text-white]="periodFilter === 'LAST_MONTH'" [class.text-muted]="periodFilter !== 'LAST_MONTH'" class="px-5 py-2 rounded-full font-bold text-sm transition-all hover:bg-white/10 hover:text-white" [ngClass]="{'bg-blue-500/20 text-blue-400 border border-blue-500/30': periodFilter === 'LAST_MONTH'}">Último Mes</button>
+            <button (click)="setPeriodFilter('LAST_3_MONTHS')" [class.bg-white_10]="periodFilter === 'LAST_3_MONTHS'" [class.text-white]="periodFilter === 'LAST_3_MONTHS'" [class.text-muted]="periodFilter !== 'LAST_3_MONTHS'" class="px-5 py-2 rounded-full font-bold text-sm transition-all hover:bg-white/10 hover:text-white" [ngClass]="{'bg-blue-500/20 text-blue-400 border border-blue-500/30': periodFilter === 'LAST_3_MONTHS'}">Últimos 3 Meses</button>
+            <button (click)="setPeriodFilter('YTD')" [class.bg-white_10]="periodFilter === 'YTD'" [class.text-white]="periodFilter === 'YTD'" [class.text-muted]="periodFilter !== 'YTD'" class="px-5 py-2 rounded-full font-bold text-sm transition-all hover:bg-white/10 hover:text-white" [ngClass]="{'bg-blue-500/20 text-blue-400 border border-blue-500/30': periodFilter === 'YTD'}">Año Actual</button>
+            <button (click)="setPeriodFilter('TOTAL')" [class.bg-white_10]="periodFilter === 'TOTAL'" [class.text-white]="periodFilter === 'TOTAL'" [class.text-muted]="periodFilter !== 'TOTAL'" class="px-5 py-2 rounded-full font-bold text-sm transition-all hover:bg-white/10 hover:text-white" [ngClass]="{'bg-blue-500/20 text-blue-400 border border-blue-500/30': periodFilter === 'TOTAL'}">Todo el Año</button>
+        </div>
+    </div>
+
+    <ng-container *ngIf="!isLoading && !hasError && data">
+        
+        <!-- VISTA DIRECTOR -->
+        <div [class.hidden]="activeTab !== 'director'" class="animate-fade-in-up space-y-8">
+            
+            <!-- Banner de Estado (Vamos Bien / Vamos Mal) -->
+            <div class="glass-effect rounded-[32px] p-8 md:p-12 shadow-2xl relative overflow-hidden border-2"
+                 [ngClass]="data.diferencia_anual >= 0 ? 'border-green-500/30' : 'border-red-500/30'">
+                <!-- Glow Effect -->
+                <div class="absolute -top-32 -right-32 w-96 h-96 rounded-full blur-[120px] pointer-events-none"
+                     [ngClass]="data.diferencia_anual >= 0 ? 'bg-green-500/20' : 'bg-red-500/20'"></div>
+                
+                <div class="relative z-10 flex flex-col md:flex-row gap-8 items-center justify-between">
+                    <div>
+                        <span class="px-4 py-1.5 rounded-full font-bold text-sm tracking-widest uppercase mb-6 inline-block"
+                              [ngClass]="data.diferencia_anual >= 0 ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'">
+                            Estado Global de Negocio
+                        </span>
+                        
+                        <h1 class="text-4xl md:text-5xl font-black mb-4 flex items-center gap-4"
+                            [ngClass]="data.diferencia_anual >= 0 ? 'text-green-400' : 'text-red-400'">
+                            <span *ngIf="data.diferencia_anual >= 0">Balance Positivo</span>
+                            <span *ngIf="data.diferencia_anual < 0">Déficit Presupuestal</span>
+                        </h1>
+                        
+                        <div class="flex flex-wrap items-baseline gap-4 mt-2">
+                            <div class="text-4xl md:text-5xl font-black" [ngClass]="data.diferencia_anual >= 0 ? 'text-green-400' : 'text-red-400'">
+                                {{ data.diferencia_anual >= 0 ? '+' : '-' }}{{ (data.diferencia_anual >= 0 ? data.diferencia_anual : (data.diferencia_anual * -1)) | currency:'USD':'symbol':'1.0-0' }}
+                            </div>
+                            <div class="text-xl md:text-2xl font-bold" [ngClass]="data.diferencia_anual >= 0 ? 'text-green-500/80' : 'text-red-500/80'">
+                                <span *ngIf="data.diferencia_anual >= 0">({{ (100 - data.porcentaje_anual) | number:'1.1-1' }}% de ahorro)</span>
+                                <span *ngIf="data.diferencia_anual < 0">({{ (data.porcentaje_anual - 100) | number:'1.1-1' }}% sobregiro)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- El "Por Qué" -->
+                    <div class="w-full md:w-[400px] flex flex-col gap-4">
+                        <div *ngIf="mejorFuente" class="bg-white/5 border border-white/10 p-5 rounded-2xl">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-8 h-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                                </div>
+                                <span class="text-muted font-bold text-sm">Mayor Ahorro</span>
+                            </div>
+                            <div class="text-xl font-bold text-main truncate">{{ mejorFuente.fuente }}</div>
+                            <div class="text-green-400 font-black">+{{ mejorFuente.diferencia | currency:'USD':'symbol':'1.0-0' }}</div>
+                        </div>
+
+                        <div *ngIf="peorFuente && peorFuente.diferencia < 0" class="bg-white/5 border border-white/10 p-5 rounded-2xl">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-8 h-8 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+                                </div>
+                                <span class="text-muted font-bold text-sm">Mayor Sobrecosto</span>
+                            </div>
+                            <div class="text-xl font-bold text-main truncate">{{ peorFuente.fuente }}</div>
+                            <div class="text-red-400 font-black">{{ peorFuente.diferencia | currency:'USD':'symbol':'1.0-0' }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Evolución del Gasto (Burn-Rate) Arriba -->
+            <div class="glass-effect rounded-[32px] p-8 shadow-2xl flex flex-col mb-8">
+                <h3 class="text-xl font-bold text-main mb-2 z-10">Velocidad de Consumo (Burn Rate)</h3>
+                <p class="text-xs text-muted mb-6 z-10">Comparativa histórica del presupuesto asignado vs ejecución real</p>
+                <div class="relative w-full h-[350px] flex-grow overflow-x-auto overflow-y-hidden">
+                    <div class="min-w-[700px] md:min-w-full h-full relative">
+                        <canvas #chartEvolucion></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráficas del Director (Abajo) -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Velocímetro (Gauge) Ppto vs Ejecucion -->
+                <div class="glass-effect rounded-[32px] p-8 shadow-2xl flex flex-col items-center relative overflow-hidden">
+                    <h3 class="text-xl font-bold text-main mb-2 z-10">Consumo Total</h3>
+                    <p class="text-xs text-muted mb-6 z-10">Velocímetro Presupuestal</p>
+                    <div class="relative w-full aspect-[2/1] max-w-[350px] flex-grow flex items-end justify-center z-10">
+                        <canvas #chartDona></canvas>
+                        <!-- Center text over gauge -->
+                        <div class="absolute bottom-0 w-full flex flex-col items-center justify-end pb-2 pointer-events-none">
+                            <span class="text-3xl lg:text-4xl font-black" [ngClass]="data.porcentaje_anual <= 100 ? 'text-green-400' : 'text-red-400'">{{ data.porcentaje_anual }}%</span>
+                            <span class="text-xs font-bold text-muted uppercase">Consumido</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barras de Variacion Top -->
+                <div class="lg:col-span-2 glass-effect rounded-[32px] p-8 shadow-2xl flex flex-col">
+                    <h3 class="text-xl font-bold text-main mb-6">Top Variaciones por Fuente (Ahorro / Déficit)</h3>
+                    <div class="relative w-full h-[250px] flex-grow overflow-x-auto overflow-y-hidden">
+                        <div class="min-w-[700px] md:min-w-full h-full relative">
+                            <canvas #chartBarras></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- VISTA ANALÍTICA -->
+        <div [class.hidden]="activeTab !== 'analitico'" class="animate-fade-in-up">
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <!-- Ppto Total -->
+                <div class="glass-effect p-6 rounded-[24px] border border-white/5 shadow-lg relative overflow-hidden group">
+                    <div class="absolute -right-10 -top-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all"></div>
+                    <div class="flex items-center gap-3 mb-4 relative z-10">
+                        <div class="p-2.5 bg-blue-500/10 rounded-xl text-blue-400">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <span class="text-muted font-bold text-sm tracking-widest uppercase">Presupuesto Anual</span>
+                    </div>
+                    <h3 class="text-3xl font-black text-main relative z-10">{{ data.total_anual_ppto | currency:'USD':'symbol':'1.0-0' }}</h3>
+                </div>
+
+                <!-- Ejecucion Total -->
+                <div class="glass-effect p-6 rounded-[24px] border border-white/5 shadow-lg relative overflow-hidden group">
+                    <div class="absolute -right-10 -top-10 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all"></div>
+                    <div class="flex items-center gap-3 mb-4 relative z-10">
+                        <div class="p-2.5 bg-purple-500/10 rounded-xl text-purple-400">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                        </div>
+                        <span class="text-muted font-bold text-sm tracking-widest uppercase">Ejecución Actual</span>
+                    </div>
+                    <h3 class="text-3xl font-black text-main relative z-10">{{ data.total_anual_ejecucion | currency:'USD':'symbol':'1.0-0' }}</h3>
+                </div>
+
+                <!-- Diferencia -->
+                <div class="glass-effect p-6 rounded-[24px] border border-white/5 shadow-lg relative overflow-hidden group">
+                    <div class="absolute -right-10 -top-10 w-32 h-32 rounded-full blur-2xl transition-all"
+                         [ngClass]="data.diferencia_anual >= 0 ? 'bg-green-500/10 group-hover:bg-green-500/20' : 'bg-red-500/10 group-hover:bg-red-500/20'"></div>
+                    <div class="flex items-center gap-3 mb-4 relative z-10">
+                        <div class="p-2.5 rounded-xl" [ngClass]="data.diferencia_anual >= 0 ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        </div>
+                        <span class="text-muted font-bold text-sm tracking-widest uppercase">Variación (USD)</span>
+                    </div>
+                    <h3 class="text-3xl font-black relative z-10" [ngClass]="data.diferencia_anual >= 0 ? 'text-green-400' : 'text-red-400'">
+                        {{ data.diferencia_anual > 0 ? '+' : '' }}{{ data.diferencia_anual | currency:'USD':'symbol':'1.0-0' }}
+                    </h3>
+                </div>
+
+                <!-- Porcentaje -->
+                <div class="glass-effect p-6 rounded-[24px] border border-white/5 shadow-lg relative overflow-hidden group">
+                    <div class="absolute -right-10 -top-10 w-32 h-32 rounded-full blur-2xl transition-all"
+                         [ngClass]="data.porcentaje_anual <= 100 ? 'bg-emerald-500/10 group-hover:bg-emerald-500/20' : 'bg-orange-500/10 group-hover:bg-orange-500/20'"></div>
+                    <div class="flex items-center gap-3 mb-4 relative z-10">
+                        <div class="p-2.5 rounded-xl" [ngClass]="data.porcentaje_anual <= 100 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-orange-500/10 text-orange-400'">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+                        </div>
+                        <span class="text-muted font-bold text-sm tracking-widest uppercase">Cumplimiento (%)</span>
+                    </div>
+                    <div class="flex items-end gap-2 relative z-10">
+                        <h3 class="text-4xl font-black" [ngClass]="data.porcentaje_anual <= 100 ? 'text-emerald-400' : 'text-orange-400'">
+                            {{ data.porcentaje_anual }}%
+                        </h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tablas de Desglose -->
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                
+                <!-- Cumplimiento Mensual -->
+                <div class="glass-effect rounded-[32px] border border-white/5 p-6 md:p-8 shadow-2xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] pointer-events-none"></div>
+                    <h2 class="text-2xl font-bold text-main mb-6 relative z-10">Evolución Mensual</h2>
+                    
+                    <div class="overflow-x-auto relative z-10">
+                        <table class="w-full text-left border-collapse min-w-[500px]">
+                            <thead>
+                                <tr class="border-b border-white/10 text-muted font-bold text-sm uppercase tracking-wider">
+                                    <th class="py-4 pl-4">Mes</th>
+                                    <th class="py-4 text-right">Presupuesto</th>
+                                    <th class="py-4 text-right">Ejecución</th>
+                                    <th class="py-4 text-right">% Cumpl.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let mes of data.resumen_mensual" class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                    <td class="py-4 pl-4 font-bold text-main">{{ mes.mes | date:'MMMM yyyy' | titlecase }}</td>
+                                    <td class="py-4 text-right text-muted font-medium">{{ mes.total_ppto | currency:'USD':'symbol':'1.0-0' }}</td>
+                                    <td class="py-4 text-right text-main font-bold">{{ mes.total_ejecucion | currency:'USD':'symbol':'1.0-0' }}</td>
+                                    <td class="py-4 text-right pr-4">
+                                        <span class="px-3 py-1 rounded-full text-xs font-bold"
+                                            [ngClass]="mes.porcentaje_cumplimiento <= 100 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'">
+                                            {{ mes.porcentaje_cumplimiento }}%
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Desglose por Fuentes -->
+                <div class="glass-effect rounded-[32px] border border-white/5 p-6 md:p-8 shadow-2xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-[80px] pointer-events-none"></div>
+                    <h2 class="text-2xl font-bold text-main mb-6 relative z-10">Rendimiento por Fuente</h2>
+                    
+                    <div class="overflow-y-auto overflow-x-auto max-h-[500px] scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent pr-2 relative z-10">
+                        <table class="w-full text-left border-collapse min-w-[600px]">
+                            <thead class="sticky top-0 bg-[#0a0f1a]/95 backdrop-blur-md z-20">
+                                <tr class="border-b border-white/10 text-muted font-bold text-sm uppercase tracking-wider">
+                                    <th class="py-4 pl-4">Fuente</th>
+                                    <th class="py-4 text-right">Presupuesto</th>
+                                    <th class="py-4 text-right">Ejecución</th>
+                                    <th class="py-4 text-right">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let fuente of data.desglose_fuentes" class="border-b border-white/5 hover:bg-white/5 transition-colors group">
+                                    <td class="py-4 pl-4">
+                                        <div class="font-bold text-main truncate max-w-[150px] md:max-w-[200px]" title="{{fuente.fuente}}">{{ fuente.fuente }}</div>
+                                        <div class="text-xs text-muted truncate max-w-[150px]" title="{{fuente.seccion}}">{{ fuente.seccion }}</div>
+                                    </td>
+                                    <td class="py-4 text-right text-muted font-medium">{{ fuente.total_ppto | currency:'USD':'symbol':'1.0-0' }}</td>
+                                    <td class="py-4 text-right text-main font-bold">{{ fuente.total_ejecucion | currency:'USD':'symbol':'1.0-0' }}</td>
+                                    <td class="py-4 text-right pr-4">
+                                        <div class="flex flex-col items-end gap-1">
+                                            <span class="text-sm font-bold" [ngClass]="fuente.porcentaje_cumplimiento <= 100 ? 'text-emerald-400' : 'text-red-400'">
+                                                {{ fuente.porcentaje_cumplimiento }}%
+                                            </span>
+                                            <div class="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                                <div class="h-full rounded-full transition-all duration-1000"
+                                                     [style.width]="(fuente.porcentaje_cumplimiento > 100 ? 100 : fuente.porcentaje_cumplimiento) + '%'"
+                                                     [ngClass]="fuente.porcentaje_cumplimiento <= 100 ? 'bg-emerald-500' : 'bg-red-500'"></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </ng-container>
+
+    <!-- Error State -->
+    <div *ngIf="hasError && !isLoading"
+        class="glass-effect border-2 border-red-500/20 p-12 rounded-[40px] text-center max-w-2xl mx-auto mt-20 shadow-2xl">
+        <div class="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-8">
+            <svg class="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+        </div>
+        <h2 class="text-3xl font-black text-main mb-4">No hay datos disponibles</h2>
+        <p class="text-muted font-medium mb-10 text-lg">{{ errorMessage }}</p>
+        <button (click)="cargarDatos()"
+            class="px-8 py-3 bg-white/5 border border-white/10 text-main font-bold rounded-xl hover:bg-white/10 transition-colors">
+            Reintentar
+        </button>
+    </div>
+</div>

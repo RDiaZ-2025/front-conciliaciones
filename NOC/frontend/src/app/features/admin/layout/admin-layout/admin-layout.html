@@ -1,0 +1,111 @@
+<div class="admin-layout" [class.sidebar-hidden]="!isSidebarOpen()">
+  <!-- Backdrop for mobile -->
+  <div class="sidebar-backdrop" [class.show]="isSidebarOpen()" (click)="toggleSidebar()"></div>
+
+  <!-- Main Sidebar -->
+  <aside class="sidebar" [class.open]="isSidebarOpen()">
+    <div class="logo-area">
+      <div class="logo-box">
+        <img [src]="themeService.isDarkMode ? '/Oscuro.png' : '/Claro.png'" alt="Logo">
+      </div>
+    </div>
+
+    <nav class="menu">
+      <ul class="main-menu-list">
+        @for (module of modules; track module.name) {
+        @if (hasVisibleSubmodules(module)) {
+        <li class="menu-item-group">
+          <!-- Modulo Trigger -->
+          <button class="menu-trigger" [class.active]="isMenuOpen(module.name)" (click)="toggleMenu(module.name)">
+            <span class="icon-label-group">
+              <span class="module-icon">{{ module.icon }}</span>
+              <span class="module-label">{{ module.name }}</span>
+            </span>
+            <svg class="arrow-icon" [class.rotate]="isMenuOpen(module.name)" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor">
+              <path d="M19 9l-7 7-7-7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+
+          <!-- Submodulos -->
+          <div class="submenu-wrapper" [class.show]="isMenuOpen(module.name)">
+            <div class="submenu-inner">
+              <ul class="submenu">
+                @for (sub of module.submodules; track sub.code) {
+                @if (!sub.is_disabled && authService.hasPermission(sub.code)) {
+                <li class="animate-item" [class.maintenance]="sub.is_under_maintenance && !authService.isAdmin()">
+                  @if (sub.is_under_maintenance && !authService.isAdmin()) {
+                    <a href="javascript:void(0)" (click)="showMaintenanceAlert(sub.maintenance_message)" style="opacity: 0.5; cursor: not-allowed;" title="{{ sub.maintenance_message }}">
+                      {{ sub.label }} <span style="font-size: 0.8em;">(Mantenimiento)</span>
+                    </a>
+                  } @else {
+                    <a [routerLink]="sub.route" routerLinkActive="active-link">
+                      {{ sub.label }}
+                      @if (sub.is_under_maintenance) { <span style="font-size: 0.8em; color: #ffcc00;" title="En mantenimiento (Solo visible por Admin)">🛠️</span> }
+                    </a>
+                  }
+                </li>
+                }
+                }
+              </ul>
+            </div>
+          </div>
+        </li>
+        }
+        }
+      </ul>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <header class="top-bar">
+      <button class="hamburger-btn" (click)="toggleSidebar()" aria-label="Toggle Sidebar">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path *ngIf="!isSidebarOpen()" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4 6h16M4 12h16M4 18h16"></path>
+          <path *ngIf="isSidebarOpen()" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+
+      <div class="flex items-center gap-4">
+        <!-- Theme Toggle -->
+        <button (click)="themeService.toggleTheme()"
+          class="w-10 h-10 flex items-center justify-center rounded-xl bg-premium-card border border-main hover:bg-premium-hover transition-all text-muted hover:text-main"
+          [title]="themeService.isDarkMode ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'">
+          @if (themeService.isDarkMode) {
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 3v1m0 16v1m9-9h-1M4 9h-1m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707m12.728 12.728L5.657 5.657">
+            </path>
+            <circle cx="12" cy="12" r="5"></circle>
+          </svg>
+          } @else {
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+          </svg>
+          }
+        </button>
+
+        <div class="user-section">
+          <div class="welcome-text text-sm">Hola, <strong class="block text-main">{{ authService.getUserName()
+              }}</strong></div>
+          <div class="avatar-circle">
+            <span>{{ authService.getUserName().charAt(0) || 'U' }}</span>
+          </div>
+          <button class="logout-action" (click)="logout()" title="Cerrar Sesión">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="work-area">
+      <router-outlet></router-outlet>
+    </div>
+  </main>
+</div>

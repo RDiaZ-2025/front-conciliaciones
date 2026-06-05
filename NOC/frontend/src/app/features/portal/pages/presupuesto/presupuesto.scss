@@ -1,0 +1,43 @@
+/* Estilos especificos para presupuesto */
+:host {
+    display: block;
+    width: 100%;
+}
+
+.scrollbar-thin {
+    scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.tab-btn {
+    @apply flex items-center justify-center px-5 py-3 rounded-xl text-sm font-black text-muted transition-all duration-300;
+}
+
+.tab-btn:hover {
+    @apply text-main bg-white/10;
+    transform: translateY(-2px);
+}
+
+.tab-active {
+    background: linear-gradient(135deg, var(--primary, #0f172a), var(--secondary, #1e293b)) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5) !important;
+    transform: scale(1.05);
+}

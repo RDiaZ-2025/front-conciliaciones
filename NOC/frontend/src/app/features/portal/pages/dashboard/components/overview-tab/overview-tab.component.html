@@ -1,0 +1,136 @@
+<div *ngIf="data" class="space-y-6 animate-fade-in-up">
+
+    <!-- KPI Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <app-kpi-card label="Usuarios" [value]="data.cards.total_users" [variation]="data.cards.users_variation"
+            [comparisonPeriod]="data.comparison_period"></app-kpi-card>
+        <app-kpi-card label="Páginas Vistas" [value]="data.cards.total_views" [variation]="data.cards.views_variation"
+            [comparisonPeriod]="data.comparison_period"></app-kpi-card>
+        <app-kpi-card label="Engagement Rate" [value]="data.cards.engagement_rate" unit="%"
+            [variation]="data.cards.engagement_rate_variation" variationType="pp"
+            [comparisonPeriod]="data.comparison_period"></app-kpi-card>
+        <app-kpi-card label="Páginas/Sesión" [value]="data.cards.pages_per_session"
+            [variation]="data.cards.pps_variation" [comparisonPeriod]="data.comparison_period"></app-kpi-card>
+        <app-kpi-card label="Fidelidad" [value]="data.cards.fidelity" [variation]="data.cards.fidelity_variation"
+            [comparisonPeriod]="data.comparison_period"></app-kpi-card>
+        <app-kpi-card label="Fuente Activa" [value]="data.cards.active_source" variant="gradient"
+            footerText="Fuente Principal"></app-kpi-card>
+    </div>
+
+    <!-- Trend Chart & Highlights -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Trend Chart (2/3 width) -->
+        <div class="lg:col-span-2 glass-effect rounded-2xl border border-main p-8 shadow-2xl">
+            <h3 class="font-black text-main text-lg mb-8 flex items-center">
+                <span class="w-2 h-6 bg-primary rounded-full mr-4 shadow-[0_0_15px_var(--primary-glow)]"></span>
+                Tendencia de Consumo
+            </h3>
+            <div class="relative h-72 w-full overflow-x-auto overflow-y-hidden">
+                <div class="min-w-[600px] md:min-w-full h-full relative">
+                    <canvas #trendChart></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Highlights (1/3 width) -->
+        <div class="space-y-4">
+            <!-- Highlight 1: Top Section -->
+            <div (click)="onHighlightClick('section', data.highlights.top_section)"
+                class="glass-effect rounded-2xl border border-main p-6 relative overflow-hidden group cursor-pointer hover:border-primary/30 transition-all shadow-xl">
+                <div
+                    class="absolute -top-4 -right-4 p-4 opacity-5 group-hover:opacity-10 transition-opacity transform group-hover:scale-110">
+                    <svg class="w-24 h-24 text-main" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M4 11h6a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1zm10 0h6a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1zM4 21h6a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1zm13 0c2.206 0 4-1.794 4-4s-1.794-4-4-4-4 1.794-4 4 1.794 4 4 4z">
+                        </path>
+                    </svg>
+                </div>
+                <div class="text-[10px] font-black text-muted uppercase tracking-widest mb-2">Sección Top</div>
+                <div class="text-xl font-black text-main line-clamp-1 group-hover:text-primary transition-colors">{{
+                    data.highlights.top_section }}</div>
+                <div
+                    class="mt-4 flex items-center text-[10px] font-black text-primary uppercase tracking-widest bg-primary/10 px-3 py-1.5 rounded-lg w-fit border border-primary/20">
+                    Explorar Sección
+                </div>
+            </div>
+
+            <!-- Highlight 2: Viral Topic -->
+            <div (click)="onHighlightClick('topic', data.highlights.viral_topic)"
+                class="glass-effect rounded-2xl border border-main p-6 relative overflow-hidden group cursor-pointer hover:border-orange-500/30 transition-all shadow-xl">
+                <div
+                    class="absolute -top-4 -right-4 p-4 opacity-5 group-hover:opacity-10 transition-opacity transform group-hover:scale-110">
+                    <svg class="w-24 h-24 text-orange-500" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M19.07 4.93 17.07 6l2.15 1.5-1.5 2.15L16 7.07l-2 3.46-2-3.46-2.15 1.5-1.5-2.15L10.5 6 8.93 4.93 11.07 3l-2.15-1.5 1.5-2.15L12 1.93l2-3.46 2 3.46 2.15-1.5 1.5 2.15L17.5 3z">
+                        </path>
+                    </svg>
+                </div>
+                <div class="text-[10px] font-black text-muted uppercase tracking-widest mb-2">Tema Viral</div>
+                <div class="text-xl font-black text-main line-clamp-1 group-hover:text-orange-500 transition-colors">{{
+                    data.highlights.viral_topic }}</div>
+                <div
+                    class="mt-4 flex items-center text-[10px] font-black text-orange-500 uppercase tracking-widest bg-orange-500/10 px-3 py-1.5 rounded-lg w-fit border border-orange-500/20">
+                    Explorar Tema
+                </div>
+            </div>
+
+            <!-- Highlight 3: Featured Author -->
+            <div (click)="onHighlightClick('author', data.highlights.featured_author)"
+                class="glass-effect rounded-2xl border border-main p-6 relative overflow-hidden group cursor-pointer hover:border-emerald-500/30 transition-all shadow-xl">
+                <div
+                    class="absolute -top-4 -right-4 p-4 opacity-5 group-hover:opacity-10 transition-opacity transform group-hover:scale-110">
+                    <svg class="w-24 h-24 text-emerald-500" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 3c1.654 0 3 1.346 3 3s-1.346 3-3 3-3-1.346-3-3 1.346-3 3-3zm0 15c-3.75 0-7-2.008-7-5.024.011-2.034 2.502-3.801 7-3.968 4.499.168 6.99 1.933 7 3.968C19 17.992 15.75 20 12 20z">
+                        </path>
+                    </svg>
+                </div>
+                <div class="text-[10px] font-black text-muted uppercase tracking-widest mb-2">Autor Destacado</div>
+                <div class="text-xl font-black text-main line-clamp-1 group-hover:text-emerald-400 transition-colors">
+                    {{ data.highlights.featured_author }}</div>
+                <div
+                    class="mt-4 flex items-center text-[10px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-3 py-1.5 rounded-lg w-fit border border-emerald-500/20">
+                    Ver Perfil
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Volume & Production Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Volume Card -->
+        <div
+            class="glass-effect p-8 rounded-2xl border border-main shadow-2xl lg:col-span-1 flex flex-col justify-center relative overflow-hidden group">
+            <div
+                class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-primary/10 transition-all">
+            </div>
+            <div class="text-[10px] font-black text-muted uppercase tracking-widest mb-3">Artículos Publicados</div>
+            <div class="text-5xl font-black text-main mb-4 tracking-tighter">{{ data.volume.total_articles | number }}
+            </div>
+            <div class="flex items-center text-sm font-black"
+                [ngClass]="data.volume.variation >= 0 ? 'text-emerald-400' : 'text-primary'">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                        [attr.d]="data.volume.variation >= 0 ? 'M5 10l7-7m0 0l7 7m-7-7v18' : 'M19 14l-7 7m0 0l-7-7m7 7V3'">
+                    </path>
+                </svg>
+                <span>{{ data.volume.variation | number:'1.1-1' }}%</span>
+                <span class="text-muted ml-2 font-bold uppercase text-[9px]">vs anterior</span>
+            </div>
+        </div>
+
+        <!-- Volume Chart -->
+        <div class="lg:col-span-3 glass-effect rounded-2xl border border-main p-8 shadow-2xl">
+            <h3 class="font-black text-main text-lg mb-8 flex items-center">
+                <span class="w-2 h-6 bg-primary rounded-full mr-4 shadow-[0_0_15px_var(--primary-glow)]"></span>
+                Volumen vs Impacto
+            </h3>
+            <div class="relative h-64 w-full overflow-x-auto overflow-y-hidden">
+                <div class="min-w-[600px] md:min-w-full h-full relative">
+                    <canvas #volumeChart></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
