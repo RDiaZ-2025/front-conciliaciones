@@ -252,6 +252,19 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
 
   downloadDocument(attachment: ChatMessageAttachment, msgIndex: number): void {
     if (attachment.downloading) return;
+
+    // Archivo local (recién subido) — descargar directamente del blobUrl
+    if (!attachment.path) {
+      if (attachment.blobUrl) {
+        const a = document.createElement('a');
+        a.href = attachment.blobUrl;
+        a.download = attachment.name;
+        a.click();
+      }
+      return;
+    }
+
+    // Archivo remoto (cargado del historial) — descargar desde el servidor
     this.messages.update(msgs =>
       msgs.map((m, i) => i === msgIndex ? { ...m, attachment: { ...m.attachment!, downloading: true } } : m)
     );
@@ -513,6 +526,28 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       const extension = file.name.includes('.') ? '.' + file.name.split('.').pop()! : '';
       const isAudio = file.type.startsWith('audio/');
       const messageType: 'document' | 'audio' = isAudio ? 'audio' : 'document';
+      const blobUrl = URL.createObjectURL(file);
+      this.blobUrls.push(blobUrl);
+
+      // Agregar attachment al mensaje del usuario para que se vea el cuadro de documento
+      this.messages.update(msgs => {
+        const updated = [...msgs];
+        const lastIdx = updated.length - 1;
+        if (lastIdx >= 0 && updated[lastIdx].role === 'user') {
+          updated[lastIdx] = {
+            ...updated[lastIdx],
+            attachment: {
+              type: 'document',
+              name: file.name,
+              mimeType: file.type,
+              path: '',
+              blobUrl,
+              loading: false
+            }
+          };
+        }
+        return updated;
+      });
 
       this.askAssistant(text || `[Archivo adjunto: ${file.name}]`, {
         name: file.name,
