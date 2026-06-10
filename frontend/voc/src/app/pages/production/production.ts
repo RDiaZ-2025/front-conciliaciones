@@ -204,8 +204,6 @@ export class ProductionComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ... (rest of the methods)
-
   getSLAStatus(deliveryDate?: string): 'success' | 'warn' | 'danger' {
     if (!deliveryDate) return 'success'; // No deadline, so technically "on time" or N/A
 
