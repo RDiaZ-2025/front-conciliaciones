@@ -242,8 +242,8 @@
     <!-- Input Area -->
     <div class="input-area">
 
-      <!-- Hidden file input -->
-      <input type="file" #inlineFileInput class="hidden" (change)="onFileSelected($event)" accept=".txt,.pdf,.doc,.docx,audio/*" />
+      <!-- Hidden file input (solo documentos: Word y PDF) -->
+      <input type="file" #inlineFileInput class="hidden" (change)="onFileSelected($event)" accept=".pdf,.doc,.docx" />
 
       <!-- Backdrop to close attach panel -->
       <div *ngIf="attachPanelVisible()" class="attach-backdrop" (click)="attachPanelVisible.set(false)"></div>
