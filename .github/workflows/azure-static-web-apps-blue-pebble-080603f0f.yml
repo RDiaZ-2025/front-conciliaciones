@@ -50,7 +50,7 @@ jobs:
           app_build_command: "npm run build:voc"
           github_id_token: ${{ steps.idtoken.outputs.result }}
         env:
-          NODE_VERSION: '20'
+          NODE_VERSION: '24.16.0'
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
