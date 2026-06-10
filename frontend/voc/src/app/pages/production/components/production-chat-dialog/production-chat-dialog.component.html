@@ -223,11 +223,27 @@
     </div>
     <!-- end messages-area -->
 
+    <!-- File preview bar (pending files above input) -->
+    <div *ngIf="files().length > 0" class="file-preview-bar">
+      <div *ngFor="let file of files(); let i = index" class="file-preview-item">
+        <i class="pi" [ngClass]="{
+          'pi-file-word': file.type.includes('msword') || file.type.includes('wordprocessingml') || file.name.endsWith('.doc') || file.name.endsWith('.docx'),
+          'pi-file-pdf': file.type.includes('pdf') || file.name.endsWith('.pdf'),
+          'pi-volume-up': file.type.startsWith('audio/'),
+          'pi-file': file.type.includes('text') || file.name.endsWith('.txt')
+        }"></i>
+        <span class="file-preview-name">{{ file.name }}</span>
+        <button class="file-preview-remove" (click)="removeFile(i)" title="Quitar archivo">
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+    </div>
+
     <!-- Input Area -->
     <div class="input-area">
 
       <!-- Hidden file input -->
-      <input type="file" #inlineFileInput class="hidden" (change)="onFileSelected($event)" multiple accept="audio/*,.txt,.pdf" />
+      <input type="file" #inlineFileInput class="hidden" (change)="onFileSelected($event)" accept=".txt,.pdf,.doc,.docx,audio/*" />
 
       <!-- Backdrop to close attach panel -->
       <div *ngIf="attachPanelVisible()" class="attach-backdrop" (click)="attachPanelVisible.set(false)"></div>
@@ -263,7 +279,7 @@
         </button>
         <button
           class="input-send-btn"
-          [disabled]="!inputText.trim() || isTyping()"
+          [disabled]="(!inputText.trim() && files().length === 0) || isTyping()"
           (click)="sendMessage()">
           Send <i class="pi pi-send"></i>
         </button>
@@ -303,10 +319,10 @@
       <div class="border-2 border-dashed border-round-xl p-3 text-center cursor-pointer"
         [ngClass]="{'border-primary bg-primary-50': isDragging(), 'surface-border bg-white': !isDragging()}"
         (click)="fileInputMobile.click()">
-        <input type="file" #fileInputMobile class="hidden" (change)="onFileSelected($event)" multiple accept="audio/*,.txt,.pdf" />
+        <input type="file" #fileInputMobile class="hidden" (change)="onFileSelected($event)" accept=".txt,.pdf,.doc,.docx,audio/*" />
         <i class="pi pi-cloud-upload text-2xl text-400 mb-1"></i>
         <p class="m-0 text-sm text-600"><span class="font-semibold" style="color:#e53e3e">Toca para subir</span></p>
-        <p class="m-0 mt-1 text-xs text-500">Audio, TXT, PDF</p>
+        <p class="m-0 mt-1 text-xs text-500">TXT, PDF, Word, Audio</p>
       </div>
       <div class="mt-3 flex flex-column gap-2 pr-1" *ngIf="files().length > 0">
         <div *ngFor="let file of files(); let i = index"

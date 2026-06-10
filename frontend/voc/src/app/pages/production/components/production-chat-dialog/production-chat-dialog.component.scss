@@ -661,6 +661,59 @@
 }
 
 // ========================
+//  FILE PREVIEW BAR (pending files above input)
+// ========================
+.file-preview-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem 0;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.file-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.75rem;
+  color: #374151;
+
+  i {
+    font-size: 0.85rem;
+    color: #e53e3e;
+    flex-shrink: 0;
+  }
+}
+
+.file-preview-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-preview-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  color: #9ca3af;
+  font-size: 0.7rem;
+  flex-shrink: 0;
+
+  &:hover {
+    color: #e53e3e;
+  }
+}
+
+// ========================
 //  INPUT AREA
 // ========================
 .input-area {
