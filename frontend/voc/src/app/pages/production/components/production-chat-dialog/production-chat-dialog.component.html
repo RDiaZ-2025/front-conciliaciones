@@ -243,7 +243,7 @@
     <div class="input-area">
 
       <!-- Hidden file input (solo documentos: Word y PDF) -->
-      <input type="file" #inlineFileInput class="hidden" (change)="onFileSelected($event)" accept=".pdf,.doc,.docx" />
+      <input type="file" #inlineFileInput class="hidden" (change)="onFileSelected($event)" accept=".pdf,.docx,.txt" />
 
       <!-- Backdrop to close attach panel -->
       <div *ngIf="attachPanelVisible()" class="attach-backdrop" (click)="attachPanelVisible.set(false)"></div>
@@ -319,7 +319,7 @@
       <div class="border-2 border-dashed border-round-xl p-3 text-center cursor-pointer"
         [ngClass]="{'border-primary bg-primary-50': isDragging(), 'surface-border bg-white': !isDragging()}"
         (click)="fileInputMobile.click()">
-        <input type="file" #fileInputMobile class="hidden" (change)="onFileSelected($event)" accept=".txt,.pdf,.doc,.docx,audio/*" />
+        <input type="file" #fileInputMobile class="hidden" (change)="onFileSelected($event)" accept=".txt,.pdf,.docx,audio/*" />
         <i class="pi pi-cloud-upload text-2xl text-400 mb-1"></i>
         <p class="m-0 text-sm text-600"><span class="font-semibold" style="color:#e53e3e">Toca para subir</span></p>
         <p class="m-0 mt-1 text-xs text-500">TXT, PDF, Word, Audio</p>

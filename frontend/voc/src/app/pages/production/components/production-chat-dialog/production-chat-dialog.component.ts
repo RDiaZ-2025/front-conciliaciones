@@ -797,7 +797,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       'audio/',
       'text/plain',
       'application/pdf',
-      'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     ];
     const maxFileSize = 5 * 1024 * 1024; // 5MB
@@ -806,7 +805,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
       const isValidType = validExtensions.some(ext => file.type.startsWith(ext) || file.type === ext);
-      const validExtension = file.name.endsWith('.txt') || file.name.endsWith('.doc') || file.name.endsWith('.docx');
+      const validExtension = file.name.endsWith('.txt') || file.name.endsWith('.docx');
 
       if (!isValidType && !validExtension) {
         this.messageService.add({ severity: 'error', summary: 'Tipo de archivo inválido', detail: `${file.name} no es soportado.` });
