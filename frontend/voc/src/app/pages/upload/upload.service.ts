@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import * as XLSX from 'xlsx';
+import * as ExcelJS from 'exceljs';
 import { ExcelValidationConfig, PDFValidationConfig, ValidationResult, RequiredCell } from './upload.models';
 import { environment } from '../../../environments/environment';
 import { AzureStorageService } from '../../services/azure-storage.service';
@@ -38,63 +38,60 @@ export class UploadService {
       };
     }
 
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = new Uint8Array(e.target!.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: "array" });
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(arrayBuffer);
 
-          if (!workbook.SheetNames.includes(this.EXCEL_CONFIG.requiredSheet)) {
-            return resolve({
-              isValid: false,
-              message: `❌ El archivo Excel debe contener la hoja llamada '${this.EXCEL_CONFIG.requiredSheet}'.`,
-              debugValues: []
-            });
-          }
-
-          const ws = workbook.Sheets[this.EXCEL_CONFIG.requiredSheet];
-          let missing: string[] = [];
-          let debugValues: string[] = [];
-
-          for (const cell of this.EXCEL_CONFIG.requiredCells) {
-            const cellRef = XLSX.utils.encode_cell({ r: cell.row - 1, c: cell.col });
-            const value = ws[cellRef] ? ws[cellRef].v : null;
-            debugValues.push(`${cell.label}: ${value}`);
-
-            if (value === null || value === undefined || value === "") {
-              missing.push(cell.label);
-            }
-          }
-
-          if (missing.length > 0) {
-            return resolve({
-              isValid: false,
-              message: `❌ El archivo Excel está incompleto. Faltan valores en: ${missing.join(", ")}`,
-              debugValues
-            });
-          }
-
-          return resolve({ isValid: true, debugValues });
-        } catch (err: any) {
-          return resolve({
-            isValid: false,
-            message: `❌ Error leyendo el archivo Excel: ${err.message}`,
-            debugValues: []
-          });
-        }
-      };
-
-      reader.onerror = () => {
-        resolve({
+      const worksheet = workbook.getWorksheet(this.EXCEL_CONFIG.requiredSheet);
+      if (!worksheet) {
+        return {
           isValid: false,
-          message: "❌ Error leyendo el archivo Excel.",
+          message: `❌ El archivo Excel debe contener la hoja llamada '${this.EXCEL_CONFIG.requiredSheet}'.`,
           debugValues: []
-        });
-      };
+        };
+      }
 
-      reader.readAsArrayBuffer(file);
-    });
+      let missing: string[] = [];
+      let debugValues: string[] = [];
+
+      for (const cell of this.EXCEL_CONFIG.requiredCells) {
+        // cell.row is 1-based. cell.col is 0-based. ExcelJS uses 1-based indices for both row and column.
+        const worksheetCell = worksheet.getCell(cell.row, cell.col + 1);
+        let value = worksheetCell.value;
+
+        // If the cell contains a formula, get the result of the formula
+        if (value && typeof value === 'object') {
+          if ('result' in value) {
+            value = value.result;
+          } else if ('text' in value) {
+            value = value.text;
+          }
+        }
+
+        debugValues.push(`${cell.label}: ${value}`);
+
+        if (value === null || value === undefined || value === "") {
+          missing.push(cell.label);
+        }
+      }
+
+      if (missing.length > 0) {
+        return {
+          isValid: false,
+          message: `❌ El archivo Excel está incompleto. Faltan valores en: ${missing.join(", ")}`,
+          debugValues
+        };
+      }
+
+      return { isValid: true, debugValues };
+    } catch (err: any) {
+      return {
+        isValid: false,
+        message: `❌ Error leyendo el archivo Excel: ${err.message}`,
+        debugValues: []
+      };
+    }
   }
 
   async validatePdf(file: File): Promise<ValidationResult> {

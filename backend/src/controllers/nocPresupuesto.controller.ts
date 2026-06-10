@@ -4,7 +4,45 @@ import { AppDataSource } from '../config/typeorm.config';
 import { Presupuesto } from '../models/Presupuesto';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as xlsx from 'xlsx';
+import * as ExcelJS from 'exceljs';
+
+function sheetToJSON(worksheet: any, startRow: number = 1): any[] {
+  const rows: any[] = [];
+  const headerRow = worksheet.getRow(startRow);
+  const headers: string[] = [];
+  
+  headerRow.eachCell({ includeEmpty: true }, (cell: any, colNumber: number) => {
+    let val = cell.value;
+    if (val && typeof val === 'object' && 'result' in val) {
+      val = val.result;
+    }
+    headers[colNumber] = val ? String(val).trim() : '';
+  });
+
+  worksheet.eachRow({ includeEmpty: false }, (row: any, rowNumber: number) => {
+    if (rowNumber <= startRow) return;
+
+    const rowData: any = {};
+    let hasData = false;
+    row.eachCell({ includeEmpty: true }, (cell: any, colNumber: number) => {
+      const header = headers[colNumber];
+      if (header) {
+        let val = cell.value;
+        if (val && typeof val === 'object') {
+          if ('result' in val) val = val.result;
+          else if ('text' in val) val = val.text;
+        }
+        rowData[header] = val;
+        hasData = true;
+      }
+    });
+    if (hasData) {
+      rows.push(rowData);
+    }
+  });
+
+  return rows;
+}
 
 const calcularPorcentaje = (ppto: number, ejecucion: number): number => {
   if (ppto === 0 && ejecucion > 0) return 100.0;
@@ -142,14 +180,14 @@ export class NocPresupuestoController {
         return;
       }
 
-      const workbook = xlsx.readFile(foundPath);
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.readFile(foundPath);
+      const worksheet = workbook.worksheets[0];
 
-      let data: any[] = xlsx.utils.sheet_to_json(sheet);
+      let data: any[] = sheetToJSON(worksheet);
       let hasFecha = data.some(row => row['Fecha'] !== undefined);
       if (!hasFecha) {
-        data = xlsx.utils.sheet_to_json(sheet, { range: 1 });
+        data = sheetToJSON(worksheet, 2);
         hasFecha = data.some(row => row['Fecha'] !== undefined);
       }
 
@@ -166,7 +204,9 @@ export class NocPresupuestoController {
         if (!row['Fecha']) continue;
 
         let parsedDate: Date;
-        if (typeof row['Fecha'] === 'number') {
+        if (row['Fecha'] instanceof Date) {
+          parsedDate = row['Fecha'];
+        } else if (typeof row['Fecha'] === 'number') {
           parsedDate = new Date((row['Fecha'] - (25567 + 2)) * 86400 * 1000);
         } else {
           parsedDate = new Date(row['Fecha']);
