@@ -51,7 +51,7 @@ jobs:
           github_id_token: ${{ steps.idtoken.outputs.result }}
           skip_deploy_on_missing_secrets: true
         env:
-          NODE_VERSION: '24.16.0'
+          NODE_VERSION: '22.22.0'
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
