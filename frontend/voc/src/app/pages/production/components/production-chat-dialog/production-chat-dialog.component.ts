@@ -86,6 +86,24 @@ interface ConversationMessage {
   messageContent: ConversationMessageContent;
 }
 
+interface FileAttachment {
+  name: string;
+  mimeType: string;
+  extension: string;
+  dataBase64: string;
+  size: number;
+  messageType: 'document' | 'audio';
+}
+
+interface MessageFile {
+  name: string;
+  extension: string;
+  size: number;
+  mimeType: string;
+  contentType: string;
+  dataBase64: string;
+}
+
 @Component({
   selector: 'app-production-chat-dialog',
   standalone: true,
@@ -448,7 +466,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   // --- Chat Logic ---
 
   sendMessage() {
-    if (!this.inputText.trim() || this.isTyping()) return;
+    if ((!this.inputText.trim() && this.files().length === 0) || this.isTyping()) return;
 
     const text = this.inputText.trim();
     this.inputText = '';
@@ -456,7 +474,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     // Add user message
     this.messages.update(m => [...m, {
       role: 'user',
-      content: text,
+      content: text || (this.files().length > 0 ? `[${this.files().length} archivo(s) adjunto(s)]` : ''),
       timestamp: new Date()
     }]);
 
@@ -466,7 +484,47 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     }
 
     this.scrollToBottom();
-    this.askAssistant(text);
+
+    // Process pending files and send them along with the text
+    const pendingFiles = [...this.files()];
+    this.files.set([]);
+
+    if (pendingFiles.length > 0) {
+      this.sendFilesWithText(text, pendingFiles);
+    } else {
+      this.askAssistant(text);
+    }
+  }
+
+  private sendFilesWithText(text: string, files: File[]): void {
+    // Process files one by one, sending each with the text
+    // For multiple files, only the first one determines the message type
+    const file = files[0];
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      const arrayBuffer = e.target?.result as ArrayBuffer;
+      const uint8Array = new Uint8Array(arrayBuffer);
+      let binary = '';
+      for (let j = 0; j < uint8Array.length; j++) {
+        binary += String.fromCharCode(uint8Array[j]);
+      }
+      const base64 = btoa(binary);
+      const extension = file.name.includes('.') ? '.' + file.name.split('.').pop()! : '';
+      const isAudio = file.type.startsWith('audio/');
+      const messageType: 'document' | 'audio' = isAudio ? 'audio' : 'document';
+
+      this.askAssistant(text || `[Archivo adjunto: ${file.name}]`, {
+        name: file.name,
+        mimeType: file.type,
+        extension,
+        dataBase64: base64,
+        size: file.size,
+        messageType
+      });
+    };
+
+    reader.readAsArrayBuffer(file);
   }
 
   onKeyDown(event: KeyboardEvent, textarea: HTMLTextAreaElement) {
@@ -552,14 +610,23 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   // Call the AI assistant API
-  private askAssistant(userText: string) {
+  private askAssistant(userText: string, fileAttachment?: FileAttachment) {
     this.isTyping.set(true);
     this.startTypingMessageRotation();
     const user = this.authService.currentUser();
     const email = user?.email ?? '';
 
     const conversationId = this.selectedConversationId();
-    const payload = {
+    const files: MessageFile[] = fileAttachment ? [{
+      name: fileAttachment.name,
+      extension: fileAttachment.extension,
+      size: fileAttachment.size,
+      mimeType: fileAttachment.mimeType,
+      contentType: fileAttachment.mimeType,
+      dataBase64: fileAttachment.dataBase64
+    }] : [];
+
+    const payload: any = {
       async: false,
       data: {
         agentId: environment.chatAgentId,
@@ -567,10 +634,10 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         contactId: email || null,
         channelId: environment.chatChannelId,
         message: {
-          text: userText,
-          type: 'text',
+          text: userText || '',
+          type: fileAttachment ? fileAttachment.messageType : 'text',
           timestamp: String(Math.floor(Date.now() / 1000)),
-          metadata: null
+          files
         }
       }
     };
@@ -691,21 +758,28 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   private handleFiles(fileList: FileList) {
-    const validExtensions = ['audio/', 'text/plain', 'application/pdf'];
-    const maxFileSize = 10 * 1024 * 1024; // 10MB
+    const validExtensions = [
+      'audio/',
+      'text/plain',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    const maxFileSize = 5 * 1024 * 1024; // 5MB
     const newFiles: File[] = [];
 
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
       const isValidType = validExtensions.some(ext => file.type.startsWith(ext) || file.type === ext);
+      const validExtension = file.name.endsWith('.txt') || file.name.endsWith('.doc') || file.name.endsWith('.docx');
 
-      if (!isValidType && !file.name.endsWith('.txt')) {
+      if (!isValidType && !validExtension) {
         this.messageService.add({ severity: 'error', summary: 'Tipo de archivo inválido', detail: `${file.name} no es soportado.` });
         continue;
       }
 
       if (file.size > maxFileSize) {
-        this.messageService.add({ severity: 'error', summary: 'Archivo demasiado grande', detail: `${file.name} excede los 10MB.` });
+        this.messageService.add({ severity: 'error', summary: 'Archivo demasiado grande', detail: `${file.name} excede los 5MB.` });
         continue;
       }
 
@@ -713,36 +787,8 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     }
 
     if (newFiles.length > 0) {
-      this.files.update(f => [...f, ...newFiles]);
-
-      newFiles.forEach(file => {
-        if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            const textContent = e.target?.result as string;
-
-            // Mostrar en el chat que el usuario subió el archivo
-            this.messages.update(m => [...m, {
-              role: 'user',
-              content: `[Archivo subido: ${file.name}]`,
-              timestamp: new Date()
-            }]);
-            this.scrollToBottom();
-
-            // Enviar el contenido del texto a la API
-            this.askAssistant(`Contenido del documento ${file.name}:\n\n${textContent}`);
-          };
-          reader.readAsText(file);
-        } else {
-          // Para otros tipos de archivos (audio, pdf) mostramos un mensaje temporal
-          this.messages.update(m => [...m, {
-            role: 'assistant',
-            content: `He recibido el archivo ${file.name}. Por ahora, la lectura automática y análisis directo está habilitada solo para archivos de texto (.txt).`,
-            timestamp: new Date()
-          }]);
-          this.scrollToBottom();
-        }
-      });
+      // Solo un archivo por mensaje - reemplazar si ya hay uno
+      this.files.set([newFiles[0]]);
     }
   }
 
