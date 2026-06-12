@@ -1,4 +1,4 @@
-﻿param(
+param(
     [Parameter(Mandatory=$true)]
     [string]$ResourceGroup,
     
@@ -20,17 +20,17 @@ function Write-Step {
 
 function Write-Success {
     param([string]$Message)
-    Write-Host "✓ $Message" -ForegroundColor Green
+    Write-Host "[OK] $Message" -ForegroundColor Green
 }
 
 function Write-Error {
     param([string]$Message)
-    Write-Host "✗ $Message" -ForegroundColor Red
+    Write-Host "[ERROR] $Message" -ForegroundColor Red
 }
 
 function Write-Warning {
     param([string]$Message)
-    Write-Host "⚠ $Message" -ForegroundColor Yellow
+    Write-Host "[WARN] $Message" -ForegroundColor Yellow
 }
 
 function Test-AzureCLI {
@@ -85,6 +85,7 @@ if (-not (Test-AzureLogin)) {
 Write-Step "Setting Azure subscription"
 try {
     az account set --subscription $SubscriptionId
+    if ($LASTEXITCODE -ne 0) { throw "az account set failed" }
     Write-Success "Set subscription to $SubscriptionId"
 }
 catch {
@@ -144,6 +145,7 @@ Write-Step "Installing dependencies"
 #Set-Location "backend"
 try {
     npm ci
+    if ($LASTEXITCODE -ne 0) { throw "npm ci failed" }
     Write-Success "Dependencies installed"
 }
 catch {
@@ -153,7 +155,8 @@ catch {
 
 Write-Step "Building application"
 try {
-    npm run build
+    npm run build:backend
+    if ($LASTEXITCODE -ne 0) { throw "npm run build:backend failed" }
     Write-Success "Application built successfully"
 }
 catch {
@@ -171,20 +174,11 @@ New-Item -ItemType Directory -Path $deployDir
 
 Copy-Item "backend/dist" "$deployDir/dist" -Recurse
 Copy-Item "backend/package.json" "$deployDir/"
-Copy-Item "backend/package-lock.json" "$deployDir/"
 Copy-Item "backend/web.config" "$deployDir/"
 Copy-Item "backend/.env" "$deployDir/" -ErrorAction SilentlyContinue
 
-Write-Step "Installing production dependencies"
-Set-Location $deployDir
-try {
-    npm ci --omit=dev
-    Write-Success "Production dependencies installed"
-}
-catch {
-    Write-Warning "Failed to install dependencies. Deployment might fail if node_modules are missing."
-}
-Set-Location ".."
+# Skip local production dependencies installation to keep ZIP package lightweight.
+# Azure Kudu will install dependencies on the server.
 
 Write-Step "Creating deployment archive"
 $archivePath = "voc-backend-deployment.zip"
@@ -192,12 +186,13 @@ if (Test-Path $archivePath) {
     Remove-Item $archivePath -Force
 }
 
-Compress-Archive -Path "$deployDir/*" -DestinationPath $archivePath -Force
+tar -a -c -f $archivePath -C $deployDir .
+if ($LASTEXITCODE -ne 0) { throw "tar archiving failed" }
 Write-Success "Created deployment archive: $archivePath"
 
 Write-Step "Configuring App Service settings"
 try {
-    az webapp config appsettings set --resource-group $ResourceGroup --name $AppName --settings NODE_ENV=production
+    az webapp config appsettings set --resource-group $ResourceGroup --name $AppName --settings NODE_ENV=production SCM_DO_BUILD_DURING_DEPLOYMENT=true
     Write-Success "Configured app settings"
 }
 catch {
@@ -206,13 +201,24 @@ catch {
 
 Write-Step "Deploying to Azure"
 try {
+    Write-Host "Stopping web app to release file locks..." -ForegroundColor Yellow
+    az webapp stop --resource-group $ResourceGroup --name $AppName
+    if ($LASTEXITCODE -ne 0) { throw "az webapp stop failed" }
+
     az webapp deploy --resource-group $ResourceGroup --name $AppName --src-path $archivePath
+    if ($LASTEXITCODE -ne 0) { throw "az webapp deploy failed" }
     Write-Success "Deployment completed"
 }
 catch {
     Write-Error "Deployment failed"
+    Write-Host "Starting web app back up..." -ForegroundColor Yellow
+    az webapp start --resource-group $ResourceGroup --name $AppName
     exit 1
 }
+
+Write-Host "Starting web app..." -ForegroundColor Yellow
+az webapp start --resource-group $ResourceGroup --name $AppName
+if ($LASTEXITCODE -ne 0) { Write-Warning "Could not start web app" }
 
 Write-Step "Verifying deployment"
 try {
@@ -250,7 +256,7 @@ catch {
     Write-Warning "Could not clean up temporary files"
 }
 
-Write-Host "`n🎉 Deployment completed successfully!" -ForegroundColor Green
+Write-Host "`n[SUCCESS] Deployment completed successfully!" -ForegroundColor Green
 Write-Host "Your application is available at: https://$AppName.azurewebsites.net" -ForegroundColor Cyan
 Write-Host "`nNext steps:" -ForegroundColor Yellow
 Write-Host "1. Configure your database connection strings in Azure App Service settings" -ForegroundColor Gray

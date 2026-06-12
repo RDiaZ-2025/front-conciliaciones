@@ -34,7 +34,8 @@ const corsOptions = {
     process.env.FRONTEND_URL || 'http://localhost:5173',
     'http://localhost:5173', // Desarrollo local
     'http://localhost:5174', // Puerto alternativo cuando 5173 está ocupado
-    'https://blue-pebble-080603f0f.3.azurestaticapps.net' // Producción (URL actual)
+    'https://blue-pebble-080603f0f.3.azurestaticapps.net', // Producción (URL anterior)
+    'https://wonderful-coast-0c074260f.7.azurestaticapps.net' // Producción (URL actual)
   ],
   credentials: true,
   optionsSuccessStatus: 200
