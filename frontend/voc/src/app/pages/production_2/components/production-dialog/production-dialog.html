@@ -1,0 +1,66 @@
+<div class="flex flex-column gap-2 p-fluid p-4">
+    <p-steps [model]="items" [(activeIndex)]="currentStep" [readonly]="false" styleClass="mb-5"></p-steps>
+
+    <div *ngIf="!canEditCore && isAssignedUser"
+        class="bg-blue-50 border-round p-3 mb-3 flex align-items-center gap-2 text-blue-700">
+        <i class="pi pi-info-circle text-xl"></i>
+        <span class="font-medium">Modo Restringido: Solo puedes agregar comentarios, archivos, reasignar y actualizar el
+            estado.</span>
+    </div>
+
+    <form [formGroup]="form" class="flex flex-column gap-2">
+        <app-production-step-general *ngIf="currentStep === 0" [form]="form" [teams]="(teams$ | async) ?? []"
+            [statuses]="workflowStages"
+            [minDate]="minDate" [existingFiles]="existingFiles" [disabledFileUpload]="!canEditCore && !isAssignedUser"
+            [canRemoveFiles]="canEditCore || isAssignedUser" (fileSelect)="onFileSelect($event)"
+            (fileRemove)="onFileRemove($event)" (fileClear)="onFileClear()" (fileDownload)="downloadFile($event)"
+            (fileDelete)="removeFile($event)">
+        </app-production-step-general>
+
+        <app-production-step-customer *ngIf="currentStep === 1" [form]="form">
+        </app-production-step-customer>
+
+        <app-production-step-campaign *ngIf="currentStep === 2" [form]="form" [campaignObjectives]="campaignObjectives"
+            [products]="(products$ | async) ?? []" (addProduct)="addCampaignProduct()"
+            (removeProduct)="removeCampaignProduct($event)">
+        </app-production-step-campaign>
+
+        <app-production-step-audience *ngIf="currentStep === 3" [form]="form" [genders]="genders"
+            [ageRanges]="ageRanges" [socioeconomicLevels]="socioeconomicLevels">
+        </app-production-step-audience>
+
+        <app-production-step-production *ngIf="currentStep === 4" [form]="form" [formatTypes]="formatTypes"
+            [rightsDurations]="rightsDurations">
+        </app-production-step-production>
+
+    </form>
+
+    <div class="flex justify-content-between gap-2 mt-4">
+        <button pButton label="Cancelar" icon="pi pi-times" class="p-button-text p-button-danger"
+            (click)="cancel()"></button>
+
+        <div class="flex gap-2">
+            <button *ngIf="currentStep > 0" pButton label="Atrás" icon="pi pi-arrow-left" class="p-button-outlined"
+                (click)="prev()"></button>
+            <button *ngIf="currentStep < 4" pButton [label]="isCurrentStepEnabled() ? 'Guardar y Continuar' : 'Siguiente'" icon="pi pi-arrow-right"
+                (click)="next()" [loading]="isCurrentStepEnabled() && ((isUploading$ | async) ?? false)"></button>
+            <button *ngIf="currentStep === 4 && isCurrentStepEnabled()" pButton label="Guardar" icon="pi pi-check" (click)="saveData(true)"
+                [loading]="(isUploading$ | async) ?? false"></button>
+        </div>
+    </div>
+</div>
+
+<p-dialog [(visible)]="showSuccessModal" [modal]="true" [closable]="false" [style]="{width: '400px'}">
+    <ng-template pTemplate="header">
+        <div class="flex align-items-center gap-2">
+            <i class="pi pi-check-circle text-green-500" style="font-size: 1.5rem"></i>
+            <span class="font-bold text-xl">¡Éxito!</span>
+        </div>
+    </ng-template>
+    <div class="p-3 text-lg line-height-3">
+        <p>Genial! Tu solicitud fue creada y enviada con el Id <strong>{{createdRequestId}}</strong> al equipo <strong>{{createdTeam}}</strong> y fue asignada a la persona <strong>{{createdUserName || createdUserId}}</strong>.</p>
+    </div>
+    <ng-template pTemplate="footer">
+        <button pButton label="Aceptar" (click)="closeDialogAfterSuccess()"></button>
+    </ng-template>
+</p-dialog>

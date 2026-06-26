@@ -1,0 +1,144 @@
+<div class="flex flex-column gap-3 p-3">
+    <form [formGroup]="form" (ngSubmit)="submit()">
+        <div class="field mb-4">
+            <label class="font-bold block mb-2 text-xl text-900">Configuración Email Marketing</label>
+            <div class="p-3 surface-ground border-round-md shadow-1">
+                <div class="text-700">Diseño y contenido para campañas de correo masivo.</div>
+            </div>
+        </div>
+
+        <div class="grid p-fluid">
+            <div class="col-12 md:col-6">
+                <div class="field">
+                    <label class="font-bold block mb-2">Plantilla</label>
+                    <p-select [options]="emailTemplates" formControlName="email_template" placeholder="Seleccione una plantilla" appendTo="body"></p-select>
+                    <small *ngIf="form.get('email_template')?.invalid && (form.get('email_template')?.dirty || form.get('email_template')?.touched)" class="p-error block">Requerido.</small>
+                </div>
+            </div>
+            <div class="col-12 md:col-6">
+                <div class="field">
+                    <label class="font-bold block mb-2">
+                        Colores
+                        <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                           pTooltip="Códigos Hexadecimales separados por coma (ej: #FF0000, #00FF00)" tooltipPosition="top"></i>
+                    </label>
+                    <input pInputText class="w-full" formControlName="email_colors" placeholder="#FFFFFF, #000000" />
+                    <small *ngIf="form.get('email_colors')?.invalid && (form.get('email_colors')?.dirty || form.get('email_colors')?.touched)" class="p-error block">Requerido. Formato Hex.</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="field">
+            <label class="font-bold block mb-2">Fuentes / Tipografía</label>
+            <input pInputText class="w-full" formControlName="email_fonts" placeholder="Ej: Arial, Helvetica, sans-serif" />
+            <small *ngIf="form.get('email_fonts')?.invalid && (form.get('email_fonts')?.dirty || form.get('email_fonts')?.touched)" class="p-error block">Requerido.</small>
+        </div>
+
+        <div class="field">
+            <label class="font-bold block mb-2">Información del Footer</label>
+            <textarea pTextarea class="w-full" formControlName="email_footer_info" rows="3" placeholder="Dirección, Copyright, etc."></textarea>
+            <small *ngIf="form.get('email_footer_info')?.invalid && (form.get('email_footer_info')?.dirty || form.get('email_footer_info')?.touched)" class="p-error block">Requerido.</small>
+        </div>
+
+        <div class="grid p-fluid">
+            <div class="col-12 md:col-6">
+                <div class="field">
+                    <label class="font-bold block mb-2">Emails de Contacto</label>
+                    <input pInputText class="w-full" formControlName="email_contact_emails" placeholder="contacto@empresa.com" />
+                    <small *ngIf="form.get('email_contact_emails')?.invalid && (form.get('email_contact_emails')?.dirty || form.get('email_contact_emails')?.touched)" class="p-error block">Email válido requerido.</small>
+                </div>
+            </div>
+            <div class="col-12 md:col-6">
+                <div class="field">
+                    <label class="font-bold block mb-2">Enlace de Soporte</label>
+                    <input pInputText class="w-full" formControlName="email_support_links" placeholder="https://soporte.empresa.com" />
+                </div>
+            </div>
+        </div>
+
+        <div class="field">
+            <label class="font-bold block mb-2">Texto Legal / TyC</label>
+            <textarea pTextarea class="w-full" formControlName="email_legal_text" rows="3" placeholder="Términos y condiciones..."></textarea>
+            <small *ngIf="form.get('email_legal_text')?.invalid && (form.get('email_legal_text')?.dirty || form.get('email_legal_text')?.touched)" class="p-error block">Requerido.</small>
+        </div>
+
+        <div class="field">
+            <label class="font-bold block mb-2">
+                Configuración DNS (DKIM/SPF)
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                   pTooltip="Registros DNS necesarios para la autenticación del dominio." tooltipPosition="top"></i>
+            </label>
+            <textarea pTextarea class="w-full" formControlName="email_dnsConfig" rows="2" placeholder="v=spf1 include:sendgrid.net ~all"></textarea>
+            <small *ngIf="form.get('email_dnsConfig')?.invalid && (form.get('email_dnsConfig')?.dirty || form.get('email_dnsConfig')?.touched)" class="p-error block">Requerido.</small>
+        </div>
+
+        <!-- CTAs Array -->
+        <div class="field mt-4">
+            <div class="flex justify-content-between align-align-align-items-center mb-2">
+                <label class="font-bold block">Call to Actions (CTAs)</label>
+                <p-button label="Agregar CTA" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="addEmailCta()"></p-button>
+            </div>
+            <div formArrayName="email_ctas_list">
+                <div *ngFor="let cta of emailCtasList.controls; let i=index" [formGroupName]="i" class="p-3 surface-card border-round mb-2 shadow-1 relative">
+                    <div class="grid p-fluid">
+                        <div class="col-12 md:col-5">
+                            <label class="block text-sm font-bold mb-1">Texto</label>
+                            <input pInputText class="w-full" formControlName="text" placeholder="Ver más" />
+                        </div>
+                        <div class="col-12 md:col-7">
+                            <label class="block text-sm font-bold mb-1">URL</label>
+                            <input pInputText class="w-full" formControlName="url" placeholder="https://..." />
+                        </div>
+                    </div>
+                    <button pButton icon="pi pi-trash" class="p-button-rounded p-button-danger p-button-text absolute top-0 right-0 mt-2 mr-2" (click)="removeEmailCta(i)"></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Social Array -->
+        <div class="field mt-4">
+            <div class="flex justify-content-between align-align-align-items-center mb-2">
+                <label class="font-bold block">Redes Sociales</label>
+                <p-button label="Agregar Red Social" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="addEmailSocial()"></p-button>
+            </div>
+            <div formArrayName="email_social_list">
+                <div *ngFor="let social of emailSocialList.controls; let i=index" [formGroupName]="i" class="p-3 surface-card border-round mb-2 shadow-1 relative">
+                    <div class="grid p-fluid">
+                        <div class="col-12 md:col-5">
+                            <label class="block text-sm font-bold mb-1">Red</label>
+                            <p-select [options]="socialNetworks" formControlName="network" appendTo="body" placeholder="Seleccione"></p-select>
+                        </div>
+                        <div class="col-12 md:col-7">
+                            <label class="block text-sm font-bold mb-1">URL Perfil</label>
+                            <input pInputText class="w-full" formControlName="url" placeholder="https://facebook.com/..." />
+                        </div>
+                    </div>
+                    <button pButton icon="pi pi-trash" class="p-button-rounded p-button-danger p-button-text absolute top-0 right-0 mt-2 mr-2" (click)="removeEmailSocial(i)"></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logo Upload -->
+        <div class="field mt-4">
+            <label class="font-bold block mb-2">
+                Logo de la Marca
+                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                   pTooltip="Formato PNG/JPG. Ancho máximo 600px." tooltipPosition="top"></i>
+            </label>
+            <p-fileupload mode="advanced" chooseLabel="Subir Logo" accept="image/png,image/jpeg"
+                [maxFileSize]="1000000" [customUpload]="true" (uploadHandler)="onUpload($event, 'email_logo')" 
+                [auto]="true"></p-fileupload>
+            
+            <div *ngFor="let file of uploadedFiles">
+                <div *ngIf="file.category === 'email_logo'" class="mt-2 text-sm text-green-500 flex align-align-align-items-center gap-2">
+                    <i class="pi pi-check-circle"></i> Logo cargado: {{file.name}}
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-content-end gap-2 mt-4">
+            <p-button label="Cancelar" icon="pi pi-times" styleClass="p-button-text" (onClick)="cancel()"></p-button>
+            <p-button label="Guardar y Continuar" icon="pi pi-check" type="submit" [disabled]="form.invalid || isUploading()"></p-button>
+        </div>
+    </form>
+</div>

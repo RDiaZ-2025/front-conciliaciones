@@ -1,0 +1,94 @@
+<div class="flex flex-column gap-4 p-4">
+    <h3 class="text-xl font-semibold text-900">Virtual Preloads Configuration</h3>
+    
+    <form [formGroup]="form" class="flex flex-column gap-4">
+        <div class="flex flex-column gap-2">
+            <label class="text-700">Nombre de la App</label>
+            <input pInputText class="w-full" formControlName="vp_appName" />
+            <small *ngIf="form.get('vp_appName')?.hasError('required') && form.get('vp_appName')?.touched" class="text-red-500">Requerido.</small>
+        </div>
+
+        <div class="flex flex-column gap-2">
+            <label class="text-700">Nombre del Cliente</label>
+            <input pInputText class="w-full" formControlName="vp_clientName" />
+            <small *ngIf="form.get('vp_clientName')?.hasError('required') && form.get('vp_clientName')?.touched" class="text-red-500">Requerido.</small>
+        </div>
+
+        <div class="flex flex-column gap-2">
+            <label class="text-700">URL Play Store (Opcional si sube APK)</label>
+            <input pInputText class="w-full" formControlName="vp_playStoreUrl" placeholder="https://play.google.com/..." />
+            <small *ngIf="form.get('vp_playStoreUrl')?.hasError('pattern')" class="text-red-500">URL inválida.</small>
+        </div>
+
+        <div class="flex flex-column gap-2">
+            <label class="text-700">Texto Notificación (Max 50 chars)</label>
+            <input pInputText class="w-full" formControlName="vp_notificationText" />
+            <small *ngIf="form.get('vp_notificationText')?.hasError('maxlength')" class="text-red-500">Máximo 50 caracteres.</small>
+        </div>
+
+        <div class="formgrid grid gap-4">
+            <div class="col-12 md:col-6 flex flex-column gap-2">
+                <label class="text-700">Icono (256x256)
+                    <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
+                       pTooltip="El icono debe tener dimensiones exactas de 256x256 píxeles." tooltipPosition="top"></i>
+                </label>
+                <p-fileUpload #iconUploader
+                    mode="basic" 
+                    chooseLabel="Subir Icono" 
+                    accept="image/*" 
+                    [maxFileSize]="2000000" 
+                    (onSelect)="onUpload($event, 'icon', iconUploader)"
+                    [auto]="true">
+                </p-fileUpload>
+                <div *ngIf="getUploadedFile('icon')" class="flex align-items-center justify-content-between mt-2 p-2 surface-ground border-round">
+                    <div class="flex align-items-center gap-2 overflow-hidden">
+                        <img [src]="getUploadedFile('icon').safeUrl" alt="Icon Preview" style="max-height: 50px; max-width: 50px; object-fit: contain;" class="border-round" />
+                        <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ getUploadedFile('icon').name }}</span>
+                    </div>
+                    <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('icon', iconUploader)"></p-button>
+                </div>
+            </div>
+            <div class="col-12 md:col-6 flex flex-column gap-2">
+                <label class="text-700">Imagen (Aspecto 2:1)</label>
+                <p-fileUpload #imageUploader
+                    mode="basic" 
+                    chooseLabel="Subir Imagen" 
+                    accept="image/*" 
+                    [maxFileSize]="2000000" 
+                    (onSelect)="onUpload($event, 'image', imageUploader)"
+                    [auto]="true">
+                </p-fileUpload>
+                <div *ngIf="getUploadedFile('image')" class="flex align-items-center justify-content-between mt-2 p-2 surface-ground border-round">
+                    <div class="flex align-items-center gap-2 overflow-hidden">
+                        <img [src]="getUploadedFile('image').safeUrl" alt="Image Preview" style="max-height: 50px; max-width: 100px; object-fit: contain;" class="border-round" />
+                        <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ getUploadedFile('image').name }}</span>
+                    </div>
+                    <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('image', imageUploader)"></p-button>
+                </div>
+            </div>
+            <div class="col-12 flex flex-column gap-2">
+                <label class="text-700">APK (Opcional si hay URL)</label>
+                <p-fileUpload #apkUploader
+                    mode="basic" 
+                    chooseLabel="Subir APK" 
+                    accept=".apk,application/vnd.android.package-archive" 
+                    [maxFileSize]="50000000" 
+                    (onSelect)="onUpload($event, 'apk', apkUploader)"
+                    [auto]="true">
+                </p-fileUpload>
+                <div *ngIf="getUploadedFile('apk')" class="flex align-items-center justify-content-between mt-2 p-2 surface-ground border-round">
+                    <div class="flex align-items-center gap-2 overflow-hidden">
+                        <i class="pi pi-file text-primary"></i>
+                        <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ getUploadedFile('apk').name }}</span>
+                    </div>
+                    <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('apk', apkUploader)"></p-button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="flex justify-content-end gap-2 mt-4">
+        <p-button label="Cancelar" severity="secondary" (onClick)="cancel()"></p-button>
+        <p-button label="Guardar" (onClick)="submit()" [loading]="isUploading()"></p-button>
+    </div>
+</div>

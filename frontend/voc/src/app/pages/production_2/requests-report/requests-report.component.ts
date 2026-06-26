@@ -1,0 +1,190 @@
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { CardModule } from 'primeng/card';
+import { ChartModule } from 'primeng/chart';
+import { TableModule } from 'primeng/table';
+import { ButtonModule } from 'primeng/button';
+import { SkeletonModule } from 'primeng/skeleton';
+import { AvatarModule } from 'primeng/avatar';
+import { TooltipModule } from 'primeng/tooltip';
+import { PageHeaderComponent } from '../../../components/shared/page-header/page-header';
+import { RequestsReportService, DashboardStats } from './requests-report.service';
+
+@Component({
+  selector: 'app-requests-report',
+  standalone: true,
+  imports: [
+    CommonModule,
+    CardModule,
+    ChartModule,
+    TableModule,
+    ButtonModule,
+    AvatarModule,
+    PageHeaderComponent,
+    SkeletonModule,
+    TooltipModule
+  ],
+  templateUrl: './requests-report.component.html',
+  styleUrl: './requests-report.component.scss'
+})
+export class RequestsReportComponent implements OnInit {
+  private service = inject(RequestsReportService);
+
+  stats = signal<DashboardStats | null>(null);
+
+  workloadChartData: any;
+  workloadChartOptions: any;
+
+  executionChartData: any;
+  executionChartOptions: any;
+
+  stageChartData: any;
+  stageChartOptions: any;
+
+  ngOnInit() {
+    this.loadStats();
+    this.initChartOptions();
+  }
+
+  loadStats() {
+    this.service.getDashboardStats().subscribe(data => {
+      this.stats.set(data);
+      this.initCharts(data);
+    });
+  }
+
+  initCharts(data: DashboardStats) {
+    // Workload Chart (Horizontal Bar)
+    this.workloadChartData = {
+      labels: data.workload.map(w => w.userName),
+      datasets: [
+        {
+          label: 'Carga de Trabajo',
+          backgroundColor: data.workload.map(w => w.status === 'overloaded' ? '#EF4444' : w.status === 'underutilized' ? '#22C55E' : '#F59E0B'),
+          data: data.workload.map(w => w.count)
+        }
+      ]
+    };
+
+    // Execution Status Chart (Pie/Doughnut)
+    this.executionChartData = {
+      labels: ['Pendiente', 'En Curso', 'Completado'],
+      datasets: [
+        {
+          data: [
+            data.executionStatus.pending,
+            data.executionStatus.inProgress,
+            data.executionStatus.completed
+          ],
+          backgroundColor: ['#F59E0B', '#3B82F6', '#22C55E'],
+          hoverBackgroundColor: ['#D97706', '#2563EB', '#16A34A']
+        }
+      ]
+    };
+
+    // Stages Chart (Horizontal Bar)
+    this.stageChartData = {
+      labels: data.stages.map(s => s.label),
+      datasets: [
+        {
+          label: 'Solicitudes por Etapa',
+          backgroundColor: '#8B5CF6', // Violet
+          data: data.stages.map(s => s.count)
+        }
+      ]
+    };
+  }
+
+  initChartOptions() {
+    const documentStyle = getComputedStyle(document.documentElement);
+    const textColor = documentStyle.getPropertyValue('--text-color');
+    const textColorSecondary = documentStyle.getPropertyValue('--text-color-secondary');
+    const surfaceBorder = documentStyle.getPropertyValue('--surface-border');
+
+    this.workloadChartOptions = {
+      indexAxis: 'y',
+      maintainAspectRatio: false,
+      aspectRatio: 0.8,
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: textColorSecondary
+          },
+          grid: {
+            color: surfaceBorder,
+            drawBorder: false
+          }
+        },
+        y: {
+          ticks: {
+            color: textColorSecondary
+          },
+          grid: {
+            color: surfaceBorder,
+            drawBorder: false
+          }
+        }
+      }
+    };
+
+    this.stageChartOptions = {
+      indexAxis: 'y',
+      maintainAspectRatio: false,
+      aspectRatio: 0.8,
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: textColorSecondary,
+            stepSize: 1
+          },
+          grid: {
+            color: surfaceBorder,
+            drawBorder: false
+          }
+        },
+        y: {
+          ticks: {
+            color: textColorSecondary
+          },
+          grid: {
+            color: surfaceBorder,
+            drawBorder: false
+          }
+        }
+      }
+    };
+
+    this.executionChartOptions = {
+      cutout: '60%',
+      layout: {
+        padding: {
+          top: 0,
+          bottom: 0
+        }
+      },
+      plugins: {
+        legend: {
+          labels: {
+            color: textColor
+          }
+        }
+      }
+    };
+  }
+
+  getStatusSeverity(status: string) {
+    if (status.includes('ATRASADA')) return 'danger';
+    if (status.includes('En Riesgo')) return 'warn';
+    return 'success';
+  }
+}

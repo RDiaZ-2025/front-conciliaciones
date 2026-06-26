@@ -1,0 +1,59 @@
+<div class="flex flex-column gap-4 p-4">
+    <h3 class="text-xl font-semibold text-900">Native Ads Configuration</h3>
+    
+    <form [formGroup]="form" class="flex flex-column gap-4">
+        <div class="flex flex-column gap-2">
+            <label class="text-700">Título Corto (Max 25 chars)</label>
+            <input pInputText class="w-full" formControlName="native_shortTitle" />
+            <small *ngIf="form.get('native_shortTitle')?.hasError('maxlength')" class="text-red-500">Máximo 25 caracteres.</small>
+        </div>
+
+        <div class="flex flex-column gap-2">
+            <label class="text-700">Título Largo (Max 50 chars)</label>
+            <input pInputText class="w-full" formControlName="native_longTitle" />
+            <small *ngIf="form.get('native_longTitle')?.hasError('maxlength')" class="text-red-500">Máximo 50 caracteres.</small>
+        </div>
+
+        <div class="flex flex-column gap-2">
+            <label class="text-700">Descripción Corta (Max 90 chars)</label>
+            <textarea pTextarea class="w-full" formControlName="native_shortDesc" rows="2"></textarea>
+            <small *ngIf="form.get('native_shortDesc')?.hasError('maxlength')" class="text-red-500">Máximo 90 caracteres.</small>
+        </div>
+
+        <div class="flex flex-column gap-2">
+            <label class="text-700">Descripción Larga (Max 150 chars)</label>
+            <textarea pTextarea class="w-full" formControlName="native_longDesc" rows="3"></textarea>
+            <small *ngIf="form.get('native_longDesc')?.hasError('maxlength')" class="text-red-500">Máximo 150 caracteres.</small>
+        </div>
+
+        <div class="formgrid grid gap-4">
+            <div class="col-12 md:col-6 flex flex-column gap-2">
+                <label class="text-700">Banner</label>
+                <p-fileUpload 
+                    mode="basic" 
+                    chooseLabel="Subir Banner" 
+                    accept="image/*" 
+                    [maxFileSize]="2000000" 
+                    (onSelect)="onUpload($event, 'native_banner')"
+                    [auto]="true">
+                </p-fileUpload>
+            </div>
+            <div class="col-12 md:col-6 flex flex-column gap-2">
+                <label class="text-700">Logo</label>
+                <p-fileUpload 
+                    mode="basic" 
+                    chooseLabel="Subir Logo" 
+                    accept="image/*" 
+                    [maxFileSize]="1000000" 
+                    (onSelect)="onUpload($event, 'native_logo')"
+                    [auto]="true">
+                </p-fileUpload>
+            </div>
+        </div>
+    </form>
+
+    <div class="flex justify-content-end gap-2 mt-4">
+        <p-button label="Cancelar" severity="secondary" (onClick)="cancel()"></p-button>
+        <p-button label="Guardar" (onClick)="submit()" [loading]="isUploading()"></p-button>
+    </div>
+</div>

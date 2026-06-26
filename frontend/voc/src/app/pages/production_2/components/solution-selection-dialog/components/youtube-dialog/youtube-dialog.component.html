@@ -1,0 +1,17 @@
+<div class="flex flex-column gap-4 p-4">
+    <h3 class="text-xl font-semibold text-900">YouTube Configuration</h3>
+    
+    <form [formGroup]="form" class="flex flex-column gap-4">
+        <div class="flex flex-column gap-2">
+            <label class="text-700">URL del Video Público (Youtube)</label>
+            <input pInputText class="w-full" formControlName="youtube_url" placeholder="https://youtube.com/..." />
+            <small *ngIf="form.get('youtube_url')?.hasError('required') && form.get('youtube_url')?.touched" class="text-red-500">Requerido.</small>
+            <small *ngIf="form.get('youtube_url')?.hasError('pattern')" class="text-red-500">URL inválida.</small>
+        </div>
+    </form>
+
+    <div class="flex justify-content-end gap-2 mt-4">
+        <p-button label="Cancelar" severity="secondary" (onClick)="cancel()"></p-button>
+        <p-button label="Guardar" (onClick)="submit()"></p-button>
+    </div>
+</div>

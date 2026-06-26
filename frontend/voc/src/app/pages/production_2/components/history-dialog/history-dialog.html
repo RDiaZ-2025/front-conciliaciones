@@ -1,0 +1,54 @@
+<div class="history-dialog p-4">
+    <div class="card border-round-xl shadow-1 surface-card overflow-hidden">
+        <p-table [value]="(history$ | async) ?? []" [loading]="(loading$ | async) ?? false" [scrollable]="true"
+            scrollHeight="400px" styleClass="p-datatable-lg" [rowHover]="true">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th pSortableColumn="createdAt" style="width: 200px">Fecha <p-sortIcon
+                            field="createdAt"></p-sortIcon></th>
+                    <th pSortableColumn="changedByUser.name" style="width: 200px">Usuario <p-sortIcon
+                            field="changedByUser.name"></p-sortIcon></th>
+                    <th pSortableColumn="changeType" style="width: 120px">Tipo <p-sortIcon
+                            field="changeType"></p-sortIcon></th>
+                    <th pSortableColumn="changeField" style="width: 150px">Campo <p-sortIcon
+                            field="changeField"></p-sortIcon></th>
+                    <th>Valor Anterior</th>
+                    <th>Valor Nuevo</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-record>
+                <tr>
+                    <td>{{formatDate(record.createdAt)}}</td>
+                    <td>
+                        <div class="flex align-items-center gap-2">
+                            <div
+                                class="flex align-items-center justify-content-center p-2 border-round bg-primary-50 text-primary">
+                                <i class="pi pi-user"></i>
+                            </div>
+                            <span class="font-medium">{{record.changedByUser?.name || 'Sistema'}}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <p-tag [value]="record.changeType" [severity]="getSeverity(record.changeType)"
+                            [rounded]="true"></p-tag>
+                    </td>
+                    <td>{{record.changeField}}</td>
+                    <td class="text-wrap" style="max-width: 200px; word-break: break-word;">{{record.oldValue || '-'}}
+                    </td>
+                    <td class="text-wrap" style="max-width: 200px; word-break: break-word;">{{record.newValue || '-'}}
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="6" class="text-center p-4 text-600">No hay historial de cambios registrado.</td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+
+    <div class="flex justify-content-end mt-3">
+        <p-button label="Cerrar" icon="pi pi-times" (onClick)="close()" styleClass="p-button-secondary"
+            [text]="true"></p-button>
+    </div>
+</div>

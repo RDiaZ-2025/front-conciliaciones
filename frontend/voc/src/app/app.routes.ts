@@ -21,16 +21,28 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/admin/admin').then(m => m.AdminComponent)
       },
       {
-        path: 'production',
+        path: 'mia',
         loadComponent: () => import('./pages/production/production').then(m => m.ProductionComponent)
+      },
+      {
+        path: 'requests',
+        loadComponent: () => import('./pages/production_2/production').then(m => m.ProductionComponent)
       },
       {
         path: 'campaign-scheduling',
         loadComponent: () => import('./pages/production/campaign-scheduling/campaign-scheduling.component').then(m => m.CampaignSchedulingComponent)
       },
       {
+        path: 'campaign-scheduling_2',
+        loadComponent: () => import('./pages/production_2/campaign-scheduling/campaign-scheduling.component').then(m => m.CampaignSchedulingComponent)
+      },
+      {
         path: 'requests-report',
         loadComponent: () => import('./pages/production/requests-report/requests-report.component').then(m => m.RequestsReportComponent)
+      },
+      {
+        path: 'requests-report_2',
+        loadComponent: () => import('./pages/production_2/requests-report/requests-report.component').then(m => m.RequestsReportComponent)
       },
       {
         path: 'upload',

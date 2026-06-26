@@ -98,7 +98,7 @@ export class LayoutComponent implements OnInit {
       const match = notification.message.match(/Se te ha asignado la solicitud de producción: (.*)/);
       if (match && match[1]) {
         const requestName = match[1].trim();
-        this.router.navigate(['/production'], { 
+        this.router.navigate(['/mia'], { 
           queryParams: { 
             action: 'open', 
             requestName: requestName 
