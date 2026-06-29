@@ -20,6 +20,12 @@ export const routes: Routes = [
     loadChildren: () => import('./features/portal/portal-module').then(m => m.PortalModule)
   },
 
+  // Ruta privada: Módulo Noticias
+  {
+    path: 'noticias',
+    loadChildren: () => import('./features/noticias/noticias.module').then(m => m.NoticiasModule)
+  },
+
   // Si la ruta está vacía (ej. localhost:4200), ir al login
   { path: '', redirectTo: '/login', pathMatch: 'full' },
 

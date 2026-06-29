@@ -1,0 +1,169 @@
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<div class="p-4 flex flex-column gap-4 animate-fade-in-up">
+  <!-- Header Card -->
+  <div class="surface-card p-4 border-round-xl shadow-3 flex flex-column md:flex-row align-items-start md:align-items-center justify-content-between gap-3 border-1 border-main">
+    <div>
+      <div class="flex align-items-center gap-2 mb-1">
+        <span class="text-3xl">📰</span>
+        <h1 class="text-2xl font-bold text-main m-0">Auto Generar Noticias</h1>
+      </div>
+      <p class="text-muted m-0">Configura agendamientos automáticos para que la IA genere noticias periódicamente basándose en fuentes y temas específicos.</p>
+    </div>
+    <div>
+      <button pButton pRipple type="button" label="Nuevo Agendamiento" icon="pi pi-plus" class="p-button-primary p-button-raised border-round-lg" (click)="openNew()"></button>
+    </div>
+  </div>
+
+  <!-- Table Card -->
+  <div class="surface-card p-4 border-round-xl shadow-3 border-1 border-main">
+    <h2 class="text-xl font-semibold text-main mb-3 flex align-items-center gap-2">
+      <i class="pi pi-calendar-plus text-primary"></i> Listado de Agendamientos
+    </h2>
+
+    <p-table [value]="schedules()" responsiveLayout="scroll" [rows]="10" [paginator]="true" styleClass="p-datatable-striped custom-schedule-table">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Nombre / Tema</th>
+          <th>Fuentes</th>
+          <th>Frecuencia</th>
+          <th>Próxima Ejecución</th>
+          <th class="text-center">Estado</th>
+          <th class="text-center" style="width: 180px;">Acciones</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-schedule>
+        <tr>
+          <td>
+            <div class="font-bold text-main text-base mb-1">{{ schedule.name }}</div>
+            <div class="text-muted text-sm line-height-2" title="{{ schedule.topic }}">
+              <strong class="text-main">Tema:</strong> {{ schedule.topic }}
+            </div>
+            <div *ngIf="schedule.userInstructions" class="text-muted text-xs mt-1 italic flex align-items-center gap-1">
+              <i class="pi pi-info-circle text-primary"></i> {{ schedule.userInstructions }}
+            </div>
+          </td>
+          <td>
+            <div class="flex flex-column gap-1">
+              <span *ngFor="let url of schedule.sources" class="text-xs underline overflow-hidden text-overflow-ellipsis white-space-nowrap inline-block max-w-15rem">
+                <a [href]="url" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-700">{{ url }}</a>
+              </span>
+            </div>
+          </td>
+          <td>
+            <div class="font-medium text-main">{{ getFrequencyLabel(schedule.intervalMinutes) }}</div>
+            <div class="text-xs text-muted mt-1">Inicio: {{ schedule.startAt | date:'short' }}</div>
+          </td>
+          <td>
+            <div class="text-sm font-medium text-main">{{ schedule.nextRunAt ? (schedule.nextRunAt | date:'short') : 'Pendiente' }}</div>
+            <div class="text-xs text-muted mt-1" *ngIf="schedule.lastRunAt">Última: {{ schedule.lastRunAt | date:'short' }}</div>
+          </td>
+          <td class="text-center">
+            <span class="cursor-pointer" (click)="toggleActive(schedule)" title="Haz clic para activar/desactivar">
+              <p-tag [severity]="schedule.isActive ? 'success' : 'danger'" [value]="schedule.isActive ? 'Activo' : 'Inactivo'" [rounded]="true"></p-tag>
+            </span>
+          </td>
+          <td class="text-center">
+            <div class="flex justify-content-center gap-2">
+              <button pButton pRipple icon="pi pi-bolt" class="p-button-rounded p-button-warning p-button-text" 
+                      [loading]="isExecuting(schedule.id)" pTooltip="Ejecutar Ahora" tooltipPosition="top"
+                      (click)="executeNow(schedule)"></button>
+              <button pButton pRipple icon="pi pi-pencil" class="p-button-rounded p-button-info p-button-text" 
+                      pTooltip="Editar" tooltipPosition="top"
+                      (click)="editSchedule(schedule)"></button>
+              <button pButton pRipple icon="pi pi-trash" class="p-button-rounded p-button-danger p-button-text" 
+                      pTooltip="Eliminar" tooltipPosition="top"
+                      (click)="confirmDelete(schedule)"></button>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="6" class="text-center p-5 text-muted">
+            No hay agendamientos creados aún. Haz clic en <strong class="text-main">"Nuevo Agendamiento"</strong> para comenzar.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+</div>
+
+<!-- Modal Form Dialog -->
+<p-dialog [(visible)]="displayDialog" [header]="isEditMode ? 'Editar Agendamiento' : 'Nuevo Agendamiento'" 
+          [modal]="true" [style]="{width: '620px'}" [breakpoints]="{'960px': '75vw', '640px': '95vw'}" 
+          styleClass="custom-scheduler-modal">
+  <ng-template pTemplate="content">
+    <form [formGroup]="scheduleForm" class="modal-form-container">
+      <!-- Nombre -->
+      <div class="form-field">
+        <label for="name" class="form-label">Nombre del Agendamiento <span class="text-primary">*</span></label>
+        <input id="name" type="text" pInputText formControlName="name" placeholder="Ej: Noticias Tecnología Diario" class="w-full form-input" />
+        <small class="p-error block mt-1" *ngIf="scheduleForm.get('name')?.invalid && scheduleForm.get('name')?.touched">
+          El nombre es requerido (mínimo 3 caracteres).
+        </small>
+      </div>
+
+      <!-- Tema / Topic -->
+      <div class="form-field">
+        <label for="topic" class="form-label">Tema Principal (Topic) <span class="text-primary">*</span></label>
+        <input id="topic" type="text" pInputText formControlName="topic" placeholder="Ej: Inteligencia Artificial y Computación Cuántica" class="w-full form-input" />
+        <small class="p-error block mt-1" *ngIf="scheduleForm.get('topic')?.invalid && scheduleForm.get('topic')?.touched">
+          El tema es requerido. Este campo se envía a la IA.
+        </small>
+      </div>
+
+      <!-- Instrucciones para la IA -->
+      <div class="form-field">
+        <label for="userInstructions" class="form-label">Instrucciones para la IA (Lenguaje Natural)</label>
+        <textarea id="userInstructions" pTextarea formControlName="userInstructions" rows="3" class="w-full form-textarea"
+                  placeholder="Ej: Enfocarse en noticias de empresas líderes. Usar un tono profesional y resumir los puntos clave."></textarea>
+        <small class="form-help">Opcional. Instrucciones adicionales que la IA tendrá en cuenta al generar la noticia.</small>
+      </div>
+
+      <!-- Fuentes (URLs) Dynamic List -->
+      <div class="form-field">
+        <div class="flex justify-content-between align-items-center mb-2">
+          <label class="form-label m-0">Fuentes de Información (URLs) <span class="text-primary">*</span></label>
+          <button pButton pRipple type="button" label="Agregar URL" icon="pi pi-plus" class="p-button-outlined p-button-sm border-round-md" (click)="addSource()"></button>
+        </div>
+        
+        <div formArrayName="sources" class="flex flex-column gap-2">
+          <div *ngFor="let control of sourcesArray.controls; let i = index" class="flex align-items-center gap-2">
+            <input type="text" pInputText [formControlName]="i" placeholder="https://ejemplo.com/noticia" class="flex-grow-1 form-input" />
+            <button pButton pRipple type="button" icon="pi pi-trash" class="p-button-danger p-button-text p-button-rounded" (click)="removeSource(i)" title="Eliminar URL"></button>
+          </div>
+        </div>
+        <small class="p-error block mt-1" *ngIf="sourcesArray.invalid && sourcesArray.touched">
+          Debes ingresar al menos una URL válida.
+        </small>
+      </div>
+
+      <!-- Programación: Inicio y Frecuencia -->
+      <div class="grid grid-nogutter gap-3">
+        <div class="col-12 md:col-6 form-field flex-1">
+          <label for="startAt" class="form-label">Fecha y Hora de Inicio <span class="text-primary">*</span></label>
+          <input id="startAt" type="datetime-local" pInputText formControlName="startAt" class="w-full form-input" />
+        </div>
+        <div class="col-12 md:col-6 form-field flex-1">
+          <label for="intervalMinutes" class="form-label">Frecuencia de Repetición <span class="text-primary">*</span></label>
+          <p-select [options]="frequencyOptions" formControlName="intervalMinutes" optionLabel="label" optionValue="value" placeholder="Selecciona frecuencia" styleClass="w-full form-select"></p-select>
+        </div>
+      </div>
+
+      <!-- Estado Activo/Inactivo -->
+      <div class="form-checkbox-field flex align-items-center gap-2 mt-2 p-3 border-round-lg border-1 border-main">
+        <input type="checkbox" id="isActive" formControlName="isActive" class="custom-checkbox" />
+        <label for="isActive" class="form-label cursor-pointer m-0 text-sm font-medium">Activar este agendamiento inmediatamente</label>
+      </div>
+    </form>
+  </ng-template>
+
+  <ng-template pTemplate="footer">
+    <div class="flex justify-content-end gap-2 pt-2">
+      <button pButton pRipple label="Cancelar" icon="pi pi-times" class="p-button-text p-button-secondary border-round-lg" (click)="displayDialog = false"></button>
+      <button pButton pRipple label="Guardar Agendamiento" icon="pi pi-check" class="p-button-primary border-round-lg" (click)="saveSchedule()"></button>
+    </div>
+  </ng-template>
+</p-dialog>

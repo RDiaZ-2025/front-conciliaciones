@@ -22,6 +22,7 @@ export * from './Presupuesto';
 export * from './IngresoPortal';
 export * from './IngresoRedes';
 export * from './PrecioDolar';
+export * from './NocNewsScheduler';
 
 export { MenuItem } from './MenuItem';
 export { UserActionLog } from './UserActionLog';
@@ -61,6 +62,7 @@ import { Presupuesto } from './Presupuesto';
 import { IngresoPortal } from './IngresoPortal';
 import { IngresoRedes } from './IngresoRedes';
 import { PrecioDolar } from './PrecioDolar';
+import { NocNewsScheduler } from './NocNewsScheduler';
 
 export const entities = [
   User,
@@ -93,7 +95,8 @@ export const entities = [
   Presupuesto,
   IngresoPortal,
   IngresoRedes,
-  PrecioDolar
+  PrecioDolar,
+  NocNewsScheduler
 ];
 
 export const ModelCategories = {

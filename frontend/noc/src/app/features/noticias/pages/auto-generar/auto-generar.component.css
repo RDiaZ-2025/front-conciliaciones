@@ -1,0 +1,104 @@
+/* Estilos Adaptativos Tema Claro/Oscuro para Auto Generar Noticias */
+
+.text-overflow-ellipsis {
+  text-overflow: ellipsis;
+}
+
+/* Modal Form Custom Overrides using PrimeNG Theme Tokens */
+::ng-deep .custom-scheduler-modal {
+  border-radius: 16px !important;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+}
+
+::ng-deep .custom-scheduler-modal .p-dialog-header {
+  padding: 1.25rem 1.5rem !important;
+  border-bottom: 1px solid var(--border-main, var(--surface-border, rgba(128, 128, 128, 0.2))) !important;
+}
+
+::ng-deep .custom-scheduler-modal .p-dialog-content {
+  padding: 1.5rem !important;
+}
+
+::ng-deep .custom-scheduler-modal .p-dialog-footer {
+  padding: 1rem 1.5rem !important;
+  border-top: 1px solid var(--border-main, var(--surface-border, rgba(128, 128, 128, 0.2))) !important;
+}
+
+/* Form Layout Classes */
+.modal-form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.form-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-main, var(--text-color, inherit));
+  margin: 0;
+}
+
+.form-help {
+  font-size: 0.8rem;
+  color: var(--text-muted, var(--text-muted-color, #888888));
+  margin-top: 0.25rem;
+}
+
+/* Input Styles Overrides adapting to Dark & Light theme automatically */
+.form-input,
+.form-textarea {
+  width: 100% !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  padding: 0.65rem 0.85rem !important;
+  border-radius: 8px !important;
+  font-size: 0.95rem !important;
+  background-color: var(--surface-card, transparent) !important;
+  color: var(--text-main, var(--text-color, inherit)) !important;
+  border: 1px solid var(--border-main, var(--surface-border, rgba(128, 128, 128, 0.3))) !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  border-color: var(--primary, #ee3829) !important;
+  box-shadow: 0 0 0 2px rgba(238, 56, 41, 0.2) !important;
+  outline: none !important;
+}
+
+::ng-deep .form-select {
+  width: 100% !important;
+  display: flex !important;
+  border-radius: 8px !important;
+  background-color: var(--surface-card, transparent) !important;
+  border: 1px solid var(--border-main, var(--surface-border, rgba(128, 128, 128, 0.3))) !important;
+}
+
+::ng-deep .form-select .p-select-label {
+  padding: 0.65rem 0.85rem !important;
+  color: var(--text-main, var(--text-color, inherit)) !important;
+}
+
+.form-checkbox-field {
+  background-color: transparent;
+}
+
+.custom-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary, #ee3829);
+}
+
+.custom-schedule-table .p-datatable-tbody > tr:nth-child(even) {
+  background-color: var(--surface-hover, rgba(128, 128, 128, 0.05));
+}

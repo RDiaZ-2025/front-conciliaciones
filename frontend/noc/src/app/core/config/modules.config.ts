@@ -23,5 +23,12 @@ export const SYSTEM_MODULES = [
             { code: 'segmentacion', label: 'Segmentación Bases (Beta)', route: '/admin/mensajeria/segmentacion-bases' },
             { code: 'analisis', label: 'Análisis SMS (Beta)', route: '/admin/mensajeria/analisis-sms' }
         ]
+    },
+    {
+        name: 'Noticias',
+        icon: '📰',
+        submodules: [
+            { code: 'auto_generar', label: 'Auto Generar', route: '/noticias/auto-generar' }
+        ]
     }
 ];

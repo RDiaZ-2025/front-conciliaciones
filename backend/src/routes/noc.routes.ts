@@ -5,6 +5,7 @@ import { NocDashboardController } from '../controllers/nocDashboard.controller';
 import { NocIngresosController } from '../controllers/nocIngresos.controller';
 import { NocPresupuestoController } from '../controllers/nocPresupuesto.controller';
 import { NocAgentController } from '../controllers/nocAgent.controller';
+import { NocNewsSchedulerController } from '../controllers/nocNewsScheduler.controller';
 
 const router = Router();
 const systemModulesController = new SystemModulesController();
@@ -12,6 +13,7 @@ const nocDashboardController = new NocDashboardController();
 const nocIngresosController = new NocIngresosController();
 const nocPresupuestoController = new NocPresupuestoController();
 const nocAgentController = new NocAgentController();
+const nocNewsSchedulerController = new NocNewsSchedulerController();
 
 // System Modules
 router.get('/system-modules', authenticateToken, systemModulesController.getSystemModules);
@@ -40,4 +42,14 @@ router.post('/portal-presupuesto/importar', authenticateToken, requirePermission
 router.post('/agent/chat', authenticateToken, nocAgentController.agentChat);
 router.get('/agent/health', nocAgentController.agentHealth);
 
+// News Scheduler (Support both /noc/news-scheduler and /news-scheduler)
+router.get(['/news-scheduler', '/noc/news-scheduler'], authenticateToken, (req, res) => nocNewsSchedulerController.getSchedules(req, res));
+router.get(['/news-scheduler/:id', '/noc/news-scheduler/:id'], authenticateToken, (req, res) => nocNewsSchedulerController.getScheduleById(req, res));
+router.post(['/news-scheduler', '/noc/news-scheduler'], authenticateToken, (req, res) => nocNewsSchedulerController.createSchedule(req, res));
+router.put(['/news-scheduler/:id', '/noc/news-scheduler/:id'], authenticateToken, (req, res) => nocNewsSchedulerController.updateSchedule(req, res));
+router.patch(['/news-scheduler/:id/toggle', '/noc/news-scheduler/:id/toggle'], authenticateToken, (req, res) => nocNewsSchedulerController.toggleActive(req, res));
+router.post(['/news-scheduler/:id/record-execution', '/noc/news-scheduler/:id/record-execution'], authenticateToken, (req, res) => nocNewsSchedulerController.recordExecution(req, res));
+router.delete(['/news-scheduler/:id', '/noc/news-scheduler/:id'], authenticateToken, (req, res) => nocNewsSchedulerController.deleteSchedule(req, res));
+
 export default router;
+

@@ -1,6 +1,8 @@
 import 'reflect-metadata';
 import { validateEnv } from './config/env.config';
 
+process.env.TZ = 'America/Bogota';
+
 // Cargar y validar variables de entorno antes de importar otros módulos
 validateEnv();
 
