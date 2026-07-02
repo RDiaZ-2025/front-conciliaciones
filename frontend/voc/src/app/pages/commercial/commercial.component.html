@@ -43,6 +43,20 @@
                      [class.disabled-item]="downloadingFileId() && downloadingFileId() !== file.id"
                      [class.downloading]="downloadingFileId() === file.id"
                      (click)="onItemClick(file)">
+                     
+                    <!-- Direct Download Button -->
+                    <p-button *ngIf="!file.isFolder"
+                              icon="pi pi-download"
+                              [rounded]="true"
+                              [text]="true"
+                              severity="secondary"
+                              styleClass="absolute top-0 right-0 m-1 z-2"
+                              [style]="{ 'width': '2.2rem', 'height': '2.2rem' }"
+                              (onClick)="downloadFile(file, $event)"
+                              pTooltip="Descargar"
+                              tooltipPosition="left">
+                    </p-button>
+
                     <div class="file-icon-wrapper relative">
                          <img *ngIf="file.isFolder" src="assets/folder.svg" alt="Folder" class="w-4rem h-4rem">
                          <i *ngIf="!file.isFolder" [class]="getFileIcon(file)"></i>
