@@ -86,6 +86,7 @@ export interface ProductionRequestDTO {
   campaignDetail?: Record<string, unknown> & { budget?: string | number };
   productionInfo?: Record<string, unknown>;
   unitAssigned?: number;
+  consecutive?: number;
   [key: string]: unknown;
 }
 

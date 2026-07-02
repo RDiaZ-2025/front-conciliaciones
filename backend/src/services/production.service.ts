@@ -238,6 +238,7 @@ export class ProductionService {
         if (audienceData) existingRequest.audienceData = { ...existingRequest.audienceData, ...(audienceData as unknown as AudienceData) };
         if (productionInfo) existingRequest.productionInfo = { ...existingRequest.productionInfo, ...(productionInfo as unknown as ProductionInfo) };
         if (unitAssigned !== undefined) existingRequest.unitAssigned = unitAssigned !== undefined ? String(unitAssigned) : (existingRequest.unitAssigned || null);
+        if (data.consecutive !== undefined) existingRequest.consecutive = data.consecutive ? Number(data.consecutive) : null;
         if (campaignDetail) {
             if (campaignDetail.budget !== undefined && campaignDetail.budget !== null) campaignDetail.budget = String(campaignDetail.budget);
             existingRequest.campaignDetail = { ...existingRequest.campaignDetail, ...(campaignDetail as unknown as CampaignDetail), budget: campaignDetail.budget !== undefined && campaignDetail.budget !== null ? String(campaignDetail.budget) : existingRequest.campaignDetail?.budget } as unknown as CampaignDetail;
@@ -290,6 +291,7 @@ export class ProductionService {
         if (data.deliveryDate !== undefined) existingRequest.deliveryDate = data.deliveryDate ? new Date(data.deliveryDate) : null;
         if (data.observations !== undefined) existingRequest.observations = data.observations || null;
         if (data.unitAssigned !== undefined) existingRequest.unitAssigned = data.unitAssigned ? String(data.unitAssigned) : null;
+        if (data.consecutive !== undefined) existingRequest.consecutive = data.consecutive ? Number(data.consecutive) : null;
 
         if (data.customerData) existingRequest.customerData = { ...existingRequest.customerData, ...data.customerData } as unknown as CustomerData;
         if (data.audienceData) existingRequest.audienceData = { ...existingRequest.audienceData, ...data.audienceData } as unknown as AudienceData;
