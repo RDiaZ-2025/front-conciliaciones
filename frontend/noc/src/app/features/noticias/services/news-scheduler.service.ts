@@ -14,6 +14,7 @@ export interface NewsSchedule {
   startAt: string; // ISO string
   intervalMinutes: number; // Interval in minutes (e.g., 15, 30, 60, 1440)
   cronExpression?: string | null;
+  scheduleConfig: any; // Flexible JSON config
   isActive: boolean;
   status?: string;
   lastRunAt?: string | null;

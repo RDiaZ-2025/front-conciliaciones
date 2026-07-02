@@ -27,7 +27,7 @@
         <tr>
           <th>Nombre / Tema</th>
           <th>Fuentes</th>
-          <th>Frecuencia</th>
+          <th>Programación</th>
           <th>Próxima Ejecución</th>
           <th class="text-center">Estado</th>
           <th class="text-center" style="width: 180px;">Acciones</th>
@@ -52,11 +52,11 @@
             </div>
           </td>
           <td>
-            <div class="font-medium text-main">{{ getFrequencyLabel(schedule.intervalMinutes) }}</div>
+            <div class="font-medium text-main">{{ getFrequencyLabel(schedule) }}</div>
             <div class="text-xs text-muted mt-1">Inicio: {{ schedule.startAt | date:'short' }}</div>
           </td>
           <td>
-            <div class="text-sm font-medium text-main">{{ schedule.nextRunAt ? (schedule.nextRunAt | date:'short') : 'Pendiente' }}</div>
+            <div class="text-sm font-medium text-main">{{ schedule.nextRunAt ? (schedule.nextRunAt | date:'short') : 'Finalizado' }}</div>
             <div class="text-xs text-muted mt-1" *ngIf="schedule.lastRunAt">Última: {{ schedule.lastRunAt | date:'short' }}</div>
           </td>
           <td class="text-center">
@@ -140,16 +140,55 @@
         </small>
       </div>
 
-      <!-- Programación: Inicio y Frecuencia -->
-      <div class="grid grid-nogutter gap-3">
-        <div class="col-12 md:col-6 form-field flex-1">
-          <label for="startAt" class="form-label">Fecha y Hora de Inicio <span class="text-primary">*</span></label>
-          <input id="startAt" type="datetime-local" pInputText formControlName="startAt" class="w-full form-input" />
+      <!-- Fecha y Hora de Inicio -->
+      <div class="form-field">
+        <label for="startAt" class="form-label">Fecha y Hora de Inicio <span class="text-primary">*</span></label>
+        <input id="startAt" type="datetime-local" pInputText formControlName="startAt" class="w-full form-input" />
+      </div>
+
+      <!-- Frecuencia de Repetición / Repetir por Intervalo -->
+      <div class="form-field">
+        <label for="intervalMinutes" class="form-label">Repetición por Intervalo</label>
+        <p-select [options]="[
+          { label: 'No repetir (Ejecutar solo a horas específicas)', value: 0 },
+          { label: 'Cada 15 minutos', value: 15 },
+          { label: 'Cada 30 minutos', value: 30 },
+          { label: 'Cada 1 hora', value: 60 },
+          { label: 'Cada 2 horas', value: 120 },
+          { label: 'Cada 6 horas', value: 360 },
+          { label: 'Cada 12 horas', value: 720 },
+          { label: 'Cada 24 horas (Diario)', value: 1440 }
+        ]" formControlName="intervalMinutes" optionLabel="label" optionValue="value" styleClass="w-full form-select"></p-select>
+        <small class="form-help">Selecciona un intervalo regular o elige ejecutar a horas fijas.</small>
+      </div>
+
+      <!-- Horas de Ejecución Específicas por Día (Solo si intervalMinutes es 0) -->
+      <div *ngIf="scheduleForm.get('intervalMinutes')?.value === 0" class="form-field">
+        <div class="flex justify-content-between align-items-center mb-2">
+          <label class="form-label m-0">Reglas de Programación Semanal <span class="text-primary">*</span></label>
+          <button pButton pRipple type="button" label="Agregar Día/Hora" icon="pi pi-plus" class="p-button-outlined p-button-sm border-round-md" (click)="addWeeklyRule()"></button>
         </div>
-        <div class="col-12 md:col-6 form-field flex-1">
-          <label for="intervalMinutes" class="form-label">Frecuencia de Repetición <span class="text-primary">*</span></label>
-          <p-select [options]="frequencyOptions" formControlName="intervalMinutes" optionLabel="label" optionValue="value" placeholder="Selecciona frecuencia" styleClass="w-full form-select"></p-select>
+        
+        <div formArrayName="weeklyRules" class="flex flex-column gap-2">
+          <div *ngFor="let ruleGroup of weeklyRulesArray.controls; let i = index" [formGroupName]="i" class="flex align-items-center gap-2">
+            <!-- Selector de Día -->
+            <p-select [options]="daysOfWeekOptions" formControlName="dayOfWeek" optionLabel="label" optionValue="value" placeholder="Día" styleClass="w-8rem form-select"></p-select>
+            <!-- Input de Hora -->
+            <input type="time" pInputText formControlName="time" class="flex-grow-1 form-input" />
+            <!-- Botón Eliminar -->
+            <button pButton pRipple type="button" icon="pi pi-trash" class="p-button-danger p-button-text p-button-rounded" (click)="removeWeeklyRule(i)" title="Eliminar Regla"></button>
+          </div>
         </div>
+        <small class="p-error block mt-1" *ngIf="weeklyRulesArray.invalid && weeklyRulesArray.touched">
+          Debes ingresar horas válidas.
+        </small>
+      </div>
+
+      <!-- Fecha Límite (Opcional) -->
+      <div class="form-field">
+        <label for="endAt" class="form-label">Fecha Límite de Ejecución (Opcional)</label>
+        <input id="endAt" type="datetime-local" pInputText formControlName="endAt" class="w-full form-input" />
+        <small class="form-help">El agendamiento se desactivará automáticamente después de esta fecha.</small>
       </div>
 
       <!-- Estado Activo/Inactivo -->

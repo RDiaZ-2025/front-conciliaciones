@@ -13,6 +13,7 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { SelectModule } from 'primeng/select';
+import { SelectButtonModule } from 'primeng/selectbutton';
 import { MessageService, ConfirmationService } from 'primeng/api';
 
 import { NewsSchedulerService, NewsSchedule } from '../../services/news-scheduler.service';
@@ -32,7 +33,8 @@ import { NewsSchedulerService, NewsSchedule } from '../../services/news-schedule
     ToastModule,
     ConfirmDialogModule,
     TooltipModule,
-    SelectModule
+    SelectModule,
+    SelectButtonModule
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './auto-generar.component.html',
@@ -47,6 +49,12 @@ export class AutoGenerarComponent implements OnInit {
 
   scheduleForm!: FormGroup;
 
+  scheduleTypeOptions = [
+    { label: 'Por Intervalo', value: 'interval' },
+    { label: 'Diario (Hora Fija)', value: 'daily' },
+    { label: 'Horas Específicas al día', value: 'specific_hours' }
+  ];
+
   frequencyOptions = [
     { label: 'Cada 15 minutos', value: 15 },
     { label: 'Cada 30 minutos', value: 30 },
@@ -54,9 +62,17 @@ export class AutoGenerarComponent implements OnInit {
     { label: 'Cada 2 horas', value: 120 },
     { label: 'Cada 6 horas', value: 360 },
     { label: 'Cada 12 horas', value: 720 },
-    { label: 'Cada 24 horas (Diario)', value: 1440 },
-    { label: 'Cada 48 horas', value: 2880 },
-    { label: 'Cada 7 días (Semanal)', value: 10080 }
+    { label: 'Cada 24 horas (Diario)', value: 1440 }
+  ];
+
+  daysOfWeekOptions = [
+    { label: 'Lun', value: 1 },
+    { label: 'Mar', value: 2 },
+    { label: 'Mié', value: 3 },
+    { label: 'Jue', value: 4 },
+    { label: 'Vie', value: 5 },
+    { label: 'Sáb', value: 6 },
+    { label: 'Dom', value: 0 }
   ];
 
   constructor(
@@ -81,14 +97,26 @@ export class AutoGenerarComponent implements OnInit {
       userInstructions: [''],
       sources: this.fb.array([this.fb.control('', [Validators.required])]),
       startAt: [nowISO, [Validators.required]],
-      intervalMinutes: [1440, [Validators.required]],
+      // Unified inputs
+      intervalMinutes: [0, [Validators.required]], // 0 = weekly day/time rules, >0 = regular intervals
+      endAt: [''],
+      weeklyRules: this.fb.array([]),
       isActive: [true]
     });
+
+    // Make sure we have at least one weekly rule by default
+    this.addWeeklyRule(1, '12:00'); // Default Monday at 12:00
   }
 
   get sourcesArray(): FormArray {
     return this.scheduleForm.get('sources') as FormArray;
   }
+
+  get weeklyRulesArray(): FormArray {
+    return this.scheduleForm.get('weeklyRules') as FormArray;
+  }
+
+
 
   addSource(urlValue: string = ''): void {
     this.sourcesArray.push(this.fb.control(urlValue, [Validators.required]));
@@ -102,6 +130,25 @@ export class AutoGenerarComponent implements OnInit {
         severity: 'warn',
         summary: 'Atención',
         detail: 'Debe haber al menos una fuente de información.'
+      });
+    }
+  }
+
+  addWeeklyRule(day: number = 1, time: string = '12:00'): void {
+    this.weeklyRulesArray.push(this.fb.group({
+      dayOfWeek: [day, [Validators.required]],
+      time: [time, [Validators.required, Validators.pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)]]
+    }));
+  }
+
+  removeWeeklyRule(index: number): void {
+    if (this.weeklyRulesArray.length > 1) {
+      this.weeklyRulesArray.removeAt(index);
+    } else {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Atención',
+        detail: 'Debe ingresar al menos una regla de ejecución.'
       });
     }
   }
@@ -124,12 +171,15 @@ export class AutoGenerarComponent implements OnInit {
       topic: '',
       userInstructions: '',
       startAt: nowISO,
-      intervalMinutes: 1440,
+      intervalMinutes: 0,
+      endAt: '',
       isActive: true
     });
 
     this.sourcesArray.clear();
     this.addSource('');
+    this.weeklyRulesArray.clear();
+    this.addWeeklyRule(1, '12:00');
     this.displayDialog = true;
   }
 
@@ -142,12 +192,16 @@ export class AutoGenerarComponent implements OnInit {
       formattedStartAt = formattedStartAt.slice(0, 16);
     }
 
+    const config = schedule.scheduleConfig || {};
+    const intervalMin = config.intervalMinutes || 0;
+
     this.scheduleForm.patchValue({
       name: schedule.name,
       topic: schedule.topic,
       userInstructions: schedule.userInstructions || '',
       startAt: formattedStartAt,
-      intervalMinutes: schedule.intervalMinutes,
+      intervalMinutes: intervalMin,
+      endAt: config.endAt ? config.endAt.slice(0, 16) : '',
       isActive: schedule.isActive
     });
 
@@ -156,6 +210,25 @@ export class AutoGenerarComponent implements OnInit {
       schedule.sources.forEach(url => this.addSource(url));
     } else {
       this.addSource('');
+    }
+
+    this.weeklyRulesArray.clear();
+    if (config.weeklyRules && config.weeklyRules.length > 0) {
+      config.weeklyRules.forEach((rule: any) => this.addWeeklyRule(rule.dayOfWeek, rule.time));
+    } else if (intervalMin === 0) {
+      // Fallback from old config models
+      if (config.times && config.times.length > 0) {
+        config.times.forEach((t: string) => {
+          if (config.daysOfWeek && config.daysOfWeek.length > 0) {
+            config.daysOfWeek.forEach((d: number) => this.addWeeklyRule(d, t));
+          } else {
+            // Default everyday (Mon-Sun) if no day filters existed
+            [1, 2, 3, 4, 5, 6, 0].forEach(d => this.addWeeklyRule(d, t));
+          }
+        });
+      } else {
+        this.addWeeklyRule(1, '12:00');
+      }
     }
 
     this.displayDialog = true;
@@ -167,7 +240,7 @@ export class AutoGenerarComponent implements OnInit {
       this.messageService.add({
         severity: 'error',
         summary: 'Formulario Inválido',
-        detail: 'Por favor completa todos los campos requeridos y asegúrate de agregar al menos una URL válida.'
+        detail: 'Por favor completa todos los campos requeridos.'
       });
       return;
     }
@@ -184,13 +257,40 @@ export class AutoGenerarComponent implements OnInit {
       return;
     }
 
+    // Build the simplified configuration JSON
+    const interval = Number(formVal.intervalMinutes);
+    let scheduleConfig: any = {};
+
+    if (interval > 0) {
+      scheduleConfig.intervalMinutes = interval;
+    } else {
+      const rules = formVal.weeklyRules || [];
+      if (rules.length === 0) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Reglas Requeridas',
+          detail: 'Debes ingresar al menos una regla de día y hora.'
+        });
+        return;
+      }
+      scheduleConfig.weeklyRules = rules.map((r: any) => ({
+        dayOfWeek: Number(r.dayOfWeek),
+        time: r.time
+      }));
+    }
+
+    if (formVal.endAt) {
+      scheduleConfig.endAt = formVal.endAt;
+    }
+
     const schedulePayload = {
       name: formVal.name,
       topic: formVal.topic,
       userInstructions: formVal.userInstructions?.trim() ? formVal.userInstructions.trim() : null,
       sources: sourcesFiltered,
       startAt: formVal.startAt,
-      intervalMinutes: Number(formVal.intervalMinutes),
+      intervalMinutes: interval > 0 ? interval : 1440,
+      scheduleConfig,
       isActive: formVal.isActive
     };
 
@@ -339,11 +439,64 @@ export class AutoGenerarComponent implements OnInit {
     return this.executingIds().has(id);
   }
 
-  getFrequencyLabel(minutes: number): string {
-    const option = this.frequencyOptions.find(o => o.value === minutes);
-    if (option) return option.label;
-    if (minutes < 60) return `Cada ${minutes} minutos`;
-    if (minutes < 1440) return `Cada ${Math.floor(minutes / 60)} horas`;
-    return `Cada ${Math.floor(minutes / 1440)} días`;
+  getFrequencyLabel(schedule: NewsSchedule): string {
+    const config = schedule.scheduleConfig || {};
+    const intervalMin = config.intervalMinutes || 0;
+    
+    // Day of week labels dictionary
+    const dayNames: { [key: number]: string } = {
+      1: 'Lun',
+      2: 'Mar',
+      3: 'Mié',
+      4: 'Jue',
+      5: 'Vie',
+      6: 'Sáb',
+      0: 'Dom'
+    };
+
+    let label = '';
+    if (intervalMin > 0) {
+      const option = this.frequencyOptions.find(o => o.value === intervalMin);
+      if (option) {
+        label = option.label;
+      } else {
+        if (intervalMin < 60) label = `Cada ${intervalMin} minutos`;
+        else if (intervalMin < 1440) label = `Cada ${Math.floor(intervalMin / 60)} horas`;
+        else label = `Cada ${Math.floor(intervalMin / 1440)} días`;
+      }
+      
+      if (config.daysOfWeek && config.daysOfWeek.length > 0) {
+        const names = config.daysOfWeek.map((d: number) => dayNames[d]);
+        label += ` (Días: ${names.join(', ')})`;
+      }
+    } else {
+      const rules = config.weeklyRules || [];
+      if (rules.length === 0) {
+        label = 'Sin programar';
+      } else {
+        // Group times by dayOfWeek to display nicely (e.g. "Lun: 09:00, 22:00 | Mar: 15:00")
+        const grouped: { [key: number]: string[] } = {};
+        rules.forEach((r: any) => {
+          if (!grouped[r.dayOfWeek]) {
+            grouped[r.dayOfWeek] = [];
+          }
+          grouped[r.dayOfWeek].push(r.time);
+        });
+
+        const sortedDays = Object.keys(grouped).map(Number).sort((a, b) => {
+          // Sort Mon-Sun (1,2,3,4,5,6,0)
+          const order = [1, 2, 3, 4, 5, 6, 0];
+          return order.indexOf(a) - order.indexOf(b);
+        });
+
+        label = sortedDays.map(d => `${dayNames[d]}: ${grouped[d].join(', ')}`).join(' | ');
+      }
+    }
+
+    if (config.endAt) {
+      const endFormatted = new Date(config.endAt).toLocaleDateString();
+      label += ` (hasta ${endFormatted})`;
+    }
+    return label;
   }
 }

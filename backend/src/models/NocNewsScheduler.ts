@@ -32,6 +32,9 @@ export class NocNewsScheduler {
     @Column({ name: 'cronExpression', type: 'nvarchar', length: 100, nullable: true })
     cronExpression!: string | null;
 
+    @Column({ name: 'scheduleConfig', type: 'nvarchar', length: 'MAX', nullable: false })
+    scheduleConfig!: string; // JSON string representing the schedule configuration
+
     @Column({ name: 'isActive', type: 'bit', nullable: false, default: 1 })
     isActive!: boolean;
 

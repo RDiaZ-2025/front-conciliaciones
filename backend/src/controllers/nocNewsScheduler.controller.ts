@@ -31,8 +31,8 @@ export class NocNewsSchedulerController {
 
     async createSchedule(req: Request, res: Response): Promise<void> {
         try {
-            const { name, topic, userInstructions, sources, startAt, intervalMinutes, isActive } = req.body;
-            if (!name || !topic || !sources || !startAt || !intervalMinutes) {
+            const { name, topic, userInstructions, sources, startAt, scheduleConfig, isActive } = req.body;
+            if (!name || !topic || !sources || !startAt || !scheduleConfig) {
                 res.status(400).json({ message: 'Faltan campos requeridos para el agendamiento' });
                 return;
             }
@@ -42,7 +42,7 @@ export class NocNewsSchedulerController {
                 userInstructions,
                 sources,
                 startAt,
-                intervalMinutes: Number(intervalMinutes),
+                scheduleConfig,
                 isActive
             });
             res.status(201).json(schedule);

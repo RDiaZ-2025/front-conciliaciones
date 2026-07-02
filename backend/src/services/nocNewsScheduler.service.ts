@@ -8,7 +8,7 @@ export interface CreateNewsScheduleDto {
     userInstructions?: string | null;
     sources: string[];
     startAt: string;
-    intervalMinutes: number;
+    scheduleConfig: any; // Raw JSON config from frontend
     isActive?: boolean;
 }
 
@@ -18,7 +18,7 @@ export interface UpdateNewsScheduleDto {
     userInstructions?: string | null;
     sources?: string[];
     startAt?: string;
-    intervalMinutes?: number;
+    scheduleConfig?: any; // Raw JSON config from frontend
     isActive?: boolean;
     status?: string;
 }
@@ -28,6 +28,15 @@ export class NocNewsSchedulerService {
 
     private get repository(): Repository<NocNewsScheduler> {
         return AppDataSource.getRepository(NocNewsScheduler);
+    }
+
+    private parseColombiaDate(dateStr: string): Date {
+        if (!dateStr) return new Date();
+        let normalized = dateStr.trim();
+        if (!normalized.includes('Z') && !normalized.includes('+') && !/-\d{2}:\d{2}$/.test(normalized)) {
+            normalized = normalized + '-05:00';
+        }
+        return new Date(normalized);
     }
 
     private minutesToCron(minutes: number): string {
@@ -43,28 +52,99 @@ export class NocNewsSchedulerService {
         return `*/${minutes} * * * *`;
     }
 
-    private parseColombiaDate(dateStr: string): Date {
-        if (!dateStr) return new Date();
-        let normalized = dateStr.trim();
-        if (!normalized.includes('Z') && !normalized.includes('+') && !/-\d{2}:\d{2}$/.test(normalized)) {
-            normalized = normalized + '-05:00';
-        }
-        return new Date(normalized);
-    }
-
-    private calculateNextRun(startAtISO: string, intervalMinutes: number): Date {
+    // Simplified dynamic next run calculator using a unified JSON config
+    private calculateNextRunFromConfig(config: any, startAtISO: string, fromDate: Date = new Date()): Date | null {
         const startDate = this.parseColombiaDate(startAtISO);
-        const start = startDate.getTime();
-        const now = Date.now();
-        if (isNaN(start)) {
-            return new Date(now + intervalMinutes * 60000);
+        const next = new Date(fromDate.getTime());
+        next.setSeconds(0);
+        next.setMilliseconds(0);
+
+        if (!config) return null;
+
+        // Check if global endAt boundary has already passed
+        if (config.endAt) {
+            const endDate = this.parseColombiaDate(config.endAt);
+            if (fromDate > endDate) {
+                return null; // Expiration reached
+            }
         }
 
-        let next = start;
-        while (next <= now) {
-            next += intervalMinutes * 60000;
+        // Case A: Interval-based execution
+        if (config.intervalMinutes && config.intervalMinutes > 0) {
+            const minutes = config.intervalMinutes;
+            const start = startDate.getTime();
+            const now = fromDate.getTime();
+            
+            let target = start;
+            if (isNaN(start)) {
+                target = now;
+            }
+            
+            while (target <= now) {
+                target += minutes * 60000;
+            }
+
+            const nextRun = new Date(target);
+            
+            // Loop until we hit a valid day of the week if day selection is active (fallback legacy support)
+            if (config.daysOfWeek && config.daysOfWeek.length > 0) {
+                while (!config.daysOfWeek.includes(nextRun.getDay())) {
+                    nextRun.setDate(nextRun.getDate() + 1);
+                }
+            }
+
+            if (config.endAt) {
+                const endDate = this.parseColombiaDate(config.endAt);
+                if (nextRun > endDate) {
+                    return null; // Expiration boundary reached
+                }
+            }
+            return nextRun;
         }
-        return new Date(next);
+
+        // Case B: Specific Day/Time Rules execution (weeklyRules)
+        const rules = config.weeklyRules && config.weeklyRules.length > 0 ? config.weeklyRules : [{ dayOfWeek: 1, time: "12:00" }];
+        
+        // Helper to format date in Colombia local timezone
+        const getColombiaDateStr = (d: Date) => {
+            const options: Intl.DateTimeFormatOptions = { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' };
+            const formatter = new Intl.DateTimeFormat('en-US', options);
+            const parts = formatter.formatToParts(d);
+            const partVal = (type: Intl.DateTimeFormatPartTypes) => parts.find(p => p.type === type)!.value;
+            return `${partVal('year')}-${partVal('month')}-${partVal('day')}`;
+        };
+
+        const candidateDates = rules.map((rule: any) => {
+            const dateStr = getColombiaDateStr(fromDate);
+            const candidate = new Date(`${dateStr}T${rule.time}:00-05:00`);
+
+            // Compute correct Colombia day of week
+            const colDateObj = new Date(`${dateStr}T12:00:00-05:00`);
+            const colDayOfWeek = colDateObj.getDay();
+
+            let daysDiff = (rule.dayOfWeek - colDayOfWeek + 7) % 7;
+
+            if (daysDiff === 0) {
+                // If it is today, check if time has already passed
+                if (candidate <= fromDate) {
+                    daysDiff = 7; // Move to next week same day
+                }
+            }
+
+            candidate.setDate(candidate.getDate() + daysDiff);
+            return candidate;
+        });
+
+        candidateDates.sort((a: Date, b: Date) => a.getTime() - b.getTime());
+        const nextRun = candidateDates[0];
+
+        if (config.endAt) {
+            const endDate = this.parseColombiaDate(config.endAt);
+            if (nextRun > endDate) {
+                return null;
+            }
+        }
+        return nextRun;
     }
 
     async getAllSchedules() {
@@ -77,7 +157,8 @@ export class NocNewsSchedulerService {
 
         return schedules.map((item: NocNewsScheduler) => ({
             ...item,
-            sources: JSON.parse(item.sources || '[]')
+            sources: JSON.parse(item.sources || '[]'),
+            scheduleConfig: JSON.parse(item.scheduleConfig || '{}')
         }));
     }
 
@@ -89,7 +170,8 @@ export class NocNewsSchedulerService {
         if (!schedule) return null;
         return {
             ...schedule,
-            sources: JSON.parse(schedule.sources || '[]')
+            sources: JSON.parse(schedule.sources || '[]'),
+            scheduleConfig: JSON.parse(schedule.scheduleConfig || '{}')
         };
     }
 
@@ -99,8 +181,10 @@ export class NocNewsSchedulerService {
         }
         const id = 'sched-' + Date.now();
         const startAtDate = this.parseColombiaDate(dto.startAt);
-        const nextRun = this.calculateNextRun(dto.startAt, dto.intervalMinutes);
-        const cron = this.minutesToCron(dto.intervalMinutes);
+        const nextRun = this.calculateNextRunFromConfig(dto.scheduleConfig, dto.startAt);
+
+        // Fallback backward compatibility for interval minutes
+        let intervalMin = dto.scheduleConfig?.intervalMinutes || 1440;
 
         const newSchedule = this.repository.create({
             id,
@@ -111,17 +195,19 @@ export class NocNewsSchedulerService {
             url: this.defaultWebhookUrl,
             method: 'POST',
             startAt: startAtDate,
-            intervalMinutes: dto.intervalMinutes,
-            cronExpression: cron,
+            intervalMinutes: intervalMin,
+            cronExpression: dto.scheduleConfig?.intervalMinutes ? this.minutesToCron(dto.scheduleConfig.intervalMinutes) : null,
+            scheduleConfig: JSON.stringify(dto.scheduleConfig || {}),
             isActive: dto.isActive !== undefined ? dto.isActive : true,
-            status: dto.isActive !== false ? 'Pending' : 'Cancelled',
+            status: dto.isActive !== false ? (nextRun ? 'Pending' : 'Completed') : 'Cancelled',
             nextRunAt: nextRun
         });
 
         const saved = await this.repository.save(newSchedule);
         return {
             ...saved,
-            sources: JSON.parse(saved.sources)
+            sources: JSON.parse(saved.sources),
+            scheduleConfig: JSON.parse(saved.scheduleConfig)
         };
     }
 
@@ -136,26 +222,41 @@ export class NocNewsSchedulerService {
         if (dto.topic !== undefined) schedule.topic = dto.topic;
         if (dto.userInstructions !== undefined) schedule.userInstructions = dto.userInstructions;
         if (dto.sources !== undefined) schedule.sources = JSON.stringify(dto.sources);
+        
         if (dto.isActive !== undefined) {
             schedule.isActive = dto.isActive;
             schedule.status = dto.isActive ? 'Pending' : 'Cancelled';
         }
         if (dto.status !== undefined) schedule.status = dto.status;
 
-        if (dto.startAt !== undefined || dto.intervalMinutes !== undefined) {
-            if (dto.startAt !== undefined) schedule.startAt = this.parseColombiaDate(dto.startAt);
-            if (dto.intervalMinutes !== undefined) {
-                schedule.intervalMinutes = dto.intervalMinutes;
-                schedule.cronExpression = this.minutesToCron(dto.intervalMinutes);
+        if (dto.scheduleConfig !== undefined) {
+            schedule.scheduleConfig = JSON.stringify(dto.scheduleConfig);
+            if (dto.scheduleConfig.intervalMinutes) {
+                schedule.intervalMinutes = dto.scheduleConfig.intervalMinutes;
+                schedule.cronExpression = this.minutesToCron(dto.scheduleConfig.intervalMinutes);
+            } else {
+                schedule.intervalMinutes = 1440;
+                schedule.cronExpression = null;
             }
+        }
+
+        if (dto.startAt !== undefined || dto.scheduleConfig !== undefined) {
+            if (dto.startAt !== undefined) schedule.startAt = this.parseColombiaDate(dto.startAt);
             const startAtStr = dto.startAt !== undefined ? dto.startAt : schedule.startAt.toISOString();
-            schedule.nextRunAt = this.calculateNextRun(startAtStr, schedule.intervalMinutes);
+            const configObj = dto.scheduleConfig !== undefined ? dto.scheduleConfig : JSON.parse(schedule.scheduleConfig);
+            
+            const nextRun = this.calculateNextRunFromConfig(configObj, startAtStr);
+            schedule.nextRunAt = nextRun;
+            if (schedule.isActive && !nextRun) {
+                schedule.status = 'Completed';
+            }
         }
 
         const saved = await this.repository.save(schedule);
         return {
             ...saved,
-            sources: JSON.parse(saved.sources)
+            sources: JSON.parse(saved.sources),
+            scheduleConfig: JSON.parse(saved.scheduleConfig)
         };
     }
 
@@ -167,12 +268,20 @@ export class NocNewsSchedulerService {
         if (!schedule) return null;
 
         schedule.isActive = !schedule.isActive;
-        schedule.status = schedule.isActive ? 'Pending' : 'Cancelled';
+        if (schedule.isActive) {
+            const configObj = JSON.parse(schedule.scheduleConfig);
+            const nextRun = this.calculateNextRunFromConfig(configObj, schedule.startAt.toISOString());
+            schedule.nextRunAt = nextRun;
+            schedule.status = nextRun ? 'Pending' : 'Completed';
+        } else {
+            schedule.status = 'Cancelled';
+        }
 
         const saved = await this.repository.save(schedule);
         return {
             ...saved,
-            sources: JSON.parse(saved.sources)
+            sources: JSON.parse(saved.sources),
+            scheduleConfig: JSON.parse(saved.scheduleConfig)
         };
     }
 
@@ -193,12 +302,21 @@ export class NocNewsSchedulerService {
 
         const now = new Date();
         schedule.lastRunAt = now;
-        schedule.nextRunAt = this.calculateNextRun(now.toISOString(), schedule.intervalMinutes);
+        
+        const configObj = JSON.parse(schedule.scheduleConfig);
+        const nextRun = this.calculateNextRunFromConfig(configObj, schedule.startAt.toISOString(), now);
+        schedule.nextRunAt = nextRun;
+        if (!nextRun) {
+            schedule.status = 'Completed';
+        } else {
+            schedule.status = 'Pending';
+        }
         
         const saved = await this.repository.save(schedule);
         return {
             ...saved,
-            sources: JSON.parse(saved.sources)
+            sources: JSON.parse(saved.sources),
+            scheduleConfig: JSON.parse(saved.scheduleConfig)
         };
     }
 }
