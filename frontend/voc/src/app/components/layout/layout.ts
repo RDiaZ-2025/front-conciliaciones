@@ -17,6 +17,9 @@ import { MenuItem as PrimeMenuItem } from 'primeng/api';
 import { AuthService } from '../../services/auth.service';
 import { MenuService, MenuItem } from '../../services/menu.service';
 import { NotificationService, Notification } from '../../services/notification.service';
+import { DialogService } from 'primeng/dynamicdialog';
+import { ProductionService } from '../../services/production.service';
+import { ProductionDialogComponent } from '../../pages/production/components/production-dialog/production-dialog';
 
 @Component({
   selector: 'app-layout',
@@ -34,6 +37,7 @@ import { NotificationService, Notification } from '../../services/notification.s
     BadgeModule,
     MenuModule
   ],
+  providers: [DialogService],
   templateUrl: './layout.html',
   styleUrl: './layout.scss'
 })
@@ -41,6 +45,8 @@ export class LayoutComponent implements OnInit {
   private authService = inject(AuthService);
   private menuService = inject(MenuService);
   private notificationService = inject(NotificationService);
+  private productionService = inject(ProductionService);
+  private dialogService = inject(DialogService);
   private router = inject(Router);
 
   menuItems = signal<MenuItem[]>([]);
@@ -93,16 +99,30 @@ export class LayoutComponent implements OnInit {
     // Always mark as read
     this.markAsRead(notification);
 
-    // Handle navigation based on notification content
+    // Open modal directly on current page
     if (notification.title === 'Nueva Solicitud Asignada') {
       const match = notification.message.match(/Se te ha asignado la solicitud de producción: (.*)/);
       if (match && match[1]) {
         const requestName = match[1].trim();
-        this.router.navigate(['/mia'], { 
-          queryParams: { 
-            action: 'open', 
-            requestName: requestName 
-          } 
+        this.productionService.getProductionRequests().subscribe({
+          next: (requests) => {
+            const request = requests.find(r => r.name === requestName);
+            if (request) {
+              this.dialogService.open(ProductionDialogComponent, {
+                header: 'Editar Solicitud',
+                width: '70%',
+                contentStyle: { overflow: 'auto' },
+                baseZIndex: 10000,
+                maximizable: true,
+                breakpoints: {
+                  '960px': '75vw',
+                  '640px': '90vw'
+                },
+                data: { id: request.id, readonly: false }
+              });
+            }
+          },
+          error: (err) => console.error('Error fetching request on notification click', err)
         });
       }
     }
