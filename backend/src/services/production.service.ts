@@ -228,6 +228,12 @@ export class ProductionService {
         let oldAssignedUserId = existingRequest.assignedUserId;
 
         const targetStage = status || stage;
+        if (targetStage === 'closed_won') {
+            if (data.consecutive === undefined || data.consecutive === null || isNaN(Number(data.consecutive)) || Number(data.consecutive) <= 0) {
+                throw new Error('Se requiere un consecutivo válido para avanzar a la etapa Cerrado Ganado.');
+            }
+        }
+
         if (targetStage && targetStage !== existingRequest.status) {
             const rulesResult = await workflowService.advanceStage(existingRequest, { ...data, targetStage, budget: campaignDetail?.budget ? parseInt(String(campaignDetail.budget).replace(/[^0-9]/g, '')) : undefined, saleClosed: targetStage === 'completed' ? false : true } as Record<string, unknown>);
             if (rulesResult.assignmentMethod !== 'Manual') assignmentMethod = rulesResult.assignmentMethod;
@@ -245,6 +251,15 @@ export class ProductionService {
         }
 
         const updatedRequest = await repo.save(existingRequest);
+
+        // Verification query: confirm DB persistence of consecutive & status
+        const verification = await repo.findOne({ where: { id: existingRequest.id } });
+        if (!verification) {
+            throw new Error('Error de verificación: La solicitud no se encontró tras el guardado.');
+        }
+        if (targetStage === 'closed_won' && (verification.status !== 'closed_won' || !verification.consecutive)) {
+            throw new Error('Error de base de datos: El consecutivo o el estado no se guardaron correctamente.');
+        }
 
         if (userId && assignmentMethod !== 'Manual' && assignedUserId) {
             await historyService.logChange(updatedRequest.id, 'AssignmentMethod', null, `${assignmentMethod}: Auto-assigned to user ID ${assignedUserId}`, userId, 'update');
@@ -268,6 +283,12 @@ export class ProductionService {
         let oldAssignedUserId = existingRequest.assignedUserId;
 
         const targetStage = data.status || data.stage;
+        if (targetStage === 'closed_won') {
+            if (data.consecutive === undefined || data.consecutive === null || isNaN(Number(data.consecutive)) || Number(data.consecutive) <= 0) {
+                throw new Error('Se requiere un consecutivo válido para avanzar a la etapa Cerrado Ganado.');
+            }
+        }
+
         if (targetStage && targetStage !== existingRequest.status) {
             const rulesResult = await workflowService.advanceStage(existingRequest, { ...data, targetStage, budget: data.campaignDetail?.budget ? parseInt(String(data.campaignDetail.budget).replace(/[^0-9]/g, '')) : undefined, saleClosed: targetStage === 'completed' ? false : true });
             assignmentMethod = rulesResult.assignmentMethod;
@@ -302,6 +323,15 @@ export class ProductionService {
         }
 
         const updatedRequest = await repo.save(existingRequest);
+
+        // Verification query: confirm DB persistence of consecutive & status
+        const verification = await repo.findOne({ where: { id: existingRequest.id } });
+        if (!verification) {
+            throw new Error('Error de verificación: La solicitud no se encontró tras el guardado.');
+        }
+        if (targetStage === 'closed_won' && (verification.status !== 'closed_won' || !verification.consecutive)) {
+            throw new Error('Error de base de datos: El consecutivo o el estado no se guardaron correctamente.');
+        }
 
         if (userId) {
             await historyService.logDifferences(existingRequest, { ...data, assignedUserId: existingRequest.assignedUserId || undefined, department: existingRequest.department } as unknown as Partial<ProductionRequest>, userId);
