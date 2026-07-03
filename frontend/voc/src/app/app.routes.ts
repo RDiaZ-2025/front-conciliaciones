@@ -29,6 +29,10 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/production_2/production').then(m => m.ProductionComponent)
       },
       {
+        path: 'requests-beta',
+        loadComponent: () => import('./pages/production-beta/production-beta').then(m => m.ProductionBetaComponent)
+      },
+      {
         path: 'campaign-scheduling',
         loadComponent: () => import('./pages/production/campaign-scheduling/campaign-scheduling.component').then(m => m.CampaignSchedulingComponent)
       },

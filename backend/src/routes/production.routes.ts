@@ -13,6 +13,7 @@ const requestsReportController = new RequestsReportController();
 router.get('/format-types', productionController.getFormatTypes);
 router.get('/rights-durations', productionController.getRightsDurations);
 router.get('/workflow-stages', productionController.getWorkflowStages);
+router.get('/request-types', productionController.getRequestTypes);
 
 // Protected routes
 router.use(authenticateToken);

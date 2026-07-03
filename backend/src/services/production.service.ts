@@ -1,4 +1,4 @@
-import { ProductionRequest, Product, User, FormatType, RightsDuration, Team } from "../models";
+import { ProductionRequest, Product, User, FormatType, RightsDuration, Team, ProductionRequestType } from "../models";
 import { AppDataSource } from "../config/typeorm.config";
 import { NotificationService } from './notification.service';
 import { ProductionRequestHistoryService } from './productionRequestHistory.service';
@@ -95,6 +95,11 @@ export class ProductionService {
     async getProducts() {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         return await AppDataSource.getRepository(Product).find();
+    }
+
+    async getRequestTypes() {
+        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+        return await AppDataSource.getRepository(ProductionRequestType).find();
     }
 
     async getProductionRequestById(id: number) {

@@ -21,8 +21,8 @@ export * from './Entity';
 export * from './Presupuesto';
 export * from './IngresoPortal';
 export * from './IngresoRedes';
-export * from './PrecioDolar';
 export * from './NocNewsScheduler';
+export * from './ProductionRequestType';
 
 export { MenuItem } from './MenuItem';
 export { UserActionLog } from './UserActionLog';
@@ -63,6 +63,7 @@ import { IngresoPortal } from './IngresoPortal';
 import { IngresoRedes } from './IngresoRedes';
 import { PrecioDolar } from './PrecioDolar';
 import { NocNewsScheduler } from './NocNewsScheduler';
+import { ProductionRequestType } from './ProductionRequestType';
 
 export const entities = [
   User,
@@ -96,7 +97,8 @@ export const entities = [
   IngresoPortal,
   IngresoRedes,
   PrecioDolar,
-  NocNewsScheduler
+  NocNewsScheduler,
+  ProductionRequestType
 ];
 
 export const ModelCategories = {

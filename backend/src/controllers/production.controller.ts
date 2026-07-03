@@ -20,6 +20,11 @@ export class ProductionController {
         const stages = await productionService.getWorkflowStages();
         return res.json(stages);
     });
+
+    getRequestTypes = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+        const requestTypes = await productionService.getRequestTypes();
+        return res.json(requestTypes);
+    });
 }
 
 export const getAllProductionRequests = asyncHandler(async (req: Request, res: Response): Promise<Response | void> => {

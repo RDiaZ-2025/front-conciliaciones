@@ -114,6 +114,10 @@ export class ProductionService {
     return this.http.get<{ id: string; label: string }[]>(`${this.apiUrl}/workflow-stages`);
   }
 
+  getRequestTypes(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/request-types`);
+  }
+
   getStatuses(): Observable<Status[]> {
     return this.http.get<Status[]>(this.statusUrl);
   }
