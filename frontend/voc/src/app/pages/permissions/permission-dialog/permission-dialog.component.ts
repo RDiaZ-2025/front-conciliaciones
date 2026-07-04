@@ -6,7 +6,8 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { FloatLabelModule } from 'primeng/floatlabel';
-import { Permission, PermissionFormData } from '../permissions.models';
+import { Permission } from '../../../models/common/permission';
+import { PermissionFormData } from '../../../models/common/permission-form-data';
 
 @Component({
   selector: 'app-permission-dialog',

@@ -1,0 +1,64 @@
+<p-toast />
+
+<div
+  class="login-container flex flex-column justify-content-center align-items-center min-h-screen surface-ground px-4">
+  <div class="login-content flex flex-column align-items-center w-full" style="max-width: 450px;">
+    <div class="logo-container mb-4 relative z-1">
+      <img [src]="'assets/claro-media-logo.png' | cachedImage" alt="Claro Media Logo" class="logo heartbeat w-18rem h-auto">
+    </div>
+
+    <p-card styleClass="w-full shadow-4 border-round-2xl p-4">
+      <ng-template pTemplate="title">
+        <div class="text-center text-3xl font-medium mb-2 text-900">Iniciar sesión</div>
+      </ng-template>
+      <ng-template pTemplate="subtitle">
+        <div class="text-center text-lg font-light text-600 mb-4">Bienvenido a Claro Media</div>
+      </ng-template>
+
+      <ng-template pTemplate="content">
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="flex flex-column gap-4">
+
+          <div class="w-full">
+            <p-floatLabel variant="in">
+              <p-iconField iconPosition="left">
+                <p-inputIcon styleClass="pi pi-envelope" />
+                <input pInputText id="email" type="email" formControlName="email" class="w-full" />
+              </p-iconField>
+              <label for="email" style="left: 2.5rem">Correo electrónico</label>
+            </p-floatLabel>
+            <small class="p-error block mt-1"
+              *ngIf="loginForm.get('email')?.touched && loginForm.get('email')?.hasError('required')">
+              El correo es requerido
+            </small>
+            <small class="p-error block mt-1"
+              *ngIf="loginForm.get('email')?.touched && loginForm.get('email')?.hasError('email')">
+              Ingrese un correo válido
+            </small>
+          </div>
+
+          <div class="w-full relative">
+            <p-floatLabel variant="in">
+              <p-password id="password" formControlName="password" [toggleMask]="true" [feedback]="false"
+                styleClass="w-full" inputStyleClass="w-full" [inputStyle]="{'padding-left': '2.5rem'}"
+                [style]="{'width':'100%'}"></p-password>
+              <label for="password" style="left: 2.5rem">Contraseña</label>
+            </p-floatLabel>
+            <i class="pi pi-lock absolute text-600"
+              style="left: 0.75rem; top: 50%; transform: translateY(-50%); z-index: 1;"></i>
+
+            <small class="p-error block mt-1"
+              *ngIf="loginForm.get('password')?.touched && loginForm.get('password')?.hasError('required')">
+              La contraseña es requerida
+            </small>
+          </div>
+
+          <div class="mt-2">
+            <p-button label="Ingresar" [loading]="loading()" type="submit" styleClass="w-full"
+              [disabled]="loginForm.invalid || loading()"></p-button>
+          </div>
+
+        </form>
+      </ng-template>
+    </p-card>
+  </div>
+</div>

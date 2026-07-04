@@ -1,3 +1,4 @@
+import { BaseApiService } from './base-api.service';
 import { Injectable, inject } from '@angular/core';
 import { BlobServiceClient, ContainerClient } from '@azure/storage-blob';
 import { ShareServiceClient, ShareClient, ShareDirectoryClient } from '@azure/storage-file-share';
@@ -40,8 +41,7 @@ interface SasTokenResponse {
 @Injectable({
   providedIn: 'root'
 })
-export class AzureStorageService {
-  private http = inject(HttpClient);
+export class AzureStorageService extends BaseApiService {
 
   // Cache for container sessions
   private sessions = new Map<string, {
@@ -52,7 +52,9 @@ export class AzureStorageService {
     serviceType: 'blob' | 'file';
   }>();
 
-  constructor() { }
+  constructor() {
+    super();
+  }
 
   private async getClient(containerName: string = 'private'): Promise<ContainerClient | ShareClient> {
     const session = this.sessions.get(containerName);

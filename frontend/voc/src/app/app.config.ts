@@ -9,6 +9,7 @@ import { ClaroPreset } from '../../public/ClaroPreset';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './interceptors/auth-interceptor';
+import { DialogService } from 'primeng/dynamicdialog';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -23,6 +24,7 @@ export const appConfig: ApplicationConfig = {
           darkModeSelector: '.my-app-dark'
         }
       }
-    })
+    }),
+    DialogService
   ]
 };

@@ -1,6 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import * as ExcelJS from 'exceljs';
-import { ExcelValidationConfig, PDFValidationConfig, ValidationResult, RequiredCell } from './upload.models';
+import { ExcelValidationConfig } from '../../models/common/excel-validation-config';
+import { PDFValidationConfig } from '../../models/common/pdf-validation-config';
+import { ValidationResult } from '../../models/common/validation-result';
+import { RequiredCell } from '../../models/common/required-cell';
 import { environment } from '../../../environments/environment';
 import { AzureStorageService } from '../../services/azure-storage.service';
 

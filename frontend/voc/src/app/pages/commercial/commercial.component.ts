@@ -1,3 +1,4 @@
+import { CachedImagePipe } from '../../pipes/cached-image.pipe';
 
 import { Component, OnInit, signal, inject, computed, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -13,8 +14,8 @@ import { InputIconModule } from 'primeng/inputicon';
 import { TooltipModule } from 'primeng/tooltip';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { AzureStorageService } from '../../services/azure-storage.service';
-import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
-import { FilePreviewComponent } from '../../components/file-preview/file-preview';
+import { PageHeaderComponent } from '../../components/shared/page-header/page-header.component';
+import { FilePreviewComponent } from '../../components/file-preview/file-preview.component';
 
 interface FileItem {
   id: string;
@@ -30,6 +31,7 @@ interface FileItem {
   selector: 'app-commercial',
   standalone: true,
   imports: [
+    CachedImagePipe,
     CommonModule,
     FormsModule,
     TableModule,

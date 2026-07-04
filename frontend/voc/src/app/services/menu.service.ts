@@ -1,3 +1,4 @@
+import { BaseApiService } from './base-api.service';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -25,8 +26,7 @@ export interface MenuApiResponse {
 @Injectable({
   providedIn: 'root'
 })
-export class MenuService {
-  private http = inject(HttpClient);
+export class MenuService extends BaseApiService {
   private baseUrl = `${environment.apiUrl}/menus`;
 
   getAllMenuItems(): Observable<MenuApiResponse> {

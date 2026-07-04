@@ -14,10 +14,10 @@ import { MessageModule } from 'primeng/message';
 import { TagModule } from 'primeng/tag';
 import { DialogModule } from 'primeng/dialog';
 import { MessageService } from 'primeng/api';
-import { PageHeaderComponent } from '../../../components/shared/page-header/page-header';
+import { PageHeaderComponent } from '../../../components/shared/page-header/page-header.component';
 import { TeamService } from '../../../services/team.service';
 import { CampaignService, Campaign } from '../../../services/campaign.service';
-import { Team } from '../production.models';
+import { Team } from '../../../models/common/team';
 
 @Component({
   selector: 'app-campaign-scheduling',

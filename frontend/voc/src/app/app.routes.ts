@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
-import { LoginComponent } from './pages/login/login';
-import { LayoutComponent } from './components/layout/layout';
+import { LoginComponent } from './pages/login/login.component';
+import { LayoutComponent } from './components/layout/layout.component';
 import { authGuard } from './guards/auth-guard';
 
 export const routes: Routes = [
@@ -14,23 +14,23 @@ export const routes: Routes = [
       { path: '', redirectTo: 'home', pathMatch: 'full' },
       {
         path: 'home',
-        loadComponent: () => import('./pages/home/home').then(m => m.HomeComponent)
+        loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent)
       },
       {
         path: 'users',
-        loadComponent: () => import('./pages/admin/admin').then(m => m.AdminComponent)
+        loadComponent: () => import('./pages/admin/admin.component').then(m => m.AdminComponent)
       },
       {
         path: 'mia',
-        loadComponent: () => import('./pages/production/production').then(m => m.ProductionComponent)
+        loadComponent: () => import('./pages/production/production.component').then(m => m.ProductionComponent)
       },
       {
         path: 'requests',
-        loadComponent: () => import('./pages/production_2/production').then(m => m.ProductionComponent)
+        loadComponent: () => import('./pages/production_2/production.component').then(m => m.ProductionComponent)
       },
       {
         path: 'requests-beta',
-        loadComponent: () => import('./pages/production-beta/production-beta').then(m => m.ProductionBetaComponent)
+        loadComponent: () => import('./pages/production-beta/production-beta.component').then(m => m.ProductionBetaComponent)
       },
       {
         path: 'campaign-scheduling',
@@ -50,11 +50,11 @@ export const routes: Routes = [
       },
       {
         path: 'upload',
-        loadComponent: () => import('./pages/upload/upload').then(m => m.UploadComponent)
+        loadComponent: () => import('./pages/upload/upload.component').then(m => m.UploadComponent)
       },
       {
         path: 'load-documents',
-        loadComponent: () => import('./pages/load-documents/load-documents').then(m => m.LoadDocumentsComponent)
+        loadComponent: () => import('./pages/load-documents/load-documents.component').then(m => m.LoadDocumentsComponent)
       },
       {
         path: 'historical-oc',
@@ -62,7 +62,7 @@ export const routes: Routes = [
       },
       {
         path: 'menus',
-        loadComponent: () => import('./pages/menus/menus').then(m => m.MenusComponent)
+        loadComponent: () => import('./pages/menus/menus.component').then(m => m.MenusComponent)
       },
       {
         path: 'permissions',
@@ -70,7 +70,7 @@ export const routes: Routes = [
       },
       {
         path: 'teams',
-        loadComponent: () => import('./pages/teams/teams').then(m => m.TeamsComponent)
+        loadComponent: () => import('./pages/teams/teams.component').then(m => m.TeamsComponent)
       },
       {
         path: 'portada',
@@ -79,11 +79,11 @@ export const routes: Routes = [
       },
       {
         path: 'cover15minutes',
-        loadComponent: () => import('./pages/cover15minutes/cover15minutes').then(m => m.Cover15MinutesComponent)
+        loadComponent: () => import('./pages/cover15minutes/cover15minutes.component').then(m => m.Cover15MinutesComponent)
       },
       {
         path: 'dashboard',
-        loadComponent: () => import('./pages/dashboard/dashboard').then(m => m.DashboardComponent)
+        loadComponent: () => import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent)
       },
       {
         path: 'commercial/onboarding',

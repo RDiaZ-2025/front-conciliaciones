@@ -10,10 +10,11 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
+import { PageHeaderComponent } from '../../components/shared/page-header/page-header.component';
 import { PermissionDialogComponent } from './permission-dialog/permission-dialog.component';
 import { PermissionService } from '../../services/permission.service';
-import { Permission, PermissionFormData } from './permissions.models';
+import { Permission } from '../../models/common/permission';
+import { PermissionFormData } from '../../models/common/permission-form-data';
 
 @Component({
   selector: 'app-permissions',

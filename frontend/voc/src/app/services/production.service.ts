@@ -1,14 +1,23 @@
+import { BaseApiService } from './base-api.service';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { ProductionRequest, Objective, Gender, AgeRange, SocioeconomicLevel, FormatType, RightsDuration, Product, ProductionRequestHistory, Status } from '../pages/production/production.models';
+import { ProductionRequest } from '../models/common/production-request';
+import { Objective } from '../models/common/objective';
+import { Gender } from '../models/common/gender';
+import { AgeRange } from '../models/common/age-range';
+import { SocioeconomicLevel } from '../models/common/socioeconomic-level';
+import { FormatType } from '../models/common/format-type';
+import { RightsDuration } from '../models/common/rights-duration';
+import { Product } from '../models/common/product';
+import { ProductionRequestHistory } from '../models/common/production-request-history';
+import { Status } from '../models/common/status';
 
 @Injectable({
   providedIn: 'root'
 })
-export class ProductionService {
-  private http = inject(HttpClient);
+export class ProductionService extends BaseApiService {
   private apiUrl = `${environment.apiUrl}/production`; // Updated to match likely route mount point
   private objectiveUrl = `${environment.apiUrl}/objectives`;
   private audienceUrl = `${environment.apiUrl}/audience`;

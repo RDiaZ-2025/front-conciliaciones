@@ -1,14 +1,14 @@
+import { BaseApiService } from '../../services/base-api.service';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { LoadDocument } from './load-documents.models';
+import { LoadDocument } from '../../models/common/load-document';
 
 @Injectable({
   providedIn: 'root'
 })
-export class LoadDocumentsService {
-  private http = inject(HttpClient);
+export class LoadDocumentsService extends BaseApiService {
   private apiUrl = `${environment.apiUrl}/load-documents`;
 
   getDocuments(): Observable<any> {

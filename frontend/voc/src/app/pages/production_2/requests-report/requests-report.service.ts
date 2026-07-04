@@ -1,3 +1,4 @@
+import { BaseApiService } from '../../../services/base-api.service';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -41,11 +42,10 @@ export interface DashboardStats {
 @Injectable({
   providedIn: 'root'
 })
-export class RequestsReportService {
-  private http = inject(HttpClient);
+export class RequestsReportService extends BaseApiService {
   private apiUrl = `${environment.apiUrl}/production/dashboard-stats`;
 
-  getDashboardStats(): Observable<DashboardStats> {
-    return this.http.get<DashboardStats>(this.apiUrl);
+  getDashboardStats(): Observable<{ success: boolean; data: DashboardStats }> {
+    return this.http.get<{ success: boolean; data: DashboardStats }>(this.apiUrl);
   }
 }

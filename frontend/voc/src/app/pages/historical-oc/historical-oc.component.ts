@@ -9,11 +9,11 @@ import { InputIconModule } from 'primeng/inputicon';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
-import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
-import { SessionInfoComponent } from '../../components/shared/session-info/session-info';
+import { PageHeaderComponent } from '../../components/shared/page-header/page-header.component';
+import { SessionInfoComponent } from '../../components/shared/session-info/session-info.component';
 import { LoadDocumentsService } from '../load-documents/load-documents.service';
 import { AzureStorageService } from '../../services/azure-storage.service';
-import { LoadDocument } from '../load-documents/load-documents.models';
+import { LoadDocument } from '../../models/common/load-document';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 

@@ -1,3 +1,4 @@
+import { BaseApiService } from './base-api.service';
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
@@ -24,8 +25,7 @@ export interface NotificationResponse {
 @Injectable({
   providedIn: 'root'
 })
-export class NotificationService {
-  private http = inject(HttpClient);
+export class NotificationService extends BaseApiService {
   private apiUrl = `${environment.apiUrl}/notifications`;
 
   // Signals for reactive state

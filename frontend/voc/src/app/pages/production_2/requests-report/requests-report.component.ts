@@ -7,7 +7,7 @@ import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AvatarModule } from 'primeng/avatar';
 import { TooltipModule } from 'primeng/tooltip';
-import { PageHeaderComponent } from '../../../components/shared/page-header/page-header';
+import { PageHeaderComponent } from '../../../components/shared/page-header/page-header.component';
 import { RequestsReportService, DashboardStats } from './requests-report.service';
 
 @Component({
@@ -47,21 +47,26 @@ export class RequestsReportComponent implements OnInit {
   }
 
   loadStats() {
-    this.service.getDashboardStats().subscribe(data => {
-      this.stats.set(data);
-      this.initCharts(data);
+    this.service.getDashboardStats().subscribe(res => {
+      if (res && res.success && res.data) {
+        this.stats.set(res.data);
+        this.initCharts(res.data);
+      }
     });
   }
 
-  initCharts(data: DashboardStats) {
+  initCharts(data: any) {
+    const workload = data.workload || [];
+    const stages = data.stages || [];
+
     // Workload Chart (Horizontal Bar)
     this.workloadChartData = {
-      labels: data.workload.map(w => w.userName),
+      labels: workload.map((w: any) => w.userName),
       datasets: [
         {
           label: 'Carga de Trabajo',
-          backgroundColor: data.workload.map(w => w.status === 'overloaded' ? '#EF4444' : w.status === 'underutilized' ? '#22C55E' : '#F59E0B'),
-          data: data.workload.map(w => w.count)
+          backgroundColor: workload.map((w: any) => w.status === 'overloaded' ? '#EF4444' : w.status === 'underutilized' ? '#22C55E' : '#F59E0B'),
+          data: workload.map((w: any) => w.count)
         }
       ]
     };
@@ -72,9 +77,9 @@ export class RequestsReportComponent implements OnInit {
       datasets: [
         {
           data: [
-            data.executionStatus.pending,
-            data.executionStatus.inProgress,
-            data.executionStatus.completed
+            data.pending || 0,
+            data.inProgress || 0,
+            data.completed || 0
           ],
           backgroundColor: ['#F59E0B', '#3B82F6', '#22C55E'],
           hoverBackgroundColor: ['#D97706', '#2563EB', '#16A34A']
@@ -84,12 +89,12 @@ export class RequestsReportComponent implements OnInit {
 
     // Stages Chart (Horizontal Bar)
     this.stageChartData = {
-      labels: data.stages.map(s => s.label),
+      labels: stages.map((s: any) => s.label),
       datasets: [
         {
           label: 'Solicitudes por Etapa',
           backgroundColor: '#8B5CF6', // Violet
-          data: data.stages.map(s => s.count)
+          data: stages.map((s: any) => s.count)
         }
       ]
     };

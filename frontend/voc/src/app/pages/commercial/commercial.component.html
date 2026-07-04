@@ -58,7 +58,7 @@
                     </p-button>
 
                     <div class="file-icon-wrapper relative">
-                         <img *ngIf="file.isFolder" src="assets/folder.svg" alt="Folder" class="w-4rem h-4rem">
+                         <img *ngIf="file.isFolder" [src]="'assets/folder.svg' | cachedImage" alt="Folder" class="w-4rem h-4rem">
                          <i *ngIf="!file.isFolder" [class]="getFileIcon(file)"></i>
                          
                          <!-- Loader Overlay -->

@@ -1,15 +1,15 @@
+import { BaseApiService } from './base-api.service';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Team } from '../pages/production/production.models';
+import { Team } from '../models/common/team';
 import { User } from './user.service';
 import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
-export class TeamService {
-  private http = inject(HttpClient);
+export class TeamService extends BaseApiService {
   private apiUrl = `${environment.apiUrl}/teams`;
 
   getTeams(): Observable<{ success: boolean; data: Team[] }> {
