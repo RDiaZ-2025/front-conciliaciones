@@ -95,7 +95,7 @@ export class RequestsReportComponent implements OnInit {
       datasets: [
         {
           label: 'Solicitudes por Etapa',
-          backgroundColor: '#8B5CF6', // Violet
+          backgroundColor: '#EE3829', // Claro Red
           data: stages.map((s: any) => s.count)
         }
       ]

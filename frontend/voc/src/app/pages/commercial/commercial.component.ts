@@ -402,7 +402,7 @@ export class CommercialComponent implements OnInit {
     if (type.includes('pdf') || name.endsWith('.pdf')) return 'text-red-500';
     if (type.includes('excel') || type.includes('sheet') || name.endsWith('.xlsx') || name.endsWith('.xls')) return 'text-green-500';
     if (type.includes('word') || type.includes('document') || name.endsWith('.docx') || name.endsWith('.doc')) return 'text-blue-500';
-    if (type.includes('image') || name.endsWith('.jpg') || name.endsWith('.png') || name.endsWith('.jpeg')) return 'text-purple-500';
+    if (type.includes('image') || name.endsWith('.jpg') || name.endsWith('.png') || name.endsWith('.jpeg')) return 'text-yellow-500';
     if (type.includes('presentation') || name.endsWith('.pptx') || name.endsWith('.ppt')) return 'text-orange-500';
     return 'text-gray-500';
   }
