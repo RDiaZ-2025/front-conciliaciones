@@ -7,19 +7,14 @@ export const routes: Routes = [
   // Ruta pública: Cualquiera puede ver el login
   { path: 'login', component: LoginComponent },
 
-  // Ruta privada: Módulo de Administración
+  // Ruta privada: Módulo Mensajería
   {
-    path: 'admin',
+    path: 'messages',
     component: AdminLayoutComponent,
     canActivate: [authGuard],
     children: [
       {
-        path: 'roles',
-        loadComponent: () => import('./pages/roles/roles.component').then(m => m.RolesComponent),
-        data: { requireAdmin: true }
-      },
-      {
-        path: 'mensajeria',
+        path: '',
         loadChildren: () => import('./pages/mensajeria/mensajeria.module').then(m => m.MensajeriaModule)
       }
     ]
@@ -33,7 +28,7 @@ export const routes: Routes = [
 
   // Ruta privada: Módulo Noticias
   {
-    path: 'noticias',
+    path: 'news',
     loadChildren: () => import('./pages/noticias/noticias.module').then(m => m.NoticiasModule)
   },
 

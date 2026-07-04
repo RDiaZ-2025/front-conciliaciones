@@ -3,7 +3,6 @@ import { Injectable } from '@angular/core';
 
 import { Observable, of } from 'rxjs';
 import { map, tap, catchError } from 'rxjs/operators';
-import { User } from '../models/common/user';
 import { SYSTEM_MODULES } from '../models/common/modules-config';
 import { environment } from '../../environments/environment';
 
@@ -11,21 +10,10 @@ import { environment } from '../../environments/environment';
   providedIn: 'root'
 })
 export class UserService extends BaseApiService {
-  private apiUrl = `${environment.apiUrl}/users`;
-
-  
-
-  // 1. Obtener todos los usuarios de Express
-  getUsers(): Observable<User[]> {
-    return this.http.get<{ success: boolean; data: any[] }>(this.apiUrl).pipe(
-      map(res => (res.data || []).map(u => this.adaptUser(u)))
-    );
-  }
-
   // Caché de módulos para no saturar el backend
   private cachedModules: any[] | null = null;
 
-  // 1.5 Obtener módulos dinámicos del sistema de FastAPI (port 8000)
+  // Obtener módulos dinámicos del sistema
   getSystemModules(forceRefresh = false): Observable<any[]> {
     if (this.cachedModules && !forceRefresh) {
       return new Observable<any[]>(observer => {
@@ -72,69 +60,5 @@ export class UserService extends BaseApiService {
       }),
       tap(modules => this.cachedModules = modules)
     );
-  }
-
-  // 1.6 Actualizar estado de submódulo (Mantenimiento / Deshabilitado) en FastAPI (port 8000)
-  updateModuleState(code: string, state: any): Observable<any> {
-    return this.http.put<any>(`${environment.apiUrl}/system-modules/${code}/state`, state).pipe(
-      catchError(err => {
-        console.warn("FastAPI offline, using mock updateModuleState response.", err);
-        return of({ success: true, message: 'Estado del submódulo actualizado localmente (Offline Mode).' });
-      })
-    );
-  }
-
-  // 2. Crear un usuario nuevo en Express
-  createUser(user: User): Observable<User> {
-    const payload = {
-      name: user.fullName,
-      email: user.email.toLowerCase(),
-      password: user.password,
-      permissions: user.modules,
-      role: user.role
-    };
-
-    return this.http.post<{ success: boolean; data: any }>(this.apiUrl, payload).pipe(
-      map(res => this.adaptUser(res.data || res))
-    );
-  }
-
-  // 3. Eliminar un usuario por su ID en Express
-  deleteUser(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
-  }
-
-  // 4. Actualizar usuario existente en Express
-  updateUser(user: User): Observable<User> {
-    const payload = {
-      name: user.fullName,
-      email: user.email.toLowerCase(),
-      password: user.password || undefined,
-      permissions: user.modules,
-      role: user.role
-    };
-    return this.http.put<{ success: boolean; user?: any; data?: any }>(`${this.apiUrl}/${user.id}`, payload).pipe(
-      map(res => this.adaptUser(res.user || res.data || res))
-    );
-  }
-
-  // Adaptador: Backend Express -> Frontend (camelCase)
-  private adaptUser(backendUser: any): User {
-    const modulesList = backendUser.permissions
-      ? (Array.isArray(backendUser.permissions)
-        ? backendUser.permissions.map((p: any) => typeof p === 'string' ? p : p.name)
-        : String(backendUser.permissions).split(','))
-      : [];
-
-    return {
-      id: backendUser.id,
-      username: backendUser.email,
-      email: backendUser.email,
-      fullName: backendUser.name || backendUser.fullName || backendUser.username || '',
-      role: backendUser.role || (modulesList.includes('admin_panel') ? 'admin' : 'user'),
-      enabled: backendUser.status === 1,
-      password: '',
-      modules: modulesList
-    };
   }
 }

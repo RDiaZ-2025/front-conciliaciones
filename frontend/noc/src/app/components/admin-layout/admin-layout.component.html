@@ -47,8 +47,8 @@
 
       <div class="flex flex-column h-full">
          <ul class="list-none p-0 m-0 flex-grow-1 overflow-y-auto">
-            @for (module of modules; track module.id) {
-               @if (hasVisibleSubmodules(module)) {
+            @for (module of modules; track module.label) {
+               @if (module.children && module.children.length > 0) {
                   <li class="mb-1">
                      <div pRipple (click)="toggleMenu(module.label)"
                         class="p-3 flex align-items-center justify-content-between text-700 cursor-pointer border-round hover:surface-100 transition-duration-150 transition-colors w-full">
@@ -66,21 +66,19 @@
                      <ul *ngIf="isMenuOpen(module.label)"
                         class="list-none py-0 pl-3 pr-0 m-0 overflow-y-hidden transition-all transition-duration-400 transition-ease-in-out fadein animation-duration-200">
                         @for (sub of module.children; track sub.id) {
-                           @if (sub.isActive && hasPermission(sub)) {
-                              <li class="animate-item">
-                                 <a pRipple [routerLink]="sub.route" routerLinkActive="active-link" (click)="isDrawerOpen = false"
-                                    class="flex align-items-center cursor-pointer p-3 border-round text-600 hover:surface-100 transition-duration-150 transition-colors w-full">
-                                    @if (sub.icon) {
-                                       @if (isEmoji(sub.icon)) {
-                                          <span class="mr-3">{{ sub.icon }}</span>
-                                       } @else {
-                                          <lucide-icon [name]="sub.icon" class="mr-3 text-sm"></lucide-icon>
-                                       }
+                           <li class="animate-item">
+                              <a pRipple [routerLink]="getAbsoluteRoute(sub.route)" routerLinkActive="active-link" (click)="isDrawerOpen = false"
+                                 class="flex align-items-center cursor-pointer p-3 border-round text-600 hover:surface-100 transition-duration-150 transition-colors w-full">
+                                 @if (sub.icon) {
+                                    @if (isEmoji(sub.icon)) {
+                                       <span class="mr-3">{{ sub.icon }}</span>
+                                    } @else {
+                                       <lucide-icon [name]="sub.icon" class="mr-3 text-sm"></lucide-icon>
                                     }
-                                    <span class="font-medium">{{ sub.label }}</span>
-                                 </a>
-                              </li>
-                           }
+                                 }
+                                 <span class="font-medium">{{ sub.label }}</span>
+                              </a>
+                           </li>
                         }
                      </ul>
                   </li>
