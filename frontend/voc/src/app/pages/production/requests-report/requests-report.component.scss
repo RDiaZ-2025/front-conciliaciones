@@ -1,22 +1,22 @@
 .status-danger {
-    background-color: #ffcdd2;
-    color: #c63737;
+    background-color: var(--p-red-100);
+    color: var(--p-red-700);
     padding: 0.25em 0.5rem;
     border-radius: 4px;
     font-weight: 700;
 }
 
 .status-warn {
-    background-color: #feedaf;
-    color: #8a5340;
+    background-color: var(--p-yellow-100);
+    color: var(--p-yellow-700);
     padding: 0.25em 0.5rem;
     border-radius: 4px;
     font-weight: 700;
 }
 
 .status-success {
-    background-color: #c8e6c9;
-    color: #256029;
+    background-color: var(--p-green-100);
+    color: var(--p-green-700);
     padding: 0.25em 0.5rem;
     border-radius: 4px;
     font-weight: 700;

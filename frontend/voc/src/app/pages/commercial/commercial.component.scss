@@ -93,11 +93,10 @@
     }
 }
 
-/* Custom colors for icons if needed beyond utility classes */
-.text-yellow-500 { color: #eab308 !important; }
-.text-red-500 { color: #ef4444 !important; }
-.text-green-500 { color: #22c55e !important; }
-.text-blue-500 { color: #3b82f6 !important; }
+.text-yellow-500 { color: var(--p-yellow-500) !important; }
+.text-red-500 { color: var(--p-red-500) !important; }
+.text-green-500 { color: var(--p-green-500) !important; }
+.text-blue-500 { color: var(--p-blue-500) !important; }
 
-.text-orange-500 { color: #f97316 !important; }
-.text-gray-500 { color: #6b7280 !important; }
+.text-orange-500 { color: var(--p-orange-500) !important; }
+.text-gray-500 { color: var(--p-surface-500) !important; }

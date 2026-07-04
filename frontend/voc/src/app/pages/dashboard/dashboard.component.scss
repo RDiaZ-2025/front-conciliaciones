@@ -14,22 +14,22 @@ svg {
 }
 
 /* SVG Utility Classes */
-.fill-blue-500 { fill: var(--blue-500, #3b82f6); }
-.fill-blue-600 { fill: var(--blue-600, #2563eb); }
-.fill-green-500 { fill: var(--green-500, #22c55e); }
-.fill-green-600 { fill: var(--green-600, #16a34a); }
-.fill-red-500 { fill: var(--red-500, #ef4444); }
+.fill-blue-500 { fill: var(--p-blue-500); }
+.fill-blue-600 { fill: var(--p-blue-600); }
+.fill-green-500 { fill: var(--p-green-500); }
+.fill-green-600 { fill: var(--p-green-600); }
+.fill-red-500 { fill: var(--p-red-500); }
 
 .stroke-white { stroke: #ffffff; }
-.stroke-red-500 { stroke: var(--red-500, #ef4444); }
-.stroke-300 { stroke: var(--surface-300, #d1d5db); }
-.stroke-200 { stroke: var(--surface-200, #e5e7eb); }
+.stroke-red-500 { stroke: var(--p-red-500); }
+.stroke-300 { stroke: var(--p-surface-300); }
+.stroke-200 { stroke: var(--p-surface-200); }
 
-.fill-text-secondary { fill: var(--text-color-secondary, #6b7280); }
+.fill-text-secondary { fill: var(--p-text-muted-color); }
 
 /* Hover effects */
-rect.fill-blue-500:hover { fill: var(--blue-600, #2563eb); }
-rect.fill-green-500:hover { fill: var(--green-600, #16a34a); }
+rect.fill-blue-500:hover { fill: var(--p-blue-600); }
+rect.fill-green-500:hover { fill: var(--p-green-600); }
 
 /* Custom scrollbar for table if needed */
 ::ng-deep .p-datatable-wrapper {

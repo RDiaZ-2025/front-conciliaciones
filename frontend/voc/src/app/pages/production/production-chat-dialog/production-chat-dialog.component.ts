@@ -1,7 +1,7 @@
 import { LucideIconComponent } from '../../../components/lucide-icon/lucide-icon.component';
 import { CachedImagePipe } from '../../../pipes/cached-image.pipe';
 import { Component, ElementRef, ViewChild, signal, computed, inject, Output, EventEmitter, OnDestroy, AfterViewInit } from '@angular/core';
-import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';

@@ -22,7 +22,7 @@ import { SocioeconomicLevel } from '../../../models/common/socioeconomic-level';
 import { FormatType } from '../../../models/common/format-type';
 import { RightsDuration } from '../../../models/common/rights-duration';
 import { Status } from '../../../models/common/status';
-import { WORKFLOW_STAGES } from '../production.constants';
+import { WORKFLOW_STAGES } from '../../../models/common/workflow-stage';
 import { AzureStorageService } from '../../../services/azure-storage.service';
 import { TeamService } from '../../../services/team.service';
 import { User, UserService } from '../../../services/user.service';
