@@ -1,5 +1,6 @@
+import { BaseApiService } from './base-api.service';
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpParams } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { DASHBOARD_CONFIG } from '../pages/portal/dashboard/dashboard.models';
@@ -131,10 +132,10 @@ export interface EntityDetail {
 @Injectable({
     providedIn: 'root'
 })
-export class DashboardService {
+export class DashboardService extends BaseApiService {
     private apiUrl = DASHBOARD_CONFIG.apiUrl;
 
-    constructor(private http: HttpClient) { }
+    
 
     private getHttpParams(filters: any): HttpParams {
         let params = new HttpParams();

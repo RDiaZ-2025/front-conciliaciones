@@ -1,5 +1,6 @@
+import { BaseApiService } from './base-api.service';
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
@@ -32,11 +33,11 @@ export interface WebhookPayload {
 @Injectable({
   providedIn: 'root'
 })
-export class NewsSchedulerService {
+export class NewsSchedulerService extends BaseApiService {
   private apiUrl = `${environment.apiUrl}/noc/news-scheduler`;
   private webhookUrl = 'https://n8n.srv865978.hstgr.cloud/webhook/noc/generate-news';
 
-  constructor(private http: HttpClient) {}
+  
 
   getSchedules(): Observable<NewsSchedule[]> {
     return this.http.get<NewsSchedule[]>(this.apiUrl);

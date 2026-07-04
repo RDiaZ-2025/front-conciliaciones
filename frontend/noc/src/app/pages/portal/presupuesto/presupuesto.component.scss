@@ -35,7 +35,7 @@
 }
 
 .tab-active {
-    background: linear-gradient(135deg, var(--primary, #0f172a), var(--secondary, #1e293b)) !important;
+    background: linear-gradient(135deg, var(--primary), var(--secondary)) !important;
     color: #ffffff !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5) !important;

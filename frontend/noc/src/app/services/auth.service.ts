@@ -1,9 +1,10 @@
+import { BaseApiService } from './base-api.service';
 import { Injectable, signal, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+
 import { Observable, tap, of, catchError } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
-import { SYSTEM_MODULES } from '../constants/modules.config';
+import { SYSTEM_MODULES } from '../models/common/modules-config';
 
 export interface User {
   id: number;
@@ -24,14 +25,15 @@ export interface LoginResponse {
 @Injectable({
   providedIn: 'root'
 })
-export class AuthService {
-  private http = inject(HttpClient);
+export class AuthService extends BaseApiService {
+  
   private router = inject(Router);
   private apiUrl = `${environment.apiUrl}/auth`;
 
   currentUser = signal<User | null>(null);
 
   constructor() {
+    super();
     this.initializeAuth();
   }
 

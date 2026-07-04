@@ -1,18 +1,19 @@
+import { BaseApiService } from './base-api.service';
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+
 import { Observable, of } from 'rxjs';
 import { map, tap, catchError } from 'rxjs/operators';
 import { User } from '../models/common/user';
-import { SYSTEM_MODULES } from '../constants/modules.config';
+import { SYSTEM_MODULES } from '../models/common/modules-config';
 import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
-export class UserService {
+export class UserService extends BaseApiService {
   private apiUrl = `${environment.apiUrl}/users`;
 
-  constructor(private http: HttpClient) { }
+  
 
   // 1. Obtener todos los usuarios de Express
   getUsers(): Observable<User[]> {

@@ -77,12 +77,12 @@ import { EntityDetail } from '../../../../services/dashboard.service';
 
                     <div *ngIf="data.metrics.syntactic > 0; else noSyntactic" class="glass-effect p-4 rounded-3xl border border-muted flex flex-col items-center justify-center text-center">
                         <div class="flex items-center gap-2 mb-2">
-                            <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
                             <div class="text-[10px] font-bold text-muted uppercase tracking-widest">Score Sintáctico</div>
                         </div>
-                        <div class="text-3xl font-bold text-purple-400">{{ data.metrics.syntactic }}</div>
+                        <div class="text-3xl font-bold text-amber-400">{{ data.metrics.syntactic }}</div>
                         <div class="w-full bg-muted h-1 rounded-full mt-4 overflow-hidden">
-                            <div class="h-full bg-purple-500" [style.width.%]="data.metrics.syntactic"></div>
+                            <div class="h-full bg-amber-500" [style.width.%]="data.metrics.syntactic"></div>
                         </div>
                         <div class="text-[9px] text-muted font-bold mt-2 uppercase tracking-widest">Redacción</div>
                     </div>
@@ -173,11 +173,11 @@ import { EntityDetail } from '../../../../services/dashboard.service';
                             </div>
                             <div class="bg-white/5 p-4 rounded-xl border border-white/5 flex flex-col">
                                 <span class="text-[9px] font-bold text-muted uppercase tracking-widest mb-1">Score Sintáctico</span>
-                                <div class="text-xl font-bold" [ngClass]="sec.syntactic > 0 ? 'text-purple-400' : 'text-muted'">
+                                <div class="text-xl font-bold" [ngClass]="sec.syntactic > 0 ? 'text-amber-400' : 'text-muted'">
                                     {{ sec.syntactic > 0 ? sec.syntactic : 'N/A' }}
                                 </div>
                                 <div class="w-full bg-muted h-1 rounded-full mt-2 overflow-hidden" *ngIf="sec.syntactic > 0">
-                                    <div class="h-full bg-purple-500" [style.width.%]="sec.syntactic"></div>
+                                    <div class="h-full bg-amber-500" [style.width.%]="sec.syntactic"></div>
                                 </div>
                             </div>
                         </div>
@@ -253,7 +253,7 @@ export class EntityDetailComponent implements OnInit {
     getBadgeClass(type: string): string {
         switch(type?.toLowerCase()) {
             case 'org': return 'bg-blue-400/20 text-blue-400 border-blue-400/30';
-            case 'persona': return 'bg-purple-400/20 text-purple-400 border-purple-400/30';
+            case 'persona': return 'bg-primary/20 text-primary border-primary/30';
             case 'lugar': return 'bg-amber-400/20 text-amber-400 border-amber-400/30';
             case 'tema': return 'bg-orange-400/20 text-orange-400 border-orange-400/30';
             default: return 'bg-slate-400/20 text-slate-400 border-slate-400/30';

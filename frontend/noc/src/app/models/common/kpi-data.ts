@@ -5,5 +5,5 @@ export interface KpiData {
   variationType?: 'pp' | 'percentage';
   comparisonPeriod?: string;
   isActive?: boolean;
-  color?: 'indigo' | 'slate' | 'emerald' | 'pink' | 'amber';
+  color?: 'red' | 'slate' | 'emerald' | 'pink' | 'amber';
 }

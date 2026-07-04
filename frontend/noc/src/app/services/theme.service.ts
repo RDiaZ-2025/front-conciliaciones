@@ -42,7 +42,7 @@ export class ThemeService {
 
     private applyTheme(theme: Theme): void {
         document.body.setAttribute('data-theme', theme);
-        // Add specific class for tailwind if needed, though data-theme is usually enough
+        // Add specific styling for tailwind if needed, though data-theme is usually enough
         if (theme === 'dark') {
             document.documentElement.classList.add('dark');
         } else {

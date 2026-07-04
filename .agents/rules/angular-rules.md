@@ -21,6 +21,7 @@ globs: Frontend/*.*
 ## Core Principles
 - Check if project builds successfully with `npm run build:all`.
 - Use Tailwind classes for styles, prioritizing dark and light themes.
+- Avoid custom CSS.
 - Use Lucide icons for Standalone components.
 - Use `p-select` instead for dropdown functionality.
 - Use `p-floatLabel` for input fields with `variant="in"`.
@@ -50,12 +51,8 @@ globs: Frontend/*.*
 - Use absolute paths for imports when configured.
 - Avoid circular dependencies.
 
-## Documentation
-- Write clear, concise README files for each project.
-- Document complex business logic with JSDoc comments.
-- Use English for all documentation.
-
 ## Color Palette Rules
+- ALWAYS use a PrimeNG custom theme.
 - NEVER use purple or other unauthorized random/weird colors.
 - STRICTLY adhere to the following color semantics:
   - **primary-color**: Use exclusively for main controls and main icons.
