@@ -9,7 +9,7 @@ globs: Frontend/*.*
 - `public/assets` -> images
 - `src/app/` -> base project
 - `./services` -> services
-- `./i18n` -> translations (Always add English and Spanish translations)
+- `./i18n` -> translations (Needed if more than one language translations is required)
 - `./directives` -> directives
 - `./pipes` -> pipes
 - `./guards` -> guards

@@ -1,0 +1,226 @@
+<div class="flex flex-column gap-4 p-4 fadein animation-duration-300 w-full max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-column md:flex-row md:justify-content-between md:align-items-start gap-4">
+        <app-page-header title="Ingresos de Audiencia" subtitle="Monitoreo de ingresos Ad Manager y Redes Sociales"
+            icon="dollar-sign" class="flex-grow-1"></app-page-header>
+    </div>
+
+    <!-- Standard Loading State (for initial load) -->
+    <div *ngIf="isLoading" class="space-y-8 animate-pulse">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div *ngFor="let i of [1,2,3]" class="surface-card rounded-3xl border border-muted p-6 h-32">
+                <div class="skeleton skeleton-title w-24 mb-4 bg-white/10 h-6 rounded-lg"></div>
+                <div class="skeleton skeleton-text w-48 bg-white/5 h-10 rounded-xl"></div>
+            </div>
+        </div>
+        <div class="surface-card rounded-[32px] border border-muted p-8 h-[500px] flex flex-col justify-between">
+            <!-- Main Content Skeletons -->
+            <div class="skeleton skeleton-chart bg-white/5 h-[400px] rounded-3xl mt-auto"></div>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div *ngIf="!isLoading && !hasError" class="surface-card p-1 border-round-xl border-1 surface-border shadow-2 flex flex-wrap gap-2 max-w-fit mb-2">
+        <p-button label="Asistente Red+"  [variant]="activeTab === 'chat' ? undefined : 'text'" [severity]="activeTab === 'chat' ? 'primary' : 'secondary'" (onClick)="setTab('chat')"></p-button>
+        <p-button label="Ad Manager"  [variant]="activeTab === 'admanager' ? undefined : 'text'" [severity]="activeTab === 'admanager' ? 'primary' : 'secondary'" (onClick)="setTab('admanager')"></p-button>
+        <p-button label="YouTube"  [variant]="activeTab === 'youtube' ? undefined : 'text'" [severity]="activeTab === 'youtube' ? 'primary' : 'secondary'" (onClick)="setTab('youtube')"></p-button>
+        <p-button label="Facebook"  [variant]="activeTab === 'facebook' ? undefined : 'text'" [severity]="activeTab === 'facebook' ? 'primary' : 'secondary'" (onClick)="setTab('facebook')"></p-button>
+    </div>
+
+    <!-- Interface State -->
+    <ng-container *ngIf="!isLoading && !hasError">
+        <div class="animate-fade-in-up space-y-6">
+            
+            <ng-container *ngIf="activeTab !== 'chat'">
+                <!-- Filters & KPI Header -->
+                <div class="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-4 bg-white/5 border border-white/10 p-2 md:pl-6 rounded-[2rem] md:rounded-full shadow-lg">
+                    <span class="text-muted text-sm font-semibold">Resumen y Métricas ({{activeTab | titlecase}}):</span>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <p-button label="Último Mes" [variant]="kpiFilter === '7D' ? undefined : 'text'" [severity]="kpiFilter === '7D' ? 'primary' : 'secondary'" (onClick)="setKpiFilter('7D')"></p-button>
+                        <p-button label="Últimos 3 Meses" [variant]="kpiFilter === '30D' ? undefined : 'text'" [severity]="kpiFilter === '30D' ? 'primary' : 'secondary'" (onClick)="setKpiFilter('30D')"></p-button>
+                        <p-button label="Año Actual" [variant]="kpiFilter === 'YTD' ? undefined : 'text'" [severity]="kpiFilter === 'YTD' ? 'primary' : 'secondary'" (onClick)="setKpiFilter('YTD')"></p-button>
+                        <p-button label="Global" [variant]="kpiFilter === 'TOTAL' ? undefined : 'text'" [severity]="kpiFilter === 'TOTAL' ? 'primary' : 'secondary'" (onClick)="setKpiFilter('TOTAL')"></p-button>
+                        
+                        <div class="w-1px h-2rem surface-300 mx-2 hidden md:block"></div>
+                        
+                        <!-- Custom Date Picker styled nicely -->
+                        <div class="flex align-items-center gap-2 surface-card border-1 surface-border p-1 pl-3 border-round-3xl" [style]="{'border-color': kpiFilter === 'CUSTOM' ? 'var(--primary)' : 'inherit'}">
+                             <input type="date" [(ngModel)]="customStartDate" class="bg-transparent text-sm text-color border-none focus:outline-none" style="width: 110px;" />
+                             <span class="text-muted-color text-xs">-</span>
+                             <input type="date" [(ngModel)]="customEndDate" class="bg-transparent text-sm text-color border-none focus:outline-none" style="width: 110px;" />
+                             <p-button [text]="true" [rounded]="true" size="small" [severity]="kpiFilter === 'CUSTOM' ? 'success' : 'secondary'" (onClick)="aplicarFiltroFechas()"><lucide-icon name="filter"></lucide-icon></p-button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Channel Filter (Only for Networks) -->
+                <div *ngIf="isYoutubeOrFacebook" class="surface-card p-1 border-round-xl border-1 surface-border shadow-2 flex flex-wrap gap-2 align-items-center pl-3 w-fit">
+                    <span class="text-muted text-sm font-semibold mr-2">Filtro de Canal:</span>
+                    <p-button label="Global" [variant]="channelFilter === 'TOTAL' ? undefined : 'text'" [severity]="channelFilter === 'TOTAL' ? 'primary' : 'secondary'" (onClick)="setChannelFilter('TOTAL')"></p-button>
+                    <p-button label="RED+ TV" [variant]="channelFilter === 'RED+ TV' ? undefined : 'text'" [severity]="channelFilter === 'RED+ TV' ? 'primary' : 'secondary'" (onClick)="setChannelFilter('RED+ TV')"></p-button>
+                    <p-button label="Noticias" [variant]="channelFilter === 'RED+NOTICIAS' ? undefined : 'text'" [severity]="channelFilter === 'RED+NOTICIAS' ? 'primary' : 'secondary'" (onClick)="setChannelFilter('RED+NOTICIAS')"></p-button>
+                    <p-button label="15 Min." [variant]="channelFilter === '15 MINUTOS' ? undefined : 'text'" [severity]="channelFilter === '15 MINUTOS' ? 'primary' : 'secondary'" (onClick)="setChannelFilter('15 MINUTOS')"></p-button>
+                    <p-button label="RadiolaTV" [variant]="channelFilter === 'RADIOLATV' ? undefined : 'text'" [severity]="channelFilter === 'RADIOLATV' ? 'primary' : 'secondary'" (onClick)="setChannelFilter('RADIOLATV')"></p-button>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="surface-card p-4 border-round-xl border-1 surface-border shadow-2">
+                        <div class="flex align-items-center gap-3 mb-2">
+                            <div class="p-2 bg-green-500/10 border-round text-green-500">
+                                <lucide-icon name="banknote" class="text-xl"></lucide-icon>
+                            </div>
+                            <span class="text-muted font-bold tracking-wide text-xs uppercase">{{ isYoutubeOrFacebook ? 'Total Neto' : 'Revenue Total' }}</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-main">{{ totalRevenue | currency:'USD':'symbol':'1.0-0' }}</h3>
+                    </div>
+                    
+                    <!-- Span Filler for Layout Grid when elements are hidden -->
+                    <div *ngIf="activeTab === 'facebook' || (isYoutubeOrFacebook && channelFilter !== 'TOTAL')" class="hidden md:block col-span-3"></div>
+                    
+                    <div *ngIf="activeTab !== 'facebook' && channelFilter === 'TOTAL'" class="surface-card p-4 border-round-xl border-1 surface-border shadow-2">
+                        <div class="flex align-items-center gap-3 mb-2">
+                            <div class="p-2 bg-orange-500/10 border-round text-orange-400">
+                                <lucide-icon name="percent" class="text-xl"></lucide-icon>
+                            </div>
+                            <span class="text-muted font-bold tracking-wide text-xs uppercase">{{ isYoutubeOrFacebook ? 'Retención' : 'eCPM Promedio' }}</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-main">{{ avgECPM | currency:'USD':'symbol': (isYoutubeOrFacebook ? '1.0-0' : '1.2-2') }}</h3>
+                    </div>
+                    
+                    <div *ngIf="activeTab !== 'facebook' && channelFilter === 'TOTAL'" class="surface-card p-4 border-round-xl border-1 surface-border shadow-2">
+                        <div class="flex align-items-center gap-3 mb-2">
+                            <div class="p-2 bg-blue-500/10 border-round text-blue-400">
+                                <lucide-icon name="eye" class="text-xl"></lucide-icon>
+                            </div>
+                            <span class="text-muted font-bold tracking-wide text-xs uppercase">{{ isYoutubeOrFacebook ? 'Total Bruto' : 'Impresiones' }}</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-main">{{ totalImpressions | number:'1.0-0' }}</h3>
+                    </div>
+
+                    <div *ngIf="activeTab === 'admanager'" class="surface-card p-4 border-round-xl border-1 surface-border shadow-2">
+                        <div class="flex align-items-center gap-3 mb-2">
+                            <div class="p-2 bg-red-500/10 border-round text-red-500">
+                                <lucide-icon name="x-circle" class="text-xl"></lucide-icon>
+                            </div>
+                            <span class="text-muted font-bold tracking-wide text-xs uppercase">Sin Rellenar</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-red-400">{{ unfilledImpressions | number:'1.0-0' }}</h3>
+                    </div>
+                </div>
+
+                <!-- Chart -->
+                <div class="surface-card border-round-xl border-1 surface-border p-4 shadow-3 flex flex-column relative overflow-hidden">
+                    <div class="mb-4">
+                        <h2 class="text-lg font-bold text-main">Evolución Histórica ({{ activeTab | titlecase }})</h2>
+                    </div>
+                    <div class="flex-grow w-full h-[350px] relative overflow-x-auto overflow-y-hidden">
+                         <div class="min-w-[700px] md:min-w-full h-full relative">
+                              <canvas #tradingChart id="tradingChart"></canvas>
+                         </div>
+                    </div>
+                </div>
+            </ng-container>
+
+            <!-- Chat Tab State -->
+            <ng-container *ngIf="activeTab === 'chat'">
+                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" style="height: 600px;">
+                      <!-- Informative Card / Panel -->
+                      <div class="surface-card border-round-xl border-1 surface-border p-4 shadow-3 flex flex-column align-items-center justify-content-center text-center relative overflow-hidden">
+                           <div class="w-5rem h-5rem mb-4 border-round-circle bg-primary-50 text-primary flex align-items-center justify-center shadow-2">
+                               <lucide-icon name="sparkles" class="text-4xl"></lucide-icon>
+                           </div>
+                           
+                           <h2 class="text-2xl font-bold text-main mb-1">Ingresos Globales</h2>
+                           <p class="text-muted font-medium mb-4 text-xs">Todos los centros de costo y plataformas unificados</p>
+                           
+                           <h1 class="text-4xl font-bold text-green-500 mb-6">
+                               {{ resumenData?.total_global_usd | currency:'USD':'symbol':'1.0-0' }}
+                           </h1>
+                           
+                           <div class="w-full space-y-2 text-left flex-grow overflow-y-auto pr-1">
+                               <div class="flex justify-content-between align-items-center p-3 surface-hover border-round-xl border-1 surface-border">
+                                   <span class="text-muted text-sm font-semibold flex align-items-center gap-2"><div class="w-2 h-2 bg-green-500 border-round-circle"></div>Ad Manager</span>
+                                   <span class="text-main font-bold">{{ resumenData?.admanager_total | currency:'USD':'symbol':'1.0-0' }}</span>
+                                </div>
+                               <div class="flex justify-content-between align-items-center p-3 surface-hover border-round-xl border-1 surface-border">
+                                   <span class="text-muted text-sm font-semibold flex align-items-center gap-2"><div class="w-2 h-2 bg-red-500 border-round-circle"></div>YouTube</span>
+                                   <span class="text-main font-bold">{{ resumenData?.youtube_total_neto | currency:'USD':'symbol':'1.0-0' }}</span>
+                                </div>
+                               <div class="flex justify-content-between align-items-center p-3 surface-hover border-round-xl border-1 surface-border">
+                                   <span class="text-muted text-sm font-semibold flex align-items-center gap-2"><div class="w-2 h-2 bg-blue-500 border-round-circle"></div>Facebook</span>
+                                   <span class="text-main font-bold">{{ resumenData?.facebook_total | currency:'USD':'symbol':'1.0-0' }}</span>
+                                </div>
+                           </div>
+
+                           <!-- Quick Suggestions -->
+                           <div class="w-full mt-4">
+                               <p class="text-xs text-muted font-bold uppercase tracking-wider mb-2">Preguntas rápidas</p>
+                               <div class="flex flex-column gap-1">
+                                   <p-button *ngFor="let s of quickSuggestions"
+                                       [label]="s"
+                                       [disabled]="isChatLoading"
+                                       [text]="true"
+                                       severity="secondary"
+                                       styleClass="w-full text-left text-xs p-2 justify-content-start border-round-lg hover:surface-hover"
+                                       (onClick)="enviarMensajeChat(s)">
+                                   </p-button>
+                               </div>
+                           </div>
+                      </div>
+                      
+                      <!-- Chat Interface -->
+                      <div class="lg:col-span-2 surface-card border-round-xl border-1 surface-border p-4 shadow-3 flex flex-column h-full">
+                           <!-- Chat History -->
+                           <div class="flex-grow overflow-y-auto pr-2 flex flex-column gap-4" style="max-height: 480px;">
+                               <div *ngFor="let msg of chatMessages" class="flex w-full" [ngClass]="msg.role === 'user' ? 'justify-end' : 'justify-start'">
+                                   <div [ngClass]="msg.role === 'user' ? 'bg-primary text-white border-round-left-xl border-round-top-xl' : 'surface-hover text-color border-1 surface-border border-round-right-xl border-round-top-xl'"
+                                        class="p-3 border-round max-w-[85%] shadow-1 font-medium text-sm line-height-3">
+                                       <div *ngIf="msg.role === 'ai'" class="flex align-items-center gap-2 mb-2 opacity-70">
+                                            <lucide-icon name="sparkles" class="text-xs"></lucide-icon>
+                                            <span class="text-xs font-bold uppercase tracking-wider">Asistente AI</span>
+                                       </div>
+                                       <span style="white-space: pre-line;">{{ msg.text }}</span>
+                                   </div>
+                                </div>
+ 
+                               <!-- Typing Indicator -->
+                               <div *ngIf="isChatLoading" class="flex w-full justify-start">
+                                   <div class="surface-hover border-1 surface-border border-round-right-xl border-round-top-xl p-3 max-w-[85%] shadow-1">
+                                       <div class="flex align-items-center gap-2 mb-2 opacity-70">
+                                            <lucide-icon name="sparkles" class="text-xs"></lucide-icon>
+                                           <span class="text-xs font-bold uppercase tracking-wider">Asistente AI</span>
+                                       </div>
+                                       <div class="flex align-items-center gap-1">
+                                           <lucide-icon name="loader-2" class="animate-spin text-primary"></lucide-icon>
+                                           <span class="text-xs text-muted">Escribiendo...</span>
+                                       </div>
+                                   </div>
+                               </div>
+                           </div>
+                           
+                           <!-- Chat Input -->
+                           <div class="mt-4 pt-3 border-t-1 surface-border relative flex align-items-center">
+                               <input type="text" [(ngModel)]="chatInput" (keyup.enter)="enviarMensajeChat()" placeholder="Pregúntame sobre ingresos, presupuesto o tendencias..."
+                                      [disabled]="isChatLoading"
+                                      class="w-full surface-hover border-1 surface-border p-3 pr-6 border-round-2xl text-color focus:outline-none focus:border-primary transition-all font-medium disabled:opacity-50">
+                               <p-button [loading]="isChatLoading" [disabled]="isChatLoading || !chatInput.trim()" (onClick)="enviarMensajeChat()" styleClass="absolute right-0 mr-2 w-3rem h-3rem border-round-xl"><lucide-icon name="send"></lucide-icon></p-button>
+                           </div>
+                      </div>
+                 </div>
+            </ng-container>
+
+        </div>
+    </ng-container>
+
+    <!-- Error State -->
+    <div *ngIf="hasError && !isLoading"
+        class="surface-card border-2 border-red-500/20 p-8 border-round-xl text-center max-w-2xl mx-auto mt-20 shadow-2xl">
+        <div class="w-16 h-16 bg-red-500/10 rounded-full flex align-items-center justify-center mx-auto mb-4">
+            <lucide-icon name="alert-triangle" class="text-red-500 text-3xl"></lucide-icon>
+        </div>
+        <h2 class="text-2xl font-bold text-main mb-2">Error de Sincronización</h2>
+        <p class="text-muted font-medium mb-6 text-lg">{{ errorMessage }}</p>
+        <p-button (onClick)="cargarDatos()"><lucide-icon name="refresh-cw" class="mr-2"></lucide-icon>Reintentar Conexión</p-button>
+    </div>
+</div>

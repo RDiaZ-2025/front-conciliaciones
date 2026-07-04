@@ -1,0 +1,213 @@
+<div class="flex flex-column gap-4 p-4 fadein animation-duration-300 w-full max-w-7xl mx-auto">
+  
+  <!-- Page Header -->
+  <div class="flex flex-column md:flex-row md:justify-content-between md:align-items-start gap-4">
+      <app-page-header title="Permisos y Roles" subtitle="Administración de accesos de usuarios y mantenimiento de módulos"
+          icon="shield" class="flex-grow-1"></app-page-header>
+  </div>
+
+  <div class="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-4 mb-2">
+    <!-- Navigation Tabs -->
+    <div class="surface-card p-1 border-round-xl border-1 surface-border shadow-2 flex gap-2 max-w-fit">
+      <p-button label="Gestión de Usuarios"  [variant]="activeTab === 'usuarios' ? undefined : 'text'" [severity]="activeTab === 'usuarios' ? 'primary' : 'secondary'" (onClick)="setTab('usuarios')"></p-button>
+      <p-button label="Gestión de Módulos"  [variant]="activeTab === 'modulos' ? undefined : 'text'" [severity]="activeTab === 'modulos' ? 'primary' : 'secondary'" (onClick)="setTab('modulos')"></p-button>
+    </div>
+    
+    @if (activeTab === 'usuarios') {
+      <p-button (onClick)="openPanel()"><lucide-icon name="plus" class="mr-2"></lucide-icon>Nuevo Usuario</p-button>
+    }
+  </div>
+
+  @if (activeTab === 'usuarios') {
+  <div class="surface-card border-round-xl border-1 surface-border p-4 shadow-3 overflow-x-auto">
+    <table class="w-full text-left border-collapse min-w-[600px]">
+      <thead>
+        <tr class="border-b border-white/10 text-muted font-bold text-xs uppercase tracking-wider">
+          <th class="py-3 pl-3">Usuario</th>
+          <th class="py-3">Rol</th>
+          <th class="py-3">Estado</th>
+          <th class="py-3">Módulos</th>
+          <th class="py-3 text-right pr-3">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (user of users; track user.id) {
+        <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+          <td class="py-3 pl-3">
+            <div class="flex align-items-center gap-3">
+              <p-avatar [label]="(user.fullName || user.username || '?').charAt(0) | uppercase" shape="circle" styleClass="bg-primary text-white font-bold"></p-avatar>
+              <div class="flex flex-column">
+                <span class="font-bold text-main">{{ user.fullName || user.username }}</span>
+                <span class="text-xs text-muted">{{ user.email }}</span>
+              </div>
+            </div>
+          </td>
+          <td class="py-3">
+            <span class="px-2 py-1 border-round-3xl text-xs font-bold" 
+                  [ngClass]="user.role === 'admin' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'">
+              {{ user.role | uppercase }}
+            </span>
+          </td>
+          <td class="py-3">
+            <div class="flex align-items-center gap-2">
+              <span class="w-2 h-2 border-round-circle" [ngClass]="user.enabled ? 'bg-green-500' : 'bg-red-500'"></span>
+              <span class="text-sm font-semibold">{{ user.enabled ? 'Activo' : 'Inactivo' }}</span>
+            </div>
+          </td>
+          <td class="py-3">
+            <span class="text-xs text-muted">{{ user.modules.length }} asignados</span>
+          </td>
+          <td class="py-3 text-right pr-3">
+            <p-button [text]="true" [rounded]="true" severity="secondary" (onClick)="editUser(user)" title="Editar"><lucide-icon name="pencil"></lucide-icon></p-button>
+            <p-button [text]="true" [rounded]="true" severity="danger" (onClick)="deleteUser(user)" title="Eliminar"><lucide-icon name="trash-2"></lucide-icon></p-button>
+          </td>
+        </tr>
+        } @empty {
+        <tr>
+          <td colspan="5" class="text-center py-4 text-muted">No hay usuarios registrados aún.</td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  }
+
+  @if (activeTab === 'modulos') {
+  <div class="flex flex-column gap-4">
+    <div class="p-3 border-round-xl border-1 bg-primary-50 border-primary/20 text-sm">
+      <p class="m-0 text-color">
+        <strong>Modo Mantenimiento:</strong> El módulo seguirá visible en el menú pero los usuarios verán un aviso de mantenimiento al intentar entrar (solo administradores tienen acceso).<br>
+        <strong>Deshabilitar:</strong> El módulo desaparecerá completamente del menú para TODOS los usuarios. Útil para suspender el servicio inmediatamente.
+      </p>
+    </div>
+
+    @for (mod of systemModules; track mod.name) {
+    <div class="surface-card border-round-xl border-1 surface-border p-4 shadow-3">
+      <h3 class="m-0 text-lg font-bold text-main mb-4 flex align-items-center gap-2">
+        <span>{{ mod.icon }}</span>
+        <span>{{ mod.name }}</span>
+      </h3>
+      
+      <div class="flex flex-column gap-3">
+        @for (sub of mod.submodules; track sub.code) {
+        <div class="flex flex-column md:flex-row md:justify-content-between md:align-items-center p-3 surface-hover border-round-xl border-1 surface-border gap-3">
+          <div class="flex flex-column">
+            <h4 class="m-0 font-bold text-main">{{ sub.label }}</h4>
+            <code class="text-xs text-muted mt-1">{{ sub.code }}</code>
+          </div>
+          
+          <div class="flex flex-wrap gap-4 align-items-center">
+            <div class="flex flex-column gap-2">
+              <label class="flex align-items-center gap-2 cursor-pointer text-sm font-semibold">
+                <input type="checkbox" [(ngModel)]="sub.is_under_maintenance" (change)="updateSubmoduleState(sub)" class="w-1rem h-1rem accent-primary">
+                <span>🛠️ Mantenimiento</span>
+              </label>
+              @if (sub.is_under_maintenance) {
+                <input type="text" [(ngModel)]="sub.maintenance_message" (change)="updateSubmoduleState(sub)" placeholder="Mensaje para usuarios..." 
+                       class="p-2 border-round surface-card border-1 surface-border text-color text-xs focus:outline-none focus:border-primary">
+              }
+            </div>
+
+            <div>
+              <label class="flex align-items-center gap-2 cursor-pointer text-sm font-bold text-red-500">
+                <input type="checkbox" [(ngModel)]="sub.is_disabled" (change)="updateSubmoduleState(sub)" class="w-1rem h-1rem accent-red-500">
+                <span>⛔ Deshabilitar</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+    }
+  </div>
+  }
+
+  <!-- Sidebar Dialog for user details -->
+  <div class="side-panel-overlay" [class.open]="isPanelOpen" (click)="closePanel()">
+    <div class="side-panel surface-card border-left-1 surface-border shadow-4 flex flex-column h-full" (click)="$event.stopPropagation()">
+      <div class="panel-header p-4 border-b-1 surface-border flex justify-content-between align-items-center">
+        <h3 class="m-0 text-xl font-bold text-main">{{ isEditing ? 'Editar Usuario' : 'Nuevo Usuario' }}</h3>
+        <p-button [text]="true" [rounded]="true" severity="secondary" (onClick)="closePanel()"><lucide-icon name="x"></lucide-icon></p-button>
+      </div>
+
+      <div class="panel-body p-4 flex-grow-1 overflow-y-auto">
+        <form (submit)="saveUser()" class="flex flex-column gap-4">
+          <div class="flex flex-column gap-1">
+            <label class="text-xs font-bold text-muted uppercase">Usuario</label>
+            <input type="text" [(ngModel)]="selectedUser.username" name="username" class="p-3 border-round surface-hover border-1 surface-border text-color focus:outline-none focus:border-primary w-full" required>
+          </div>
+
+          <div class="flex flex-column gap-1">
+            <label class="text-xs font-bold text-muted uppercase">Nombre Completo</label>
+            <input type="text" [(ngModel)]="selectedUser.fullName" name="fullName" placeholder="Ej: Juan Pérez" class="p-3 border-round surface-hover border-1 surface-border text-color focus:outline-none focus:border-primary w-full">
+          </div>
+
+          <div class="flex flex-column gap-1">
+            <label class="text-xs font-bold text-muted uppercase">Correo Electrónico</label>
+            <input type="email" [(ngModel)]="selectedUser.email" name="email" placeholder="juan@empresa.com" class="p-3 border-round surface-hover border-1 surface-border text-color focus:outline-none focus:border-primary w-full">
+          </div>
+
+          <div class="flex flex-column gap-1">
+            <label class="text-xs font-bold text-muted uppercase">Contraseña</label>
+            <input type="password" [(ngModel)]="selectedUser.password" name="password" placeholder="********" class="p-3 border-round surface-hover border-1 surface-border text-color focus:outline-none focus:border-primary w-full">
+          </div>
+
+          <div class="flex flex-column gap-1">
+            <label class="text-xs font-bold text-muted uppercase">Rol</label>
+            <select [(ngModel)]="selectedUser.role" name="role" class="p-3 border-round surface-hover border-1 surface-border text-color focus:outline-none focus:border-primary w-full">
+              <option value="user">Usuario</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+
+          <div class="flex flex-column gap-2">
+            <label class="text-xs font-bold text-muted uppercase">Estado</label>
+            <label class="flex align-items-center gap-2 cursor-pointer"
+              [style.opacity]="selectedUser.modules.length === 0 ? '0.6' : '1'"
+              [title]="selectedUser.modules.length === 0 ? 'Seleccione al menos un módulo para activar' : ''">
+              <input type="checkbox" [(ngModel)]="selectedUser.enabled" name="enabled" class="w-1.5rem h-1.5rem" [disabled]="selectedUser.modules.length === 0">
+              <span class="text-sm font-semibold">{{ selectedUser.enabled ? '🟢 Usuario Activo' : '🔴 Usuario Inactivo' }}</span>
+            </label>
+            <p *ngIf="selectedUser.modules.length === 0" class="m-0 text-xs text-red-500 font-bold">
+              ⚠️ Debe asignar al menos un módulo para activar al usuario.
+            </p>
+          </div>
+
+          <div class="flex flex-column gap-2">
+            <label class="text-xs font-bold text-muted uppercase">Permisos de Acceso</label>
+            <div class="flex flex-column gap-3">
+              @for (mod of systemModules; track mod.name) {
+              <div class="p-3 border-round surface-hover border-1 surface-border">
+                <h4 class="m-0 text-sm font-bold text-main mb-3 flex align-items-center gap-2">
+                  <input type="checkbox" class="w-1rem h-1rem cursor-pointer accent-primary"
+                         (change)="toggleModuleGroup(mod, $event)"
+                         [checked]="isModuleGroupChecked(mod)">
+                  <span>{{ mod.icon }}</span>
+                  <span>{{ mod.name }}</span>
+                </h4>
+                <div class="flex flex-wrap gap-2 pl-4">
+                  @for (sub of mod.submodules; track sub.code) {
+                  <label class="p-2 border-round surface-card border-1 surface-border flex align-items-center gap-2 cursor-pointer hover:border-primary transition-all">
+                    <input type="checkbox" class="w-1rem h-1rem cursor-pointer accent-primary" [checked]="selectedUser.modules.includes(sub.code)"
+                      (change)="toggleModule(sub.code)">
+                    <span class="text-xs text-color font-semibold">{{ sub.label }}</span>
+                  </label>
+                  }
+                </div>
+              </div>
+              }
+            </div>
+          </div>
+
+          <div class="panel-footer pt-4 border-t-1 surface-border flex gap-2 justify-content-end">
+            <p-button severity="secondary" [text]="true" (onClick)="closePanel()"><lucide-icon name="x" class="mr-2"></lucide-icon>Cancelar</p-button>
+            <p-button type="submit"><lucide-icon name="check" class="mr-2"></lucide-icon>Guardar</p-button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+</div>

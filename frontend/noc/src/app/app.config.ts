@@ -7,7 +7,7 @@ import { ClaroPreset } from './ClaroPreset';
 
 import { routes } from './app.routes';
 import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
-import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { authInterceptor } from './interceptors/auth.interceptor';
 
 
 export const appConfig: ApplicationConfig = {

@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
-import { LoginComponent } from './features/auth/pages/login/login';
-import { authGuard } from './core/guards/auth.guard';
+import { LoginComponent } from './pages/auth/login/login.component';
+import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
   // Ruta pública: Cualquiera puede ver el login
@@ -10,20 +10,20 @@ export const routes: Routes = [
   {
     path: 'admin',
     // Lazy Loading: Solo descarga el código de Admin cuando el usuario entra aquí
-    loadChildren: () => import('./features/admin/admin-module').then(m => m.AdminModule),
+    loadChildren: () => import('./pages/admin/admin.module').then(m => m.AdminModule),
     canActivate: [authGuard] // 🛡️ Aquí aplicamos el portero que creamos
   },
 
   // Ruta privada: Módulo Portal
   {
     path: 'portal',
-    loadChildren: () => import('./features/portal/portal-module').then(m => m.PortalModule)
+    loadChildren: () => import('./pages/portal/portal.module').then(m => m.PortalModule)
   },
 
   // Ruta privada: Módulo Noticias
   {
     path: 'noticias',
-    loadChildren: () => import('./features/noticias/noticias.module').then(m => m.NoticiasModule)
+    loadChildren: () => import('./pages/noticias/noticias.module').then(m => m.NoticiasModule)
   },
 
   // Si la ruta está vacía (ej. localhost:4200), ir al login
