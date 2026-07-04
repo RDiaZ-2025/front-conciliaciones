@@ -1,4 +1,4 @@
-import { LucideIconComponent } from '../shared/lucide-icon/lucide-icon.component';
+import { LucideIconComponent } from '../lucide-icon/lucide-icon.component';
 import { CachedImagePipe } from '../../pipes/cached-image.pipe';
 import { Component, input, output, signal, effect, computed, OnDestroy, model } from '@angular/core';
 import { CommonModule } from '@angular/common';

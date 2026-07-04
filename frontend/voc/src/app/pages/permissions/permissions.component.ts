@@ -1,4 +1,4 @@
-import { LucideIconComponent } from '../../components/shared/lucide-icon/lucide-icon.component';
+import { LucideIconComponent } from '../../components/lucide-icon/lucide-icon.component';
 
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -11,7 +11,7 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { PageHeaderComponent } from '../../components/shared/page-header/page-header.component';
+import { PageHeaderComponent } from '../../components/page-header/page-header.component';
 import { PermissionDialogComponent } from './permission-dialog/permission-dialog.component';
 import { PermissionService } from '../../services/permission.service';
 import { Permission } from '../../models/common/permission';

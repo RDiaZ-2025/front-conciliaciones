@@ -1,4 +1,4 @@
-import { LucideIconComponent } from '../../components/shared/lucide-icon/lucide-icon.component';
+import { LucideIconComponent } from '../../components/lucide-icon/lucide-icon.component';
 import { Component, inject, signal, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -12,7 +12,7 @@ import { MessageModule } from 'primeng/message';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { CheckboxModule } from 'primeng/checkbox';
 import { MessageService, SharedModule } from 'primeng/api';
-import { PageHeaderComponent } from '../../components/shared/page-header/page-header.component';
+import { PageHeaderComponent } from '../../components/page-header/page-header.component';
 import { UploadService } from './upload.service';
 import { AuthService } from '../../services/auth.service';
 import { SafeUrlPipe } from '../../pipes/safe-url.pipe';

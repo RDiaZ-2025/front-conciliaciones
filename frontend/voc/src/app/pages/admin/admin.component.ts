@@ -1,4 +1,4 @@
-import { LucideIconComponent } from '../../components/shared/lucide-icon/lucide-icon.component';
+import { LucideIconComponent } from '../../components/lucide-icon/lucide-icon.component';
 import { CoreDialogService } from '../../services/core-dialog.service';
 import { Component, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -24,7 +24,7 @@ import { PERMISSIONS, PERMISSION_LABELS, PERMISSION_COLORS } from '../../constan
 import { UserDialogComponent } from './user-dialog/user-dialog.component';
 import { HistoryDialogComponent } from './history-dialog/history-dialog.component';
 import { AccessHistoryRecord } from '../../services/user.service';
-import { PageHeaderComponent } from '../../components/shared/page-header/page-header.component';
+import { PageHeaderComponent } from '../../components/page-header/page-header.component';
 
 @Component({
   selector: 'app-admin',

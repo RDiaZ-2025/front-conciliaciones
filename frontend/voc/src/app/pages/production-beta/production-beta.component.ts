@@ -1,4 +1,4 @@
-import { LucideIconComponent } from '../../components/shared/lucide-icon/lucide-icon.component';
+import { LucideIconComponent } from '../../components/lucide-icon/lucide-icon.component';
 import { CoreDialogService } from '../../services/core-dialog.service';
 import { Component, inject, OnInit, OnDestroy, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -19,7 +19,7 @@ import { RippleModule } from 'primeng/ripple';
 import { DynamicDialogRef, DialogService } from 'primeng/dynamicdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { PageHeaderComponent } from '../../components/shared/page-header/page-header.component';
+import { PageHeaderComponent } from '../../components/page-header/page-header.component';
 import { ProductionService } from '../../services/production.service';
 import { AuthService } from '../../services/auth.service';
 import { CheckboxModule } from 'primeng/checkbox';

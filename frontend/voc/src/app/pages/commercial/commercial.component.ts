@@ -1,4 +1,4 @@
-import { LucideIconComponent } from '../../components/shared/lucide-icon/lucide-icon.component';
+import { LucideIconComponent } from '../../components/lucide-icon/lucide-icon.component';
 import { CachedImagePipe } from '../../pipes/cached-image.pipe';
 
 import { Component, OnInit, signal, inject, computed, ViewChild } from '@angular/core';
@@ -15,7 +15,7 @@ import { InputIconModule } from 'primeng/inputicon';
 import { TooltipModule } from 'primeng/tooltip';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { AzureStorageService } from '../../services/azure-storage.service';
-import { PageHeaderComponent } from '../../components/shared/page-header/page-header.component';
+import { PageHeaderComponent } from '../../components/page-header/page-header.component';
 import { FilePreviewComponent } from '../../components/file-preview/file-preview.component';
 
 interface FileItem {

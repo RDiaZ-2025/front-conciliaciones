@@ -1,4 +1,4 @@
-import { LucideIconComponent } from '../../../../components/shared/lucide-icon/lucide-icon.component';
+import { LucideIconComponent } from '../../../../components/lucide-icon/lucide-icon.component';
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';

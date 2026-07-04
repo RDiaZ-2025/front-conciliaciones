@@ -1,4 +1,4 @@
-import { LucideIconComponent } from '../../../components/shared/lucide-icon/lucide-icon.component';
+import { LucideIconComponent } from '../../../components/lucide-icon/lucide-icon.component';
 import { Component } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { DynamicDialogRef, DynamicDialogConfig } from 'primeng/dynamicdialog';

@@ -1,4 +1,4 @@
-import { LucideIconComponent } from '../../../components/shared/lucide-icon/lucide-icon.component';
+import { LucideIconComponent } from '../../../components/lucide-icon/lucide-icon.component';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CardModule } from 'primeng/card';
@@ -8,7 +8,7 @@ import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AvatarModule } from 'primeng/avatar';
 import { TooltipModule } from 'primeng/tooltip';
-import { PageHeaderComponent } from '../../../components/shared/page-header/page-header.component';
+import { PageHeaderComponent } from '../../../components/page-header/page-header.component';
 import { RequestsReportService, DashboardStats } from './requests-report.service';
 
 @Component({

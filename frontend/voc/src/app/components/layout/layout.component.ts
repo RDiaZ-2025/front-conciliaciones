@@ -1,4 +1,4 @@
-import { LucideIconComponent } from '../shared/lucide-icon/lucide-icon.component';
+import { LucideIconComponent } from '../lucide-icon/lucide-icon.component';
 import { CachedImagePipe } from '../../pipes/cached-image.pipe';
 import { CoreDialogService } from '../../services/core-dialog.service';
 import { DialogService } from 'primeng/dynamicdialog';

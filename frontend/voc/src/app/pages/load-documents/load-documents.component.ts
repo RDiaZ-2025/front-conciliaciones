@@ -1,4 +1,4 @@
-import { LucideIconComponent } from '../../components/shared/lucide-icon/lucide-icon.component';
+import { LucideIconComponent } from '../../components/lucide-icon/lucide-icon.component';
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -11,8 +11,8 @@ import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
-import { PageHeaderComponent } from '../../components/shared/page-header/page-header.component';
-import { SessionInfoComponent } from '../../components/shared/session-info/session-info.component';
+import { PageHeaderComponent } from '../../components/page-header/page-header.component';
+import { SessionInfoComponent } from '../../components/session-info/session-info.component';
 import { LoadDocumentsService } from './load-documents.service';
 import { AzureStorageService } from '../../services/azure-storage.service';
 import { LoadDocument } from '../../models/common/load-document';

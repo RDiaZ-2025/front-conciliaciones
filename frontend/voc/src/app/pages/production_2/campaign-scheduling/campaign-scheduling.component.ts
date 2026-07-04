@@ -1,4 +1,4 @@
-import { LucideIconComponent } from '../../../components/shared/lucide-icon/lucide-icon.component';
+import { LucideIconComponent } from '../../../components/lucide-icon/lucide-icon.component';
 import { Component, OnInit, OnDestroy, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
@@ -15,7 +15,7 @@ import { MessageModule } from 'primeng/message';
 import { TagModule } from 'primeng/tag';
 import { DialogModule } from 'primeng/dialog';
 import { MessageService } from 'primeng/api';
-import { PageHeaderComponent } from '../../../components/shared/page-header/page-header.component';
+import { PageHeaderComponent } from '../../../components/page-header/page-header.component';
 import { TeamService } from '../../../services/team.service';
 import { CampaignService, Campaign } from '../../../services/campaign.service';
 import { Team } from '../../../models/common/team';

@@ -1,4 +1,4 @@
-import { LucideIconComponent } from '../../components/shared/lucide-icon/lucide-icon.component';
+import { LucideIconComponent } from '../../components/lucide-icon/lucide-icon.component';
 import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -14,8 +14,8 @@ import { TagModule } from 'primeng/tag';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { SelectModule } from 'primeng/select';
-import { PageHeaderComponent } from '../../components/shared/page-header/page-header.component';
-import { SessionInfoComponent } from '../../components/shared/session-info/session-info.component';
+import { PageHeaderComponent } from '../../components/page-header/page-header.component';
+import { SessionInfoComponent } from '../../components/session-info/session-info.component';
 import { AuthService } from '../../services/auth.service';
 import { PERMISSIONS } from '../../constants/permissions';
 
