@@ -23,6 +23,13 @@ export * from './IngresoPortal';
 export * from './IngresoRedes';
 export * from './NocNewsScheduler';
 export * from './ProductionRequestType';
+export * from './DynamicForm';
+export * from './DynamicFormField';
+export * from './DynamicFormSubmission';
+export * from './DynamicFormFieldValue';
+export * from './DynamicWorkflowStage';
+export * from './DynamicSubmissionWorkflowState';
+
 
 export { MenuItem } from './MenuItem';
 export { UserActionLog } from './UserActionLog';
@@ -64,6 +71,13 @@ import { IngresoRedes } from './IngresoRedes';
 import { PrecioDolar } from './PrecioDolar';
 import { NocNewsScheduler } from './NocNewsScheduler';
 import { ProductionRequestType } from './ProductionRequestType';
+import { DynamicForm } from './DynamicForm';
+import { DynamicFormField } from './DynamicFormField';
+import { DynamicFormSubmission } from './DynamicFormSubmission';
+import { DynamicFormFieldValue } from './DynamicFormFieldValue';
+import { DynamicWorkflowStage } from './DynamicWorkflowStage';
+import { DynamicSubmissionWorkflowState } from './DynamicSubmissionWorkflowState';
+
 
 export const entities = [
   User,
@@ -98,7 +112,13 @@ export const entities = [
   IngresoRedes,
   PrecioDolar,
   NocNewsScheduler,
-  ProductionRequestType
+  ProductionRequestType,
+  DynamicForm,
+  DynamicFormField,
+  DynamicFormSubmission,
+  DynamicFormFieldValue,
+  DynamicWorkflowStage,
+  DynamicSubmissionWorkflowState
 ];
 
 export const ModelCategories = {

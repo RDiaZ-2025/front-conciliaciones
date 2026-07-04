@@ -1,0 +1,176 @@
+<div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
+    <app-page-header [title]="'Bandeja de Aprobaciones (Beta)'"
+        [subtitle]="'Revisión y autorización de solicitudes dinámicas asignadas a tu cargo'"
+        [icon]="'pi pi-inbox'">
+    </app-page-header>
+
+    <div class="grid" *ngIf="!loadingTasks()">
+        <div class="col-12 text-center p-5 surface-card border-round-xl border-1 surface-border" *ngIf="pendingTasks().length === 0">
+            <i class="pi pi-check-circle text-5xl text-success mb-3 block"></i>
+            <h3 class="text-700 m-0">¡Todo al día!</h3>
+            <p class="text-500">No tienes tareas ni aprobaciones pendientes en este momento.</p>
+        </div>
+
+        <div *ngFor="let task of pendingTasks()" class="col-12 md:col-6 lg:col-4 xl:col-3">
+            <p-card [style]="{ height: '100%', display: 'flex', flexDirection: 'column' }"
+                styleClass="flex flex-column h-full shadow-2 hover:shadow-6 transition-duration-200 border-round-xl">
+                <ng-template pTemplate="header">
+                    <div class="flex justify-content-between align-items-start p-3 pb-0">
+                        <h3 class="text-xl font-bold m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap flex-1 mr-2"
+                            [pTooltip]="task.formName">{{ task.formName }}</h3>
+                        <p-tag severity="info" [value]="task.stageName"></p-tag>
+                    </div>
+                </ng-template>
+
+                <div class="flex flex-column gap-3 p-3 pt-3 flex-grow-1">
+                    <div class="flex align-items-center gap-2 text-sm text-600">
+                        <i class="pi pi-user"></i>
+                        <span>Solicitante: <strong>{{ task.requesterName }}</strong></span>
+                    </div>
+
+                    <div class="flex align-items-center gap-2 text-sm text-600">
+                        <i class="pi pi-calendar"></i>
+                        <span>Solicitado: <strong>{{ task.createdAt | date:'dd/MM/yyyy HH:mm' }}</strong></span>
+                    </div>
+
+                    <div class="flex align-items-center gap-2 text-sm text-600">
+                        <i class="pi pi-clock"></i>
+                        <span>Asignado: <strong>{{ task.assignedAt | date:'dd/MM/yyyy HH:mm' }}</strong></span>
+                    </div>
+                </div>
+
+                <ng-template pTemplate="footer">
+                    <div class="flex justify-content-end border-top-1 surface-border pt-3">
+                        <p-button label="Revisar y Decidir" icon="pi pi-search" size="small" (onClick)="openActionDialog(task)"></p-button>
+                    </div>
+                </ng-template>
+            </p-card>
+        </div>
+    </div>
+
+    <div *ngIf="loadingTasks()" class="flex justify-content-center p-5">
+        <p-progressSpinner></p-progressSpinner>
+    </div>
+
+    <!-- Action Decision Dialog -->
+    <p-dialog [header]="isCorrection(selectedTask()) ? 'Corregir Solicitud: ' + (selectedTask()?.formName || '') : 'Revisión: ' + (selectedTask()?.formName || '')" [(visible)]="showActionDialog" 
+              [modal]="true" [style]="{width: '650px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
+        <div class="flex flex-column gap-4 px-4 py-2" *ngIf="selectedTask()">
+            
+            <!-- Rejection Alert Banner -->
+            <div *ngIf="isCorrection(selectedTask())" class="p-3 bg-red-50 text-red-700 border-round border-1 border-red-200 mb-2">
+                <div class="flex align-items-center gap-2 mb-2 font-bold">
+                    <i class="pi pi-exclamation-triangle"></i>
+                    <span>Solicitud Devuelta para Corrección</span>
+                </div>
+                <p class="m-0 text-sm font-semibold">Comentarios del revisor:</p>
+                <p class="m-0 text-sm mt-1 italic">"{{ selectedTask().rejectionNotes || 'Sin comentarios.' }}"</p>
+            </div>
+
+            <!-- Section 1: Original Form Data (Only if not correction) -->
+            <div class="flex flex-column gap-3" *ngIf="!isCorrection(selectedTask())">
+                <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">Datos de la Solicitud</span>
+                <div class="grid row-gap-3">
+                    <div *ngFor="let val of selectedTask().values" class="col-12 md:col-6 flex flex-column gap-1">
+                        <span class="text-xs text-500 font-medium">{{ val.label }}</span>
+                        <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
+                            <div *ngFor="let file of getUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
+                                <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><i class="pi pi-file mr-2"></i>{{ file.name }}</span>
+                                <p-button icon="pi pi-download" [text]="true" severity="primary" size="small" (onClick)="downloadFormFile(file)"></p-button>
+                            </div>
+                        </div>
+                        <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value)">{{ val.value || 'N/A' }}</span>
+                    </div>
+                </div>
+            </div>
+ 
+            <!-- Section 2: Conditional approval form to fill or correction editor -->
+            <div class="flex flex-column gap-3 mt-2" *ngIf="selectedTask().formIdToFill || isCorrection(selectedTask())">
+                <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">
+                    {{ isCorrection(selectedTask()) ? 'Modificar Datos de la Solicitud' : 'Formulario Requerido en esta Etapa: ' + selectedTask().formToFill?.name }}
+                </span>
+                
+                <div *ngIf="loadingStageFields()" class="flex justify-content-center p-3">
+                    <i class="pi pi-spin pi-spinner text-primary text-xl"></i>
+                </div>
+ 
+                <div *ngIf="!loadingStageFields()" class="flex flex-column gap-3">
+                    <div *ngFor="let field of stageFormFields()" class="flex flex-column gap-1">
+                        <label [for]="'stage-field-' + field.name" class="font-medium text-900">
+                            {{ field.label }} <span class="text-red-500" *ngIf="field.isRequired">*</span>
+                        </label>
+                        <span class="text-xs text-500 mb-1" *ngIf="field.description">{{ field.description }}</span>
+                        
+                        <ng-container [ngSwitch]="field.type">
+                            <input *ngSwitchCase="'date'" type="date" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [disabled]="field.isReadOnly" />
+                            
+                            <ng-container *ngSwitchCase="'datetime'">
+                                <input type="datetime-local" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [disabled]="field.isReadOnly" *ngIf="!field.isReadOnly" />
+                                <input type="text" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [disabled]="true" *ngIf="field.isReadOnly" />
+                            </ng-container>
+ 
+                            <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
+                            
+                            <input *ngSwitchCase="'number'" type="number" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
+                            
+                            <!-- File type -->
+                            <ng-container *ngSwitchCase="'file'">
+                                <div class="flex flex-column gap-2 w-full">
+                                    <input type="file" [id]="'stage-field-' + field.name" [multiple]="(field.metadata?.maxFileCount || 1) > 1"
+                                           [accept]="field.metadata?.allowedFormats || '*'" (change)="onFileSelected($event, field)"
+                                           class="hidden" #fileInput />
+                                    
+                                    <div class="flex gap-2">
+                                        <p-button label="Seleccionar archivo" icon="pi pi-upload" [outlined]="true" size="small"
+                                                  (onClick)="fileInput.click()" [disabled]="field.isReadOnly"></p-button>
+                                        <span class="text-xs text-500 align-self-center">
+                                            Máx: {{ field.metadata?.maxFileCount || 1 }} archivos ({{ field.metadata?.maxFileSize || 10 }}MB c/u). Formatos: {{ field.metadata?.allowedFormats || 'Cualquiera' }}
+                                        </span>
+                                    </div>
+
+                                    <!-- Selected files list -->
+                                    <div class="flex flex-column gap-1 mt-1" *ngIf="getSelectedFiles(field.name).length > 0">
+                                        <div *ngFor="let file of getSelectedFiles(field.name); let fIdx = index" class="flex justify-content-between align-items-center bg-light p-2 border-round text-sm border-1 surface-border">
+                                            <span class="font-medium text-600"><i class="pi pi-file mr-2"></i>{{ file.name }} ({{ (file.size / 1024 / 1024) | number:'1.1-2' }} MB)</span>
+                                            <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small" (onClick)="removeSelectedFile(field.name, fIdx)" *ngIf="!field.isReadOnly"></p-button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Uploaded files list (for viewing/downloading) -->
+                                    <div class="flex flex-column gap-1 mt-1" *ngIf="getUploadedFiles(stageFormValues[field.name]).length > 0">
+                                        <div *ngFor="let file of getUploadedFiles(stageFormValues[field.name])" class="flex justify-content-between align-items-center bg-blue-50 p-2 border-round text-sm border-1 border-blue-200">
+                                            <span class="font-medium text-blue-700"><i class="pi pi-file mr-2"></i>{{ file.name }}</span>
+                                            <p-button icon="pi pi-download" [text]="true" severity="primary" size="small" (onClick)="downloadFormFile(file)"></p-button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </ng-container>
+
+                            <input *ngSwitchDefault type="text" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
+                        </ng-container>
+                    </div>
+                </div>
+            </div>
+ 
+            <!-- Section 3: Comments (Only if not correction) -->
+            <div class="flex flex-column gap-2 mt-2" *ngIf="!isCorrection(selectedTask())">
+                <label for="comments" class="font-bold text-sm text-900">Comentarios / Observaciones</label>
+                <textarea id="comments" class="w-full p-inputtext border-round" [(ngModel)]="comments" rows="3" placeholder="Escribe notas adicionales o la razón en caso de rechazo..." style="resize: vertical; font-family: inherit;"></textarea>
+            </div>
+        </div>
+ 
+        <ng-template pTemplate="footer">
+            <div class="flex justify-content-end gap-2 px-4 pb-3">
+                <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary" (onClick)="showActionDialog.set(false)" [disabled]="loadingAction()"></p-button>
+                <ng-container *ngIf="!isCorrection(selectedTask())">
+                    <p-button label="Rechazar / Devolver" icon="pi pi-exclamation-circle" severity="danger" (onClick)="processAction('reject')" [loading]="loadingAction()"></p-button>
+                    <p-button label="Aprobar" icon="pi pi-check" severity="success" (onClick)="processAction('approve')" [loading]="loadingAction()"></p-button>
+                </ng-container>
+                <ng-container *ngIf="isCorrection(selectedTask())">
+                    <p-button label="Enviar Corrección" icon="pi pi-send" severity="success" (onClick)="processAction('approve')" [loading]="loadingAction()"></p-button>
+                </ng-container>
+            </div>
+        </ng-template>
+    </p-dialog>
+</div>
+<p-toast></p-toast>

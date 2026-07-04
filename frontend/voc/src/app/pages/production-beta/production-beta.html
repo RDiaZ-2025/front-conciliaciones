@@ -1,138 +1,55 @@
 <div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
-    <app-page-header [title]="showHistorical() ? 'Histórico de Producción' : 'Gestión de Producción (Beta)'"
-        [subtitle]="showHistorical() ? 'Registro de solicitudes completadas y entregadas' : 'Seguimiento de solicitudes en el flujo de producción'"
-        [icon]="showHistorical() ? 'pi pi-history' : 'pi pi-cog'">
+    <app-page-header [title]="'Gestión de Producción (Beta)'"
+        [subtitle]="'Seguimiento de solicitudes y flujos dinámicos de trabajo'"
+        [icon]="'pi pi-cog'">
         <div class="flex gap-2">
-            <p-button *ngIf="!showHistorical()" label="Reglas SLA" icon="pi pi-info-circle" [outlined]="true"
-                (click)="slaRulesVisible.set(true)"></p-button>
-            <p-button *ngIf="!showHistorical() && canViewHistory()" label="Histórico" icon="pi pi-history"
-                [outlined]="true" (click)="showHistorical.set(true)"></p-button>
-            <p-button *ngIf="showHistorical()" label="Volver al Tablero" icon="pi pi-arrow-left" [outlined]="true"
-                (click)="showHistorical.set(false)"></p-button>
-            <p-button *ngIf="!showHistorical() && canCreateRequest()" label="Nueva Solicitud" icon="pi pi-plus"
+            <p-button label="Bandeja de Aprobaciones" icon="pi pi-inbox" [outlined]="true"
+                (click)="goToInbox()"></p-button>
+            <p-button label="Administrar" icon="pi pi-sliders-h" [outlined]="true"
+                (click)="goToAdmin()"></p-button>
+            <p-button label="Nueva Solicitud" icon="pi pi-plus"
                 (click)="openDialog()"></p-button>
         </div>
     </app-page-header>
 
-    <div class="grid" *ngIf="!showHistorical()">
-        <div class="col-12 text-center p-5" *ngIf="activeRequests().length === 0">
+    <div class="grid">
+        <div class="col-12 text-center p-5" *ngIf="dynamicSubmissions().length === 0">
             <i class="pi pi-inbox text-5xl text-400 mb-3"></i>
             <h3 class="text-700 m-0">No hay solicitudes activas</h3>
             <p class="text-500">Crea una nueva solicitud para comenzar.</p>
         </div>
-        <div *ngFor="let request of activeRequests()" class="col-12 md:col-6 lg:col-4 xl:col-3">
+        
+        <div *ngFor="let sub of dynamicSubmissions()" class="col-12 md:col-6 lg:col-4 xl:col-3">
             <p-card [style]="{ height: '100%', display: 'flex', flexDirection: 'column' }"
-                styleClass="flex flex-column h-full shadow-2 hover:shadow-6 transition-duration-200">
+                styleClass="flex flex-column h-full shadow-2 hover:shadow-6 transition-duration-200 border-round-xl">
                 <ng-template pTemplate="header">
                     <div class="flex justify-content-between align-items-start p-3 pb-0">
                         <h3 class="text-xl font-bold m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap flex-1 mr-2"
-                            [pTooltip]="request.name">{{ request.name }}</h3>
-                        <p-tag [value]="getStageLabel(request.stage)"
-                            [severity]="getStageSeverity(request.stage)"></p-tag>
+                            [pTooltip]="sub.formName">{{ sub.formName }}</h3>
+                        <p-tag [severity]="getStatusSeverity(sub.status)" [value]="sub.status"></p-tag>
                     </div>
                 </ng-template>
 
-                <div class="flex flex-column gap-3 p-3 pt-0 flex-grow-1">
-                    <div class="flex align-items-center gap-2 text-sm text-600" *ngIf="request.consecutive">
-                        <i class="pi pi-hashtag"></i>
-                        <span class="font-bold text-900">Consecutivo: {{ request.consecutive }}</span>
-                    </div>
-
+                <div class="flex flex-column gap-3 p-3 pt-3 flex-grow-1">
                     <div class="flex align-items-center gap-2 text-sm text-600">
                         <i class="pi pi-calendar"></i>
-                        <span>Solicitado: {{ request.requestDate | date:'dd/MM/yyyy' }}</span>
+                        <span>Solicitado: <strong>{{ sub.createdAt | date:'dd/MM/yyyy HH:mm' }}</strong></span>
                     </div>
 
                     <div class="flex align-items-center gap-2 text-sm text-600">
-                        <i class="pi pi-user"></i>
+                        <i class="pi pi-cog"></i>
+                        <span>Etapa actual: <strong>{{ sub.stageName }}</strong></span>
+                    </div>
+
+                    <div class="flex align-items-center gap-2 text-sm text-600">
+                        <i class="pi pi-user align-self-start mt-1"></i>
                         <div class="flex flex-column">
-                            <span>Dep: {{ request.department }}</span>
-                        </div>
-                    </div>
-
-                    <div class="flex align-items-center gap-2 text-sm text-600" *ngIf="request.deliveryDate">
-                        <i class="pi pi-calendar-plus"></i>
-                        <span>Entrega: {{ request.deliveryDate | date:'dd/MM/yyyy hh:mm a' }}</span>
-                    </div>
-
-                    <div class="flex align-items-center gap-2 text-sm mt-1"
-                        *ngIf="request.deliveryDate && request.stage !== 'completed'">
-                        <i class="pi pi-clock" [ngClass]="{
-                            'text-green-500': getSLAStatus(request.deliveryDate) === 'success',
-                            'text-yellow-500': getSLAStatus(request.deliveryDate) === 'warn',
-                            'text-red-500': getSLAStatus(request.deliveryDate) === 'danger'
-                        }"></i>
-                        <span [ngClass]="{
-                            'text-green-500': getSLAStatus(request.deliveryDate) === 'success',
-                            'text-yellow-500': getSLAStatus(request.deliveryDate) === 'warn',
-                            'text-red-500': getSLAStatus(request.deliveryDate) === 'danger'
-                        }" class="font-bold">
-                            {{ getRemainingTime(request.deliveryDate) }}
-                        </span>
-                    </div>
-
-                    <div *ngIf="request.files && request.files.length > 0" class="mt-2">
-                        <div class="text-sm font-bold mb-1">Archivos adjuntos ({{ request.files.length }}):</div>
-                        <div class="flex flex-column gap-1">
-                            <div *ngFor="let file of request.files.slice(0, 3)"
-                                class="flex align-items-center justify-content-between surface-100 p-1 border-round text-xs">
-                                <span class="text-overflow-ellipsis overflow-hidden white-space-nowrap"
-                                    style="max-width: 150px;" [pTooltip]="file.name">{{ file.name }}</span>
-                                <div class="flex">
-                                    <p-button icon="pi pi-eye" [rounded]="true" [text]="true" size="small"
-                                        (click)="openPreview(file)" pTooltip="Vista Previa"></p-button>
-                                    <p-button icon="pi pi-download" [rounded]="true" [text]="true" size="small"
-                                        (click)="downloadFile(file.id, file.name)" pTooltip="Descargar"></p-button>
-                                </div>
-                            </div>
-                            <div *ngIf="request.files.length > 3" class="text-xs text-500 font-italic pl-1">
-                                +{{ request.files.length - 3 }} archivos más
-                            </div>
+                            <span>Asignado a: <strong>{{ sub.assigneeName }}</strong></span>
+                            <span *ngIf="sub.assigneeEmail" class="text-xs text-500 font-medium">{{ sub.assigneeEmail }}</span>
                         </div>
                     </div>
                 </div>
-
-                <ng-template pTemplate="footer">
-                    <div class="flex justify-content-end gap-2 border-top-1 surface-border pt-3 mt-auto">
-                        <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="info"
-                            pTooltip="Ver Detalles" (click)="openDialog(request, true)"></p-button>
-                        <p-button icon="pi pi-history" [rounded]="true" [text]="true" severity="help"
-                            pTooltip="Historial de Cambios" (click)="openHistory(request)"></p-button>
-
-
-                        <p-button
-                            *ngIf="request.stage === 'closed_won' || request.stage === 'implementation' || request.stage === 'customer_review'"
-                            icon="pi pi-list" [rounded]="true" [text]="true" severity="help"
-                            pTooltip="Registros de Material"
-                            (click)="openMaterialRegisterListDialog(request)"></p-button>
-
-                        <p-button *ngIf="request.stage !== 'completed'" icon="pi pi-arrow-right" [rounded]="true"
-                            [text]="true" severity="success" pTooltip="Avanzar etapa"
-                            (click)="moveRequest(request)"></p-button>
-                    </div>
-                </ng-template>
             </p-card>
-        </div>
-    </div>
-
-    <!-- Historical View -->
-    <div class="grid" *ngIf="showHistorical()">
-        <div class="col-12 text-center p-5" *ngIf="historicalRequests().length === 0">
-            <i class="pi pi-inbox text-5xl text-400 mb-3"></i>
-            <h3 class="text-700 m-0">No hay solicitudes en el histórico</h3>
-            <p class="text-500">Las solicitudes completadas aparecerán aquí.</p>
-        </div>
-
-        <div *ngFor="let request of historicalRequests()" class="col-12 md:col-6 lg:col-4 xl:col-3">
-            <div class="surface-card p-3 shadow-1 border-round cursor-pointer hover:shadow-3 transition-duration-200 border-1 surface-border flex align-items-center justify-content-between h-full"
-                (click)="openDetailDialog(request)" pRipple>
-                <div class="flex align-items-center gap-2 overflow-hidden">
-                    <i class="pi pi-file text-primary text-xl"></i>
-                    <span class="font-medium text-lg text-900 text-overflow-ellipsis overflow-hidden white-space-nowrap"
-                        [pTooltip]="request.name">{{ request.name }}</span>
-                </div>
-                <i class="pi pi-external-link text-400"></i>
-            </div>
         </div>
     </div>
 
@@ -199,73 +116,67 @@
                 <span>{{ selectedRequestTypes()[currentFormIndex()]?.name }}</span>
             </div>
             
-            <!-- Conditional content: Content Marketing Form -->
-            <div class="flex flex-column gap-3 overflow-y-auto" style="max-height: 60vh;" *ngIf="selectedRequestTypes()[currentFormIndex()]?.name === 'CONTENT MARKETING'">
-                
-                <div class="flex flex-column gap-1">
-                    <label for="requestDate" class="font-medium text-900">Fecha de solicitud <span class="text-red-500">*</span></label>
-                    <span class="text-xs text-500 mb-1">Seleccione la fecha en la que realiza la solicitud.</span>
-                    <input type="date" pInputText id="requestDate" [(ngModel)]="contentMarketingForm.requestDate" class="w-full" />
-                </div>
-                
-                <div class="flex flex-column gap-1">
-                    <label for="requesterName" class="font-medium text-900">Nombre del consultor o estratega que realiza la solicitud <span class="text-red-500">*</span></label>
-                    <span class="text-xs text-500 mb-1">Indique el nombre completo de la persona responsable de esta solicitud.</span>
-                    <input pInputText id="requesterName" [(ngModel)]="contentMarketingForm.requesterName" placeholder="Nombre completo" class="w-full" />
-                </div>
-                
-                <div class="flex flex-column gap-1">
-                    <label for="clientName" class="font-medium text-900">Cliente <span class="text-red-500">*</span></label>
-                    <span class="text-xs text-500 mb-1">Nombre de la empresa o persona para quien se solicita la cotización.</span>
-                    <input pInputText id="clientName" [(ngModel)]="contentMarketingForm.clientName" placeholder="Empresa o cliente" class="w-full" />
-                </div>
-                
-                <div class="flex flex-column gap-1">
-                    <label for="productService" class="font-medium text-900">Producto o servicio <span class="text-red-500">*</span></label>
-                    <span class="text-xs text-500 mb-1">Especifique el producto o servicio relacionado con la solicitud.</span>
-                    <input pInputText id="productService" [(ngModel)]="contentMarketingForm.productService" placeholder="Producto/servicio" class="w-full" />
-                </div>
-                
-                <div class="flex flex-column gap-1">
-                    <label for="projectDescription" class="font-medium text-900">Breve descripción del proyecto <span class="text-red-500">*</span></label>
-                    <span class="text-xs text-500 mb-1">Resuma el objetivo y alcance del proyecto.</span>
-                    <textarea class="w-full p-inputtext border-round" id="projectDescription" [(ngModel)]="contentMarketingForm.projectDescription" placeholder="Descripción breve" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
-                </div>
-                
-                <div class="flex flex-column gap-1">
-                    <label for="requestObjective" class="font-medium text-900">Objetivo de la solicitud <span class="text-red-500">*</span></label>
-                    <span class="text-xs text-500 mb-1">¿Qué espera lograr con este proyecto de Content Marketing?</span>
-                    <textarea class="w-full p-inputtext border-round" id="requestObjective" [(ngModel)]="contentMarketingForm.requestObjective" placeholder="Objetivo esperado" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
-                </div>
-                
-                <div class="flex flex-column gap-1">
-                    <label for="requestDetails" class="font-medium text-900">Detalle de lo solicitado <span class="text-red-500">*</span></label>
-                    <span class="text-xs text-500 mb-1">Incluya todos los requerimientos para la cotización: formatos, cantidades, tamaños, duraciones, estudios exteriores, etc. Cuanto más detalle, mejor.</span>
-                    <textarea class="w-full p-inputtext border-round" id="requestDetails" [(ngModel)]="contentMarketingForm.requestDetails" placeholder="Detalle completo de formatos, duraciones, etc." rows="4" style="resize: vertical; font-family: inherit;"></textarea>
-                </div>
-                
-                <div class="flex flex-column gap-1">
-                    <label for="executionDates" class="font-medium text-900">Fechas de posible ejecución <span class="text-red-500">*</span></label>
-                    <span class="text-xs text-500 mb-1">Indique el rango de fechas en que podría ejecutarse el proyecto.</span>
-                    <input pInputText id="executionDates" [(ngModel)]="contentMarketingForm.executionDates" placeholder="Ej: Rango de fechas o mes estimado" class="w-full" />
-                </div>
-            </div>
-            
-            <!-- Conditional content: Standard/Test Form -->
-            <div class="flex flex-column gap-3" *ngIf="selectedRequestTypes()[currentFormIndex()]?.name !== 'CONTENT MARKETING'">
-                <div class="flex flex-column gap-2">
-                    <label for="test1" class="font-medium text-900">Campo de Prueba 1 <span class="text-red-500">*</span></label>
-                    <input pInputText id="test1" [(ngModel)]="testForm.test1" placeholder="Escriba valor 1" class="w-full" />
-                </div>
-                
-                <div class="flex flex-column gap-2">
-                    <label for="test2" class="font-medium text-900">Campo de Prueba 2 <span class="text-red-500">*</span></label>
-                    <input pInputText id="test2" [(ngModel)]="testForm.test2" placeholder="Escriba valor 2" class="w-full" />
-                </div>
-                
-                <div class="flex flex-column gap-2">
-                    <label for="test3" class="font-medium text-900">Campo de Prueba 3 <span class="text-red-500">*</span></label>
-                    <input pInputText id="test3" [(ngModel)]="testForm.test3" placeholder="Escriba valor 3" class="w-full" />
+            <!-- Dynamic Form content -->
+            <div class="flex flex-column gap-3 overflow-y-auto" style="max-height: 60vh;" *ngIf="currentFormFields().length > 0">
+                <div *ngFor="let field of currentFormFields()" class="flex flex-column gap-1">
+                    <label [for]="field.name" class="font-medium text-900">
+                        {{ field.label }} 
+                        <span class="text-red-500" *ngIf="field.isRequired">*</span>
+                    </label>
+                    <span class="text-xs text-500 mb-1" *ngIf="field.description">{{ field.description }}</span>
+                    
+                    <ng-container [ngSwitch]="field.type">
+                        <!-- Date type -->
+                        <input *ngSwitchCase="'date'" type="date" pInputText [id]="field.name" [(ngModel)]="formValues[field.name]" [disabled]="field.isReadOnly" class="w-full" />
+                        
+                        <!-- Datetime type -->
+                        <ng-container *ngSwitchCase="'datetime'">
+                            <input type="datetime-local" pInputText [id]="field.name" [(ngModel)]="formValues[field.name]" [disabled]="field.isReadOnly" class="w-full" *ngIf="!field.isReadOnly" />
+                            <input type="text" pInputText [id]="field.name" [(ngModel)]="formValues[field.name]" [disabled]="true" class="w-full" *ngIf="field.isReadOnly" />
+                        </ng-container>
+                        
+                        <!-- Textarea type -->
+                        <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="field.name" [(ngModel)]="formValues[field.name]" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
+                        
+                        <!-- Number type -->
+                        <input *ngSwitchCase="'number'" type="number" pInputText [id]="field.name" [(ngModel)]="formValues[field.name]" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" class="w-full" />
+                        
+                        <!-- File type -->
+                        <ng-container *ngSwitchCase="'file'">
+                            <div class="flex flex-column gap-2 w-full">
+                                <input type="file" [id]="field.name" [multiple]="(field.metadata?.maxFileCount || 1) > 1"
+                                       [accept]="field.metadata?.allowedFormats || '*'" (change)="onFileSelected($event, field)"
+                                       class="hidden" #fileInput />
+                                
+                                <div class="flex gap-2">
+                                    <p-button label="Seleccionar archivo" icon="pi pi-upload" [outlined]="true" size="small"
+                                              (onClick)="fileInput.click()" [disabled]="field.isReadOnly"></p-button>
+                                    <span class="text-xs text-500 align-self-center">
+                                        Máx: {{ field.metadata?.maxFileCount || 1 }} archivos ({{ field.metadata?.maxFileSize || 10 }}MB c/u). Formatos: {{ field.metadata?.allowedFormats || 'Cualquiera' }}
+                                    </span>
+                                </div>
+
+                                <!-- Selected files list -->
+                                <div class="flex flex-column gap-1 mt-1" *ngIf="getSelectedFiles(field.name).length > 0">
+                                    <div *ngFor="let file of getSelectedFiles(field.name); let fIdx = index" class="flex justify-content-between align-items-center bg-light p-2 border-round text-sm border-1 surface-border">
+                                        <span class="font-medium text-600"><i class="pi pi-file mr-2"></i>{{ file.name }} ({{ (file.size / 1024 / 1024) | number:'1.1-2' }} MB)</span>
+                                        <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small" (onClick)="removeSelectedFile(field.name, fIdx)" *ngIf="!field.isReadOnly"></p-button>
+                                    </div>
+                                </div>
+
+                                <!-- Uploaded files list (for viewing/downloading) -->
+                                <div class="flex flex-column gap-1 mt-1" *ngIf="getUploadedFiles(formValues[field.name]).length > 0">
+                                    <div *ngFor="let file of getUploadedFiles(formValues[field.name])" class="flex justify-content-between align-items-center bg-blue-50 p-2 border-round text-sm border-1 border-blue-200">
+                                        <span class="font-medium text-blue-700"><i class="pi pi-file mr-2"></i>{{ file.name }}</span>
+                                        <p-button icon="pi pi-download" [text]="true" severity="primary" size="small" (onClick)="downloadFormFile(file)"></p-button>
+                                    </div>
+                                </div>
+                            </div>
+                        </ng-container>
+
+                        <!-- Default text type -->
+                        <input *ngSwitchDefault type="text" pInputText [id]="field.name" [(ngModel)]="formValues[field.name]" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" class="w-full" />
+                    </ng-container>
                 </div>
             </div>
         </div>

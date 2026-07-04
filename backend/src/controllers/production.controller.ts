@@ -73,3 +73,80 @@ export const updateStepCampaign = asyncHandler(async (req: Request, res: Respons
 export const updateStepAudience = updateProductionRequestPartial;
 export const updateStepProduction = updateProductionRequestPartial;
 export const updateMaterialData = updateProductionRequestPartial;
+
+export const getFormFields = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const fields = await productionService.getFormFields(parseInt(id));
+    return res.json(fields);
+});
+
+export const createSubmission = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { formId, values } = req.body;
+    const requesterUserId = req.user?.userId;
+    if (!requesterUserId) return res.status(401).json({ message: 'Usuario no autenticado' });
+    const submission = await productionService.createSubmission(parseInt(formId), requesterUserId, values);
+    return res.status(201).json(submission);
+});
+
+export const getSubmissions = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const requesterUserId = req.user?.userId;
+    if (!requesterUserId) return res.status(401).json({ message: 'Usuario no autenticado' });
+    const submissions = await productionService.getSubmissions(requesterUserId);
+    return res.json(submissions);
+});
+
+export const adminGetForms = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const forms = await productionService.adminGetForms();
+    return res.json(forms);
+});
+
+export const adminCreateForm = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const form = await productionService.adminCreateForm(req.body);
+    return res.status(201).json(form);
+});
+
+export const adminUpdateForm = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const form = await productionService.adminUpdateForm(parseInt(id), req.body);
+    return res.json(form);
+});
+
+export const adminDeleteForm = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const form = await productionService.adminDeleteForm(parseInt(id));
+    return res.json(form);
+});
+
+export const adminSaveFields = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const fields = await productionService.adminSaveFields(parseInt(id), req.body);
+    return res.json(fields);
+});
+
+export const adminGetStages = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const stages = await productionService.adminGetStages(parseInt(id));
+    return res.json(stages);
+});
+
+export const adminSaveStages = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const stages = await productionService.adminSaveStages(parseInt(id), req.body);
+    return res.json(stages);
+});
+
+export const getPendingApprovals = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ message: 'Usuario no autenticado' });
+    const approvals = await productionService.getPendingApprovals(userId);
+    return res.json(approvals);
+});
+
+export const actionApproval = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { stateId } = req.params;
+    const { action, notes, formValues } = req.body;
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ message: 'Usuario no autenticado' });
+    const result = await productionService.actionApproval(parseInt(stateId), userId, action, notes, formValues);
+    return res.json(result);
+});

@@ -1,4 +1,4 @@
-import { ProductionRequest, Product, User, FormatType, RightsDuration, Team, ProductionRequestType } from "../models";
+import { ProductionRequest, Product, User, FormatType, RightsDuration, Team, ProductionRequestType, DynamicForm, DynamicFormField, DynamicFormSubmission, DynamicFormFieldValue, DynamicWorkflowStage, DynamicSubmissionWorkflowState } from "../models";
 import { AppDataSource } from "../config/typeorm.config";
 import { NotificationService } from './notification.service';
 import { ProductionRequestHistoryService } from './productionRequestHistory.service';
@@ -99,7 +99,169 @@ export class ProductionService {
 
     async getRequestTypes() {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
-        return await AppDataSource.getRepository(ProductionRequestType).find();
+        return await AppDataSource.getRepository(DynamicForm).find({
+            where: { isEntryForm: true, isActive: true },
+            order: { id: 'ASC' }
+        });
+    }
+
+    async getFormFields(formId: number) {
+        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+        return await AppDataSource.getRepository(DynamicFormField).find({
+            where: { formId },
+            order: { displayOrder: 'ASC' }
+        });
+    }
+
+    async createSubmission(formId: number, requesterUserId: number, values: Record<string, string>) {
+        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+        
+        return await AppDataSource.transaction(async (transactionManager) => {
+            const subRepo = transactionManager.getRepository(DynamicFormSubmission);
+            const valRepo = transactionManager.getRepository(DynamicFormFieldValue);
+            const stageRepo = transactionManager.getRepository(DynamicWorkflowStage);
+            const stateRepo = transactionManager.getRepository(DynamicSubmissionWorkflowState);
+            const userRepo = transactionManager.getRepository(User);
+
+            // Create submission header
+            const submission = subRepo.create({
+                formId,
+                requesterUserId,
+                status: 'Pending'
+            });
+            const savedSubmission = await subRepo.save(submission);
+
+            // Fetch dynamic fields for validation/default generation
+            const fields = await transactionManager.getRepository(DynamicFormField).find({
+                where: { formId },
+                order: { displayOrder: 'ASC' }
+            });
+
+            // Insert values
+            for (const field of fields) {
+                let valueStr = values[field.name];
+
+                // Auto-fill read-only defaults if not provided or to ensure integrity
+                if (field.isReadOnly && field.defaultValueExpression) {
+                    if (field.defaultValueExpression === '{{CURRENT_DATE_TIME}}') {
+                        // Format: YYYY-MM-DD HH:mm (24h)
+                        const now = new Date();
+                        const pad = (n: number) => n.toString().padStart(2, '0');
+                        valueStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+                    } else if (field.defaultValueExpression === '{{LOGGED_USER_NAME}}') {
+                        const requester = await userRepo.findOne({ where: { id: requesterUserId } });
+                        valueStr = requester?.name || 'Usuario';
+                    }
+                }
+
+                if (valueStr !== undefined && valueStr !== null) {
+                    const fieldValue = valRepo.create({
+                        submissionId: savedSubmission.id,
+                        fieldId: field.id,
+                        value: valueStr
+                    });
+                    await valRepo.save(fieldValue);
+                }
+            }
+
+            // Find first stage in workflow (stepOrder = 1)
+            const firstStage = await stageRepo.findOne({
+                where: { formId, stepOrder: 1 }
+            });
+
+            if (firstStage) {
+                savedSubmission.currentStageId = firstStage.id;
+                savedSubmission.status = 'In Progress';
+                await subRepo.save(savedSubmission);
+
+                // Resolve assignee
+                let assigneeUserId: number | null = null;
+                if (firstStage.assigneeType === 'specific_user') {
+                    assigneeUserId = firstStage.assigneeUserId;
+                } else if (firstStage.assigneeType === 'requester_boss') {
+                    const requester = await userRepo.findOne({ where: { id: requesterUserId } });
+                    assigneeUserId = requester?.bossId || firstStage.assigneeUserId || 1; // Fallback to admin/specific_user if no boss
+                } else if (firstStage.assigneeType === 'team' && firstStage.assigneeTeamId) {
+                    // Load balancing: pick user in active team with least pending tasks
+                    const teamUsers = await userRepo.find({
+                        where: { teamId: firstStage.assigneeTeamId, status: 1 }
+                    });
+                    if (teamUsers.length > 0) {
+                        const workloads = await Promise.all(teamUsers.map(async (u) => {
+                            const count = await stateRepo.count({
+                                where: { assignedUserId: u.id, status: 'Pending' }
+                            });
+                            return { userId: u.id, count };
+                        }));
+                        workloads.sort((a, b) => a.count - b.count);
+                        assigneeUserId = workloads[0].userId;
+                    } else {
+                        assigneeUserId = firstStage.assigneeUserId || 1;
+                    }
+                }
+
+                if (!assigneeUserId) assigneeUserId = 1; // absolute fallback to user ID 1 (Admin)
+
+                // Create initial stage workflow entry
+                const state = stateRepo.create({
+                    submissionId: savedSubmission.id,
+                    stageId: firstStage.id,
+                    assignedUserId: assigneeUserId,
+                    status: 'Pending'
+                });
+                await stateRepo.save(state);
+
+                // Send notification
+                try {
+                    await notificationService.createNotification(
+                        assigneeUserId,
+                        'Nueva Tarea de Flujo Asignada',
+                        `Se te ha asignado la tarea: "${firstStage.name}"`,
+                        'info'
+                    );
+                } catch (err) {
+                    console.error('Error sending notification:', err);
+                }
+            }
+
+            return savedSubmission;
+        });
+    }
+
+    async getSubmissions(userId: number) {
+        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+        const submissions = await AppDataSource.getRepository(DynamicFormSubmission).find({
+            where: { requesterUserId: userId },
+            relations: ['form', 'currentStage'],
+            order: { createdAt: 'DESC' }
+        });
+
+        const stateRepo = AppDataSource.getRepository(DynamicSubmissionWorkflowState);
+        const results = await Promise.all(submissions.map(async (sub) => {
+            let assigneeName = 'N/A';
+            let assigneeEmail: string | undefined = undefined;
+            if (sub.currentStageId) {
+                const activeState = await stateRepo.findOne({
+                    where: { submissionId: sub.id, stageId: sub.currentStageId, status: 'Pending' },
+                    relations: ['assignedUser']
+                });
+                if (activeState && activeState.assignedUser) {
+                    assigneeName = activeState.assignedUser.name;
+                    assigneeEmail = activeState.assignedUser.email;
+                }
+            }
+            return {
+                id: sub.id,
+                formName: sub.form.name,
+                createdAt: sub.createdAt,
+                stageName: sub.currentStage ? sub.currentStage.name : 'Completado',
+                status: sub.status,
+                assigneeName,
+                assigneeEmail
+            };
+        }));
+
+        return results;
     }
 
     async getProductionRequestById(id: number) {
@@ -354,6 +516,500 @@ export class ProductionService {
 
     async updateStepCampaign(id: number, data: Partial<ProductionRequestDTO>, userId: number | undefined) {
         return this.updateProductionRequestPartial(id, data, userId);
+    }
+
+    // --- ADMIN FORMS ---
+    async adminGetForms() {
+        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+        return await AppDataSource.getRepository(DynamicForm).find({
+            order: { name: 'ASC' }
+        });
+    }
+
+    async adminCreateForm(data: Partial<DynamicForm>) {
+        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+        const repo = AppDataSource.getRepository(DynamicForm);
+        const form = repo.create({
+            name: data.name,
+            description: data.description,
+            isEntryForm: data.isEntryForm ?? true,
+            isActive: data.isActive ?? true,
+            responsible: data.responsible,
+            role: data.role
+        });
+        return await repo.save(form);
+    }
+
+    async adminUpdateForm(id: number, data: Partial<DynamicForm>) {
+        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+        const repo = AppDataSource.getRepository(DynamicForm);
+        const form = await repo.findOne({ where: { id } });
+        if (!form) throw new Error('Formulario no encontrado');
+        
+        if (data.name !== undefined) form.name = data.name;
+        if (data.description !== undefined) form.description = data.description;
+        if (data.isEntryForm !== undefined) form.isEntryForm = data.isEntryForm;
+        if (data.isActive !== undefined) form.isActive = data.isActive;
+        if (data.responsible !== undefined) form.responsible = data.responsible;
+        if (data.role !== undefined) form.role = data.role;
+
+        return await repo.save(form);
+    }
+
+    async adminDeleteForm(id: number) {
+        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+        const repo = AppDataSource.getRepository(DynamicForm);
+        const form = await repo.findOne({ where: { id } });
+        if (!form) throw new Error('Formulario no encontrado');
+        form.isActive = false;
+        return await repo.save(form);
+    }
+
+    async adminSaveFields(formId: number, fields: Partial<DynamicFormField>[]) {
+        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+        return await AppDataSource.transaction(async (manager) => {
+            const fieldRepo = manager.getRepository(DynamicFormField);
+
+            // Fetch existing field IDs to know what to delete
+            const existingFields = await fieldRepo.find({ where: { formId } });
+            const inputIds = fields.map(f => f.id).filter(id => !!id) as number[];
+            
+            // Delete fields that are not in the input list
+            const fieldsToDelete = existingFields.filter(ef => !inputIds.includes(ef.id));
+            if (fieldsToDelete.length > 0) {
+                await fieldRepo.remove(fieldsToDelete);
+            }
+
+            // Insert or Update fields
+            const savedFields = [];
+            for (let i = 0; i < fields.length; i++) {
+                const f = fields[i];
+                let fieldEntity = existingFields.find(ef => ef.id === f.id);
+
+                if (!fieldEntity) {
+                    fieldEntity = fieldRepo.create({
+                        formId,
+                        name: f.name || `field_${Date.now()}_${i}`,
+                        label: f.label || 'Campo nuevo',
+                        description: f.description,
+                        type: f.type || 'text',
+                        placeholder: f.placeholder,
+                        isRequired: f.isRequired ?? false,
+                        isReadOnly: f.isReadOnly ?? false,
+                        defaultValueExpression: f.defaultValueExpression,
+                        displayOrder: f.displayOrder ?? (i + 1),
+                        metadata: f.metadata ? (typeof f.metadata === 'string' ? f.metadata : JSON.stringify(f.metadata)) : null
+                    });
+                } else {
+                    if (f.name !== undefined) fieldEntity.name = f.name;
+                    if (f.label !== undefined) fieldEntity.label = f.label;
+                    if (f.description !== undefined) fieldEntity.description = f.description;
+                    if (f.type !== undefined) fieldEntity.type = f.type;
+                    if (f.placeholder !== undefined) fieldEntity.placeholder = f.placeholder;
+                    if (f.isRequired !== undefined) fieldEntity.isRequired = f.isRequired;
+                    if (f.isReadOnly !== undefined) fieldEntity.isReadOnly = f.isReadOnly;
+                    if (f.defaultValueExpression !== undefined) fieldEntity.defaultValueExpression = f.defaultValueExpression;
+                    if (f.displayOrder !== undefined) fieldEntity.displayOrder = f.displayOrder;
+                    if (f.metadata !== undefined) fieldEntity.metadata = f.metadata ? (typeof f.metadata === 'string' ? f.metadata : JSON.stringify(f.metadata)) : null;
+                }
+
+                savedFields.push(await fieldRepo.save(fieldEntity));
+            }
+
+            return savedFields;
+        });
+    }
+
+    // --- ADMIN WORKFLOWS ---
+    async adminGetStages(formId: number) {
+        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+        return await AppDataSource.getRepository(DynamicWorkflowStage).find({
+            where: { formId },
+            relations: ['assigneeUser', 'assigneeTeam', 'formToFill', 'rejectionTargetUser', 'rejectionTargetTeam'],
+            order: { stepOrder: 'ASC' }
+        });
+    }
+
+    async adminSaveStages(formId: number, stages: Partial<DynamicWorkflowStage>[]) {
+        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+        return await AppDataSource.transaction(async (manager) => {
+            const stageRepo = manager.getRepository(DynamicWorkflowStage);
+
+            // Fetch existing stages to know what to delete
+            const existingStages = await stageRepo.find({ where: { formId } });
+            const inputIds = stages.map(s => s.id).filter(id => !!id) as number[];
+
+            // Delete stages that are not in the input list
+            const stagesToDelete = existingStages.filter(es => !inputIds.includes(es.id));
+            if (stagesToDelete.length > 0) {
+                await stageRepo.remove(stagesToDelete);
+            }
+
+            // Insert or Update stages
+            const savedStages = [];
+            for (let i = 0; i < stages.length; i++) {
+                const s = stages[i];
+                let stageEntity = existingStages.find(es => es.id === s.id);
+
+                if (!stageEntity) {
+                    stageEntity = stageRepo.create({
+                        formId,
+                        name: s.name || `Etapa ${i + 1}`,
+                        description: s.description,
+                        stepOrder: s.stepOrder ?? (i + 1),
+                        assigneeType: s.assigneeType || 'specific_user',
+                        assigneeUserId: s.assigneeUserId || null,
+                        assigneeTeamId: s.assigneeTeamId || null,
+                        formIdToFill: s.formIdToFill || null,
+                        rejectionTargetType: s.rejectionTargetType || 'previous_sender',
+                        rejectionTargetUserId: s.rejectionTargetUserId || null,
+                        rejectionTargetTeamId: s.rejectionTargetTeamId || null
+                    });
+                } else {
+                    if (s.name !== undefined) stageEntity.name = s.name;
+                    if (s.description !== undefined) stageEntity.description = s.description;
+                    if (s.stepOrder !== undefined) stageEntity.stepOrder = s.stepOrder;
+                    if (s.assigneeType !== undefined) stageEntity.assigneeType = s.assigneeType;
+                    if (s.assigneeUserId !== undefined) stageEntity.assigneeUserId = s.assigneeUserId;
+                    if (s.assigneeTeamId !== undefined) stageEntity.assigneeTeamId = s.assigneeTeamId;
+                    if (s.formIdToFill !== undefined) stageEntity.formIdToFill = s.formIdToFill;
+                    if (s.rejectionTargetType !== undefined) stageEntity.rejectionTargetType = s.rejectionTargetType;
+                    if (s.rejectionTargetUserId !== undefined) stageEntity.rejectionTargetUserId = s.rejectionTargetUserId;
+                    if (s.rejectionTargetTeamId !== undefined) stageEntity.rejectionTargetTeamId = s.rejectionTargetTeamId;
+                }
+
+                savedStages.push(await stageRepo.save(stageEntity));
+            }
+
+            return savedStages;
+        });
+    }
+
+    // --- APPROVALS INBOX ---
+    async getPendingApprovals(userId: number) {
+        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+        const stateRepo = AppDataSource.getRepository(DynamicSubmissionWorkflowState);
+
+        const states = await stateRepo.find({
+            where: { assignedUserId: userId, status: 'Pending' },
+            relations: ['submission', 'submission.form', 'stage', 'stage.formToFill', 'submission.requesterUser'],
+            order: { createdAt: 'DESC' }
+        });
+
+        // For each pending approval, fetch the values of the submission
+        const valRepo = AppDataSource.getRepository(DynamicFormFieldValue);
+        const results = [];
+        for (const state of states) {
+            const values = await valRepo.find({
+                where: { submissionId: state.submissionId },
+                relations: ['field']
+            });
+
+            const prevState = await stateRepo.findOne({
+                where: { submissionId: state.submissionId, status: 'Rejected' },
+                order: { updatedAt: 'DESC' }
+            });
+            const rejectionNotes = prevState ? prevState.notes : null;
+
+            const submittedValuesRaw: Record<string, string> = {};
+            for (const v of values) {
+                submittedValuesRaw[v.field.name] = v.value || '';
+            }
+
+            results.push({
+                stateId: state.id,
+                submissionId: state.submissionId,
+                formId: state.submission.formId,
+                requesterUserId: state.submission.requesterUserId,
+                submissionStatus: state.submission.status,
+                rejectionNotes,
+                formName: state.submission.form.name,
+                requesterName: state.submission.requesterUser ? state.submission.requesterUser.name : 'Usuario',
+                createdAt: state.submission.createdAt,
+                assignedAt: state.createdAt,
+                stageName: state.stage.name,
+                stageDescription: state.stage.description,
+                formIdToFill: state.stage.formIdToFill,
+                formToFill: state.stage.formToFill,
+                values: values.map(v => ({
+                    label: v.field.label,
+                    value: v.value
+                })),
+                submittedValuesRaw
+            });
+        }
+
+        return results;
+    }
+
+    async actionApproval(stateId: number, userId: number, action: 'approve' | 'reject', notes: string, formValues?: Record<string, string>) {
+        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+        return await AppDataSource.transaction(async (manager) => {
+            const stateRepo = manager.getRepository(DynamicSubmissionWorkflowState);
+            const subRepo = manager.getRepository(DynamicFormSubmission);
+            const userRepo = manager.getRepository(User);
+            const stageRepo = manager.getRepository(DynamicWorkflowStage);
+            const valRepo = manager.getRepository(DynamicFormFieldValue);
+
+            // 1. Find active workflow state
+            const currentState = await stateRepo.findOne({
+                where: { id: stateId, assignedUserId: userId, status: 'Pending' },
+                relations: ['submission', 'stage', 'submission.form']
+            });
+            if (!currentState) throw new Error('Tarea pendiente no encontrada o ya procesada');
+
+            const submission = currentState.submission;
+            const stage = currentState.stage;
+
+            const isCorrection = (submission.status === 'Rejected' && currentState.assignedUserId === submission.requesterUserId);
+
+            if (isCorrection) {
+                // 1. Save / Update original form fields
+                if (formValues) {
+                    const fieldsToSave = await manager.getRepository(DynamicFormField).find({
+                        where: { formId: submission.formId }
+                    });
+                    for (const field of fieldsToSave) {
+                        const valueStr = formValues[field.name];
+                        if (valueStr !== undefined && valueStr !== null) {
+                            let existingVal = await valRepo.findOne({
+                                where: { submissionId: submission.id, fieldId: field.id }
+                            });
+                            if (existingVal) {
+                                existingVal.value = valueStr;
+                                await valRepo.save(existingVal);
+                            } else {
+                                const newVal = valRepo.create({
+                                    submissionId: submission.id,
+                                    fieldId: field.id,
+                                    value: valueStr
+                                });
+                                await valRepo.save(newVal);
+                            }
+                        }
+                    }
+                }
+
+                // 2. Complete current state
+                currentState.status = 'Approved';
+                currentState.actionedByUserId = userId;
+                currentState.notes = 'Corrección enviada';
+                await stateRepo.save(currentState);
+
+                // 3. Update submission status and stage
+                submission.status = 'In Progress';
+                submission.currentStageId = stage.id;
+                await subRepo.save(submission);
+
+                // 4. Resolve assignee for the same stage to review again
+                let assigneeUserId: number | null = null;
+                if (stage.assigneeType === 'specific_user') {
+                    assigneeUserId = stage.assigneeUserId;
+                } else if (stage.assigneeType === 'requester_boss') {
+                    const requester = await userRepo.findOne({ where: { id: submission.requesterUserId } });
+                    assigneeUserId = requester?.bossId || stage.assigneeUserId || 1;
+                } else if (stage.assigneeType === 'team' && stage.assigneeTeamId) {
+                    const teamUsers = await userRepo.find({
+                        where: { teamId: stage.assigneeTeamId, status: 1 }
+                    });
+                    if (teamUsers.length > 0) {
+                        const workloads = await Promise.all(teamUsers.map(async (u) => {
+                            const count = await stateRepo.count({
+                                where: { assignedUserId: u.id, status: 'Pending' }
+                            });
+                            return { userId: u.id, count };
+                        }));
+                        workloads.sort((a, b) => a.count - b.count);
+                        assigneeUserId = workloads[0].userId;
+                    } else {
+                        assigneeUserId = stage.assigneeUserId || 1;
+                    }
+                }
+
+                if (!assigneeUserId) assigneeUserId = 1;
+
+                const nextState = stateRepo.create({
+                    submissionId: submission.id,
+                    stageId: stage.id,
+                    assignedUserId: assigneeUserId,
+                    status: 'Pending'
+                });
+                await stateRepo.save(nextState);
+
+                // Notification
+                try {
+                    await notificationService.createNotification(
+                        assigneeUserId,
+                        'Corrección de Solicitud Recibida',
+                        `Se ha enviado una corrección para la solicitud de "${submission.form.name}". Por favor, revísala nuevamente.`,
+                        'info'
+                    );
+                } catch (err) {
+                    console.error('Error sending notification:', err);
+                }
+
+                return submission;
+            }
+
+            // --- STANDARD WORKFLOW (Approve / Reject) ---
+            // 2. If approved and there are values to fill, save them
+            if (action === 'approve' && stage.formIdToFill && formValues) {
+                // Save these filled values under this submission!
+                const fields = await manager.getRepository(DynamicFormField).find({
+                    where: { formId: stage.formIdToFill }
+                });
+                for (const field of fields) {
+                    const valueStr = formValues[field.name];
+                    if (valueStr !== undefined && valueStr !== null) {
+                        const fieldValue = valRepo.create({
+                            submissionId: submission.id,
+                            fieldId: field.id,
+                            value: valueStr
+                        });
+                        await valRepo.save(fieldValue);
+                    }
+                }
+            }
+
+            // 3. Mark current workflow state as actioned
+            currentState.status = action === 'approve' ? 'Approved' : 'Rejected';
+            currentState.actionedByUserId = userId;
+            currentState.notes = notes;
+            await stateRepo.save(currentState);
+
+            if (action === 'approve') {
+                // Find next stage
+                const nextStage = await stageRepo.findOne({
+                    where: { formId: submission.formId, stepOrder: stage.stepOrder + 1 }
+                });
+
+                if (nextStage) {
+                    submission.currentStageId = nextStage.id;
+                    submission.status = 'In Progress';
+                    await subRepo.save(submission);
+
+                    // Resolve assignee for the next stage
+                    let assigneeUserId: number | null = null;
+                    if (nextStage.assigneeType === 'specific_user') {
+                        assigneeUserId = nextStage.assigneeUserId;
+                    } else if (nextStage.assigneeType === 'requester_boss') {
+                        const requester = await userRepo.findOne({ where: { id: submission.requesterUserId } });
+                        assigneeUserId = requester?.bossId || nextStage.assigneeUserId || 1;
+                    } else if (nextStage.assigneeType === 'team' && nextStage.assigneeTeamId) {
+                        const teamUsers = await userRepo.find({
+                            where: { teamId: nextStage.assigneeTeamId, status: 1 }
+                        });
+                        if (teamUsers.length > 0) {
+                            const workloads = await Promise.all(teamUsers.map(async (u) => {
+                                const count = await stateRepo.count({
+                                    where: { assignedUserId: u.id, status: 'Pending' }
+                                });
+                                return { userId: u.id, count };
+                            }));
+                            workloads.sort((a, b) => a.count - b.count);
+                            assigneeUserId = workloads[0].userId;
+                        } else {
+                            assigneeUserId = nextStage.assigneeUserId || 1;
+                        }
+                    }
+
+                    if (!assigneeUserId) assigneeUserId = 1;
+
+                    // Create next workflow state
+                    const nextState = stateRepo.create({
+                        submissionId: submission.id,
+                        stageId: nextStage.id,
+                        assignedUserId: assigneeUserId,
+                        status: 'Pending'
+                    });
+                    await stateRepo.save(nextState);
+
+                    // Notification
+                    try {
+                        await notificationService.createNotification(
+                            assigneeUserId,
+                            'Nueva Tarea de Flujo Asignada',
+                            `Se te ha asignado la tarea: "${nextStage.name}" para la solicitud dinámica de ${currentState.submission.form.name}`,
+                            'info'
+                        );
+                    } catch (err) {
+                        console.error('Error sending notification:', err);
+                    }
+                } else {
+                    // No next stage, mark completed
+                    submission.currentStageId = null;
+                    submission.status = 'Completed';
+                    await subRepo.save(submission);
+
+                    // Notify the creator that it is approved/completed!
+                    try {
+                        await notificationService.createNotification(
+                            submission.requesterUserId,
+                            'Solicitud Completada',
+                            `Tu solicitud de "${currentState.submission.form.name}" ha sido completada y aprobada.`,
+                            'success'
+                        );
+                    } catch (err) {
+                        console.error('Error sending notification:', err);
+                    }
+                }
+            } else if (action === 'reject') {
+                // Handle rejection routing
+                let targetUserId: number | null = null;
+                const targetType = stage.rejectionTargetType || 'previous_sender';
+
+                if (targetType === 'previous_sender') {
+                    // Find the state that approved this submission immediately prior
+                    const prevState = await stateRepo.findOne({
+                        where: { submissionId: submission.id, status: 'Approved' },
+                        order: { updatedAt: 'DESC' }
+                    });
+                    targetUserId = prevState ? prevState.actionedByUserId : submission.requesterUserId;
+                } else if (targetType === 'specific_user') {
+                    targetUserId = stage.rejectionTargetUserId;
+                } else if (targetType === 'team_random' && stage.rejectionTargetTeamId) {
+                    const teamUsers = await userRepo.find({
+                        where: { teamId: stage.rejectionTargetTeamId, status: 1 }
+                    });
+                    if (teamUsers.length > 0) {
+                        const randIndex = Math.floor(Math.random() * teamUsers.length);
+                        targetUserId = teamUsers[randIndex].id;
+                    }
+                }
+
+                if (!targetUserId) targetUserId = submission.requesterUserId; // absolute fallback to submitter
+
+                submission.status = 'Rejected';
+                // Creator correction or assigned back
+                if (targetUserId === submission.requesterUserId) {
+                    submission.currentStageId = null;
+                }
+                await subRepo.save(submission);
+
+                // Create workflow state for rejection recipient
+                const rejectedState = stateRepo.create({
+                    submissionId: submission.id,
+                    stageId: stage.id,
+                    assignedUserId: targetUserId,
+                    status: 'Pending'
+                });
+                await stateRepo.save(rejectedState);
+
+                // Notify target user
+                try {
+                    await notificationService.createNotification(
+                        targetUserId,
+                        'Solicitud Rechazada / Devuelta',
+                        `La solicitud de "${currentState.submission.form.name}" ha sido devuelta. Comentarios: "${notes}"`,
+                        'warning'
+                    );
+                } catch (err) {
+                    console.error('Error sending notification:', err);
+                }
+            }
+
+            return submission;
+        });
     }
 }
 

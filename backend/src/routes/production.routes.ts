@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { ProductionController, getAllProductionRequests, getProductionRequestById, createProductionRequest, updateProductionRequest, getProducts, moveProductionRequest, updateStepGeneral, updateStepCustomer, updateStepCampaign, updateStepAudience, updateStepProduction, updateMaterialData } from '../controllers/production.controller';
+import { ProductionController, getAllProductionRequests, getProductionRequestById, createProductionRequest, updateProductionRequest, getProducts, moveProductionRequest, updateStepGeneral, updateStepCustomer, updateStepCampaign, updateStepAudience, updateStepProduction, updateMaterialData, getFormFields, createSubmission, getSubmissions, adminGetForms, adminCreateForm, adminUpdateForm, adminDeleteForm, adminSaveFields, adminGetStages, adminSaveStages, getPendingApprovals, actionApproval } from '../controllers/production.controller';
 import { addMaterialRegister, getMaterialRegisters } from '../controllers/materialRegister.controller';
 import { RequestsReportController } from '../controllers/requestsReport.controller';
 import { getProductionRequestHistory } from '../controllers/productionRequestHistory.controller';
@@ -17,6 +17,24 @@ router.get('/request-types', productionController.getRequestTypes);
 
 // Protected routes
 router.use(authenticateToken);
+
+// Dynamic forms routes
+router.get('/forms/:id/fields', getFormFields);
+router.post('/submissions', createSubmission);
+router.get('/submissions', getSubmissions);
+
+// Admin Forms & Workflows
+router.get('/admin/forms', adminGetForms);
+router.post('/admin/forms', adminCreateForm);
+router.put('/admin/forms/:id', adminUpdateForm);
+router.delete('/admin/forms/:id', adminDeleteForm);
+router.post('/admin/forms/:id/fields', adminSaveFields);
+router.get('/admin/forms/:id/stages', adminGetStages);
+router.post('/admin/forms/:id/stages', adminSaveStages);
+
+// Approvals Inbox
+router.get('/approvals/pending', getPendingApprovals);
+router.post('/approvals/:stateId/action', actionApproval);
 
 // Product routes
 router.get('/products', getProducts);

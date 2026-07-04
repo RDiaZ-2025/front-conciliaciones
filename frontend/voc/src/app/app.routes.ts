@@ -30,7 +30,16 @@ export const routes: Routes = [
       },
       {
         path: 'requests-beta',
-        loadComponent: () => import('./pages/production-beta/production-beta').then(m => m.ProductionBetaComponent)
+        loadComponent: () => import('./pages/production-beta/production-beta').then(m => m.ProductionBetaComponent),
+        pathMatch: 'full'
+      },
+      {
+        path: 'requests-beta/admin',
+        loadComponent: () => import('./pages/requests-beta-admin/requests-beta-admin.component').then(m => m.RequestsBetaAdminComponent)
+      },
+      {
+        path: 'requests-beta/inbox',
+        loadComponent: () => import('./pages/requests-beta-inbox/requests-beta-inbox.component').then(m => m.RequestsBetaInboxComponent)
       },
       {
         path: 'campaign-scheduling',

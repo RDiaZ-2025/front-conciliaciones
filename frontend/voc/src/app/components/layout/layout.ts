@@ -178,11 +178,38 @@ export class LayoutComponent implements OnInit {
 
   getIconName(iconKey: string | undefined): string {
     if (!iconKey) return 'pi pi-list';
-    // If the icon already starts with 'pi ', assume it's a full class
     if (iconKey.startsWith('pi ')) return iconKey;
-    // Otherwise prepend 'pi ' (assuming the user entered e.g. 'pi-home' or 'home')
-    // Matches the behavior in Menus page where it does 'pi ' + icon
-    return `pi ${iconKey}`;
+
+    const mapping: Record<string, string> = {
+      'book-user': 'pi-book',
+      'square-menu': 'pi-bars',
+      'users-round': 'pi-users',
+      'bot': 'pi-android',
+      'book-open': 'pi-book',
+      'file-sliders': 'pi-sliders-h',
+      'copy-plus': 'pi-plus-circle',
+      'chart-column': 'pi-chart-bar',
+      'contact-round': 'pi-user',
+      'clipboard-minus': 'pi-clipboard',
+      'key': 'pi-key',
+      'flame': 'pi-bolt',
+      'folder-git': 'pi-folder',
+      'calendar-clock': 'pi-calendar',
+      'list-plus': 'pi-list',
+      'chart-no-axes-gantt': 'pi-chart-bar',
+      'inbox': 'pi-inbox',
+      'form': 'pi-file-edit',
+      'list-indent-increase': 'pi-bars',
+      'layout-dashboard': 'pi-th-large',
+      'newspaper': 'pi-copy',
+      'send': 'pi-send',
+      'copy-slash': 'pi-copy',
+      'chart-no-axes-combined': 'pi-chart-line',
+      'sliders-h': 'pi-sliders-h'
+    };
+
+    const primeIcon = mapping[iconKey] || (iconKey.startsWith('pi-') ? iconKey : `pi-${iconKey}`);
+    return `pi ${primeIcon}`;
   }
 
   hasPermission(item: MenuItem): boolean {
