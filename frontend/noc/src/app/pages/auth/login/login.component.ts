@@ -1,3 +1,4 @@
+import { CachedImagePipe } from '../../../pipes/cached-image.pipe';
 import { LucideIconComponent } from '../../../components/lucide-icon/lucide-icon.component';
 import { Component, inject, ChangeDetectorRef, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -30,9 +31,10 @@ import { FloatLabelModule } from 'primeng/floatlabel';
     ToastModule,
     IconFieldModule,
     InputIconModule,
-    FloatLabelModule
-  ,
-    LucideIconComponent],
+    FloatLabelModule,
+    LucideIconComponent,
+    CachedImagePipe
+  ],
   providers: [MessageService],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']

@@ -5,7 +5,7 @@
             styleClass="text-900 w-3rem h-3rem">
             <lucide-icon name="menu"></lucide-icon>
          </p-button>
-         <img [src]="themeService.isDarkMode ? '/assets/Oscuro.png' : '/assets/Claro.png'" alt="Logo" class="h-2rem ml-2" style="max-height: 2.2rem; width: auto; object-fit: contain;">
+         <img [src]="(themeService.isDarkMode ? '/assets/Oscuro.png' : '/assets/Claro.png') | cachedImage" alt="Logo" class="h-2rem ml-2" style="max-height: 2.2rem; width: auto; object-fit: contain;">
       </div>
       <div class="p-toolbar-group-end flex align-items-center">
          <p-button [text]="true" [rounded]="true"
@@ -40,7 +40,7 @@
       [showCloseIcon]="true" styleClass="w-20rem shadow-6">
       <ng-template pTemplate="header">
          <div class="flex align-items-center gap-2">
-            <img [src]="themeService.isDarkMode ? '/assets/Oscuro.png' : '/assets/Claro.png'" alt="Logo" class="h-2rem" style="max-height: 2rem; width: auto; object-fit: contain;">
+            <img [src]="(themeService.isDarkMode ? '/assets/Oscuro.png' : '/assets/Claro.png') | cachedImage" alt="Logo" class="h-2rem" style="max-height: 2rem; width: auto; object-fit: contain;">
             <span class="font-bold text-xl text-900">Menú</span>
          </div>
       </ng-template>

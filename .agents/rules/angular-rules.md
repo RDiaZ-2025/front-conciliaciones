@@ -25,7 +25,7 @@ globs: Frontend/*.*
 - Use `p-select` instead for dropdown functionality.
 - Use `p-floatLabel` for input fields with `variant="in"`.
 - Use `p` components from primeNG library.
-- Use `cachedImage` pipe for image loading.
+- Use `cachedImage` pipe for image loading. (Note: Currently a structural placeholder returning the URL directly; designed to be extended to implement client-side caching of static assets using CacheStorage, Service Workers, or blob loading as needed).
 - Use `BaseApiService` for all HTTP services to ensure consistent authentication and URL handling.
 - Use `CoreDialogService` for all modal interactions to ensure consistent behavior and styling.
 - For translations check `translations_rules.md`.

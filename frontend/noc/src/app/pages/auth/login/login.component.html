@@ -12,7 +12,7 @@
   <div class="login-content flex flex-column align-items-center w-full" style="max-width: 450px;">
     <!-- Red+ Logo -->
     <div class="logo-container mb-4 relative z-1 flex justify-content-center">
-      <img [src]="themeService.isDarkMode ? '/assets/Oscuro.png' : '/assets/Claro.png'" alt="Logo" class="logo w-18rem h-auto animate-fade-in-up" style="max-height: 5rem; object-fit: contain;">
+      <img [src]="(themeService.isDarkMode ? '/assets/Oscuro.png' : '/assets/Claro.png') | cachedImage" alt="Logo" class="logo w-18rem h-auto animate-fade-in-up" style="max-height: 5rem; object-fit: contain;">
     </div>
 
     <p-card styleClass="w-full shadow-4 border-round-2xl p-4">

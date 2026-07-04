@@ -1,3 +1,4 @@
+import { CachedImagePipe } from '../../../pipes/cached-image.pipe';
 import { LucideIconComponent } from '../../../components/lucide-icon/lucide-icon.component';
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -32,7 +33,8 @@ import { UserService } from '../../../services/user.service';
     AvatarModule,
     StyleClassModule,
     MenuModule,
-    LucideIconComponent
+    LucideIconComponent,
+    CachedImagePipe
   ]
 })
 export class AdminLayoutComponent implements OnInit {
