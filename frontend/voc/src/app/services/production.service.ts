@@ -130,4 +130,52 @@ export class ProductionService extends BaseApiService {
   getStatuses(): Observable<Status[]> {
     return this.http.get<Status[]>(this.statusUrl);
   }
+
+  getDynamicFormFields(formId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/forms/${formId}/fields`);
+  }
+
+  submitDynamicForm(formId: number, values: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/submissions`, { formId, values });
+  }
+
+  getDynamicSubmissions(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/submissions`);
+  }
+
+  adminGetForms(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/admin/forms`);
+  }
+
+  adminCreateForm(data: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/admin/forms`, data);
+  }
+
+  adminUpdateForm(id: number, data: any): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/admin/forms/${id}`, data);
+  }
+
+  adminDeleteForm(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/admin/forms/${id}`);
+  }
+
+  adminSaveFields(formId: number, fields: any[]): Observable<any[]> {
+    return this.http.post<any[]>(`${this.apiUrl}/admin/forms/${formId}/fields`, fields);
+  }
+
+  adminGetStages(formId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/admin/forms/${formId}/stages`);
+  }
+
+  adminSaveStages(formId: number, stages: any[]): Observable<any[]> {
+    return this.http.post<any[]>(`${this.apiUrl}/admin/forms/${formId}/stages`, stages);
+  }
+
+  getPendingApprovals(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/approvals/pending`);
+  }
+
+  actionApproval(stateId: number, action: 'approve' | 'reject', notes: string, formValues?: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/approvals/${stateId}/action`, { action, notes, formValues });
+  }
 }

@@ -1,0 +1,328 @@
+<div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
+    <app-page-header [title]="'Administrador de Solicitudes Dinámicas'"
+        [subtitle]="'Configuración de plantillas de formularios y flujos de trabajo'"
+        [icon]="'pi pi-sliders-h'">
+    </app-page-header>
+
+    <p-card>
+        <!-- Pill Switcher for Tabs -->
+        <div class="flex gap-2 mb-4 border-bottom-1 surface-border pb-3">
+            <button pButton label="Formularios Dinámicos" icon="pi pi-file-edit" 
+                    [outlined]="activeTab() !== 'forms'" (click)="activeTab.set('forms')"></button>
+            <button pButton label="Flujos de Trabajo" icon="pi pi-share-alt" 
+                    [outlined]="activeTab() !== 'workflows'" (click)="activeTab.set('workflows')"></button>
+        </div>
+
+        <!-- TAB 1: FORMULARIOS -->
+        <div *ngIf="activeTab() === 'forms'">
+            <div class="flex justify-content-between align-items-center mb-3">
+                <span class="text-700 font-medium">Listado de plantillas de formularios configuradas</span>
+                <p-button label="Nuevo Formulario" icon="pi pi-plus" (click)="openCreateFormDialog()"></p-button>
+            </div>
+
+            <p-table [value]="forms()" [loading]="loadingForms()" responsiveLayout="scroll" styleClass="p-datatable-striped">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th>Líder Responsable</th>
+                        <th>Cargo</th>
+                        <th class="text-center">Tipo Entrada</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-center" style="width: 15rem;">Acciones</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-form>
+                    <tr>
+                        <td class="font-bold text-900">{{ form.name }}</td>
+                        <td>{{ form.description || 'Sin descripción' }}</td>
+                        <td>{{ form.responsible || 'Sin asignar' }}</td>
+                        <td>{{ form.role || 'Sin asignar' }}</td>
+                        <td class="text-center">
+                            <p-tag [value]="form.isEntryForm ? 'Inicial' : 'Interno'" 
+                                   [severity]="form.isEntryForm ? 'success' : 'warn'"></p-tag>
+                        </td>
+                        <td class="text-center">
+                            <p-tag [value]="form.isActive ? 'Activo' : 'Inactivo'" 
+                                   [severity]="form.isActive ? 'success' : 'danger'"></p-tag>
+                        </td>
+                        <td class="text-center">
+                            <div class="flex justify-content-center gap-2">
+                                <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="secondary" 
+                                          pTooltip="Editar Metadatos" (click)="openEditFormDialog(form)"></p-button>
+                                <p-button icon="pi pi-list" [text]="true" [rounded]="true" severity="info" 
+                                          pTooltip="Configurar Campos" (click)="openFieldsConfigurator(form)"></p-button>
+                                <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" 
+                                          pTooltip="Desactivar" *ngIf="form.isActive" (click)="deleteForm(form)"></p-button>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="7" class="text-center p-4 text-500">No se encontraron formularios configurados.</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+
+        <!-- TAB 2: WORKFLOWS -->
+        <div *ngIf="activeTab() === 'workflows'">
+            <div class="flex flex-column gap-4">
+                <div class="flex align-items-center gap-3">
+                    <label for="wfFormSelect" class="font-semibold text-900">Seleccionar Formulario:</label>
+                    <p-select id="wfFormSelect" [options]="forms()" [(ngModel)]="selectedWorkflowFormId" 
+                                optionLabel="name" optionValue="id" placeholder="Seleccione un formulario..."
+                                (onChange)="onWorkflowFormChange($event)" styleClass="w-20rem"></p-select>
+                </div>
+
+                <div *ngIf="!selectedWorkflowFormId()" class="text-center p-5 text-500 border-round border-1 surface-border surface-card">
+                    <i class="pi pi-info-circle text-4xl mb-3 block text-400"></i>
+                    Seleccione un formulario de la lista para diseñar su flujo de aprobación secuencial.
+                </div>
+
+                <div *ngIf="selectedWorkflowFormId()" class="flex flex-column gap-3">
+                    <div class="flex justify-content-between align-items-center">
+                        <h3 class="text-xl font-bold m-0 text-900">Diseño del Flujo Secuencial</h3>
+                        <p-button label="Añadir Etapa" icon="pi pi-plus" [outlined]="true" (click)="addStage()"></p-button>
+                    </div>
+
+                    <div *ngIf="loadingStages()" class="flex justify-content-center p-5">
+                        <i class="pi pi-spin pi-spinner text-primary text-3xl"></i>
+                    </div>
+
+                    <div *ngIf="!loadingStages()" class="flex flex-column gap-3">
+                        <div *ngFor="let stage of workflowStages(); let i = index" 
+                             class="p-4 border-round-xl border-1 surface-border surface-card shadow-1 flex flex-column gap-3 relative">
+                            
+                            <div class="flex justify-content-between align-items-center border-bottom-1 surface-border pb-3">
+                                <div class="flex align-items-center gap-2">
+                                    <p-badge [value]="(i + 1).toString()" size="large" severity="info"></p-badge>
+                                    <span class="font-bold text-lg text-900">Etapa {{ stage.stepOrder }}</span>
+                                </div>
+                                <div class="flex gap-1">
+                                    <p-button icon="pi pi-arrow-up" [text]="true" severity="secondary" [disabled]="i === 0" (onClick)="moveStageUp(i)" pTooltip="Subir Orden"></p-button>
+                                    <p-button icon="pi pi-arrow-down" [text]="true" severity="secondary" [disabled]="i === workflowStages().length - 1" (onClick)="moveStageDown(i)" pTooltip="Bajar Orden"></p-button>
+                                    <p-button icon="pi pi-trash" [text]="true" severity="danger" (onClick)="removeStage(i)" pTooltip="Eliminar Etapa"></p-button>
+                                </div>
+                            </div>
+
+                            <div class="grid">
+                                <!-- Nombre y Descripción -->
+                                <div class="col-12 md:col-6 flex flex-column gap-2">
+                                    <label class="font-semibold text-sm">Nombre de la Etapa *</label>
+                                    <input pInputText [(ngModel)]="stage.name" placeholder="Ej: Aprobación Preventa" class="w-full" />
+                                </div>
+                                <div class="col-12 md:col-6 flex flex-column gap-2">
+                                    <label class="font-semibold text-sm">Descripción Explicativa</label>
+                                    <input pInputText [(ngModel)]="stage.description" placeholder="Instrucciones para el aprobador" class="w-full" />
+                                </div>
+
+                                <!-- Regla de Asignación -->
+                                <div class="col-12 md:col-4 flex flex-column gap-2">
+                                    <label class="font-semibold text-sm">Asignar a (Tipo) *</label>
+                                    <p-select [options]="assigneeTypeOptions" [(ngModel)]="stage.assigneeType" class="w-full"></p-select>
+                                </div>
+
+                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'specific_user'">
+                                    <label class="font-semibold text-sm">Usuario Aprobador *</label>
+                                    <p-select [options]="users()" [(ngModel)]="stage.assigneeUserId" optionLabel="name" optionValue="id" placeholder="Seleccione usuario..." filter="true" class="w-full">
+                                        <ng-template let-user pTemplate="item">
+                                            <div class="flex flex-column gap-1">
+                                                <span class="font-semibold text-sm">{{ user.name }}</span>
+                                                <span class="text-xs text-500">{{ user.teamName || 'Sin equipo' }} | {{ user.email }}</span>
+                                            </div>
+                                        </ng-template>
+                                    </p-select>
+                                </div>
+
+                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'team'">
+                                    <label class="font-semibold text-sm">Equipo Aprobador *</label>
+                                    <p-select [options]="teams()" [(ngModel)]="stage.assigneeTeamId" optionLabel="name" optionValue="id" placeholder="Seleccione equipo..." class="w-full"></p-select>
+                                </div>
+
+                                <div class="col-12 md:col-4 flex flex-column gap-2">
+                                    <label class="font-semibold text-sm">Formulario a Rellenar (Opcional)</label>
+                                    <p-select [options]="forms()" [(ngModel)]="stage.formIdToFill" optionLabel="name" optionValue="id" [showClear]="true" placeholder="Ninguno (Decisión simple)" class="w-full"></p-select>
+                                </div>
+
+                                <!-- Regla de Rechazo -->
+                                <div class="col-12 md:col-4 flex flex-column gap-2 mt-2">
+                                    <label class="font-semibold text-sm text-red-500">En Caso de Rechazo, retornar a:</label>
+                                    <p-select [options]="rejectionTypeOptions" [(ngModel)]="stage.rejectionTargetType" class="w-full"></p-select>
+                                </div>
+
+                                <div class="col-12 md:col-4 flex flex-column gap-2 mt-2" *ngIf="stage.rejectionTargetType === 'specific_user'">
+                                    <label class="font-semibold text-sm">Usuario de Retorno *</label>
+                                    <p-select [options]="users()" [(ngModel)]="stage.rejectionTargetUserId" optionLabel="name" optionValue="id" placeholder="Seleccione usuario..." filter="true" class="w-full">
+                                        <ng-template let-user pTemplate="item">
+                                            <div class="flex flex-column gap-1">
+                                                <span class="font-semibold text-sm">{{ user.name }}</span>
+                                                <span class="text-xs text-500">{{ user.teamName || 'Sin equipo' }} | {{ user.email }}</span>
+                                            </div>
+                                        </ng-template>
+                                    </p-select>
+                                </div>
+
+                                <div class="col-12 md:col-4 flex flex-column gap-2 mt-2" *ngIf="stage.rejectionTargetType === 'team_random'">
+                                    <label class="font-semibold text-sm">Equipo de Retorno *</label>
+                                    <p-select [options]="teams()" [(ngModel)]="stage.rejectionTargetTeamId" optionLabel="name" optionValue="id" placeholder="Seleccione equipo..." class="w-full"></p-select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-content-end gap-2 mt-4">
+                            <p-button label="Guardar Flujo de Trabajo" icon="pi pi-save" severity="primary" (onClick)="saveWorkflow()"></p-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </p-card>
+
+    <!-- Dialog 1: Form Metadata Edit / Create -->
+    <p-dialog [header]="isNewForm() ? 'Crear Formulario' : 'Editar Formulario'" [(visible)]="showFormDialog" 
+              [modal]="true" [style]="{width: '500px'}" [draggable]="false" [resizable]="false" styleClass="p-fluid">
+        <div class="flex flex-column gap-3 py-2 px-3">
+            <div class="flex flex-column gap-1">
+                <label for="formName" class="font-semibold text-sm">Nombre del Formulario *</label>
+                <input pInputText id="formName" [(ngModel)]="selectedForm().name" placeholder="Ej: TRÁFICO CALIFICADO" />
+            </div>
+
+            <div class="flex flex-column gap-1">
+                <label for="formDesc" class="font-semibold text-sm">Descripción</label>
+                <input pInputText id="formDesc" [(ngModel)]="selectedForm().description" placeholder="Breve explicación de la plantilla" />
+            </div>
+
+            <div class="flex flex-column gap-1">
+                <label for="formResp" class="font-semibold text-sm">Nombre del Responsable / Líder</label>
+                <p-select id="formResp" [options]="users()" [(ngModel)]="selectedForm().responsible" 
+                          optionLabel="name" optionValue="name" placeholder="Seleccione líder..."
+                          [filter]="true" filterBy="name" (onChange)="onResponsibleChange($event)">
+                    <ng-template let-user pTemplate="item">
+                        <div class="flex flex-column gap-1">
+                            <span class="font-semibold text-sm">{{ user.name }}</span>
+                            <span class="text-xs text-500">{{ user.teamName || 'Sin equipo' }} | {{ user.email }}</span>
+                        </div>
+                    </ng-template>
+                </p-select>
+            </div>
+
+            <div class="flex flex-column gap-1">
+                <label for="formRole" class="font-semibold text-sm">Cargo del Responsable</label>
+                <input pInputText id="formRole" [(ngModel)]="selectedForm().role" placeholder="Ej: Jefe de Preventa" />
+            </div>
+
+            <div class="flex align-items-center gap-3 mt-2">
+                <p-checkbox [(ngModel)]="selectedForm().isEntryForm" [binary]="true" id="isEntryForm"></p-checkbox>
+                <label for="isEntryForm" class="font-medium cursor-pointer">Mostrar en menú inicial de "Nueva Solicitud"</label>
+            </div>
+
+            <div class="flex align-items-center gap-3" *ngIf="!isNewForm()">
+                <p-checkbox [(ngModel)]="selectedForm().isActive" [binary]="true" id="isActiveForm"></p-checkbox>
+                <label for="isActiveForm" class="font-medium cursor-pointer">Plantilla Activa</label>
+            </div>
+        </div>
+        <ng-template pTemplate="footer">
+            <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary" (onClick)="showFormDialog.set(false)"></p-button>
+            <p-button label="Guardar" icon="pi pi-save" severity="primary" (onClick)="saveForm()"></p-button>
+        </ng-template>
+    </p-dialog>
+
+    <!-- Dialog 2: Fields Configurator -->
+    <p-dialog [header]="'Configurar Campos: ' + (editingFormForFields()?.name || '')" [(visible)]="showFieldsDialog" 
+              [modal]="true" [style]="{width: '950px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
+        <div class="flex flex-column gap-3 py-2 px-3">
+            <div class="flex justify-content-between align-items-center">
+                <span class="text-600 font-medium">Define los campos de entrada de datos para esta plantilla</span>
+                <p-button label="Añadir Campo" icon="pi pi-plus" [outlined]="true" size="small" (click)="addField()"></p-button>
+            </div>
+
+            <div class="overflow-y-auto" style="max-height: 60vh;">
+                <p-table [value]="formFields()" responsiveLayout="scroll" styleClass="p-datatable-striped p-datatable-sm">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 15rem;">Etiqueta (Label) *</th>
+                            <th style="width: 10rem;">Clave/Key (Técnico)</th>
+                            <th style="width: 15rem;">Descripción explicativa</th>
+                            <th style="width: 10rem;">Tipo</th>
+                            <th>Exp. Defecto</th>
+                            <th class="text-center" style="width: 4rem;">Req</th>
+                            <th class="text-center" style="width: 4rem;">Lec</th>
+                            <th class="text-center" style="width: 4rem;">Elim</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-field let-rowIndex="rowIndex">
+                        <tr>
+                            <td>
+                                <input pInputText [(ngModel)]="field.label" placeholder="Nombre visible" class="p-inputtext-sm" />
+                            </td>
+                            <td>
+                                <input pInputText [(ngModel)]="field.name" placeholder="Ej: clientName" class="p-inputtext-sm" />
+                            </td>
+                            <td>
+                                <input pInputText [(ngModel)]="field.description" placeholder="Texto de ayuda" class="p-inputtext-sm" />
+                            </td>
+                            <td>
+                                 <div class="flex flex-column gap-1">
+                                     <p-select [options]="fieldTypeOptions" [(ngModel)]="field.type" styleClass="p-inputtext-sm w-full" appendTo="body"></p-select>
+                                     <p-button *ngIf="field.type === 'file'" label="Configurar" icon="pi pi-cog" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openFileConfigDialog(field)"></p-button>
+                                 </div>
+                            </td>
+                            <td>
+                                <input pInputText [(ngModel)]="field.defaultValueExpression" placeholder="Ej: CURRENT_DATE_TIME" class="p-inputtext-sm" />
+                            </td>
+                            <td class="text-center">
+                                <p-checkbox [(ngModel)]="field.isRequired" [binary]="true"></p-checkbox>
+                            </td>
+                            <td class="text-center">
+                                <p-checkbox [(ngModel)]="field.isReadOnly" [binary]="true"></p-checkbox>
+                            </td>
+                            <td class="text-center">
+                                <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" size="small" (onClick)="removeField(rowIndex)"></p-button>
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="8" class="text-center p-4 text-500">Este formulario no tiene campos asignados. Añade uno para comenzar.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+        <ng-template pTemplate="footer">
+            <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary" (onClick)="showFieldsDialog.set(false)"></p-button>
+            <p-button label="Guardar Configuración" icon="pi pi-save" severity="primary" (onClick)="saveFields()"></p-button>
+        </ng-template>
+    </p-dialog>
+
+    <!-- Dialog 3: File Upload Config -->
+    <p-dialog [header]="'Configurar archivo: ' + (selectedFieldForFileConfig()?.label || '')" [(visible)]="showFileConfigDialog" 
+              [modal]="true" [style]="{width: '450px'}" [draggable]="false" [resizable]="false" styleClass="p-fluid">
+        <div class="flex flex-column gap-3 py-2 px-3" *ngIf="selectedFieldForFileConfig()">
+            <div class="flex flex-column gap-1">
+                <label for="maxFileCount" class="font-semibold text-sm">Cantidad máxima de archivos *</label>
+                <input type="number" pInputText id="maxFileCount" [(ngModel)]="selectedFieldForFileConfig().metadata.maxFileCount" min="1" placeholder="Ej: 1" />
+            </div>
+
+            <div class="flex flex-column gap-1">
+                <label for="allowedFormats" class="font-semibold text-sm">Formatos permitidos (separados por coma) *</label>
+                <input pInputText id="allowedFormats" [(ngModel)]="selectedFieldForFileConfig().metadata.allowedFormats" placeholder="Ej: .pdf,.png,.jpg,.jpeg,.zip" />
+            </div>
+
+            <div class="flex flex-column gap-1">
+                <label for="maxFileSize" class="font-semibold text-sm">Peso máximo por archivo (MB) *</label>
+                <input type="number" pInputText id="maxFileSize" [(ngModel)]="selectedFieldForFileConfig().metadata.maxFileSize" min="1" placeholder="Ej: 10" />
+            </div>
+        </div>
+        <ng-template pTemplate="footer">
+            <div class="flex justify-content-end gap-2 px-4 pb-3">
+                <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary" (onClick)="showFileConfigDialog.set(false)"></p-button>
+                <p-button label="Aceptar" icon="pi pi-check" severity="success" (onClick)="saveFileConfig()"></p-button>
+            </div>
+        </ng-template>
+    </p-dialog>
+</div>
+<p-toast></p-toast>
+<p-confirmDialog [style]="{width: '450px'}"></p-confirmDialog>

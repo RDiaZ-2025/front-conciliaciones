@@ -78,6 +78,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   private router = inject(Router);
 
   requests = signal<ProductionRequest[]>([]);
+  dynamicSubmissions = signal<any[]>([]);
   loading = signal<boolean>(true);
   loading$ = toObservable(this.loading);
 
@@ -129,21 +130,8 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   selectedRequestTypes = signal<any[]>([]);
   showFormDialog = signal<boolean>(false);
   currentFormIndex = signal<number>(0);
-  testForm = {
-    test1: '',
-    test2: '',
-    test3: ''
-  };
-  contentMarketingForm = {
-    requestDate: '',
-    requesterName: '',
-    clientName: '',
-    productService: '',
-    projectDescription: '',
-    requestObjective: '',
-    requestDetails: '',
-    executionDates: ''
-  };
+  currentFormFields = signal<any[]>([]);
+  formValues: Record<string, string> = {};
   isProcessingMove = signal<boolean>(false);
   currentRequestProcessing: ProductionRequest | null = null;
 
@@ -204,8 +192,16 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
   loadRequests() {
     this.loading.set(true);
-    this.requests.set([]);
-    this.loading.set(false);
+    this.productionService.getDynamicSubmissions().subscribe({
+      next: (subs) => {
+        this.dynamicSubmissions.set(subs);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las solicitudes.' });
+        this.loading.set(false);
+      }
+    });
   }
 
   loadWorkflowStages() {
@@ -347,19 +343,45 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     });
   }
 
-  resetForms() {
-    this.testForm.test1 = '';
-    this.testForm.test2 = '';
-    this.testForm.test3 = '';
-    
-    this.contentMarketingForm.requestDate = '';
-    this.contentMarketingForm.requesterName = '';
-    this.contentMarketingForm.clientName = '';
-    this.contentMarketingForm.productService = '';
-    this.contentMarketingForm.projectDescription = '';
-    this.contentMarketingForm.requestObjective = '';
-    this.contentMarketingForm.requestDetails = '';
-    this.contentMarketingForm.executionDates = '';
+  loadFormFieldsForIndex(index: number) {
+    const currentForm = this.selectedRequestTypes()[index];
+    if (!currentForm) return;
+
+    this.loadingRequestTypes.set(true);
+    this.productionService.getDynamicFormFields(currentForm.id).subscribe({
+      next: (fields) => {
+        const initialValues: Record<string, string> = {};
+        const now = new Date();
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const formattedDate = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        const userName = this.authService.currentUser()?.name || '';
+
+        fields.forEach(f => {
+          if (f.metadata && typeof f.metadata === 'string') {
+            try { f.metadata = JSON.parse(f.metadata); } catch(e){}
+          }
+          if (f.isReadOnly && f.defaultValueExpression) {
+            if (f.defaultValueExpression === '{{CURRENT_DATE_TIME}}') {
+              initialValues[f.name] = formattedDate;
+            } else if (f.defaultValueExpression === '{{LOGGED_USER_NAME}}') {
+              initialValues[f.name] = userName;
+            } else {
+              initialValues[f.name] = f.defaultValueExpression;
+            }
+          } else {
+            initialValues[f.name] = '';
+          }
+        });
+
+        this.formValues = initialValues;
+        this.currentFormFields.set(fields);
+        this.loadingRequestTypes.set(false);
+      },
+      error: (err) => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los campos del formulario.' });
+        this.loadingRequestTypes.set(false);
+      }
+    });
   }
 
   cancelTypeSelection() {
@@ -375,10 +397,9 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.selectedRequestTypes.set(selected);
     this.showTypeSelectionDialog.set(false);
     
-    this.resetForms();
-    
     // Start form dialog flow
     this.currentFormIndex.set(0);
+    this.loadFormFieldsForIndex(0);
     this.showFormDialog.set(true);
   }
 
@@ -387,35 +408,158 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   }
 
   continueFormFlow() {
-    const currentItem = this.selectedRequestTypes()[this.currentFormIndex()];
-    const isContentMarketing = currentItem?.name?.toUpperCase() === 'CONTENT MARKETING';
-
-    if (isContentMarketing) {
-      const f = this.contentMarketingForm;
-      if (!f.requestDate || !f.requesterName.trim() || !f.clientName.trim() || 
-          !f.productService.trim() || !f.projectDescription.trim() || 
-          !f.requestObjective.trim() || !f.requestDetails.trim() || !f.executionDates.trim()) {
-        this.messageService.add({ severity: 'error', summary: 'Error de Validación', detail: 'Todos los campos son obligatorios.' });
-        return;
-      }
-    } else {
-      if (!this.testForm.test1.trim() || !this.testForm.test2.trim() || !this.testForm.test3.trim()) {
-        this.messageService.add({ severity: 'error', summary: 'Error de Validación', detail: 'Todos los campos son obligatorios.' });
-        return;
+    const fields = this.currentFormFields();
+    for (const field of fields) {
+      if (field.isRequired) {
+        if (field.type === 'file') {
+          const files = this.getSelectedFiles(field.name);
+          const val = this.formValues[field.name];
+          const hasUploaded = this.getUploadedFiles(val).length > 0;
+          if (files.length === 0 && !hasUploaded) {
+            this.messageService.add({ 
+              severity: 'error', 
+              summary: 'Error de Validación', 
+              detail: `El campo "${field.label}" requiere cargar al menos un archivo.` 
+            });
+            return;
+          }
+        } else {
+          const val = this.formValues[field.name];
+          if (!val || !val.trim()) {
+            this.messageService.add({ 
+              severity: 'error', 
+              summary: 'Error de Validación', 
+              detail: `El campo "${field.label}" es obligatorio.` 
+            });
+            return;
+          }
+        }
       }
     }
 
-    const nextIndex = this.currentFormIndex() + 1;
-    if (nextIndex < this.selectedRequestTypes().length) {
-      this.currentFormIndex.set(nextIndex);
-    } else {
-      this.showFormDialog.set(false);
-      this.messageService.add({ 
-        severity: 'success', 
-        summary: 'Éxito', 
-        detail: 'Formularios completados exitosamente (Modo Beta).' 
-      });
+    const currentForm = this.selectedRequestTypes()[this.currentFormIndex()];
+    this.uploadFilesAndSubmit(currentForm);
+  }
+
+  // --- File Uploader Helpers ---
+  tempFiles: Record<string, File[]> = {};
+
+  onFileSelected(event: any, field: any) {
+    const files: FileList = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const maxCount = field.metadata?.maxFileCount || 1;
+    const maxMB = field.metadata?.maxFileSize || 10;
+    const allowed = field.metadata?.allowedFormats ? field.metadata.allowedFormats.toLowerCase().split(',') : [];
+
+    const currentList = this.tempFiles[field.name] || [];
+    const newList = [...currentList];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      // Check count limit
+      if (newList.length >= maxCount) {
+        this.messageService.add({ severity: 'warn', summary: 'Límite excedido', detail: `Solo se permiten máximo ${maxCount} archivos en el campo "${field.label}".` });
+        break;
+      }
+
+      // Check size limit
+      if (file.size > maxMB * 1024 * 1024) {
+        this.messageService.add({ severity: 'error', summary: 'Archivo muy grande', detail: `El archivo "${file.name}" supera el peso máximo permitido de ${maxMB}MB.` });
+        continue;
+      }
+
+      // Check file formats
+      const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+      if (allowed.length > 0 && !allowed.includes(ext)) {
+        this.messageService.add({ severity: 'error', summary: 'Formato no permitido', detail: `El formato de "${file.name}" no está permitido. Formatos aceptados: ${field.metadata.allowedFormats}.` });
+        continue;
+      }
+
+      newList.push(file);
     }
+
+    this.tempFiles[field.name] = newList;
+    event.target.value = '';
+  }
+
+  getSelectedFiles(fieldName: string): File[] {
+    return this.tempFiles[fieldName] || [];
+  }
+
+  removeSelectedFile(fieldName: string, index: number) {
+    const current = this.tempFiles[fieldName] || [];
+    current.splice(index, 1);
+    this.tempFiles[fieldName] = current;
+  }
+
+  getUploadedFiles(valueStr: string): any[] {
+    if (!valueStr) return [];
+    try {
+      const parsed = JSON.parse(valueStr);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  downloadFormFile(file: any) {
+    if (file && file.url) {
+      window.open(file.url, '_blank');
+    }
+  }
+
+  async uploadFilesAndSubmit(currentForm: any) {
+    this.loadingRequestTypes.set(true);
+
+    const fields = this.currentFormFields();
+    // 1. Upload files
+    for (const field of fields) {
+      if (field.type === 'file') {
+        const filesToUpload = this.tempFiles[field.name] || [];
+        if (filesToUpload.length > 0) {
+          const uploadResults = [];
+          for (const file of filesToUpload) {
+            const folderPath = `dynamic-submissions/temp_${Date.now()}/${field.name}`;
+            const res = await this.azureService.uploadFile(file, { containerName: 'private', folderPath });
+            if (res.success) {
+              uploadResults.push({ name: file.name, url: res.url });
+            } else {
+              this.messageService.add({ severity: 'error', summary: 'Error de carga', detail: `No se pudo subir el archivo: ${file.name}. ${res.error}` });
+              this.loadingRequestTypes.set(false);
+              return;
+            }
+          }
+          this.formValues[field.name] = JSON.stringify(uploadResults);
+        }
+      }
+    }
+
+    // 2. Submit the form
+    this.productionService.submitDynamicForm(currentForm.id, this.formValues).subscribe({
+      next: (res) => {
+        this.tempFiles = {};
+        this.loadingRequestTypes.set(false);
+        const nextIndex = this.currentFormIndex() + 1;
+        if (nextIndex < this.selectedRequestTypes().length) {
+          this.currentFormIndex.set(nextIndex);
+          this.loadFormFieldsForIndex(nextIndex);
+        } else {
+          this.showFormDialog.set(false);
+          this.messageService.add({ 
+            severity: 'success', 
+            summary: 'Éxito', 
+            detail: 'Formularios enviados y registrados en base de datos exitosamente.' 
+          });
+          this.loadRequests(); // Reload submissions list
+        }
+      },
+      error: (err) => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar la solicitud.' });
+        this.loadingRequestTypes.set(false);
+      }
+    });
   }
 
   getTypeIcon(name: string): string {
@@ -426,6 +570,23 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     if (n.includes('IMPLEMENTACIÓN')) return 'pi pi-rocket text-red-500';
     if (n.includes('TRÁFICO')) return 'pi pi-chart-line text-green-500';
     return 'pi pi-tag text-secondary';
+  }
+
+  getStatusSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
+    if (!status) return 'secondary';
+    const s = status.toLowerCase();
+    if (s === 'approved' || s === 'completed') return 'success';
+    if (s === 'in progress' || s === 'pending') return 'info';
+    if (s === 'rejected') return 'danger';
+    return 'secondary';
+  }
+
+  goToInbox() {
+    this.router.navigate(['/requests-beta/inbox']);
+  }
+
+  goToAdmin() {
+    this.router.navigate(['/requests-beta/admin']);
   }
 
   openHistory(request: ProductionRequest) {

@@ -1,0 +1,6 @@
+/* Requests Beta Admin custom styling */
+.p-badge {
+    min-width: 1.8rem;
+    height: 1.8rem;
+    line-height: 1.8rem;
+}

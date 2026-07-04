@@ -58,10 +58,10 @@ export class LayoutComponent implements OnInit {
   menuItems = signal<MenuItem[]>([]);
   loading = signal(true);
   error = signal<string | null>(null);
-  
+
   // Auth signals
   currentUser = this.authService.currentUser;
-  
+
   // Notification signals
   notifications = this.notificationService.notifications;
   unreadCount = this.notificationService.unreadCount;
@@ -75,10 +75,10 @@ export class LayoutComponent implements OnInit {
   isDarkMode = signal(false);
 
   userMenuItems: PrimeMenuItem[] = [
-    { 
-      label: 'Cerrar Sesión', 
-      icon: 'power', 
-      command: () => this.logout() 
+    {
+      label: 'Cerrar Sesión',
+      icon: 'power',
+      command: () => this.logout()
     }
   ];
 
