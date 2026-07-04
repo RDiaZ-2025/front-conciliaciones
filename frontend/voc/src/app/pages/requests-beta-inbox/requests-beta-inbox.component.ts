@@ -12,7 +12,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { TagModule } from 'primeng/tag';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { MessageService } from 'primeng/api';
-import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
+import { PageHeaderComponent } from '../../components/page-header/page-header.component';
 import { ProductionService } from '../../services/production.service';
 import { AuthService } from '../../services/auth.service';
 import { AzureStorageService } from '../../services/azure-storage.service';

@@ -14,7 +14,7 @@ import { TagModule } from 'primeng/tag';
 import { BadgeModule } from 'primeng/badge';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
-import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
+import { PageHeaderComponent } from '../../components/page-header/page-header.component';
 import { ProductionService } from '../../services/production.service';
 import { UserService, User } from '../../services/user.service';
 import { TeamService } from '../../services/team.service';

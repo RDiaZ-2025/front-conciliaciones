@@ -50,49 +50,6 @@
                             <span>Asignado a: <strong>{{ sub.assigneeName }}</strong></span>
                             <span *ngIf="sub.assigneeEmail" class="text-xs text-500 font-medium">{{ sub.assigneeEmail
                                 }}</span>
-                            <span>Dep: {{ request.department }}</span>
-                        </div>
-                    </div>
-
-                    <div class="flex align-items-center gap-2 text-sm text-600" *ngIf="request.deliveryDate">
-                        <lucide-icon name="calendar-plus"></lucide-icon>
-                        <span>Entrega: {{ request.deliveryDate | date:'dd/MM/yyyy hh:mm a' }}</span>
-                    </div>
-
-                    <div class="flex align-items-center gap-2 text-sm mt-1"
-                        *ngIf="request.deliveryDate && request.stage !== 'completed'">
-                        <lucide-icon name="clock" [ngClass]="{
-                            'text-green-500': getSLAStatus(request.deliveryDate) === 'success',
-                            'text-yellow-500': getSLAStatus(request.deliveryDate) === 'warn',
-                            'text-red-500': getSLAStatus(request.deliveryDate) === 'danger'
-                        }"></lucide-icon>
-                        <span [ngClass]="{
-                            'text-green-500': getSLAStatus(request.deliveryDate) === 'success',
-                            'text-yellow-500': getSLAStatus(request.deliveryDate) === 'warn',
-                            'text-red-500': getSLAStatus(request.deliveryDate) === 'danger'
-                        }" class="font-bold">
-                            {{ getRemainingTime(request.deliveryDate) }}
-                        </span>
-                    </div>
-
-                    <div *ngIf="request.files && request.files.length > 0" class="mt-2">
-                        <div class="text-sm font-bold mb-1">Archivos adjuntos ({{ request.files.length }}):</div>
-                        <div class="flex flex-column gap-1">
-                            <div *ngFor="let file of request.files.slice(0, 3)"
-                                class="flex align-items-center justify-content-between surface-100 p-1 border-round text-xs">
-                                <span class="text-overflow-ellipsis overflow-hidden white-space-nowrap"
-                                    style="max-width: 150px;" [pTooltip]="file.name">{{ file.name }}</span>
-                                <div class="flex">
-                                    <p-button [rounded]="true" [text]="true" size="small" (click)="openPreview(file)"
-                                        pTooltip="Vista Previa"><lucide-icon name="eye"></lucide-icon></p-button>
-                                    <p-button [rounded]="true" [text]="true" size="small"
-                                        (click)="downloadFile(file.id, file.name)" pTooltip="Descargar"><lucide-icon
-                                            name="download"></lucide-icon></p-button>
-                                </div>
-                            </div>
-                            <div *ngIf="request.files.length > 3" class="text-xs text-500 font-italic pl-1">
-                                +{{ request.files.length - 3 }} archivos más
-                            </div>
                         </div>
                     </div>
                 </div>
