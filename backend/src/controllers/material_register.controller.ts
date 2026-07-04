@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { MaterialRegisterService } from '../services/materialRegister.service';
+import { MaterialRegisterService } from '../services/material_register.service';
 import { asyncHandler } from "../utils/asyncHandler";
 
 const materialRegisterService = new MaterialRegisterService();

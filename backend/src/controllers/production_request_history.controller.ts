@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ProductionRequestHistoryService } from '../services/productionRequestHistory.service';
+import { ProductionRequestHistoryService } from '../services/production_request_history.service';
 import { asyncHandler } from "../utils/asyncHandler";
 
 const historyService = new ProductionRequestHistoryService();

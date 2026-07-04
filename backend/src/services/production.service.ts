@@ -1,7 +1,7 @@
 import { ProductionRequest, Product, User, FormatType, RightsDuration, Team, ProductionRequestType } from "../models";
 import { AppDataSource } from "../config/typeorm.config";
 import { NotificationService } from './notification.service';
-import { ProductionRequestHistoryService } from './productionRequestHistory.service';
+import { ProductionRequestHistoryService } from './production_request_history.service';
 import { AuthService } from './auth.service';
 import { WorkflowService } from './workflow.service';
 import { Not, In } from "typeorm";

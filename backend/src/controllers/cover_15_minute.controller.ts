@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Cover15MinuteService } from '../services/cover15Minute.service';
+import { Cover15MinuteService } from '../services/cover_15_minute.service';
 import { asyncHandler } from "../utils/asyncHandler";
 
 export class Cover15MinuteController {

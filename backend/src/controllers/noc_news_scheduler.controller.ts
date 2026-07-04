@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { NocNewsSchedulerService } from '../services/nocNewsScheduler.service';
+import { NocNewsSchedulerService } from '../services/noc_news_scheduler.service';
 
 const schedulerService = new NocNewsSchedulerService();
 

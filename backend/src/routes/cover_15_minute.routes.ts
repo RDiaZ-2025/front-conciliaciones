@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { Cover15MinuteController } from '../controllers/cover15Minute.controller';
+import { Cover15MinuteController } from '../controllers/cover_15_minute.controller';
 import { authenticateToken } from '../middleware/auth';
 
 const router = Router();

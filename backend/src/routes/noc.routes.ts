@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { authenticateToken, requirePermission } from '../middleware/auth';
-import { SystemModulesController } from '../controllers/systemModules.controller';
-import { NocDashboardController } from '../controllers/nocDashboard.controller';
-import { NocIngresosController } from '../controllers/nocIngresos.controller';
-import { NocPresupuestoController } from '../controllers/nocPresupuesto.controller';
-import { NocAgentController } from '../controllers/nocAgent.controller';
-import { NocNewsSchedulerController } from '../controllers/nocNewsScheduler.controller';
+import { SystemModulesController } from '../controllers/system_modules.controller';
+import { NocDashboardController } from '../controllers/noc_dashboard.controller';
+import { NocIngresosController } from '../controllers/noc_ingresos.controller';
+import { NocPresupuestoController } from '../controllers/noc_presupuesto.controller';
+import { NocAgentController } from '../controllers/noc_agent.controller';
+import { NocNewsSchedulerController } from '../controllers/noc_news_scheduler.controller';
 
 const router = Router();
 const systemModulesController = new SystemModulesController();
