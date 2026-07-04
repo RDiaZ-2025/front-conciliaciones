@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './pages/auth/login/login.component';
 import { authGuard } from './guards/auth.guard';
+import { AdminLayoutComponent } from './components/admin-layout/admin-layout.component';
 
 export const routes: Routes = [
   // Ruta pública: Cualquiera puede ver el login
@@ -9,9 +10,19 @@ export const routes: Routes = [
   // Ruta privada: Módulo de Administración
   {
     path: 'admin',
-    // Lazy Loading: Solo descarga el código de Admin cuando el usuario entra aquí
-    loadChildren: () => import('./pages/admin/admin.module').then(m => m.AdminModule),
-    canActivate: [authGuard] // 🛡️ Aquí aplicamos el portero que creamos
+    component: AdminLayoutComponent,
+    canActivate: [authGuard],
+    children: [
+      {
+        path: 'roles',
+        loadComponent: () => import('./pages/roles/roles.component').then(m => m.RolesComponent),
+        data: { requireAdmin: true }
+      },
+      {
+        path: 'mensajeria',
+        loadChildren: () => import('./pages/mensajeria/mensajeria.module').then(m => m.MensajeriaModule)
+      }
+    ]
   },
 
   // Ruta privada: Módulo Portal

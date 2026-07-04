@@ -18,11 +18,11 @@ export const routes: Routes = [
       },
       {
         path: 'users',
-        loadComponent: () => import('./pages/admin/admin.component').then(m => m.AdminComponent)
+        loadComponent: () => import('./pages/users/users.component').then(m => m.UsersComponent)
       },
       {
         path: 'mia',
-        loadComponent: () => import('./pages/production/production.component').then(m => m.ProductionComponent)
+        loadComponent: () => import('./pages/mia/mia.component').then(m => m.MiaComponent)
       },
       {
         path: 'requests',
@@ -34,7 +34,7 @@ export const routes: Routes = [
       },
       {
         path: 'campaign-scheduling',
-        loadComponent: () => import('./pages/production/campaign-scheduling/campaign-scheduling.component').then(m => m.CampaignSchedulingComponent)
+        loadComponent: () => import('./pages/mia/campaign-scheduling/campaign-scheduling.component').then(m => m.CampaignSchedulingComponent)
       },
       {
         path: 'campaign-scheduling_2',
@@ -42,7 +42,7 @@ export const routes: Routes = [
       },
       {
         path: 'requests-report',
-        loadComponent: () => import('./pages/production/requests-report/requests-report.component').then(m => m.RequestsReportComponent)
+        loadComponent: () => import('./pages/mia/requests-report/requests-report.component').then(m => m.RequestsReportComponent)
       },
       {
         path: 'requests-report_2',

@@ -1,0 +1,36 @@
+<div class="fadein animation-duration-300" style="height: 100%; display: flex; flex-direction: column;">
+    <div *ngIf="showHistorical()" class="flex gap-2 p-3">
+        <p-button [outlined]="true" (click)="showHistorical.set(false)"><lucide-icon name="arrow-left" class="mr-2"></lucide-icon>Volver al Tablero</p-button>
+    </div>
+
+    <!-- Chat de Nueva Solicitud integrado en la pantalla principal -->
+    <app-production-chat-dialog *ngIf="!showHistorical()" (requestCreated)="loadRequests()">
+    </app-production-chat-dialog>
+
+    <!-- Historical View -->
+    <div class="grid" *ngIf="showHistorical()">
+        <div class="col-12 text-center p-5" *ngIf="historicalRequests().length === 0">
+            <lucide-icon name="inbox" class="text-5xl text-400 mb-3"></lucide-icon>
+            <h3 class="text-700 m-0">No hay solicitudes en el histórico</h3>
+            <p class="text-500">Las solicitudes completadas aparecerán aquí.</p>
+        </div>
+
+        <div *ngFor="let request of historicalRequests()" class="col-12 md:col-6 lg:col-4 xl:col-3">
+            <div class="surface-card p-3 shadow-1 border-round cursor-pointer hover:shadow-3 transition-duration-200 border-1 surface-border flex align-items-center justify-content-between h-full"
+                (click)="openDetailDialog(request)" pRipple>
+                <div class="flex align-items-center gap-2 overflow-hidden">
+                    <lucide-icon name="file" class="text-primary text-xl"></lucide-icon>
+                    <span class="font-medium text-lg text-900 text-overflow-ellipsis overflow-hidden white-space-nowrap"
+                        [pTooltip]="request.name">{{ request.name }}</span>
+                </div>
+                <lucide-icon name="external-link" class="text-400"></lucide-icon>
+            </div>
+        </div>
+    </div>
+
+    <p-toast></p-toast>
+    <app-file-preview [(visible)]="previewVisible" [file]="previewFile()" (onDownload)="downloadPreviewFile()">
+    </app-file-preview>
+
+    <app-ans-dialog [(visible)]="slaRulesVisible"></app-ans-dialog>
+</div>

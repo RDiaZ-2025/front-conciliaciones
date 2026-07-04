@@ -4,7 +4,7 @@ import { authGuard } from '../../guards/auth.guard';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { Ingresos } from './ingresos/ingresos.component';
 import { Presupuesto } from './presupuesto/presupuesto.component';
-import { AdminLayoutComponent } from '../admin/admin-layout/admin-layout.component';
+import { AdminLayoutComponent } from '../../components/admin-layout/admin-layout.component';
 
 const routes: Routes = [
     {

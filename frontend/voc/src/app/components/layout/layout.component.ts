@@ -23,7 +23,7 @@ import { MenuService, MenuItem } from '../../services/menu.service';
 import { NotificationService, Notification } from '../../services/notification.service';
 ;
 import { ProductionService } from '../../services/production.service';
-import { ProductionDialogComponent } from '../../pages/production/production-dialog/production-dialog.component';
+import { ProductionDialogComponent } from '../../pages/production_2/production-dialog/production-dialog.component';
 
 @Component({
   selector: 'app-layout',
