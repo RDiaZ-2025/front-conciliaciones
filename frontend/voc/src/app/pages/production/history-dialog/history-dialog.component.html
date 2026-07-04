@@ -23,7 +23,7 @@
                         <div class="flex align-items-center gap-2">
                             <div
                                 class="flex align-items-center justify-content-center p-2 border-round bg-primary-50 text-primary">
-                                <i class="pi pi-user"></i>
+                                <lucide-icon name="user"></lucide-icon>
                             </div>
                             <span class="font-medium">{{record.changedByUser?.name || 'Sistema'}}</span>
                         </div>
@@ -48,7 +48,6 @@
     </div>
 
     <div class="flex justify-content-end mt-3">
-        <p-button label="Cerrar" icon="pi pi-times" (onClick)="close()" styleClass="p-button-secondary"
-            [text]="true"></p-button>
+        <p-button (onClick)="close()" styleClass="p-button-secondary" [text]="true"><lucide-icon name="x" class="mr-2"></lucide-icon>Cerrar</p-button>
     </div>
 </div>

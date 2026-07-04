@@ -45,7 +45,7 @@
   </form>
 
   <div class="flex justify-content-end gap-2 mt-4 pt-3 border-top-1 surface-border">
-    <p-button label="Cancelar" icon="pi pi-times" [outlined]="true" severity="secondary" (click)="cancel()"></p-button>
-    <p-button label="Guardar" icon="pi pi-check" (click)="confirm()" [disabled]="form.invalid"></p-button>
+    <p-button [outlined]="true" severity="secondary" (click)="cancel()"><lucide-icon name="x" class="mr-2"></lucide-icon>Cancelar</p-button>
+    <p-button (click)="confirm()" [disabled]="form.invalid"><lucide-icon name="check" class="mr-2"></lucide-icon>Guardar</p-button>
   </div>
 </div>

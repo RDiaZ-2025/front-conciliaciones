@@ -18,13 +18,11 @@
             <div *ngFor="let file of existingFiles"
                 class="flex align-items-center justify-content-between p-2 border-1 surface-border border-round mb-2 hover:surface-50">
                 <div class="flex align-items-center gap-2">
-                    <i class="pi pi-file text-primary"></i>
+                    <lucide-icon name="file" class="text-primary"></lucide-icon>
                     <span class="text-sm font-medium">{{file.name}}</span>
                 </div>
                 <div class="flex gap-2">
-                    <button pButton icon="pi pi-download"
-                        class="p-button-text p-button-secondary p-button-sm p-0 w-2rem h-2rem"
-                        (click)="downloadFile(file)" pTooltip="Descargar" tooltipPosition="top"></button>
+                    <button pButton class="p-button-text p-button-secondary p-button-sm p-0 w-2rem h-2rem" (click)="downloadFile(file)" pTooltip="Descargar" tooltipPosition="top"><lucide-icon name="download"></lucide-icon></button>
                 </div>
             </div>
         </div>
@@ -37,7 +35,6 @@
 
     <div class="flex justify-content-end gap-2 mt-4">
         <button pButton label="Cancelar" class="p-button-text" (click)="cancel()"></button>
-        <button pButton label="Avanzar" icon="pi pi-check" (click)="advance()"
-            [disabled]="existingFiles.length === 0"></button>
+        <button pButton (click)="advance()" [disabled]="existingFiles.length === 0"><lucide-icon name="check" class="mr-2"></lucide-icon>Avanzar</button>
     </div>
 </div>

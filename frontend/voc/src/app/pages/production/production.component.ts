@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../components/shared/lucide-icon/lucide-icon.component';
 import { CoreDialogService } from '../../services/core-dialog.service';
 import { Component, inject, OnInit, OnDestroy, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -41,6 +42,7 @@ import { MaterialRegisterListDialogComponent } from './material-register-list-di
   selector: 'app-production',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CommonModule,
     ButtonModule,
     CardModule,

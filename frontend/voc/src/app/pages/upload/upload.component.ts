@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../components/shared/lucide-icon/lucide-icon.component';
 import { Component, inject, signal, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -20,6 +21,7 @@ import { SafeUrlPipe } from '../../pipes/safe-url.pipe';
   selector: 'app-upload',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CommonModule,
     FormsModule,
     StepperModule,

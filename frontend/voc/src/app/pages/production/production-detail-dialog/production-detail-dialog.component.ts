@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../../components/shared/lucide-icon/lucide-icon.component';
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
@@ -14,7 +15,8 @@ import { ProductionService } from '../../../services/production.service';
 @Component({
   selector: 'app-production-detail-dialog',
   standalone: true,
-  imports: [CommonModule, TagModule, ButtonModule, TooltipModule, FilePreviewComponent],
+  imports: [
+    LucideIconComponent,CommonModule, TagModule, ButtonModule, TooltipModule, FilePreviewComponent],
   templateUrl: './production-detail-dialog.component.html'
 })
 export class ProductionDetailDialogComponent implements OnInit {

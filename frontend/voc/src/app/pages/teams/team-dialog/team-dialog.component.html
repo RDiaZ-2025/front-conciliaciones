@@ -31,8 +31,8 @@
 
   <ng-template pTemplate="footer">
     <div class="flex justify-content-end gap-2 pt-3">
-      <p-button label="Cancelar" icon="pi pi-times" (onClick)="cancel()" styleClass="p-button-text p-button-secondary"></p-button>
-      <p-button label="Guardar" icon="pi pi-check" (onClick)="onSubmit()" [loading]="saving()" [disabled]="form.invalid"></p-button>
+      <p-button (onClick)="cancel()" styleClass="p-button-text p-button-secondary"><lucide-icon name="x" class="mr-2"></lucide-icon>Cancelar</p-button>
+      <p-button (onClick)="onSubmit()" [loading]="saving()" [disabled]="form.invalid"><lucide-icon name="check" class="mr-2"></lucide-icon>Guardar</p-button>
     </div>
   </ng-template>
 </p-dialog>

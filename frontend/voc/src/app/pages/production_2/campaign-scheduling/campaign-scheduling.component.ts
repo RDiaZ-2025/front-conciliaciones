@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../../components/shared/lucide-icon/lucide-icon.component';
 import { Component, OnInit, OnDestroy, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
@@ -23,6 +24,7 @@ import { Team } from '../../../models/common/team';
   selector: 'app-campaign-scheduling',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CommonModule,
     ReactiveFormsModule,
     CardModule,

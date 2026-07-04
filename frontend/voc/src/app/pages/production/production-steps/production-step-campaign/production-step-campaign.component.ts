@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../../../components/shared/lucide-icon/lucide-icon.component';
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormGroup, ReactiveFormsModule, FormArray } from '@angular/forms';
@@ -13,6 +14,7 @@ import { Product } from '../../../../models/common/product';
   selector: 'app-production-step-campaign',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CommonModule,
     ReactiveFormsModule,
     InputTextModule,

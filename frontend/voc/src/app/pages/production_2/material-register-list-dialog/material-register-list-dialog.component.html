@@ -1,7 +1,7 @@
 <div class="flex flex-column gap-3 p-3">
     <div class="flex justify-content-between align-items-center">
         <h3 class="m-0 text-700">Registros de Material</h3>
-        <p-button label="Agregar Nuevo" icon="pi pi-plus" (click)="addMaterialRegister()"></p-button>
+        <p-button (click)="addMaterialRegister()"><lucide-icon name="plus" class="mr-2"></lucide-icon>Agregar Nuevo</p-button>
     </div>
 
     <p-table [value]="registers" [rows]="5" [paginator]="true" [rowHover]="true" styleClass="p-datatable-sm">
@@ -21,8 +21,8 @@
                 <td>{{ register.solution }}</td>
                 <td>{{ register.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
                 <td class="flex gap-2">
-                    <p-button icon="pi pi-eye" [text]="true" [rounded]="true" severity="info" pTooltip="Ver Detalle" (click)="viewRegister(register)"></p-button>
-                    <p-button icon="pi pi-download" [text]="true" [rounded]="true" severity="success" pTooltip="Descargar Archivos" (click)="downloadFiles(register)" [loading]="isDownloading[register.id]"></p-button>
+                    <p-button [text]="true" [rounded]="true" severity="info" pTooltip="Ver Detalle" (click)="viewRegister(register)"><lucide-icon name="eye"></lucide-icon></p-button>
+                    <p-button [text]="true" [rounded]="true" severity="success" pTooltip="Descargar Archivos" (click)="downloadFiles(register)" [loading]="isDownloading[register.id]"><lucide-icon name="download"></lucide-icon></p-button>
                 </td>
             </tr>
         </ng-template>
@@ -34,6 +34,6 @@
     </p-table>
 
     <div class="flex justify-content-end mt-3 border-top-1 surface-border pt-3">
-        <p-button label="Cerrar" icon="pi pi-times" [text]="true" (click)="close()"></p-button>
+        <p-button [text]="true" (click)="close()"><lucide-icon name="x" class="mr-2"></lucide-icon>Cerrar</p-button>
     </div>
 </div>

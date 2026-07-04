@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../../components/shared/lucide-icon/lucide-icon.component';
 import { Component } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { DynamicDialogRef, DynamicDialogConfig } from 'primeng/dynamicdialog';
@@ -10,6 +11,7 @@ import { AccessHistoryRecord } from '../../../services/user.service';
   selector: 'app-history-dialog',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CommonModule,
     ButtonModule,
     TableModule,

@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../components/shared/lucide-icon/lucide-icon.component';
 import { CachedImagePipe } from '../../pipes/cached-image.pipe';
 import { Component, inject, signal, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -19,6 +20,7 @@ import { CoverHistoryItem } from '../../models/common/cover-history-item';
   selector: 'app-cover15minutes',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CachedImagePipe,
     CommonModule,
     FormsModule,

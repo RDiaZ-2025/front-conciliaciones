@@ -22,11 +22,13 @@
 
         <div class="field col-12 md:col-6">
             <p-floatlabel variant="in">
-                <i [class]="'pi ' + form.get('icon')?.value"
-                    style="position: absolute; right: 0.75rem; top: 50%; margin-top: -0.5rem; z-index: 1;"></i>
+                <lucide-icon [name]="form.get('icon')?.value" style="position: absolute; right: 0.75rem; top: 50%; margin-top: -0.5rem; z-index: 1;"></lucide-icon>
                 <input pInputText id="icon" formControlName="icon" autocomplete="off" class="w-full" />
-                <label for="icon">Icono</label>
+                <label for="icon">Icono (ej. users, settings)</label>
             </p-floatlabel>
+            <small class="text-secondary block mt-1">
+                Busca nombres de iconos en <a href="https://lucide.dev/icons" target="_blank" rel="noopener noreferrer" class="text-primary font-medium underline">Lucide Icons</a>
+            </small>
         </div>
 
         <div class="field col-12 md:col-6">
@@ -62,9 +64,7 @@
     </form>
 
     <ng-template pTemplate="footer">
-        <button pButton label="Cancelar" icon="pi pi-times" class="p-button-text"
-            (click)="visibleChange.emit(false)"></button>
-        <button pButton label="Guardar" icon="pi pi-check" class="p-button-text" (click)="onSubmit()"
-            [loading]="saving"></button>
+        <button pButton class="p-button-text" (click)="visibleChange.emit(false)"><lucide-icon name="x" class="mr-2"></lucide-icon>Cancelar</button>
+        <button pButton class="p-button-text" (click)="onSubmit()" [loading]="saving"><lucide-icon name="check" class="mr-2"></lucide-icon>Guardar</button>
     </ng-template>
 </p-dialog>

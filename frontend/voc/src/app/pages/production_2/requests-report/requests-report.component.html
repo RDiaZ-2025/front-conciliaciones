@@ -1,7 +1,7 @@
 <div class="flex flex-column gap-4 p-4 fadein animation-duration-300 w-full max-w-7xl mx-auto">
 
     <app-page-header title="Informe de Solicitudes" subtitle="Seguimiento de tareas y carga de trabajo"
-        icon="pi pi-chart-line"></app-page-header>
+        icon="line-chart"></app-page-header>
 
     @if (stats(); as data) {
     <!-- Stats Cards -->
@@ -12,14 +12,13 @@
                     <div>
                         <div class="flex align-items-center gap-2 mb-3">
                             <span class="block text-500 font-medium">Total Solicitudes</span>
-                            <i class="pi pi-info-circle text-500 cursor-pointer"
-                                pTooltip="Total de solicitudes asignadas al equipo." tooltipPosition="top"></i>
+                            <lucide-icon name="info" class="text-500 cursor-pointer" pTooltip="Total de solicitudes asignadas al equipo." tooltipPosition="top"></lucide-icon>
                         </div>
                         <div class="text-900 font-medium text-xl">{{data.total}}</div>
                     </div>
                     <div class="flex align-items-center justify-content-center bg-cyan-100 border-round"
                         style="width:2.5rem;height:2.5rem">
-                        <i class="pi pi-list text-cyan-500 text-xl"></i>
+                        <lucide-icon name="list" class="text-cyan-500 text-xl"></lucide-icon>
                     </div>
                 </div>
             </div>
@@ -30,15 +29,14 @@
                     <div>
                         <div class="flex align-items-center gap-2 mb-3">
                             <span class="block text-500 font-medium">Activas</span>
-                            <i class="pi pi-info-circle text-500 cursor-pointer"
-                                pTooltip="Solicitudes en proceso (no completadas ni canceladas)."
-                                tooltipPosition="top"></i>
+                            <lucide-icon name="info" class="text-500 cursor-pointer" pTooltip="Solicitudes en proceso (no completadas ni canceladas)."
+                                tooltipPosition="top"></lucide-icon>
                         </div>
                         <div class="text-900 font-medium text-xl">{{data.active}}</div>
                     </div>
                     <div class="flex align-items-center justify-content-center bg-blue-100 border-round"
                         style="width:2.5rem;height:2.5rem">
-                        <i class="pi pi-check-circle text-blue-500 text-xl"></i>
+                        <lucide-icon name="check-circle" class="text-blue-500 text-xl"></lucide-icon>
                     </div>
                 </div>
             </div>
@@ -49,14 +47,13 @@
                     <div>
                         <div class="flex align-items-center gap-2 mb-3">
                             <span class="block text-500 font-medium">Completadas</span>
-                            <i class="pi pi-info-circle text-500 cursor-pointer"
-                                pTooltip="Solicitudes finalizadas exitosamente." tooltipPosition="top"></i>
+                            <lucide-icon name="info" class="text-500 cursor-pointer" pTooltip="Solicitudes finalizadas exitosamente." tooltipPosition="top"></lucide-icon>
                         </div>
                         <div class="text-900 font-medium text-xl">{{data.completed}}</div>
                     </div>
                     <div class="flex align-items-center justify-content-center bg-green-100 border-round"
                         style="width:2.5rem;height:2.5rem">
-                        <i class="pi pi-check text-green-500 text-xl"></i>
+                        <lucide-icon name="check" class="text-green-500 text-xl"></lucide-icon>
                     </div>
                 </div>
             </div>
@@ -67,14 +64,13 @@
                     <div>
                         <div class="flex align-items-center gap-2 mb-3">
                             <span class="block text-500 font-medium">En Riesgo</span>
-                            <i class="pi pi-info-circle text-500 cursor-pointer"
-                                pTooltip="Solicitudes que vencen en los próximos 3 días." tooltipPosition="top"></i>
+                            <lucide-icon name="info" class="text-500 cursor-pointer" pTooltip="Solicitudes que vencen en los próximos 3 días." tooltipPosition="top"></lucide-icon>
                         </div>
                         <div class="text-900 font-medium text-xl">{{data.atRisk}}</div>
                     </div>
                     <div class="flex align-items-center justify-content-center bg-orange-100 border-round"
                         style="width:2.5rem;height:2.5rem">
-                        <i class="pi pi-exclamation-triangle text-orange-500 text-xl"></i>
+                        <lucide-icon name="alert-triangle" class="text-orange-500 text-xl"></lucide-icon>
                     </div>
                 </div>
             </div>
@@ -85,14 +81,13 @@
                     <div>
                         <div class="flex align-items-center gap-2 mb-3">
                             <span class="block text-500 font-medium">Atrasadas</span>
-                            <i class="pi pi-info-circle text-500 cursor-pointer"
-                                pTooltip="Solicitudes que han excedido su fecha de entrega." tooltipPosition="top"></i>
+                            <lucide-icon name="info" class="text-500 cursor-pointer" pTooltip="Solicitudes que han excedido su fecha de entrega." tooltipPosition="top"></lucide-icon>
                         </div>
                         <div class="text-900 font-medium text-xl">{{data.overdue}}</div>
                     </div>
                     <div class="flex align-items-center justify-content-center bg-red-100 border-round"
                         style="width:2.5rem;height:2.5rem">
-                        <i class="pi pi-clock text-red-500 text-xl"></i>
+                        <lucide-icon name="clock" class="text-red-500 text-xl"></lucide-icon>
                     </div>
                 </div>
             </div>
@@ -103,14 +98,13 @@
                     <div>
                         <div class="flex align-items-center gap-2 mb-3">
                             <span class="block text-500 font-medium">Canceladas</span>
-                            <i class="pi pi-info-circle text-500 cursor-pointer"
-                                pTooltip="Solicitudes que han sido canceladas." tooltipPosition="top"></i>
+                            <lucide-icon name="info" class="text-500 cursor-pointer" pTooltip="Solicitudes que han sido canceladas." tooltipPosition="top"></lucide-icon>
                         </div>
                         <div class="text-900 font-medium text-xl">{{data.cancelled}}</div>
                     </div>
                     <div class="flex align-items-center justify-content-center bg-gray-100 border-round"
                         style="width:2.5rem;height:2.5rem">
-                        <i class="pi pi-times-circle text-gray-500 text-xl"></i>
+                        <lucide-icon name="x-circle" class="text-gray-500 text-xl"></lucide-icon>
                     </div>
                 </div>
             </div>
@@ -123,10 +117,7 @@
             <div class="surface-card shadow-2 border-round p-4 h-full">
                 <div class="flex justify-content-between align-items-center mb-1">
                     <h5 class="text-xl font-bold m-0">Carga de Trabajo del Equipo</h5>
-                    <button pButton icon="pi pi-info-circle"
-                        class="p-button-rounded p-button-text p-button-secondary p-button-sm"
-                        pTooltip="Muestra la cantidad de solicitudes asignadas a cada miembro del equipo. Entre más alto el valor, más carga laboral está asignada a ese usuario."
-                        tooltipPosition="left"></button>
+                    <button pButton class="p-button-rounded p-button-text p-button-secondary p-button-sm" pTooltip="Muestra la cantidad de solicitudes asignadas a cada miembro del equipo. Entre más alto el valor, más carga laboral está asignada a ese usuario." tooltipPosition="left"><lucide-icon name="info"></lucide-icon></button>
                 </div>
                 <p-chart type="bar" [data]="workloadChartData" [options]="workloadChartOptions"
                     height="300px"></p-chart>
@@ -136,11 +127,7 @@
             <div class="surface-card shadow-2 border-round p-4 h-full">
                 <div class="flex justify-content-between align-items-center mb-1">
                     <h5 class="text-xl font-bold m-0">Estado de Ejecución</h5>
-                    <button pButton icon="pi pi-info-circle"
-                        class="p-button-rounded p-button-text p-button-secondary p-button-sm" pTooltip="Muestra la distribución de las solicitudes según su estado actual. 
-                        - Pendiente: Solicitudes que no han iniciado operación
-                        - En curso: Solicitudes que están en proceso de ser completadas
-                        - Completadas: Solicitudes que han sido finalizadas con éxito" tooltipPosition="left"></button>
+                    <button pButton class="p-button-rounded p-button-text p-button-secondary p-button-sm" pTooltip="Muestra la distribución de las solicitudes según su estado actual. - Pendiente: Solicitudes que no han iniciado operación - En curso: Solicitudes que están en proceso de ser completadas - Completadas: Solicitudes que han sido finalizadas con éxito" tooltipPosition="left"><lucide-icon name="info"></lucide-icon></button>
                 </div>
                 <div class="flex justify-content-center">
                     <p-chart type="doughnut" [data]="executionChartData" [options]="executionChartOptions"
@@ -156,10 +143,7 @@
             <div class="surface-card shadow-2 border-round p-4 h-full">
                 <div class="flex justify-content-between align-items-center mb-1">
                     <h5 class="text-xl font-bold m-0">Solicitudes por Etapa</h5>
-                    <button pButton icon="pi pi-info-circle"
-                        class="p-button-rounded p-button-text p-button-secondary p-button-sm"
-                        pTooltip="Distribución de solicitudes según su etapa actual en el flujo de trabajo."
-                        tooltipPosition="left"></button>
+                    <button pButton class="p-button-rounded p-button-text p-button-secondary p-button-sm" pTooltip="Distribución de solicitudes según su etapa actual en el flujo de trabajo." tooltipPosition="left"><lucide-icon name="info"></lucide-icon></button>
                 </div>
                 <p-chart type="bar" [data]="stageChartData" [options]="stageChartOptions"
                     height="400px"></p-chart>

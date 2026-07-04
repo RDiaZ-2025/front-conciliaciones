@@ -32,7 +32,7 @@
                     <img *ngIf="getUploadedFile('wsp_business_images').safeUrl" [src]="getUploadedFile('wsp_business_images').safeUrl | cachedImage" alt="Preview" style="max-height: 50px; max-width: 50px; object-fit: contain;" class="border-round" />
                     <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap font-medium">{{ getUploadedFile('wsp_business_images').name }}</span>
                 </div>
-                <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('wsp_business_images', imagesUploader)"></p-button>
+                <p-button [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('wsp_business_images', imagesUploader)"><lucide-icon name="x"></lucide-icon></p-button>
             </div>
         </div>
 
@@ -52,7 +52,7 @@
                     <video *ngIf="getUploadedFile('wsp_business_video').safeUrl" [src]="getUploadedFile('wsp_business_video').safeUrl" style="max-height: 50px; max-width: 50px; object-fit: cover;" class="border-round"></video>
                     <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap font-medium">{{ getUploadedFile('wsp_business_video').name }}</span>
                 </div>
-                <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('wsp_business_video', videoUploader)"></p-button>
+                <p-button [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('wsp_business_video', videoUploader)"><lucide-icon name="x"></lucide-icon></p-button>
             </div>
         </div>
 
@@ -69,10 +69,10 @@
             </p-fileUpload>
             <div *ngIf="getUploadedFile('wsp_business_csv')" class="flex align-items-center justify-content-between mt-2 p-2 surface-ground border-round">
                 <div class="flex align-items-center gap-2 overflow-hidden">
-                    <i class="pi pi-file-excel text-primary text-2xl"></i>
+                    <lucide-icon name="file-spreadsheet" class="text-primary text-2xl"></lucide-icon>
                     <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap font-medium">{{ getUploadedFile('wsp_business_csv').name }}</span>
                 </div>
-                <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('wsp_business_csv', csvUploader)"></p-button>
+                <p-button [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('wsp_business_csv', csvUploader)"><lucide-icon name="x"></lucide-icon></p-button>
             </div>
             <small class="text-red-500" *ngIf="form.get('wsp_business_csv')?.invalid && form.get('wsp_business_csv')?.touched && !getUploadedFile('wsp_business_csv')">
                 El archivo CSV es requerido

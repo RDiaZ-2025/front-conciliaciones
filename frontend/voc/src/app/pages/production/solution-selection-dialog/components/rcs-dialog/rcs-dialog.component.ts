@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../../../../components/shared/lucide-icon/lucide-icon.component';
 import { Component, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray, AbstractControl } from '@angular/forms';
@@ -15,6 +16,7 @@ import { MessageService } from 'primeng/api';
     selector: 'app-rcs-dialog',
     standalone: true,
     imports: [
+    LucideIconComponent,
         CommonModule,
         ReactiveFormsModule,
         ButtonModule,

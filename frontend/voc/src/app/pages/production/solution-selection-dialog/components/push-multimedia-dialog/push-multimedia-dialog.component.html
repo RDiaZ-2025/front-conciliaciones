@@ -30,8 +30,7 @@
         <div class="formgrid grid gap-4">
             <div class="col-12 md:col-6 flex flex-column gap-2">
                 <label class="text-700">Banner (700x300 JPG)
-                    <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
-                       pTooltip="El banner debe tener dimensiones exactas de 700x300 píxeles." tooltipPosition="top"></i>
+                    <lucide-icon name="info" class="ml-2 text-primary cursor-pointer" pTooltip="El banner debe tener dimensiones exactas de 700x300 píxeles." tooltipPosition="top"></lucide-icon>
                 </label>
                 <p-fileUpload #bannerUploader
                     mode="basic" 
@@ -46,13 +45,12 @@
                         <img [src]="getUploadedFile('banner').safeUrl | cachedImage" alt="Banner Preview" style="max-height: 50px; max-width: 100px; object-fit: contain;" class="border-round" />
                         <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ getUploadedFile('banner').name }}</span>
                     </div>
-                    <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('banner', bannerUploader)"></p-button>
+                    <p-button [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('banner', bannerUploader)"><lucide-icon name="x"></lucide-icon></p-button>
                 </div>
             </div>
             <div class="col-12 md:col-6 flex flex-column gap-2">
                 <label class="text-700">Logo (96x96 JPG)
-                    <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
-                       pTooltip="El logo debe tener dimensiones exactas de 96x96 píxeles." tooltipPosition="top"></i>
+                    <lucide-icon name="info" class="ml-2 text-primary cursor-pointer" pTooltip="El logo debe tener dimensiones exactas de 96x96 píxeles." tooltipPosition="top"></lucide-icon>
                 </label>
                 <p-fileUpload #logoUploader
                     mode="basic" 
@@ -67,7 +65,7 @@
                         <img [src]="getUploadedFile('logo').safeUrl | cachedImage" alt="Logo Preview" style="max-height: 50px; max-width: 50px; object-fit: contain;" class="border-round" />
                         <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ getUploadedFile('logo').name }}</span>
                     </div>
-                    <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('logo', logoUploader)"></p-button>
+                    <p-button [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('logo', logoUploader)"><lucide-icon name="x"></lucide-icon></p-button>
                 </div>
             </div>
         </div>

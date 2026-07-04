@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../components/shared/lucide-icon/lucide-icon.component';
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TreeTableModule } from 'primeng/treetable';
@@ -15,6 +16,7 @@ import { MenuFormData } from '../../models/common/menu-form-data';
   selector: 'app-menus',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CommonModule,
     TreeTableModule,
     ButtonModule,

@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../../components/shared/lucide-icon/lucide-icon.component';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -11,6 +12,7 @@ import { User } from '../../../services/user.service';
   selector: 'app-assign-implementation-dialog',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CommonModule,
     FormsModule,
     ReactiveFormsModule,

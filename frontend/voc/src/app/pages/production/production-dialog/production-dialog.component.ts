@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../../components/shared/lucide-icon/lucide-icon.component';
 import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Observable, BehaviorSubject } from 'rxjs';
@@ -39,6 +40,7 @@ import { ProductionStepProductionComponent } from '../production-steps/productio
   selector: 'app-production-dialog',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CommonModule,
     ReactiveFormsModule,
     ButtonModule,

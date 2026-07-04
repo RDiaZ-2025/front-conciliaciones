@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../../../../components/shared/lucide-icon/lucide-icon.component';
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
@@ -13,6 +14,7 @@ import { MessageService } from 'primeng/api';
     selector: 'app-sat-push-dialog',
     standalone: true,
     imports: [
+    LucideIconComponent,
         CommonModule,
         ReactiveFormsModule,
         ButtonModule,

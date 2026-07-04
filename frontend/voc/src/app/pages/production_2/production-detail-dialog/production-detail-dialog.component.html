@@ -10,7 +10,7 @@
         <div class="col-12 md:col-6">
             <div class="text-500 text-sm mb-1">Fecha Solicitud</div>
             <div class="font-medium flex align-items-center gap-2">
-                <i class="pi pi-calendar text-primary"></i>
+                <lucide-icon name="calendar" class="text-primary"></lucide-icon>
                 {{ request.requestDate | date:'dd/MM/yyyy HH:mm' }}
             </div>
         </div>
@@ -19,11 +19,11 @@
         <div class="col-12 md:col-6">
             <div class="text-500 text-sm mb-1">Fecha Entrega</div>
             <div class="font-medium flex align-items-center gap-2" *ngIf="request.deliveryDate">
-                <i class="pi pi-check-circle text-green-500"></i>
+                <lucide-icon name="check-circle" class="text-green-500"></lucide-icon>
                 {{ request.deliveryDate | date:'dd/MM/yyyy HH:mm' }}
             </div>
             <div class="font-medium text-500 flex align-items-center gap-2" *ngIf="!request.deliveryDate">
-                <i class="pi pi-clock"></i>
+                <lucide-icon name="clock"></lucide-icon>
                 Pendiente
             </div>
         </div>
@@ -32,7 +32,7 @@
         <div class="col-12 md:col-6">
             <div class="text-500 text-sm mb-1">Departamento</div>
             <div class="font-medium flex align-items-center gap-2">
-                <i class="pi pi-building text-primary"></i>
+                <lucide-icon name="building" class="text-primary"></lucide-icon>
                 {{ request.department }}
             </div>
         </div>
@@ -41,7 +41,7 @@
         <div class="col-12 md:col-6">
             <div class="text-500 text-sm mb-1">Tiempo Total Producción</div>
             <div class="font-medium flex align-items-center gap-2">
-                <i class="pi pi-stopwatch text-blue-500"></i>
+                <lucide-icon name="stopwatch" class="text-blue-500"></lucide-icon>
                 {{ getTotalTime(request) }}
             </div>
         </div>
@@ -54,15 +54,13 @@
             <div *ngFor="let file of request.files"
                 class="flex align-items-center justify-content-between surface-100 p-2 border-round hover:surface-200 transition-colors transition-duration-150">
                 <div class="flex align-items-center gap-2 overflow-hidden">
-                    <i class="pi pi-file text-primary"></i>
+                    <lucide-icon name="file" class="text-primary"></lucide-icon>
                     <span class="text-overflow-ellipsis overflow-hidden white-space-nowrap font-medium text-700"
                         [pTooltip]="file.name">{{ file.name }}</span>
                 </div>
                 <div class="flex gap-1">
-                    <p-button icon="pi pi-eye" [rounded]="true" [text]="true" size="small"
-                        (click)="openPreview(file)" pTooltip="Vista Previa"></p-button>
-                    <p-button icon="pi pi-download" [rounded]="true" [text]="true" size="small"
-                        (click)="downloadFile(file.id, file.name)" pTooltip="Descargar"></p-button>
+                    <p-button [rounded]="true" [text]="true" size="small" (click)="openPreview(file)" pTooltip="Vista Previa"><lucide-icon name="eye"></lucide-icon></p-button>
+                    <p-button [rounded]="true" [text]="true" size="small" (click)="downloadFile(file.id, file.name)" pTooltip="Descargar"><lucide-icon name="download"></lucide-icon></p-button>
                 </div>
             </div>
         </div>
@@ -86,7 +84,7 @@
     </div>
 
     <div class="flex justify-content-end mt-4 pt-3 border-top-1 surface-border">
-        <p-button label="Cerrar" icon="pi pi-times" (click)="ref.close()" [text]="true" severity="secondary"></p-button>
+        <p-button (click)="ref.close()" [text]="true" severity="secondary"><lucide-icon name="x" class="mr-2"></lucide-icon>Cerrar</p-button>
     </div>
 
     <app-file-preview [(visible)]="previewVisible" [file]="previewFile()" (onDownload)="downloadPreviewFile()">

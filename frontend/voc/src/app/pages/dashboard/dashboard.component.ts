@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../components/shared/lucide-icon/lucide-icon.component';
 import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -181,6 +182,7 @@ const initialData: DashboardData = {
   selector: 'app-dashboard',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CommonModule,
     FormsModule,
     ButtonModule,

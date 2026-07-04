@@ -2,7 +2,7 @@
     <app-page-header 
         title="Comercial" 
         subtitle="Repositorio de documentación comercial y onboarding"
-        icon="pi pi-briefcase">
+        icon="briefcase">
     </app-page-header>
     
     <p-toast></p-toast>
@@ -11,26 +11,35 @@
         <!-- Toolbar: Breadcrumb + Search + Refresh -->
         <div class="flex flex-column md:flex-row md:align-items-center justify-content-between gap-3 mb-4">
             <div class="flex-1 overflow-hidden">
-                <p-breadcrumb [model]="breadcrumbItems()" [home]="homeItem" styleClass="border-none p-0 bg-transparent"></p-breadcrumb>
+                <p-breadcrumb [model]="breadcrumbItems()" [home]="homeItem" styleClass="border-none p-0 bg-transparent">
+                    <ng-template pTemplate="item" let-item>
+                        <a class="p-menuitem-link" (click)="item.command ? item.command() : null">
+                            <lucide-icon *ngIf="item.icon" [name]="item.icon" class="text-secondary"></lucide-icon>
+                            <span class="p-menuitem-text" *ngIf="item.label">{{ item.label }}</span>
+                        </a>
+                    </ng-template>
+                </p-breadcrumb>
             </div>
             
             <div class="flex align-items-center gap-2">
                 <span class="p-input-icon-left">
                     <p-iconField iconPosition="left">
-                        <p-inputIcon styleClass="pi pi-search" />
+                        <p-inputIcon>
+                            <lucide-icon name="search"></lucide-icon>
+                        </p-inputIcon>
                         <input pInputText type="text"
                             (input)="onSearch($event)"
                             placeholder="Buscar archivo..." 
                             [ngModel]="searchValue()"/>
                     </p-iconField>
                 </span>
-                <p-button icon="pi pi-refresh" [rounded]="true" [text]="true" (onClick)="loadFiles()" pTooltip="Recargar"></p-button>
+                <p-button [rounded]="true" [text]="true" (onClick)="loadFiles()" pTooltip="Recargar"><lucide-icon name="refresh-cw" size="18"></lucide-icon></p-button>
             </div>
         </div>
 
         <!-- Loading State -->
         <div *ngIf="loading()" class="flex flex-column align-items-center justify-content-center p-6 gap-3">
-            <i class="pi pi-spin pi-spinner text-primary" style="font-size: 3rem"></i>
+            <lucide-icon name="loader-2" class="lucide-spin text-primary" style="width: 3rem; height: 3rem;"></lucide-icon>
             <span class="text-600">Cargando archivos...</span>
         </div>
 
@@ -45,25 +54,16 @@
                      (click)="onItemClick(file)">
                      
                     <!-- Direct Download Button -->
-                    <p-button *ngIf="!file.isFolder"
-                              icon="pi pi-download"
-                              [rounded]="true"
-                              [text]="true"
-                              severity="secondary"
-                              styleClass="absolute top-0 right-0 m-1 z-2"
-                              [style]="{ 'width': '2.2rem', 'height': '2.2rem' }"
-                              (onClick)="downloadFile(file, $event)"
-                              pTooltip="Descargar"
-                              tooltipPosition="left">
+                    <p-button *ngIf="!file.isFolder" [rounded]="true" [text]="true" severity="secondary" styleClass="absolute top-0 right-0 m-1 z-2" [style]="{ 'width': '2.2rem', 'height': '2.2rem' }" (onClick)="downloadFile(file, $event)" pTooltip="Descargar" tooltipPosition="left"><lucide-icon name="download" size="18"></lucide-icon>
                     </p-button>
 
                     <div class="file-icon-wrapper relative">
                          <img *ngIf="file.isFolder" [src]="'assets/folder.svg' | cachedImage" alt="Folder" class="w-4rem h-4rem">
-                         <i *ngIf="!file.isFolder" [class]="getFileIcon(file)"></i>
+                         <lucide-icon [name]="getFileIcon(file)" [ngClass]="getFileColorClass(file)" *ngIf="!file.isFolder"></lucide-icon>
                          
                          <!-- Loader Overlay -->
                          <div *ngIf="downloadingFileId() === file.id" class="absolute top-0 left-0 w-full h-full flex align-items-center justify-content-center bg-white-alpha-80 border-round z-1">
-                             <i class="pi pi-spin pi-spinner text-primary" style="font-size: 2rem"></i>
+                             <lucide-icon name="loader-2" class="lucide-spin text-primary" style="width: 2rem; height: 2rem;"></lucide-icon>
                          </div>
                     </div>
                     <span class="file-name" [pTooltip]="file.name" tooltipPosition="bottom" [showDelay]="500">{{ file.name }}</span>
@@ -79,7 +79,7 @@
             <!-- Empty State -->
             <ng-template #emptyState>
                  <div class="flex flex-column align-items-center justify-content-center p-6 gap-3">
-                     <i class="pi pi-folder-open text-400" style="font-size: 4rem"></i>
+                     <lucide-icon name="folder-open" class="text-400" style="font-size: 4rem"></lucide-icon>
                      <span class="text-500 font-medium text-lg">No se encontraron archivos</span>
                      <span *ngIf="searchValue()" class="text-400">Intenta con otra búsqueda</span>
                  </div>

@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../../components/shared/lucide-icon/lucide-icon.component';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CardModule } from 'primeng/card';
@@ -14,6 +15,7 @@ import { RequestsReportService, DashboardStats } from './requests-report.service
   selector: 'app-requests-report',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CommonModule,
     CardModule,
     ChartModule,

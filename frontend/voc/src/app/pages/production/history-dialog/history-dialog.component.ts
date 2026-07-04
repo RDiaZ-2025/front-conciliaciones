@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../../components/shared/lucide-icon/lucide-icon.component';
 import { Component, OnInit } from '@angular/core';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { CommonModule } from '@angular/common';
@@ -11,7 +12,8 @@ import { BehaviorSubject } from 'rxjs';
 @Component({
   selector: 'app-history-dialog',
   standalone: true,
-  imports: [CommonModule, TableModule, ButtonModule, TagModule],
+  imports: [
+    LucideIconComponent,CommonModule, TableModule, ButtonModule, TagModule],
   templateUrl: './history-dialog.component.html',
   styles: [`
     :host {

@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../../components/shared/lucide-icon/lucide-icon.component';
 import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -13,6 +14,7 @@ import { PermissionFormData } from '../../../models/common/permission-form-data'
   selector: 'app-permission-dialog',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CommonModule,
     ReactiveFormsModule,
     DialogModule,

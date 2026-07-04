@@ -2,8 +2,8 @@
 <p-confirmDialog></p-confirmDialog>
 
 <div class="flex flex-column gap-4 p-4">
-  <app-page-header title="Gestión de Equipos" subtitle="Administra los equipos y sus miembros" icon="pi pi-users">
-    <p-button label="Nuevo Equipo" icon="pi pi-plus" (onClick)="openNew()"></p-button>
+  <app-page-header title="Gestión de Equipos" subtitle="Administra los equipos y sus miembros" icon="users">
+    <p-button (onClick)="openNew()"><lucide-icon name="plus" class="mr-2"></lucide-icon>Nuevo Equipo</p-button>
   </app-page-header>
 
   <div class="card">
@@ -21,8 +21,8 @@
           <td>{{ team.description }}</td>
           <td>
             <div class="flex gap-2">
-              <p-button icon="pi pi-pencil" (onClick)="editTeam(team)" [rounded]="true" [text]="true" severity="info" pTooltip="Editar"></p-button>
-              <p-button icon="pi pi-trash" (onClick)="deleteTeam(team)" [rounded]="true" [text]="true" severity="danger" pTooltip="Eliminar"></p-button>
+              <p-button (onClick)="editTeam(team)" [rounded]="true" [text]="true" severity="info" pTooltip="Editar"><lucide-icon name="pencil"></lucide-icon></p-button>
+              <p-button (onClick)="deleteTeam(team)" [rounded]="true" [text]="true" severity="danger" pTooltip="Eliminar"><lucide-icon name="trash-2"></lucide-icon></p-button>
             </div>
           </td>
         </tr>

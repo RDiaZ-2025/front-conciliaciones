@@ -24,9 +24,7 @@
   </form>
 
   <ng-template pTemplate="footer">
-    <button pButton label="Cancelar" icon="pi pi-times" class="p-button-text"
-      (click)="visibleChange.emit(false)"></button>
-    <button pButton label="Guardar" icon="pi pi-check" class="p-button-text" (click)="onSubmit()"
-      [loading]="saving"></button>
+    <button pButton class="p-button-text" (click)="visibleChange.emit(false)"><lucide-icon name="x" class="mr-2"></lucide-icon>Cancelar</button>
+    <button pButton class="p-button-text" (click)="onSubmit()" [loading]="saving"><lucide-icon name="check" class="mr-2"></lucide-icon>Guardar</button>
   </ng-template>
 </p-dialog>

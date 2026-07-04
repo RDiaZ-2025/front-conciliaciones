@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../../components/shared/lucide-icon/lucide-icon.component';
 import { Component, OnInit, inject, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
@@ -13,6 +14,7 @@ import { UploadedFile } from '../../../models/common/uploaded-file';
   selector: 'app-stage-transition-upload-dialog',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CommonModule,
     ButtonModule,
     FileUploadModule,

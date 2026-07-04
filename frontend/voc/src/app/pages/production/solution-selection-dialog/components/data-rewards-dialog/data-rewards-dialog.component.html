@@ -22,10 +22,10 @@
             <div *ngIf="getUploadedFile('data_rewards_video')" class="flex flex-column gap-2 mt-2 p-2 surface-ground border-round">
                 <div class="flex align-items-center justify-content-between">
                     <div class="flex align-items-center gap-2 overflow-hidden">
-                        <i class="pi pi-video text-primary"></i>
+                        <lucide-icon name="video" class="text-primary"></lucide-icon>
                         <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap font-medium">{{ getUploadedFile('data_rewards_video').name }}</span>
                     </div>
-                    <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('data_rewards_video', videoUploader)"></p-button>
+                    <p-button [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('data_rewards_video', videoUploader)"><lucide-icon name="x"></lucide-icon></p-button>
                 </div>
                 <video *ngIf="getUploadedFile('data_rewards_video').safeUrl" controls [src]="getUploadedFile('data_rewards_video').safeUrl" class="w-full mt-2 border-round" style="max-height: 200px;"></video>
             </div>

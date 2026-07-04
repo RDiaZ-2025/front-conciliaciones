@@ -31,13 +31,11 @@
                 class="flex align-items-center justify-content-between p-2 border-round mb-2">
                 <div class="flex align-items-center gap-2 cursor-pointer hover:surface-100 p-1 border-round transition-colors"
                     (click)="downloadFile(file)" pTooltip="Descargar" tooltipPosition="top">
-                    <i class="pi pi-file text-primary"></i>
+                    <lucide-icon name="file" class="text-primary"></lucide-icon>
                     <span class="text-sm font-medium">{{file.name}}</span>
-                    <i class="pi pi-download text-xs text-600"></i>
+                    <lucide-icon name="download" class="text-xs text-600"></lucide-icon>
                 </div>
-                <button *ngIf="canRemoveFiles" pButton icon="pi pi-times"
-                    class="p-button-text p-button-danger p-button-sm p-0 w-2rem h-2rem" (click)="removeFile(file)"
-                    pTooltip="Eliminar" tooltipPosition="left"></button>
+                <button *ngIf="canRemoveFiles" pButton class="p-button-text p-button-danger p-button-sm p-0 w-2rem h-2rem" (click)="removeFile(file)" pTooltip="Eliminar" tooltipPosition="left"><lucide-icon name="x"></lucide-icon></button>
             </div>
         </div>
     </div>

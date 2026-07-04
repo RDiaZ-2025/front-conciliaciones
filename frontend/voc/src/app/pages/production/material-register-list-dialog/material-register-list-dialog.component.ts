@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../../components/shared/lucide-icon/lucide-icon.component';
 import { CoreDialogService } from '../../../services/core-dialog.service';
 import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -36,7 +37,8 @@ import { saveAs } from 'file-saver';
 @Component({
     selector: 'app-material-register-list-dialog',
     standalone: true,
-    imports: [CommonModule, TableModule, ButtonModule, TooltipModule],
+    imports: [
+    LucideIconComponent,CommonModule, TableModule, ButtonModule, TooltipModule],
     providers: [DialogService],
     templateUrl: './material-register-list-dialog.component.html',
     styleUrls: ['./material-register-list-dialog.component.css']

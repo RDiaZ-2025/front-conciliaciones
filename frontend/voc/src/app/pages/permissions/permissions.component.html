@@ -1,7 +1,7 @@
 <div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
-    <app-page-header title="Permisos" subtitle="Gestión de permisos del sistema" icon="pi pi-shield">
-        <p-button label="Nuevo Permiso" icon="pi pi-plus" (onClick)="openNew()"></p-button>
-        <p-button icon="pi pi-refresh" [text]="true" [rounded]="true" (onClick)="loadPermissions()"></p-button>
+    <app-page-header title="Permisos" subtitle="Gestión de permisos del sistema" icon="shield">
+        <p-button (onClick)="openNew()"><lucide-icon name="plus" class="mr-2"></lucide-icon>Nuevo Permiso</p-button>
+        <p-button [text]="true" [rounded]="true" (onClick)="loadPermissions()"><lucide-icon name="refresh-cw"></lucide-icon></p-button>
     </app-page-header>
 
     <p-toast></p-toast>
@@ -18,7 +18,7 @@
                     <h5 class="m-0">Listado de Permisos</h5>
                     <div class="block mt-2 md:mt-0">
                         <p-iconField iconPosition="left">
-                            <p-inputIcon styleClass="pi pi-search" />
+                            <p-inputIcon><lucide-icon name="search"></lucide-icon></p-inputIcon>
                             <input pInputText type="text" (input)="onGlobalFilter(dt, $event)" placeholder="Buscar..."
                                 class="w-full sm:w-auto" />
                         </p-iconField>
@@ -40,10 +40,8 @@
                     <td>{{permission.description}}</td>
                     <td>
                         <div class="flex gap-2">
-                            <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="info"
-                                (onClick)="editPermission(permission)"></p-button>
-                            <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger"
-                                (onClick)="deletePermission(permission)"></p-button>
+                            <p-button [text]="true" [rounded]="true" severity="info" (onClick)="editPermission(permission)"><lucide-icon name="pencil"></lucide-icon></p-button>
+                            <p-button [text]="true" [rounded]="true" severity="danger" (onClick)="deletePermission(permission)"><lucide-icon name="trash-2"></lucide-icon></p-button>
                         </div>
                     </td>
                 </tr>

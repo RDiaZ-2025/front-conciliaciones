@@ -1,22 +1,18 @@
 <div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
     <app-page-header [title]="showHistorical() ? 'Histórico de Producción' : 'Gestión de Producción'"
         [subtitle]="showHistorical() ? 'Registro de solicitudes completadas y entregadas' : 'Seguimiento de solicitudes en el flujo de producción'"
-        [icon]="showHistorical() ? 'pi pi-history' : 'pi pi-cog'">
+        [icon]="showHistorical() ? 'history' : 'cog'">
         <div class="flex gap-2">
-            <p-button *ngIf="!showHistorical()" label="Reglas SLA" icon="pi pi-info-circle" [outlined]="true"
-                (click)="slaRulesVisible.set(true)"></p-button>
-            <p-button *ngIf="!showHistorical() && canViewHistory()" label="Histórico" icon="pi pi-history"
-                [outlined]="true" (click)="showHistorical.set(true)"></p-button>
-            <p-button *ngIf="showHistorical()" label="Volver al Tablero" icon="pi pi-arrow-left" [outlined]="true"
-                (click)="showHistorical.set(false)"></p-button>
-            <p-button *ngIf="!showHistorical() && canCreateRequest()" label="Nueva Solicitud" icon="pi pi-plus"
-                (click)="openDialog()"></p-button>
+            <p-button *ngIf="!showHistorical()" [outlined]="true" (click)="slaRulesVisible.set(true)"><lucide-icon name="info" class="mr-2"></lucide-icon>Reglas SLA</p-button>
+            <p-button *ngIf="!showHistorical() && canViewHistory()" [outlined]="true" (click)="showHistorical.set(true)"><lucide-icon name="history" class="mr-2"></lucide-icon>Histórico</p-button>
+            <p-button *ngIf="showHistorical()" [outlined]="true" (click)="showHistorical.set(false)"><lucide-icon name="arrow-left" class="mr-2"></lucide-icon>Volver al Tablero</p-button>
+            <p-button *ngIf="!showHistorical() && canCreateRequest()" (click)="openDialog()"><lucide-icon name="plus" class="mr-2"></lucide-icon>Nueva Solicitud</p-button>
         </div>
     </app-page-header>
 
     <div class="grid" *ngIf="!showHistorical()">
         <div class="col-12 text-center p-5" *ngIf="activeRequests().length === 0">
-            <i class="pi pi-inbox text-5xl text-400 mb-3"></i>
+            <lucide-icon name="inbox" class="text-5xl text-400 mb-3"></lucide-icon>
             <h3 class="text-700 m-0">No hay solicitudes activas</h3>
             <p class="text-500">Crea una nueva solicitud para comenzar.</p>
         </div>
@@ -34,34 +30,34 @@
 
                 <div class="flex flex-column gap-3 p-3 pt-0 flex-grow-1">
                     <div class="flex align-items-center gap-2 text-sm text-600" *ngIf="request.consecutive">
-                        <i class="pi pi-hashtag"></i>
+                        <lucide-icon name="hash"></lucide-icon>
                         <span class="font-bold text-900">Consecutivo: {{ request.consecutive }}</span>
                     </div>
 
                     <div class="flex align-items-center gap-2 text-sm text-600">
-                        <i class="pi pi-calendar"></i>
+                        <lucide-icon name="calendar"></lucide-icon>
                         <span>Solicitado: {{ request.requestDate | date:'dd/MM/yyyy' }}</span>
                     </div>
 
                     <div class="flex align-items-center gap-2 text-sm text-600">
-                        <i class="pi pi-user"></i>
+                        <lucide-icon name="user"></lucide-icon>
                         <div class="flex flex-column">
                             <span>Dep: {{ request.department }}</span>
                         </div>
                     </div>
 
                     <div class="flex align-items-center gap-2 text-sm text-600" *ngIf="request.deliveryDate">
-                        <i class="pi pi-calendar-plus"></i>
+                        <lucide-icon name="calendar-plus"></lucide-icon>
                         <span>Entrega: {{ request.deliveryDate | date:'dd/MM/yyyy hh:mm a' }}</span>
                     </div>
 
                     <div class="flex align-items-center gap-2 text-sm mt-1"
                         *ngIf="request.deliveryDate && request.stage !== 'completed'">
-                        <i class="pi pi-clock" [ngClass]="{
+                        <lucide-icon name="clock" [ngClass]="{
                             'text-green-500': getSLAStatus(request.deliveryDate) === 'success',
                             'text-yellow-500': getSLAStatus(request.deliveryDate) === 'warn',
                             'text-red-500': getSLAStatus(request.deliveryDate) === 'danger'
-                        }"></i>
+                        }"></lucide-icon>
                         <span [ngClass]="{
                             'text-green-500': getSLAStatus(request.deliveryDate) === 'success',
                             'text-yellow-500': getSLAStatus(request.deliveryDate) === 'warn',
@@ -79,10 +75,8 @@
                                 <span class="text-overflow-ellipsis overflow-hidden white-space-nowrap"
                                     style="max-width: 150px;" [pTooltip]="file.name">{{ file.name }}</span>
                                 <div class="flex">
-                                    <p-button icon="pi pi-eye" [rounded]="true" [text]="true" size="small"
-                                        (click)="openPreview(file)" pTooltip="Vista Previa"></p-button>
-                                    <p-button icon="pi pi-download" [rounded]="true" [text]="true" size="small"
-                                        (click)="downloadFile(file.id, file.name)" pTooltip="Descargar"></p-button>
+                                    <p-button [rounded]="true" [text]="true" size="small" (click)="openPreview(file)" pTooltip="Vista Previa"><lucide-icon name="eye"></lucide-icon></p-button>
+                                    <p-button [rounded]="true" [text]="true" size="small" (click)="downloadFile(file.id, file.name)" pTooltip="Descargar"><lucide-icon name="download"></lucide-icon></p-button>
                                 </div>
                             </div>
                             <div *ngIf="request.files.length > 3" class="text-xs text-500 font-italic pl-1">
@@ -94,21 +88,13 @@
 
                 <ng-template pTemplate="footer">
                     <div class="flex justify-content-end gap-2 border-top-1 surface-border pt-3 mt-auto">
-                        <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="info"
-                            pTooltip="Ver Detalles" (click)="openDialog(request, true)"></p-button>
-                        <p-button icon="pi pi-history" [rounded]="true" [text]="true" severity="help"
-                            pTooltip="Historial de Cambios" (click)="openHistory(request)"></p-button>
+                        <p-button [rounded]="true" [text]="true" severity="info" pTooltip="Ver Detalles" (click)="openDialog(request, true)"><lucide-icon name="eye"></lucide-icon></p-button>
+                        <p-button [rounded]="true" [text]="true" severity="help" pTooltip="Historial de Cambios" (click)="openHistory(request)"><lucide-icon name="history"></lucide-icon></p-button>
 
 
-                        <p-button
-                            *ngIf="request.stage === 'closed_won' || request.stage === 'implementation' || request.stage === 'customer_review'"
-                            icon="pi pi-list" [rounded]="true" [text]="true" severity="help"
-                            pTooltip="Registros de Material"
-                            (click)="openMaterialRegisterListDialog(request)"></p-button>
+                        <p-button *ngIf="request.stage === 'closed_won' || request.stage === 'implementation' || request.stage === 'customer_review'" [rounded]="true" [text]="true" severity="help" pTooltip="Registros de Material" (click)="openMaterialRegisterListDialog(request)"><lucide-icon name="list"></lucide-icon></p-button>
 
-                        <p-button *ngIf="request.stage !== 'completed'" icon="pi pi-arrow-right" [rounded]="true"
-                            [text]="true" severity="success" pTooltip="Avanzar etapa"
-                            (click)="moveRequest(request)"></p-button>
+                        <p-button *ngIf="request.stage !== 'completed'" [rounded]="true" [text]="true" severity="success" pTooltip="Avanzar etapa" (click)="moveRequest(request)"><lucide-icon name="arrow-right"></lucide-icon></p-button>
                     </div>
                 </ng-template>
             </p-card>
@@ -118,7 +104,7 @@
     <!-- Historical View -->
     <div class="grid" *ngIf="showHistorical()">
         <div class="col-12 text-center p-5" *ngIf="historicalRequests().length === 0">
-            <i class="pi pi-inbox text-5xl text-400 mb-3"></i>
+            <lucide-icon name="inbox" class="text-5xl text-400 mb-3"></lucide-icon>
             <h3 class="text-700 m-0">No hay solicitudes en el histórico</h3>
             <p class="text-500">Las solicitudes completadas aparecerán aquí.</p>
         </div>
@@ -127,11 +113,11 @@
             <div class="surface-card p-3 shadow-1 border-round cursor-pointer hover:shadow-3 transition-duration-200 border-1 surface-border flex align-items-center justify-content-between h-full"
                 (click)="openDetailDialog(request)" pRipple>
                 <div class="flex align-items-center gap-2 overflow-hidden">
-                    <i class="pi pi-file text-primary text-xl"></i>
+                    <lucide-icon name="file" class="text-primary text-xl"></lucide-icon>
                     <span class="font-medium text-lg text-900 text-overflow-ellipsis overflow-hidden white-space-nowrap"
                         [pTooltip]="request.name">{{ request.name }}</span>
                 </div>
-                <i class="pi pi-external-link text-400"></i>
+                <lucide-icon name="external-link" class="text-400"></lucide-icon>
             </div>
         </div>
     </div>
@@ -140,7 +126,7 @@
     <p-confirmDialog [style]="{width: '450px'}" styleClass="p-fluid">
         <ng-template pTemplate="message" let-message>
             <div class="flex flex-column align-items-center w-full gap-3 border-bottom-1 surface-border pb-3 mb-3">
-                <i [class]="message.icon" class="text-6xl text-primary-500"></i>
+                <lucide-icon [name]="message.icon" class="text-6xl text-primary-500"></lucide-icon>
                 <p class="m-0 text-center text-lg text-700">{{ message.message }}</p>
             </div>
         </ng-template>

@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../shared/lucide-icon/lucide-icon.component';
 import { CachedImagePipe } from '../../pipes/cached-image.pipe';
 import { CoreDialogService } from '../../services/core-dialog.service';
 import { DialogService } from 'primeng/dynamicdialog';
@@ -28,6 +29,7 @@ import { ProductionDialogComponent } from '../../pages/production/production-dia
   selector: 'app-layout',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CachedImagePipe,
     CommonModule,
     RouterOutlet,
@@ -75,7 +77,7 @@ export class LayoutComponent implements OnInit {
   userMenuItems: PrimeMenuItem[] = [
     { 
       label: 'Cerrar Sesión', 
-      icon: 'pi pi-power-off', 
+      icon: 'power', 
       command: () => this.logout() 
     }
   ];
@@ -144,10 +146,10 @@ export class LayoutComponent implements OnInit {
 
   getNotificationIcon(type: string): string {
     switch (type) {
-      case 'success': return 'pi pi-check-circle text-green-500';
-      case 'warning': return 'pi pi-exclamation-triangle text-yellow-500';
-      case 'error': return 'pi pi-times-circle text-red-500';
-      default: return 'pi pi-info-circle text-blue-500';
+      case 'success': return 'check-circle';
+      case 'warning': return 'alert-triangle';
+      case 'error': return 'x-circle';
+      default: return 'info';
     }
   }
 
@@ -181,12 +183,7 @@ export class LayoutComponent implements OnInit {
   }
 
   getIconName(iconKey: string | undefined): string {
-    if (!iconKey) return 'pi pi-list';
-    // If the icon already starts with 'pi ', assume it's a full class
-    if (iconKey.startsWith('pi ')) return iconKey;
-    // Otherwise prepend 'pi ' (assuming the user entered e.g. 'pi-home' or 'home')
-    // Matches the behavior in Menus page where it does 'pi ' + icon
-    return `pi ${iconKey}`;
+    return iconKey || 'list';
   }
 
   hasPermission(item: MenuItem): boolean {

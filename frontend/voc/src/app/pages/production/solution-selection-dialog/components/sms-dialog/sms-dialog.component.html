@@ -10,8 +10,7 @@
         <div class="field">
             <label for="sms_clientName" class="font-bold block mb-2">
                 Nombre del Cliente (Sender ID)
-                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
-                   pTooltip="Máximo 11 caracteres alfanuméricos (A-Z, 0-9). Sin caracteres especiales." tooltipPosition="top"></i>
+                <lucide-icon name="info" class="ml-2 text-primary cursor-pointer" pTooltip="Máximo 11 caracteres alfanuméricos (A-Z, 0-9). Sin caracteres especiales." tooltipPosition="top"></lucide-icon>
             </label>
             <input pInputText class="w-full" id="sms_clientName" formControlName="sms_clientName" class="w-full" placeholder="SENDERID" maxlength="11" />
             <small *ngIf="form.get('sms_clientName')?.invalid && (form.get('sms_clientName')?.dirty || form.get('sms_clientName')?.touched)" class="p-error block">
@@ -22,8 +21,7 @@
         <div class="field">
             <label for="sms_messageText" class="font-bold block mb-2">
                 Texto del Mensaje
-                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
-                   pTooltip="Máximo 170 caracteres estándar (GSM 7-bit)." tooltipPosition="top"></i>
+                <lucide-icon name="info" class="ml-2 text-primary cursor-pointer" pTooltip="Máximo 170 caracteres estándar (GSM 7-bit)." tooltipPosition="top"></lucide-icon>
             </label>
             <textarea pTextarea class="w-full" id="sms_messageText" formControlName="sms_messageText" class="w-full" rows="4" maxlength="170" placeholder="Escriba el mensaje aquí..."></textarea>
             <div class="text-right text-sm text-500">{{form.get('sms_messageText')?.value?.length || 0}} / 170</div>
@@ -37,8 +35,7 @@
         <div class="field">
             <label for="sms_destinationUrl" class="font-bold block mb-2">
                 URL de Destino
-                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
-                   pTooltip="Ruta o URL válida." tooltipPosition="top"></i>
+                <lucide-icon name="info" class="ml-2 text-primary cursor-pointer" pTooltip="Ruta o URL válida." tooltipPosition="top"></lucide-icon>
             </label>
             <input pInputText class="w-full" id="sms_destinationUrl" formControlName="sms_destinationUrl" class="w-full" placeholder="ej. https://example.com o /ruta/interna" />
             <small *ngIf="form.get('sms_destinationUrl')?.invalid && (form.get('sms_destinationUrl')?.dirty || form.get('sms_destinationUrl')?.touched)" class="p-error block">
@@ -49,21 +46,20 @@
         <div class="field mt-3">
             <label class="font-bold block mb-2">
                 Archivos Adicionales (Opcional)
-                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
-                   pTooltip="Imágenes o videos de apoyo. Máx 1MB." tooltipPosition="top"></i>
+                <lucide-icon name="info" class="ml-2 text-primary cursor-pointer" pTooltip="Imágenes o videos de apoyo. Máx 1MB." tooltipPosition="top"></lucide-icon>
             </label>
             <p-fileupload mode="advanced" chooseLabel="Seleccionar Archivos" [accept]="fileAccept" 
                 [maxFileSize]="maxFileSize" [customUpload]="true" (uploadHandler)="onUpload($event)" 
                 [auto]="true" [multiple]="true"></p-fileupload>
             
             <div *ngFor="let file of uploadedFiles" class="mt-2 text-sm text-green-500 flex align-align-align-items-center gap-2">
-                <i class="pi pi-check-circle"></i> {{file.name}} ({{(file.size/1024).toFixed(2)}} KB)
+                <lucide-icon name="check-circle"></lucide-icon> {{file.name}} ({{(file.size/1024).toFixed(2)}} KB)
             </div>
         </div>
 
         <div class="flex justify-content-end gap-2 mt-4">
-            <p-button label="Cancelar" icon="pi pi-times" styleClass="p-button-text" (onClick)="cancel()"></p-button>
-            <p-button label="Guardar y Continuar" icon="pi pi-check" type="submit" [disabled]="form.invalid || isUploading()"></p-button>
+            <p-button styleClass="p-button-text" (onClick)="cancel()"><lucide-icon name="x" class="mr-2"></lucide-icon>Cancelar</p-button>
+            <p-button type="submit" [disabled]="form.invalid || isUploading()"><lucide-icon name="check" class="mr-2"></lucide-icon>Guardar y Continuar</p-button>
         </div>
     </form>
 </div>

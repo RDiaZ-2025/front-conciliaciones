@@ -29,8 +29,7 @@
         <div class="formgrid grid gap-4">
             <div class="col-12 md:col-6 flex flex-column gap-2">
                 <label class="text-700">Icono (256x256)
-                    <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
-                       pTooltip="El icono debe tener dimensiones exactas de 256x256 píxeles." tooltipPosition="top"></i>
+                    <lucide-icon name="info" class="ml-2 text-primary cursor-pointer" pTooltip="El icono debe tener dimensiones exactas de 256x256 píxeles." tooltipPosition="top"></lucide-icon>
                 </label>
                 <p-fileUpload #iconUploader
                     mode="basic" 
@@ -45,7 +44,7 @@
                         <img [src]="getUploadedFile('icon').safeUrl | cachedImage" alt="Icon Preview" style="max-height: 50px; max-width: 50px; object-fit: contain;" class="border-round" />
                         <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ getUploadedFile('icon').name }}</span>
                     </div>
-                    <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('icon', iconUploader)"></p-button>
+                    <p-button [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('icon', iconUploader)"><lucide-icon name="x"></lucide-icon></p-button>
                 </div>
             </div>
             <div class="col-12 md:col-6 flex flex-column gap-2">
@@ -63,7 +62,7 @@
                         <img [src]="getUploadedFile('image').safeUrl | cachedImage" alt="Image Preview" style="max-height: 50px; max-width: 100px; object-fit: contain;" class="border-round" />
                         <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ getUploadedFile('image').name }}</span>
                     </div>
-                    <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('image', imageUploader)"></p-button>
+                    <p-button [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('image', imageUploader)"><lucide-icon name="x"></lucide-icon></p-button>
                 </div>
             </div>
             <div class="col-12 flex flex-column gap-2">
@@ -78,10 +77,10 @@
                 </p-fileUpload>
                 <div *ngIf="getUploadedFile('apk')" class="flex align-items-center justify-content-between mt-2 p-2 surface-ground border-round">
                     <div class="flex align-items-center gap-2 overflow-hidden">
-                        <i class="pi pi-file text-primary"></i>
+                        <lucide-icon name="file" class="text-primary"></lucide-icon>
                         <span class="text-sm text-700 text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ getUploadedFile('apk').name }}</span>
                     </div>
-                    <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('apk', apkUploader)"></p-button>
+                    <p-button [rounded]="true" [text]="true" severity="danger" (onClick)="removeFile('apk', apkUploader)"><lucide-icon name="x"></lucide-icon></p-button>
                 </div>
             </div>
         </div>

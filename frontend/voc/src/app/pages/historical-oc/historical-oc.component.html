@@ -1,5 +1,5 @@
 <div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
-    <app-page-header title="Documentos Subidos por Usuario" subtitle="Historial y descarga de documentos" icon="pi pi-folder-open"></app-page-header>
+    <app-page-header title="Documentos Subidos por Usuario" subtitle="Historial y descarga de documentos" icon="folder-open"></app-page-header>
     <app-session-info></app-session-info>
     <p-toast></p-toast>
 
@@ -14,14 +14,13 @@
                 <div class="flex align-items-center justify-content-between">
                     <span class="p-input-icon-left">
                         <p-iconField iconPosition="left">
-                            <p-inputIcon styleClass="pi pi-search" />
+                            <p-inputIcon><lucide-icon name="search"></lucide-icon></p-inputIcon>
                             <input pInputText type="text"
                                 (input)="dt.filterGlobal($any($event.target).value, 'contains')"
                                 placeholder="Buscar..." />
                         </p-iconField>
                     </span>
-                    <p-button icon="pi pi-refresh" [rounded]="true" [text]="true" (onClick)="loadDocuments()"
-                        pTooltip="Recargar"></p-button>
+                    <p-button [rounded]="true" [text]="true" (onClick)="loadDocuments()" pTooltip="Recargar"><lucide-icon name="refresh-cw"></lucide-icon></p-button>
                 </div>
             </ng-template>
 
@@ -40,9 +39,7 @@
                     <td>{{ doc.UserName || 'N/A' }}</td>
                     <td>{{ doc.UserEmail || 'N/A' }}</td>
                     <td>
-                        <p-button icon="pi pi-download" [rounded]="true" [text]="true" severity="help"
-                            (onClick)="downloadFiles(doc)" [disabled]="downloading()"
-                            pTooltip="Descargar Archivos (ZIP)">
+                        <p-button [rounded]="true" [text]="true" severity="help" (onClick)="downloadFiles(doc)" [disabled]="downloading()" pTooltip="Descargar Archivos (ZIP)"><lucide-icon name="download"></lucide-icon>
                         </p-button>
                     </td>
                 </tr>

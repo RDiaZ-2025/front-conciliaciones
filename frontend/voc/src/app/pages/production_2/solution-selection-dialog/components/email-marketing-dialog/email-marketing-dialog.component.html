@@ -19,8 +19,7 @@
                 <div class="field">
                     <label class="font-bold block mb-2">
                         Colores
-                        <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
-                           pTooltip="Códigos Hexadecimales separados por coma (ej: #FF0000, #00FF00)" tooltipPosition="top"></i>
+                        <lucide-icon name="info" class="ml-2 text-primary cursor-pointer" pTooltip="Códigos Hexadecimales separados por coma (ej: #FF0000, #00FF00)" tooltipPosition="top"></lucide-icon>
                     </label>
                     <input pInputText class="w-full" formControlName="email_colors" placeholder="#FFFFFF, #000000" />
                     <small *ngIf="form.get('email_colors')?.invalid && (form.get('email_colors')?.dirty || form.get('email_colors')?.touched)" class="p-error block">Requerido. Formato Hex.</small>
@@ -65,8 +64,7 @@
         <div class="field">
             <label class="font-bold block mb-2">
                 Configuración DNS (DKIM/SPF)
-                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
-                   pTooltip="Registros DNS necesarios para la autenticación del dominio." tooltipPosition="top"></i>
+                <lucide-icon name="info" class="ml-2 text-primary cursor-pointer" pTooltip="Registros DNS necesarios para la autenticación del dominio." tooltipPosition="top"></lucide-icon>
             </label>
             <textarea pTextarea class="w-full" formControlName="email_dnsConfig" rows="2" placeholder="v=spf1 include:sendgrid.net ~all"></textarea>
             <small *ngIf="form.get('email_dnsConfig')?.invalid && (form.get('email_dnsConfig')?.dirty || form.get('email_dnsConfig')?.touched)" class="p-error block">Requerido.</small>
@@ -76,7 +74,7 @@
         <div class="field mt-4">
             <div class="flex justify-content-between align-align-align-items-center mb-2">
                 <label class="font-bold block">Call to Actions (CTAs)</label>
-                <p-button label="Agregar CTA" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="addEmailCta()"></p-button>
+                <p-button size="small" [outlined]="true" (onClick)="addEmailCta()"><lucide-icon name="plus" class="mr-2"></lucide-icon>Agregar CTA</p-button>
             </div>
             <div formArrayName="email_ctas_list">
                 <div *ngFor="let cta of emailCtasList.controls; let i=index" [formGroupName]="i" class="p-3 surface-card border-round mb-2 shadow-1 relative">
@@ -90,7 +88,7 @@
                             <input pInputText class="w-full" formControlName="url" placeholder="https://..." />
                         </div>
                     </div>
-                    <button pButton icon="pi pi-trash" class="p-button-rounded p-button-danger p-button-text absolute top-0 right-0 mt-2 mr-2" (click)="removeEmailCta(i)"></button>
+                    <button pButton class="p-button-rounded p-button-danger p-button-text absolute top-0 right-0 mt-2 mr-2" (click)="removeEmailCta(i)"><lucide-icon name="trash-2"></lucide-icon></button>
                 </div>
             </div>
         </div>
@@ -99,7 +97,7 @@
         <div class="field mt-4">
             <div class="flex justify-content-between align-align-align-items-center mb-2">
                 <label class="font-bold block">Redes Sociales</label>
-                <p-button label="Agregar Red Social" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="addEmailSocial()"></p-button>
+                <p-button size="small" [outlined]="true" (onClick)="addEmailSocial()"><lucide-icon name="plus" class="mr-2"></lucide-icon>Agregar Red Social</p-button>
             </div>
             <div formArrayName="email_social_list">
                 <div *ngFor="let social of emailSocialList.controls; let i=index" [formGroupName]="i" class="p-3 surface-card border-round mb-2 shadow-1 relative">
@@ -113,7 +111,7 @@
                             <input pInputText class="w-full" formControlName="url" placeholder="https://facebook.com/..." />
                         </div>
                     </div>
-                    <button pButton icon="pi pi-trash" class="p-button-rounded p-button-danger p-button-text absolute top-0 right-0 mt-2 mr-2" (click)="removeEmailSocial(i)"></button>
+                    <button pButton class="p-button-rounded p-button-danger p-button-text absolute top-0 right-0 mt-2 mr-2" (click)="removeEmailSocial(i)"><lucide-icon name="trash-2"></lucide-icon></button>
                 </div>
             </div>
         </div>
@@ -122,8 +120,7 @@
         <div class="field mt-4">
             <label class="font-bold block mb-2">
                 Logo de la Marca
-                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
-                   pTooltip="Formato PNG/JPG. Ancho máximo 600px." tooltipPosition="top"></i>
+                <lucide-icon name="info" class="ml-2 text-primary cursor-pointer" pTooltip="Formato PNG/JPG. Ancho máximo 600px." tooltipPosition="top"></lucide-icon>
             </label>
             <p-fileupload mode="advanced" chooseLabel="Subir Logo" accept="image/png,image/jpeg"
                 [maxFileSize]="1000000" [customUpload]="true" (uploadHandler)="onUpload($event, 'email_logo')" 
@@ -131,14 +128,14 @@
             
             <div *ngFor="let file of uploadedFiles">
                 <div *ngIf="file.category === 'email_logo'" class="mt-2 text-sm text-green-500 flex align-align-align-items-center gap-2">
-                    <i class="pi pi-check-circle"></i> Logo cargado: {{file.name}}
+                    <lucide-icon name="check-circle"></lucide-icon> Logo cargado: {{file.name}}
                 </div>
             </div>
         </div>
 
         <div class="flex justify-content-end gap-2 mt-4">
-            <p-button label="Cancelar" icon="pi pi-times" styleClass="p-button-text" (onClick)="cancel()"></p-button>
-            <p-button label="Guardar y Continuar" icon="pi pi-check" type="submit" [disabled]="form.invalid || isUploading()"></p-button>
+            <p-button styleClass="p-button-text" (onClick)="cancel()"><lucide-icon name="x" class="mr-2"></lucide-icon>Cancelar</p-button>
+            <p-button type="submit" [disabled]="form.invalid || isUploading()"><lucide-icon name="check" class="mr-2"></lucide-icon>Guardar y Continuar</p-button>
         </div>
     </form>
 </div>

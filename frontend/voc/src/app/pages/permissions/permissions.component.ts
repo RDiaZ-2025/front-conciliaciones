@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../components/shared/lucide-icon/lucide-icon.component';
 
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -20,6 +21,7 @@ import { PermissionFormData } from '../../models/common/permission-form-data';
   selector: 'app-permissions',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CommonModule,
     TableModule,
     ButtonModule,

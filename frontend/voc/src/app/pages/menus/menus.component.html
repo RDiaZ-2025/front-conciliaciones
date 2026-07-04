@@ -1,7 +1,7 @@
 <div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
-    <app-page-header title="Gestión de Menú" subtitle="Administración de la estructura de navegación" icon="pi pi-list">
-        <p-button label="Nuevo Ítem" icon="pi pi-plus" (onClick)="openNew()"></p-button>
-        <p-button icon="pi pi-refresh" [text]="true" [rounded]="true" (onClick)="loadMenuItems()"></p-button>
+    <app-page-header title="Gestión de Menú" subtitle="Administración de la estructura de navegación" icon="list">
+        <p-button (onClick)="openNew()"><lucide-icon name="plus" class="mr-2"></lucide-icon>Nuevo Ítem</p-button>
+        <p-button [text]="true" [rounded]="true" (onClick)="loadMenuItems()"><lucide-icon name="refresh-cw"></lucide-icon></p-button>
     </app-page-header>
     <p-toast></p-toast>
     <div class="card p-4 surface-card border-round shadow-2 overflow-x-auto">
@@ -25,7 +25,7 @@
                         {{ rowData.label }}
                     </td>
                     <td>
-                        <i [class]="'pi ' + rowData.icon" *ngIf="rowData.icon"></i>
+                        <lucide-icon [name]="rowData.icon" *ngIf="rowData.icon"></lucide-icon>
                         <span *ngIf="rowData.icon" class="ml-2 text-sm text-500">{{ rowData.icon }}</span>
                     </td>
                     <td><span class="text-sm font-mono surface-100 p-1 border-round" *ngIf="rowData.route">{{
@@ -37,15 +37,12 @@
                     </td>
                     <td>{{ rowData.displayOrder }}</td>
                     <td>
-                        <i class="pi"
-                            [ngClass]="{'pi-check-circle text-green-500': rowData.isActive, 'pi-times-circle text-red-500': !rowData.isActive}"></i>
+                        <lucide-icon [name]="rowData.isActive ? 'check-circle' : 'x-circle'" [ngClass]="rowData.isActive ? 'text-green-500' : 'text-red-500'"></lucide-icon>
                     </td>
                     <td>
                         <div class="flex gap-2">
-                            <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="info"
-                                (onClick)="editItem(rowData)"></p-button>
-                            <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger"
-                                (onClick)="deleteItem(rowData)"></p-button>
+                            <p-button [text]="true" [rounded]="true" severity="info" (onClick)="editItem(rowData)"><lucide-icon name="pencil"></lucide-icon></p-button>
+                            <p-button [text]="true" [rounded]="true" severity="danger" (onClick)="deleteItem(rowData)"><lucide-icon name="trash-2"></lucide-icon></p-button>
                         </div>
                     </td>
                 </tr>

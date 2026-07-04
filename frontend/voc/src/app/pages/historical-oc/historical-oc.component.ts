@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../components/shared/lucide-icon/lucide-icon.component';
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -21,6 +22,7 @@ import { saveAs } from 'file-saver';
   selector: 'app-historical-oc',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CommonModule,
     FormsModule,
     TableModule,

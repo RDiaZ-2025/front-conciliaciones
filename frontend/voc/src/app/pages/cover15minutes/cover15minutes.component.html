@@ -1,6 +1,6 @@
 <div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
     <app-page-header title="Portada 15 Minutos" subtitle="Gestión de la imagen de portada"
-        icon="pi pi-image"></app-page-header>
+        icon="image"></app-page-header>
     <p-toast></p-toast>
 
     <div class="grid">
@@ -12,8 +12,7 @@
                         styleClass="w-full border-round overflow-hidden shadow-1"
                         imageClass="w-full h-auto object-cover">
                     </p-image>
-                    <p-button label="Copiar Enlace" icon="pi pi-copy" severity="secondary"
-                        (onClick)="copyLink(currentImageUrl())">
+                    <p-button severity="secondary" (onClick)="copyLink(currentImageUrl())"><lucide-icon name="copy" class="mr-2"></lucide-icon>Copiar Enlace
                     </p-button>
                 </div>
             </div>
@@ -30,14 +29,9 @@
                         let-clearCallback="clearCallback" let-uploadCallback="uploadCallback">
                         <div class="flex flex-wrap justify-content-between align-items-center gap-2">
                             <div class="flex flex-column sm:flex-row sm:align-items-center gap-2 w-full sm:w-auto">
-                                <p-button (onClick)="chooseCallback()" icon="pi pi-images" label="Seleccionar"
-                                    [outlined]="true" styleClass="w-full sm:w-auto"></p-button>
-                                <p-button (onClick)="uploadCallback()" icon="pi pi-cloud-upload" label="Subir"
-                                    severity="success" [disabled]="!files || files.length === 0" [loading]="uploading()"
-                                    styleClass="w-full sm:w-auto"></p-button>
-                                <p-button (onClick)="clearCallback()" icon="pi pi-times" label="Cancelar"
-                                    severity="danger" [outlined]="true" [disabled]="!files || files.length === 0"
-                                    styleClass="w-full sm:w-auto"></p-button>
+                                <p-button (onClick)="chooseCallback()" [outlined]="true" styleClass="w-full sm:w-auto"><lucide-icon name="images" class="mr-2"></lucide-icon>Seleccionar</p-button>
+                                <p-button (onClick)="uploadCallback()" severity="success" [disabled]="!files || files.length === 0" [loading]="uploading()" styleClass="w-full sm:w-auto"><lucide-icon name="cloud-upload" class="mr-2"></lucide-icon>Subir</p-button>
+                                <p-button (onClick)="clearCallback()" severity="danger" [outlined]="true" [disabled]="!files || files.length === 0" styleClass="w-full sm:w-auto"><lucide-icon name="x" class="mr-2"></lucide-icon>Cancelar</p-button>
                             </div>
                         </div>
                     </ng-template>
@@ -54,8 +48,7 @@
                                     </div>
                                     <span class="font-semibold">{{ file.name }}</span>
                                     <div>{{ formatSize(file.size) }}</div>
-                                    <p-button icon="pi pi-times" (onClick)="removeFileCallback($event, i)"
-                                        [outlined]="true" [rounded]="true" severity="danger"></p-button>
+                                    <p-button (onClick)="removeFileCallback($event, i)" [outlined]="true" [rounded]="true" severity="danger"><lucide-icon name="x"></lucide-icon></p-button>
                                 </div>
                             </div>
                         </div>
@@ -63,7 +56,7 @@
 
                     <ng-template pTemplate="empty">
                         <div class="flex align-items-center justify-content-center flex-column py-5">
-                            <i class="pi pi-cloud-upload border-2 border-circle p-5 text-8xl text-400 border-400"></i>
+                            <lucide-icon name="cloud-upload" class="border-2 border-circle p-5 text-8xl text-400 border-400"></lucide-icon>
                             <p class="mt-4 mb-0 text-xl font-medium text-600">Arrastra y suelta la imagen aquí para
                                 subirla.</p>
                         </div>
@@ -87,9 +80,7 @@
 
                     <!-- Top Right Action Button -->
                     <div class="absolute top-0 right-0 p-2 z-1">
-                        <p-button icon="pi pi-copy" [rounded]="true" [text]="true"
-                            styleClass="bg-black-alpha-40 text-white hover:bg-black-alpha-60 transition-colors transition-duration-200 border-none w-3rem h-3rem"
-                            pTooltip="Copiar enlace" tooltipPosition="left" (onClick)="copyLink(item.url)">
+                        <p-button [rounded]="true" [text]="true" styleClass="bg-black-alpha-40 text-white hover:bg-black-alpha-60 transition-colors transition-duration-200 border-none w-3rem h-3rem" pTooltip="Copiar enlace" tooltipPosition="left" (onClick)="copyLink(item.url)"><lucide-icon name="copy"></lucide-icon>
                         </p-button>
                     </div>
 
@@ -98,7 +89,7 @@
                         <div class="font-bold text-sm mb-1 white-space-nowrap overflow-hidden text-overflow-ellipsis"
                             [pTooltip]="item.uploaderLog">{{ item.uploaderLog }}</div>
                         <div class="text-xs opacity-80 flex align-items-center gap-1">
-                            <i class="pi pi-clock text-xs"></i>
+                            <lucide-icon name="clock" class="text-xs"></lucide-icon>
                             {{ item.timestamp | date:'dd/MM/yyyy HH:mm' }}
                         </div>
                     </div>

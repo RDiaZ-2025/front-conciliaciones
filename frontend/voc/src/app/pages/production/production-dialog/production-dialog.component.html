@@ -3,7 +3,7 @@
 
     <div *ngIf="!canEditCore && isAssignedUser"
         class="bg-blue-50 border-round p-3 mb-3 flex align-items-center gap-2 text-blue-700">
-        <i class="pi pi-info-circle text-xl"></i>
+        <lucide-icon name="info" class="text-xl"></lucide-icon>
         <span class="font-medium">Modo Restringido: Solo puedes agregar comentarios, archivos, reasignar y actualizar el
             estado.</span>
     </div>
@@ -36,16 +36,12 @@
     </form>
 
     <div class="flex justify-content-between gap-2 mt-4">
-        <button pButton label="Cancelar" icon="pi pi-times" class="p-button-text p-button-danger"
-            (click)="cancel()"></button>
+        <button pButton class="p-button-text p-button-danger" (click)="cancel()"><lucide-icon name="x" class="mr-2"></lucide-icon>Cancelar</button>
 
         <div class="flex gap-2">
-            <button *ngIf="currentStep > 0" pButton label="Atrás" icon="pi pi-arrow-left" class="p-button-outlined"
-                (click)="prev()"></button>
-            <button *ngIf="currentStep < 4" pButton [label]="isCurrentStepEnabled() ? 'Guardar y Continuar' : 'Siguiente'" icon="pi pi-arrow-right"
-                (click)="next()" [loading]="isCurrentStepEnabled() && ((isUploading$ | async) ?? false)"></button>
-            <button *ngIf="currentStep === 4 && isCurrentStepEnabled()" pButton label="Guardar" icon="pi pi-check" (click)="saveData(true)"
-                [loading]="(isUploading$ | async) ?? false"></button>
+            <button *ngIf="currentStep> 0" pButton class="p-button-outlined" (click)="prev()"><lucide-icon name="arrow-left" class="mr-2"></lucide-icon>Atrás</button>
+            <button *ngIf="currentStep < 4" pButton [label]="isCurrentStepEnabled() ? 'Guardar y Continuar' : 'Siguiente'" (click)="next()" [loading]="isCurrentStepEnabled() && ((isUploading$ | async) ?? false)"><lucide-icon name="arrow-right"></lucide-icon></button>
+            <button *ngIf="currentStep === 4 && isCurrentStepEnabled()" pButton (click)="saveData(true)" [loading]="(isUploading$ | async) ?? false"><lucide-icon name="check" class="mr-2"></lucide-icon>Guardar</button>
         </div>
     </div>
 </div>
@@ -53,7 +49,7 @@
 <p-dialog [(visible)]="showSuccessModal" [modal]="true" [closable]="false" [style]="{width: '400px'}">
     <ng-template pTemplate="header">
         <div class="flex align-items-center gap-2">
-            <i class="pi pi-check-circle text-green-500" style="font-size: 1.5rem"></i>
+            <lucide-icon name="check-circle" class="text-green-500" style="font-size: 1.5rem"></lucide-icon>
             <span class="font-bold text-xl">¡Éxito!</span>
         </div>
     </ng-template>

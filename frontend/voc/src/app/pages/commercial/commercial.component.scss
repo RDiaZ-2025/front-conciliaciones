@@ -55,12 +55,19 @@
         width: 64px;
         height: 64px;
         
+        lucide-icon {
+            width: 3.5rem;
+            height: 3.5rem;
+            transition: transform 0.2s;
+        }
+
         i {
             font-size: 3.5rem;
             transition: transform 0.2s;
         }
     }
 
+    &:hover .file-icon-wrapper lucide-icon,
     &:hover .file-icon-wrapper i {
         transform: scale(1.05);
     }

@@ -27,18 +27,16 @@
                                 <h3 class="text-lg font-medium mb-2">Datos extraídos:</h3>
                                 <ul class="list-none p-0 m-0">
                                     <li *ngFor="let item of debugExcelValues()" class="mb-1 text-sm text-600">
-                                        <i class="pi pi-check-circle text-green-500 mr-2"></i>{{ item }}
+                                        <lucide-icon name="check-circle" class="text-green-500 mr-2"></lucide-icon>{{ item }}
                                     </li>
                                 </ul>
                             </div>
 
                             <div class="flex justify-content-between mt-4">
                                 <div class="flex gap-2">
-                                    <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary"
-                                        (onClick)="cancel()"></p-button>
+                                    <p-button [text]="true" severity="secondary" (onClick)="cancel()"><lucide-icon name="x" class="mr-2"></lucide-icon>Cancelar</p-button>
                                 </div>
-                                <p-button label="Siguiente" icon="pi pi-arrow-right" (onClick)="activeStep.set(1)"
-                                    [disabled]="!isExcelStepValid()"></p-button>
+                                <p-button (onClick)="activeStep.set(1)" [disabled]="!isExcelStepValid()"><lucide-icon name="arrow-right" class="mr-2"></lucide-icon>Siguiente</p-button>
                             </div>
                         </div>
                     </ng-template>
@@ -75,14 +73,10 @@
 
                             <div class="flex justify-content-between mt-4">
                                 <div class="flex gap-2">
-                                    <p-button label="Atrás" icon="pi pi-arrow-left" [text]="true"
-                                        (onClick)="activeStep.set(0)"></p-button>
-                                    <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary"
-                                        (onClick)="cancel()"></p-button>
+                                    <p-button [text]="true" (onClick)="activeStep.set(0)"><lucide-icon name="arrow-left" class="mr-2"></lucide-icon>Atrás</p-button>
+                                    <p-button [text]="true" severity="secondary" (onClick)="cancel()"><lucide-icon name="x" class="mr-2"></lucide-icon>Cancelar</p-button>
                                 </div>
-                                <p-button label="Finalizar y Enviar" icon="pi pi-check" severity="success"
-                                    (onClick)="onSubmit()" [loading]="uploading()"
-                                    [disabled]="!isPdfStepValid() || envioExitoso()"></p-button>
+                                <p-button severity="success" (onClick)="onSubmit()" [loading]="uploading()" [disabled]="!isPdfStepValid() || envioExitoso()"><lucide-icon name="check" class="mr-2"></lucide-icon>Finalizar y Enviar</p-button>
                             </div>
                         </div>
                     </ng-template>

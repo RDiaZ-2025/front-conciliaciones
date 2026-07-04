@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../../../../components/shared/lucide-icon/lucide-icon.component';
 import { CachedImagePipe } from '../../../../../pipes/cached-image.pipe';
 import { Component, inject, signal, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -14,6 +15,7 @@ import { DomSanitizer } from '@angular/platform-browser';
   selector: 'app-push-multimedia-dialog',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CachedImagePipe,
     CommonModule,
     ReactiveFormsModule,

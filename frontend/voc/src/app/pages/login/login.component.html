@@ -21,7 +21,7 @@
           <div class="w-full">
             <p-floatLabel variant="in">
               <p-iconField iconPosition="left">
-                <p-inputIcon styleClass="pi pi-envelope" />
+                <p-inputIcon><lucide-icon name="mail"></lucide-icon></p-inputIcon>
                 <input pInputText id="email" type="email" formControlName="email" class="w-full" />
               </p-iconField>
               <label for="email" style="left: 2.5rem">Correo electrónico</label>
@@ -43,8 +43,7 @@
                 [style]="{'width':'100%'}"></p-password>
               <label for="password" style="left: 2.5rem">Contraseña</label>
             </p-floatLabel>
-            <i class="pi pi-lock absolute text-600"
-              style="left: 0.75rem; top: 50%; transform: translateY(-50%); z-index: 1;"></i>
+            <lucide-icon name="lock" class="absolute text-600" style="left: 0.75rem; top: 50%; transform: translateY(-50%); z-index: 1;"></lucide-icon>
 
             <small class="p-error block mt-1"
               *ngIf="loginForm.get('password')?.touched && loginForm.get('password')?.hasError('required')">

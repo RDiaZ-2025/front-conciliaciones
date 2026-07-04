@@ -29,8 +29,7 @@
         <div class="flex flex-column gap-2 mt-3">
             <div class="flex justify-content-between align-items-center">
                 <label class="font-bold">Productos y Cantidades</label>
-                <button pButton icon="pi pi-plus" label="Agregar Producto" class="p-button-sm p-button-outlined"
-                    (click)="onAddProduct()"></button>
+                <button pButton class="p-button-sm p-button-outlined" (click)="onAddProduct()"><lucide-icon name="plus" class="mr-2"></lucide-icon>Agregar Producto</button>
             </div>
 
             <div formArrayName="campaignProducts" class="flex flex-column gap-2">
@@ -49,8 +48,7 @@
                             <label>Cantidad</label>
                         </p-floatlabel>
                     </div>
-                    <button pButton icon="pi pi-trash" class="p-button-danger p-button-text"
-                        (click)="onRemoveProduct(i)"></button>
+                    <button pButton class="p-button-danger p-button-text" (click)="onRemoveProduct(i)"><lucide-icon name="trash-2"></lucide-icon></button>
                 </div>
             </div>
         </div>

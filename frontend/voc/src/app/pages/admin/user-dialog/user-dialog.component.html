@@ -79,8 +79,7 @@
     </div>
 
     <div class="flex justify-content-end gap-2 mt-4">
-        <p-button label="Cancelar" icon="pi pi-times" (onClick)="ref.close()" severity="secondary"></p-button>
-        <p-button label="{{ config.data.isEdit ? 'Actualizar' : 'Crear' }}" icon="pi pi-check" (onClick)="onSubmit()"
-            [disabled]="userForm.invalid"></p-button>
+        <p-button (onClick)="ref.close()" severity="secondary"><lucide-icon name="x" class="mr-2"></lucide-icon>Cancelar</p-button>
+        <p-button (onClick)="onSubmit()" [disabled]="userForm.invalid"><lucide-icon name="check" class="mr-2"></lucide-icon>{{ config.data.isEdit ? 'Actualizar' : 'Crear' }}</p-button>
     </div>
 </form>

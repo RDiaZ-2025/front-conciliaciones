@@ -1,6 +1,6 @@
 <div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
     <app-page-header title="Programación de Campañas" subtitle="Gestión y programación de campañas publicitarias"
-        icon="pi pi-calendar-plus">
+        icon="calendar-plus">
         <div class="flex gap-2 align-items-center">
             <span class="font-bold mr-2">Hora Actual: {{ currentTime() | date:'shortTime' }}</span>
             <p-tag [value]="currentSlot().label" [severity]="getSlotBadgeSeverity(currentSlot().label)"></p-tag>
@@ -15,10 +15,10 @@
                         class="p-3 border-bottom-1 surface-border flex justify-content-between align-items-center bg-bluegray-50 border-round-top">
                         <span class="font-bold text-lg text-900">Creación de Campaña</span>
                         <span *ngIf="isLocked()" class="text-red-500 font-bold flex align-items-center gap-2">
-                            <i class="pi pi-lock"></i> CERRADA - Fuera de Horario
+                            <lucide-icon name="lock"></lucide-icon> CERRADA - Fuera de Horario
                         </span>
                         <span *ngIf="!isLocked()" class="text-green-500 font-bold flex align-items-center gap-2">
-                            <i class="pi pi-lock-open"></i> ABIERTA
+                            <lucide-icon name="lock-open"></lucide-icon> ABIERTA
                         </span>
                     </div>
                 </ng-template>
@@ -84,8 +84,7 @@
                                 <input pInputText formControlName="url" class="w-full" />
                                 <label>URL de Destino</label>
                             </p-floatlabel>
-                            <button type="button" pButton label="Validar Link" icon="pi pi-external-link"
-                                class="p-button-outlined flex-none" (click)="validateUrl()"></button>
+                            <button type="button" pButton class="p-button-outlined flex-none" (click)="validateUrl()"><lucide-icon name="external-link" class="mr-2"></lucide-icon>Validar Link</button>
                         </div>
                         <small class="text-red-500"
                             *ngIf="campaignForm.get('url')?.errors?.['invalidUrl'] && campaignForm.get('url')?.touched">
@@ -119,9 +118,7 @@
                     <div class="field border-1 surface-border border-round p-3">
                         <div class="flex justify-content-between align-items-center mb-3">
                             <label class="font-bold text-900">Distribución de Impactos</label>
-                            <button type="button" pButton icon="pi pi-plus" label="Agregar Fecha"
-                                class="p-button-sm p-button-outlined" (click)="addImpactRow()"
-                                [disabled]="isLocked()"></button>
+                            <button type="button" pButton class="p-button-sm p-button-outlined" (click)="addImpactRow()" [disabled]="isLocked()"><lucide-icon name="plus" class="mr-2"></lucide-icon>Agregar Fecha</button>
                         </div>
 
                         <p-table [value]="impacts.controls" styleClass="p-datatable-sm">
@@ -143,9 +140,7 @@
                                             class="w-full p-inputtext-sm" placeholder="Cantidad" />
                                     </td>
                                     <td>
-                                        <button type="button" pButton icon="pi pi-trash"
-                                            class="p-button-text p-button-danger p-button-sm"
-                                            (click)="removeImpactRow(i)" [disabled]="isLocked()"></button>
+                                        <button type="button" pButton class="p-button-text p-button-danger p-button-sm" (click)="removeImpactRow(i)" [disabled]="isLocked()"><lucide-icon name="trash-2"></lucide-icon></button>
                                     </td>
                                 </tr>
                             </ng-template>
@@ -159,8 +154,7 @@
                     </div>
 
                     <div class="flex justify-content-end">
-                        <button pButton type="submit" label="Programar Campaña" icon="pi pi-check"
-                            [disabled]="campaignForm.invalid || isLocked()"></button>
+                        <button pButton type="submit" [disabled]="campaignForm.invalid || isLocked()"><lucide-icon name="check" class="mr-2"></lucide-icon>Programar Campaña</button>
                     </div>
                 </form>
             </p-card>
@@ -210,16 +204,16 @@
              <div class="col-12 md:col-6">
                 <span class="text-500 block mb-1 text-sm">URL de Destino</span>
                 <a [href]="campaign.url" target="_blank" class="text-primary font-medium hover:underline flex align-items-center gap-1">
-                    {{campaign.url}} <i class="pi pi-external-link text-xs"></i>
+                    {{campaign.url}} <lucide-icon name="external-link" class="text-xs"></lucide-icon>
                 </a>
             </div>
             <div class="col-12 md:col-6">
                 <span class="text-500 block mb-1 text-sm">Fecha de Inicio</span>
-                <span class="font-medium"><i class="pi pi-calendar mr-2 text-primary"></i>{{campaign.startDate | date:'dd/MM/yyyy'}}</span>
+                <span class="font-medium"><lucide-icon name="calendar" class="mr-2 text-primary"></lucide-icon>{{campaign.startDate | date:'dd/MM/yyyy'}}</span>
             </div>
             <div class="col-12 md:col-6">
                 <span class="text-500 block mb-1 text-sm">Fecha de Fin</span>
-                <span class="font-medium"><i class="pi pi-calendar mr-2 text-primary"></i>{{campaign.endDate | date:'dd/MM/yyyy'}}</span>
+                <span class="font-medium"><lucide-icon name="calendar" class="mr-2 text-primary"></lucide-icon>{{campaign.endDate | date:'dd/MM/yyyy'}}</span>
             </div>
         </div>
 
@@ -252,6 +246,6 @@
         </div>
     </div>
     <ng-template pTemplate="footer">
-        <p-button label="Cerrar" icon="pi pi-times" (click)="detailsVisible.set(false)" [text]="true" severity="secondary"></p-button>
+        <p-button (click)="detailsVisible.set(false)" [text]="true" severity="secondary"><lucide-icon name="x" class="mr-2"></lucide-icon>Cerrar</p-button>
     </ng-template>
 </p-dialog>

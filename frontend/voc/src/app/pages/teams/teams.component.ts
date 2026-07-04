@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../components/shared/lucide-icon/lucide-icon.component';
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
@@ -15,6 +16,7 @@ import { Team } from '../../models/common/team';
   selector: 'app-teams',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CommonModule,
     TableModule,
     ButtonModule,

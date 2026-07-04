@@ -1,15 +1,13 @@
 <div class="layout-wrapper min-h-screen flex flex-column surface-ground">
    <p-toolbar styleClass="fixed top-0 left-0 right-0 z-5 border-none shadow-2 px-2 py-2 flex justify-content-between align-items-center" [style]="{'height': '4rem'}">
       <div class="p-toolbar-group-start flex align-items-center gap-1">
-         <p-button icon="pi pi-bars" [text]="true" [rounded]="true" (click)="toggleDrawer()"
-            styleClass="text-900 w-3rem h-3rem"></p-button>
+         <p-button [text]="true" [rounded]="true" (click)="toggleDrawer()" styleClass="text-900 w-3rem h-3rem"><lucide-icon name="menu"></lucide-icon></p-button>
          <img [src]="'assets/claro-media-logo.png' | cachedImage" alt="Logo" class="h-2rem ml-2">
       </div>
       <div class="p-toolbar-group-end flex align-items-center">
          <!-- Notification Icon -->
          <div class="relative flex align-items-center">
-            <p-button icon="pi pi-bell" [text]="true" [rounded]="true" (click)="op.toggle($event)"
-               styleClass="text-900 w-3rem h-3rem"></p-button>
+            <p-button [text]="true" [rounded]="true" (click)="op.toggle($event)" styleClass="text-900 w-3rem h-3rem"><lucide-icon name="bell"></lucide-icon></p-button>
             <p-badge *ngIf="unreadCount() > 0" [value]="unreadCount().toString()" severity="danger"
                styleClass="absolute top-0 right-0" [style]="{'min-width': '1rem', 'height': '1rem', 'line-height': '1rem'}"></p-badge>
          </div>
@@ -31,7 +29,7 @@
                      class="flex align-items-start gap-3 p-2 border-round hover:surface-100 cursor-pointer transition-colors"
                      [ngClass]="{'surface-50': !notification.isRead}"
                      (click)="handleNotificationClick(notification)">
-                     <i [class]="getNotificationIcon(notification.type) + ' text-xl mt-1'"></i>
+                     <lucide-icon [name]="getNotificationIcon(notification.type)" class="text-xl mt-1" [ngClass]="notification.type === 'success' ? 'text-green-500' : notification.type === 'warning' ? 'text-yellow-500' : notification.type === 'error' ? 'text-red-500' : 'text-blue-500'"></lucide-icon>
                      <div class="flex flex-column gap-1 flex-1">
                         <div class="flex justify-content-between align-items-start">
                            <span class="font-bold text-900" [ngClass]="{'text-700': notification.isRead}">
@@ -49,8 +47,9 @@
             </div>
          </p-popover>
 
-         <p-button [icon]="isDarkMode() ? 'pi pi-sun' : 'pi pi-moon'" [text]="true" [rounded]="true"
-            (click)="toggleTheme()" styleClass="text-900 w-3rem h-3rem"></p-button>
+         <p-button [text]="true" [rounded]="true" (click)="toggleTheme()" styleClass="text-900 w-3rem h-3rem">
+            <lucide-icon [name]="isDarkMode() ? 'sun' : 'moon'"></lucide-icon>
+         </p-button>
 
          <!-- Separator -->
          <div class="h-2rem w-1px surface-300 mx-2 hidden md:block"></div>
@@ -62,9 +61,16 @@
                  <span class="font-semibold text-sm text-900 line-height-2">{{ currentUser()?.name }}</span>
                  <span class="text-xs text-600 line-height-2">{{ currentUser()?.email }}</span>
              </div>
-             <i class="pi pi-chevron-down text-600 text-xs"></i>
+             <lucide-icon name="chevron-down" class="text-600 text-xs"></lucide-icon>
          </div>
-         <p-menu #userMenu [model]="userMenuItems" [popup]="true"></p-menu>
+         <p-menu #userMenu [model]="userMenuItems" [popup]="true">
+            <ng-template pTemplate="item" let-item>
+               <a class="flex align-items-center p-menuitem-link" (click)="item.command ? item.command() : null">
+                  <lucide-icon *ngIf="item.icon" [name]="item.icon" class="mr-2"></lucide-icon>
+                  <span class="p-menuitem-text">{{ item.label }}</span>
+               </a>
+            </ng-template>
+         </p-menu>
       </div>
    </p-toolbar>
 
@@ -79,7 +85,7 @@
 
       <div class="flex flex-column h-full">
          <div *ngIf="loading()" class="flex justify-content-center p-4">
-            <i class="pi pi-spin pi-spinner text-2xl text-primary"></i>
+            <lucide-icon name="loader-2" class="lucide-spin text-2xl text-primary"></lucide-icon>
          </div>
 
          <div *ngIf="error()" class="p-4 text-red-500 text-center">
@@ -94,18 +100,17 @@
                      <div pRipple (click)="toggleSubmenu(item.id)"
                         class="p-3 flex align-items-center justify-content-between text-700 cursor-pointer border-round hover:surface-100 transition-duration-150 transition-colors w-full">
                         <span class="flex align-items-center gap-3">
-                           <i [class]="getIconName(item.icon) + ' text-lg'"></i>
+                           <lucide-icon [name]="getIconName(item.icon)" class="text-lg"></lucide-icon>
                            <span class="font-medium">{{ item.label }}</span>
                         </span>
-                        <i class="pi pi-chevron-down text-sm transition-duration-200"
-                           [ngClass]="{'rotate-180': isExpanded(item.id)}"></i>
+                        <lucide-icon name="chevron-down" class="text-sm transition-duration-200" [ngClass]="{'rotate-180': isExpanded(item.id)}"></lucide-icon>
                      </div>
                      <ul *ngIf="isExpanded(item.id)"
                         class="list-none py-0 pl-3 pr-0 m-0 overflow-y-hidden transition-all transition-duration-400 transition-ease-in-out fadein animation-duration-200">
                         <li *ngFor="let child of item.children">
                            <a pRipple (click)="onMenuClick(child)" *ngIf="hasPermission(child)"
                               class="flex align-items-center cursor-pointer p-3 border-round text-600 hover:surface-100 transition-duration-150 transition-colors w-full">
-                              <i [class]="getIconName(child.icon) + ' mr-3 text-lg'"></i>
+                              <lucide-icon [name]="getIconName(child.icon)" class="mr-3 text-lg"></lucide-icon>
                               <span class="font-medium">{{ child.label }}</span>
                            </a>
                         </li>
@@ -116,7 +121,7 @@
                      <a pRipple (click)="onMenuClick(item)"
                         class="p-3 flex align-items-center cursor-pointer border-round text-700 hover:surface-100 transition-duration-150 transition-colors w-full">
                         <span class="flex align-items-center gap-3">
-                           <i [class]="getIconName(item.icon) + ' text-lg'"></i>
+                           <lucide-icon [name]="getIconName(item.icon)" class="text-lg"></lucide-icon>
                            <span class="font-medium">{{ item.label }}</span>
                         </span>
                      </a>

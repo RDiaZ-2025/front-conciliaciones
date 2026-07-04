@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../shared/lucide-icon/lucide-icon.component';
 import { CachedImagePipe } from '../../pipes/cached-image.pipe';
 import { Component, input, output, signal, effect, computed, OnDestroy, model } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -11,6 +12,7 @@ import { SafeUrlPipe } from '../../pipes/safe-url.pipe';
   selector: 'app-file-preview',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CachedImagePipe,CommonModule, ButtonModule, DialogModule, TooltipModule, ProgressBarModule, SafeUrlPipe],
   templateUrl: './file-preview.component.html',
   styleUrls: ['./file-preview.component.scss']

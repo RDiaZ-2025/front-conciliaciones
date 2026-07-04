@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../../../../components/shared/lucide-icon/lucide-icon.component';
 import { Component, inject, signal, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -13,6 +14,7 @@ import { DomSanitizer } from '@angular/platform-browser';
   selector: 'app-pre-recorded-call-dialog',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CommonModule,
     ReactiveFormsModule,
     ButtonModule,

@@ -10,8 +10,7 @@
         <div class="field">
             <label for="sat_clientName" class="font-bold block mb-2">
                 Nombre del Cliente
-                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
-                   pTooltip="Solo mayúsculas y espacios. Sin caracteres especiales." tooltipPosition="top"></i>
+                <lucide-icon name="info" class="ml-2 text-primary cursor-pointer" pTooltip="Solo mayúsculas y espacios. Sin caracteres especiales." tooltipPosition="top"></lucide-icon>
             </label>
             <input pInputText class="w-full" id="sat_clientName" formControlName="sat_clientName" class="w-full" placeholder="NOMBRE CLIENTE" style="text-transform: uppercase;" />
             <small *ngIf="form.get('sat_clientName')?.invalid && (form.get('sat_clientName')?.dirty || form.get('sat_clientName')?.touched)" class="p-error block">
@@ -22,8 +21,7 @@
         <div class="field">
             <label for="sat_messageText" class="font-bold block mb-2">
                 Texto del Mensaje
-                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
-                   pTooltip="Debe comenzar con 'PUBLICIDAD DE [CLIENTE]'. Máx 160 caracteres." tooltipPosition="top"></i>
+                <lucide-icon name="info" class="ml-2 text-primary cursor-pointer" pTooltip="Debe comenzar con 'PUBLICIDAD DE [CLIENTE]'. Máx 160 caracteres." tooltipPosition="top"></lucide-icon>
             </label>
             <textarea pTextarea class="w-full" id="sat_messageText" formControlName="sat_messageText" class="w-full" rows="4" maxlength="160" placeholder="PUBLICIDAD DE ..."></textarea>
             <div class="text-right text-sm text-500">{{form.get('sat_messageText')?.value?.length || 0}} / 160</div>
@@ -54,8 +52,7 @@
         <div class="field" *ngIf="form.get('sat_isClickToCall')?.value">
             <label for="sat_phoneNumber" class="font-bold block mb-2">
                 Número de Teléfono
-                <i class="pi pi-info-circle ml-2 text-primary cursor-pointer" 
-                   pTooltip="Número de 10 dígitos." tooltipPosition="top"></i>
+                <lucide-icon name="info" class="ml-2 text-primary cursor-pointer" pTooltip="Número de 10 dígitos." tooltipPosition="top"></lucide-icon>
             </label>
             <input pInputText class="w-full" id="sat_phoneNumber" formControlName="sat_phoneNumber" class="w-full" placeholder="3001234567" maxlength="10" pKeyFilter="int" />
             <small *ngIf="form.get('sat_phoneNumber')?.invalid && (form.get('sat_phoneNumber')?.dirty || form.get('sat_phoneNumber')?.touched)" class="p-error block">
@@ -64,8 +61,8 @@
         </div>
 
         <div class="flex justify-content-end gap-2 mt-4">
-            <p-button label="Cancelar" icon="pi pi-times" styleClass="p-button-text" (onClick)="cancel()"></p-button>
-            <p-button label="Guardar y Continuar" icon="pi pi-check" type="submit" [disabled]="form.invalid"></p-button>
+            <p-button styleClass="p-button-text" (onClick)="cancel()"><lucide-icon name="x" class="mr-2"></lucide-icon>Cancelar</p-button>
+            <p-button type="submit" [disabled]="form.invalid"><lucide-icon name="check" class="mr-2"></lucide-icon>Guardar y Continuar</p-button>
         </div>
     </form>
 </div>
