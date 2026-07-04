@@ -1,6 +1,6 @@
 import { CachedImagePipe } from '../../../pipes/cached-image.pipe';
 import { LucideIconComponent } from '../../../components/lucide-icon/lucide-icon.component';
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 
@@ -16,7 +16,7 @@ import { MenuItem as PrimeMenuItem } from 'primeng/api';
 
 import { AuthService } from '../../../services/auth.service';
 import { ThemeService } from '../../../services/theme.service';
-import { UserService } from '../../../services/user.service';
+import { MenuService, MenuItem } from '../../../services/menu.service';
 
 @Component({
   selector: 'app-admin-layout',
@@ -40,14 +40,14 @@ import { UserService } from '../../../services/user.service';
 export class AdminLayoutComponent implements OnInit {
   public authService = inject(AuthService);
   public themeService = inject(ThemeService);
-  private userService = inject(UserService);
+  private menuService = inject(MenuService);
   private router = inject(Router);
 
   // Drawer state
   isDrawerOpen = false;
 
   // Lista de módulos del sistema para generar el menú dinámicamente
-  modules: any[] = [];
+  modules: MenuItem[] = [];
 
   // Estado de los menús desplegables (qué modulo está abierto)
   openMenus: { [key: string]: boolean } = {};
@@ -61,8 +61,23 @@ export class AdminLayoutComponent implements OnInit {
   ];
 
   ngOnInit() {
-    this.userService.getSystemModules().subscribe(modules => {
-      this.modules = modules;
+    this.menuService.getAllMenuItems('noc').subscribe(response => {
+      if (response.success) {
+        const allItems = response.data;
+        const isFlatList = allItems.some(item => !!item.parentId);
+
+        if (isFlatList) {
+          const activeItems = allItems.filter(item => item.isActive !== false);
+          const parents = activeItems.filter(item => !item.parentId);
+          parents.forEach(parent => {
+            parent.children = activeItems.filter(child => child.parentId == parent.id);
+            parent.children.sort((a, b) => a.displayOrder - b.displayOrder);
+          });
+          this.modules = parents;
+        } else {
+          this.modules = allItems;
+        }
+      }
     });
   }
 
@@ -88,18 +103,26 @@ export class AdminLayoutComponent implements OnInit {
     return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
   }
 
-  hasVisibleSubmodules(module: any): boolean {
-    if (module.adminOnly && !this.authService.isAdmin()) {
-      return false; 
+  hasPermission(item: MenuItem): boolean {
+    if (item.permissionName) {
+      return this.authService.hasPermission(item.permissionName);
     }
-    return module.submodules.some((sub: any) => {
-      if (sub.is_disabled) return false;
-      return this.authService.hasPermission(sub.code);
+    return true;
+  }
+
+  hasVisibleSubmodules(module: MenuItem): boolean {
+    if (!module.children || module.children.length === 0) {
+      return false;
+    }
+    return module.children.some(sub => {
+      if (sub.isActive === false) return false;
+      return this.hasPermission(sub);
     });
   }
 
-  showMaintenanceAlert(msg: string) {
-    alert(msg || 'Este módulo se encuentra en mantenimiento. Por favor, intente más tarde.');
+  isEmoji(icon: string | undefined): boolean {
+    if (!icon) return false;
+    return icon.length <= 2;
   }
 
   logout() {

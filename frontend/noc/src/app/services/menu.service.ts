@@ -1,6 +1,5 @@
 import { BaseApiService } from './base-api.service';
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
@@ -37,17 +36,5 @@ export class MenuService extends BaseApiService {
 
   getMenuItemsByPermissions(permissions: string[], project?: string): Observable<MenuApiResponse> {
     return this.http.post<MenuApiResponse>(`${this.baseUrl}/by-permissions`, { permissions, project });
-  }
-
-  createMenuItem(menuItem: Partial<MenuItem>): Observable<{ success: boolean; data: { id: number }; message?: string }> {
-    return this.http.post<{ success: boolean; data: { id: number }; message?: string }>(this.baseUrl, menuItem);
-  }
-
-  updateMenuItem(id: number, menuItem: Partial<MenuItem>): Observable<{ success: boolean; message?: string }> {
-    return this.http.put<{ success: boolean; message?: string }>(`${this.baseUrl}/${id}`, menuItem);
-  }
-
-  deleteMenuItem(id: number): Observable<{ success: boolean; message?: string }> {
-    return this.http.delete<{ success: boolean; message?: string }>(`${this.baseUrl}/${id}`);
   }
 }

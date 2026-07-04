@@ -6,6 +6,7 @@ export interface MenuItem {
     parentId?: number;
     displayOrder: number;
     isActive: boolean;
+    project: string;
     children?: MenuItem[];
     permissionId?: number;
 }

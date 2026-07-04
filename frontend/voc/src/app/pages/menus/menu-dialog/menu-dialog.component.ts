@@ -53,7 +53,8 @@ export class MenuDialogComponent implements OnChanges {
       parentId: [null],
       displayOrder: [0, Validators.required],
       isActive: [true],
-      permissionId: [null]
+      permissionId: [null],
+      project: ['voc']
     });
   }
 
@@ -72,7 +73,8 @@ export class MenuDialogComponent implements OnChanges {
         parentId: this.item.parentId || 0,
         displayOrder: this.item.displayOrder,
         isActive: this.item.isActive,
-        permissionId: this.item.permissionId || null
+        permissionId: this.item.permissionId || null,
+        project: this.item.project || 'voc'
       });
     } else {
       this.form.reset({
@@ -82,7 +84,8 @@ export class MenuDialogComponent implements OnChanges {
         parentId: 0,
         displayOrder: 0,
         isActive: true,
-        permissionId: null
+        permissionId: null,
+        project: 'voc'
       });
     }
   }

@@ -12,8 +12,9 @@ import { MenuFormData } from '../../models/common/menu-form-data';
 export class MenusService extends BaseApiService {
   private apiUrl = `${environment.apiUrl}/menus`;
 
-  getMenuItems(): Observable<{ data: MenuItem[] }> {
-    return this.http.get<{ data: MenuItem[] }>(this.apiUrl);
+  getMenuItems(project?: string): Observable<{ data: MenuItem[] }> {
+    const url = project ? `${this.apiUrl}?project=${project}` : this.apiUrl;
+    return this.http.get<{ data: MenuItem[] }>(url);
   }
 
   createMenuItem(data: MenuFormData): Observable<MenuItem> {

@@ -4,6 +4,12 @@
         <p-button [text]="true" [rounded]="true" (onClick)="loadMenuItems()"><lucide-icon name="refresh-cw"></lucide-icon></p-button>
     </app-page-header>
     <p-toast></p-toast>
+    <div class="flex align-items-center gap-3 surface-card p-3 border-round border-1 surface-border shadow-2">
+        <span class="font-semibold text-main text-sm">Proyecto:</span>
+        <p-select [ngModel]="selectedProject()" (ngModelChange)="onProjectChange($event)" [options]="projectOptions"
+            optionLabel="label" optionValue="value" class="w-15rem" styleClass="w-full">
+        </p-select>
+    </div>
     <div class="card p-4 surface-card border-round shadow-2 overflow-x-auto">
         <p-treeTable [value]="menuItems()" [loading]="loading()" styleClass="p-treetable-sm"
             [tableStyle]="{'min-width': '50rem'}">

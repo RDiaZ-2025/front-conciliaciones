@@ -1,9 +1,11 @@
 import { LucideIconComponent } from '../../components/lucide-icon/lucide-icon.component';
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { TreeTableModule } from 'primeng/treetable';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
+import { SelectModule } from 'primeng/select';
 import { MessageService, TreeNode } from 'primeng/api';
 import { PageHeaderComponent } from '../../components/page-header/page-header.component';
 import { MenuDialogComponent } from './menu-dialog/menu-dialog.component';
@@ -18,9 +20,11 @@ import { MenuFormData } from '../../models/common/menu-form-data';
   imports: [
     LucideIconComponent,
     CommonModule,
+    FormsModule,
     TreeTableModule,
     ButtonModule,
     ToastModule,
+    SelectModule,
     PageHeaderComponent,
     MenuDialogComponent
   ],
@@ -40,6 +44,12 @@ export class MenusComponent implements OnInit {
   dialogVisible = signal<boolean>(false);
   saving = signal<boolean>(false);
   editingItem = signal<MenuItem | null>(null);
+
+  selectedProject = signal<string>('voc');
+  projectOptions = [
+    { label: 'Portal VOC', value: 'voc' },
+    { label: 'Portal NOC', value: 'noc' }
+  ];
 
   parentOptions = signal<{ label: string, value: number | null }[]>([]);
   permissionOptions = signal<{ label: string, value: number }[]>([]);
@@ -69,8 +79,8 @@ export class MenusComponent implements OnInit {
   }
 
   loadMenuItems() {
-    // loading is already true from loadData
-    this.menuService.getMenuItems().subscribe({
+    this.loading.set(true);
+    this.menuService.getMenuItems(this.selectedProject()).subscribe({
       next: (response) => {
         this.rawMenuItems.set(response.data);
         this.menuItems.set(this.buildTree(response.data));
@@ -84,6 +94,11 @@ export class MenusComponent implements OnInit {
     });
   }
 
+  onProjectChange(newProject: string) {
+    this.selectedProject.set(newProject);
+    this.loadMenuItems();
+  }
+
   updatePermissionOptions(permissions: Permission[]) {
     const options = permissions.map(p => ({
       label: p.name,
@@ -95,7 +110,7 @@ export class MenusComponent implements OnInit {
   getPermissionName(id?: number): string {
     if (!id) return '-';
     const permission = this.permissions().find(p => p.id === id);
-    return permission ? permission.name : `ID: ${id}`;
+    return permission ? permission.name : 'ID: ' + id;
   }
 
   buildTree(items: MenuItem[]): TreeNode[] {
@@ -111,21 +126,7 @@ export class MenusComponent implements OnInit {
       { label: 'Ninguno (Raíz)', value: 0 }
     ];
 
-    // Only show items that are roots (no parentId)
-    // If items is a tree (roots only), we just iterate them.
-    // If items is flat, we filter.
-    // Based on buildTree, items seems to be roots with children nested.
-    // Let's assume items passed here are the roots.
-
     items.forEach(item => {
-      // If it's a root (no parentId check might be needed if flat list is passed, 
-      // but buildTree suggests items are structured. 
-      // However, loadMenuItems calls updateParentOptions(response.data).
-      // If response.data is flat, we need to filter.
-      // If response.data is tree, it only contains roots.
-
-      // Safer to check parentId if available, or just take all items if they are roots.
-      // Let's filter for safety if it's a flat list mixed with children.
       if (!item.parentId) {
         options.push({ label: item.label, value: item.id });
       }
@@ -162,6 +163,9 @@ export class MenusComponent implements OnInit {
 
   saveItem(data: MenuFormData) {
     this.saving.set(true);
+    
+    // Set project value from the current selector state
+    data.project = this.selectedProject();
 
     const request = this.editingItem()
       ? this.menuService.updateMenuItem(this.editingItem()!.id, data)

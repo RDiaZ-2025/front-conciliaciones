@@ -47,35 +47,38 @@
 
       <div class="flex flex-column h-full">
          <ul class="list-none p-0 m-0 flex-grow-1 overflow-y-auto">
-            @for (module of modules; track module.name) {
+            @for (module of modules; track module.id) {
                @if (hasVisibleSubmodules(module)) {
                   <li class="mb-1">
-                     <div pRipple (click)="toggleMenu(module.name)"
+                     <div pRipple (click)="toggleMenu(module.label)"
                         class="p-3 flex align-items-center justify-content-between text-700 cursor-pointer border-round hover:surface-100 transition-duration-150 transition-colors w-full">
                         <span class="flex align-items-center gap-3">
-                           <span class="text-lg">{{ module.icon }}</span>
-                           <span class="font-medium">{{ module.name }}</span>
+                           @if (isEmoji(module.icon)) {
+                              <span class="text-lg">{{ module.icon }}</span>
+                           } @else {
+                              <lucide-icon [name]="module.icon || 'list'" class="text-lg"></lucide-icon>
+                           }
+                           <span class="font-medium">{{ module.label }}</span>
                         </span>
                         <lucide-icon name="chevron-down" class="text-sm transition-duration-200"
-                           [ngClass]="{'rotate-180': isMenuOpen(module.name)}"></lucide-icon>
+                           [ngClass]="{'rotate-180': isMenuOpen(module.label)}"></lucide-icon>
                      </div>
-                     <ul *ngIf="isMenuOpen(module.name)"
+                     <ul *ngIf="isMenuOpen(module.label)"
                         class="list-none py-0 pl-3 pr-0 m-0 overflow-y-hidden transition-all transition-duration-400 transition-ease-in-out fadein animation-duration-200">
-                        @for (sub of module.submodules; track sub.code) {
-                           @if (!sub.is_disabled && authService.hasPermission(sub.code)) {
-                              <li class="animate-item" [class.maintenance]="sub.is_under_maintenance && !authService.isAdmin()">
-                                 @if (sub.is_under_maintenance && !authService.isAdmin()) {
-                                    <a (click)="showMaintenanceAlert(sub.maintenance_message)" style="opacity: 0.5; cursor: not-allowed;" title="{{ sub.maintenance_message }}"
-                                       class="flex align-items-center p-3 border-round text-600 transition-duration-150 transition-colors w-full">
-                                       <span class="font-medium">{{ sub.label }} <span style="font-size: 0.8em;">(Mantenimiento)</span></span>
-                                    </a>
-                                 } @else {
-                                    <a pRipple [routerLink]="sub.route" routerLinkActive="active-link" (click)="isDrawerOpen = false"
-                                       class="flex align-items-center cursor-pointer p-3 border-round text-600 hover:surface-100 transition-duration-150 transition-colors w-full">
-                                       <span class="font-medium">{{ sub.label }}</span>
-                                       @if (sub.is_under_maintenance) { <span class="ml-2 text-xs" title="En mantenimiento (Solo visible por Admin)">🛠️</span> }
-                                    </a>
-                                 }
+                        @for (sub of module.children; track sub.id) {
+                           @if (sub.isActive && hasPermission(sub)) {
+                              <li class="animate-item">
+                                 <a pRipple [routerLink]="sub.route" routerLinkActive="active-link" (click)="isDrawerOpen = false"
+                                    class="flex align-items-center cursor-pointer p-3 border-round text-600 hover:surface-100 transition-duration-150 transition-colors w-full">
+                                    @if (sub.icon) {
+                                       @if (isEmoji(sub.icon)) {
+                                          <span class="mr-3">{{ sub.icon }}</span>
+                                       } @else {
+                                          <lucide-icon [name]="sub.icon" class="mr-3 text-sm"></lucide-icon>
+                                       }
+                                    }
+                                    <span class="font-medium">{{ sub.label }}</span>
+                                 </a>
                               </li>
                            }
                         }

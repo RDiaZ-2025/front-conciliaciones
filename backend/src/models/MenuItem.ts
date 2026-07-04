@@ -57,6 +57,12 @@ export class MenuItem {
   permissionId!: number | null;
 
   /**
+   * Project identifier ('voc' or 'noc')
+   */
+  @Column({ name: 'Project', type: 'nvarchar', length: 10, default: 'voc', nullable: false })
+  project!: string;
+
+  /**
    * Self-referencing many-to-one relationship for parent menu item
    */
   @ManyToOne(() => MenuItem, menuItem => menuItem.children, {
