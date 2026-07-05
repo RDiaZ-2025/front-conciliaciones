@@ -257,11 +257,86 @@ export class ProductionService {
                 stageName: sub.currentStage ? sub.currentStage.name : 'Completado',
                 status: sub.status,
                 assigneeName,
-                assigneeEmail
+                assigneeEmail,
+                consecutive: sub.consecutive,
+                icon: sub.form.icon
             };
         }));
 
         return results;
+    }
+
+    async getSubmissionDetails(submissionId: number) {
+        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+        const subRepo = AppDataSource.getRepository(DynamicFormSubmission);
+        const valRepo = AppDataSource.getRepository(DynamicFormFieldValue);
+        const stateRepo = AppDataSource.getRepository(DynamicSubmissionWorkflowState);
+
+        const sub = await subRepo.findOne({
+            where: { id: submissionId },
+            relations: ['form', 'currentStage', 'requesterUser']
+        });
+        if (!sub) throw new Error('Solicitud no encontrada');
+
+        const values = await valRepo.find({
+            where: { submissionId },
+            relations: ['field', 'field.form']
+        });
+
+        const entryValues = values.filter(v => v && v.field && v.field.formId === sub.formId);
+        const stageValues = values.filter(v => v && v.field && v.field.formId !== sub.formId);
+
+        const statesQuery: any = { submissionId };
+        if (sub.status === 'Pending Consecutive') {
+            statesQuery.status = In(['Approved', 'Rejected', 'Pending']);
+        } else {
+            statesQuery.status = In(['Approved', 'Rejected']);
+        }
+
+        const completedStates = await stateRepo.find({
+            where: statesQuery,
+            relations: ['stage', 'actionedByUser', 'assignedUser', 'stage.formToFill'],
+            order: { createdAt: 'ASC' }
+        });
+
+        const historyStages = completedStates.map(cState => {
+            const stageVals = values.filter(v => v && v.field && v.field.formId === cState.stage.formIdToFill);
+            const user = cState.actionedByUser || cState.assignedUser;
+            return {
+                stageName: cState.stage.name,
+                formName: cState.stage.formToFill ? cState.stage.formToFill.name : cState.stage.name,
+                actionedByUserName: user?.name || 'N/A',
+                actionedByUserEmail: user?.email || 'N/A',
+                actionedAt: cState.updatedAt,
+                status: cState.status === 'Pending' ? 'Approved' : cState.status,
+                notes: cState.notes,
+                values: stageVals.map(v => ({
+                    label: v.field.label,
+                    value: v.value
+                }))
+            };
+        });
+
+        return {
+            id: sub.id,
+            formName: sub.form.name,
+            createdAt: sub.createdAt,
+            status: sub.status,
+            consecutive: sub.consecutive,
+            stageName: sub.currentStage ? sub.currentStage.name : 'Completado',
+            requesterName: sub.requesterUser ? sub.requesterUser.name : 'Usuario',
+            requesterEmail: sub.requesterUser ? sub.requesterUser.email : '',
+            values: entryValues.map(v => ({
+                label: v.field.label,
+                value: v.value
+            })),
+            stageValues: stageValues.map(v => ({
+                label: v.field.label,
+                value: v.value,
+                formName: v.field.form ? v.field.form.name : 'Etapa'
+            })),
+            historyStages
+        };
     }
 
     async getProductionRequestById(id: number) {
@@ -535,7 +610,9 @@ export class ProductionService {
             isEntryForm: data.isEntryForm ?? true,
             isActive: data.isActive ?? true,
             responsible: data.responsible,
-            role: data.role
+            role: data.role,
+            icon: data.icon,
+            requireConsecutive: data.requireConsecutive ?? true
         });
         return await repo.save(form);
     }
@@ -552,6 +629,8 @@ export class ProductionService {
         if (data.isActive !== undefined) form.isActive = data.isActive;
         if (data.responsible !== undefined) form.responsible = data.responsible;
         if (data.role !== undefined) form.role = data.role;
+        if (data.icon !== undefined) form.icon = data.icon;
+        if (data.requireConsecutive !== undefined) form.requireConsecutive = data.requireConsecutive;
 
         return await repo.save(form);
     }
@@ -702,7 +781,7 @@ export class ProductionService {
         for (const state of states) {
             const values = await valRepo.find({
                 where: { submissionId: state.submissionId },
-                relations: ['field']
+                relations: ['field', 'field.form']
             });
 
             const prevState = await stateRepo.findOne({
@@ -713,8 +792,48 @@ export class ProductionService {
 
             const submittedValuesRaw: Record<string, string> = {};
             for (const v of values) {
-                submittedValuesRaw[v.field.name] = v.value || '';
+                if (v && v.field) {
+                    submittedValuesRaw[v.field.name] = v.value || '';
+                }
             }
+
+            const nextStage = await AppDataSource.getRepository(DynamicWorkflowStage)
+                .createQueryBuilder("stage")
+                .where("stage.formId = :formId", { formId: state.submission.formId })
+                .andWhere("stage.stepOrder > :stepOrder", { stepOrder: state.stage.stepOrder })
+                .getOne();
+            const isFinalStage = !nextStage;
+
+            const statesQuery: any = { submissionId: state.submissionId };
+            if (state.submission.status === 'Pending Consecutive') {
+                statesQuery.status = In(['Approved', 'Rejected', 'Pending']);
+            } else {
+                statesQuery.status = In(['Approved', 'Rejected']);
+            }
+
+            const completedStates = await stateRepo.find({
+                where: statesQuery,
+                relations: ['stage', 'actionedByUser', 'assignedUser', 'stage.formToFill'],
+                order: { createdAt: 'ASC' }
+            });
+
+            const historyStages = completedStates.map(cState => {
+                const stageVals = values.filter(v => v && v.field && v.field.formId === cState.stage.formIdToFill);
+                const user = cState.actionedByUser || cState.assignedUser;
+                return {
+                    stageName: cState.stage.name,
+                    formName: cState.stage.formToFill ? cState.stage.formToFill.name : cState.stage.name,
+                    actionedByUserName: user?.name || 'N/A',
+                    actionedByUserEmail: user?.email || 'N/A',
+                    actionedAt: cState.updatedAt,
+                    status: cState.status === 'Pending' ? 'Approved' : cState.status,
+                    notes: cState.notes,
+                    values: stageVals.map(v => ({
+                        label: v.field.label,
+                        value: v.value
+                    }))
+                };
+            });
 
             results.push({
                 stateId: state.id,
@@ -725,24 +844,34 @@ export class ProductionService {
                 rejectionNotes,
                 formName: state.submission.form.name,
                 requesterName: state.submission.requesterUser ? state.submission.requesterUser.name : 'Usuario',
+                requesterEmail: state.submission.requesterUser ? state.submission.requesterUser.email : '',
                 createdAt: state.submission.createdAt,
                 assignedAt: state.createdAt,
                 stageName: state.stage.name,
                 stageDescription: state.stage.description,
                 formIdToFill: state.stage.formIdToFill,
                 formToFill: state.stage.formToFill,
-                values: values.map(v => ({
+                isFinalStage,
+                icon: state.submission.form.icon,
+                values: values.filter(v => v && v.field && v.field.formId === state.submission.formId).map(v => ({
                     label: v.field.label,
                     value: v.value
                 })),
-                submittedValuesRaw
+                stageValues: values.filter(v => v && v.field && v.field.formId !== state.submission.formId).map(v => ({
+                    label: v.field.label,
+                    value: v.value,
+                    formName: v.field.form ? v.field.form.name : 'Etapa'
+                })),
+                submittedValuesRaw,
+                requireConsecutive: state.submission.form ? state.submission.form.requireConsecutive : true,
+                historyStages
             });
         }
 
         return results;
     }
 
-    async actionApproval(stateId: number, userId: number, action: 'approve' | 'reject', notes: string, formValues?: Record<string, string>) {
+    async actionApproval(stateId: number, userId: number, action: 'approve' | 'reject', notes: string, formValues?: Record<string, string>, consecutive?: string) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         return await AppDataSource.transaction(async (manager) => {
             const stateRepo = manager.getRepository(DynamicSubmissionWorkflowState);
@@ -871,19 +1000,21 @@ export class ProductionService {
                 }
             }
 
-            // 3. Mark current workflow state as actioned
-            currentState.status = action === 'approve' ? 'Approved' : 'Rejected';
-            currentState.actionedByUserId = userId;
-            currentState.notes = notes;
-            await stateRepo.save(currentState);
-
             if (action === 'approve') {
                 // Find next stage
-                const nextStage = await stageRepo.findOne({
-                    where: { formId: submission.formId, stepOrder: stage.stepOrder + 1 }
-                });
+                const nextStage = await stageRepo.createQueryBuilder("stage")
+                    .where("stage.formId = :formId", { formId: submission.formId })
+                    .andWhere("stage.stepOrder > :stepOrder", { stepOrder: stage.stepOrder })
+                    .orderBy("stage.stepOrder", "ASC")
+                    .getOne();
 
                 if (nextStage) {
+                    // Mark current workflow state as Approved since it transitions to next stage
+                    currentState.status = 'Approved';
+                    currentState.actionedByUserId = userId;
+                    currentState.notes = notes;
+                    await stateRepo.save(currentState);
+
                     submission.currentStageId = nextStage.id;
                     submission.status = 'In Progress';
                     await subRepo.save(submission);
@@ -936,24 +1067,50 @@ export class ProductionService {
                         console.error('Error sending notification:', err);
                     }
                 } else {
-                    // No next stage, mark completed
-                    submission.currentStageId = null;
-                    submission.status = 'Completed';
-                    await subRepo.save(submission);
+                    // No next stage, it's the final stage!
+                    const requireConsec = submission.form ? submission.form.requireConsecutive : true;
 
-                    // Notify the creator that it is approved/completed!
-                    try {
-                        await notificationService.createNotification(
-                            submission.requesterUserId,
-                            'Solicitud Completada',
-                            `Tu solicitud de "${currentState.submission.form.name}" ha sido completada y aprobada.`,
-                            'success'
-                        );
-                    } catch (err) {
-                        console.error('Error sending notification:', err);
+                    if (requireConsec && !consecutive) {
+                        // Mark submission as Pending Consecutive, currentState remains Pending!
+                        submission.status = 'Pending Consecutive';
+                        await subRepo.save(submission);
+
+                        currentState.actionedByUserId = userId;
+                        currentState.notes = notes;
+                        await stateRepo.save(currentState);
+                    } else {
+                        // Mark workflow state Approved and save consecutive
+                        currentState.status = 'Approved';
+                        currentState.actionedByUserId = userId;
+                        currentState.notes = notes;
+                        await stateRepo.save(currentState);
+
+                        submission.currentStageId = null;
+                        submission.status = 'Completed';
+                        if (consecutive) {
+                            submission.consecutive = consecutive;
+                        }
+                        await subRepo.save(submission);
+
+                        // Notify the creator
+                        try {
+                            await notificationService.createNotification(
+                                submission.requesterUserId,
+                                'Solicitud Completada',
+                                `Tu solicitud de "${currentState.submission.form.name}" ha sido completada y aprobada${consecutive ? ' con consecutivo ' + consecutive : ''}.`,
+                                'success'
+                            );
+                        } catch (err) {
+                            console.error('Error sending notification:', err);
+                        }
                     }
                 }
             } else if (action === 'reject') {
+                currentState.status = 'Rejected';
+                currentState.actionedByUserId = userId;
+                currentState.notes = notes;
+                await stateRepo.save(currentState);
+
                 // Handle rejection routing
                 let targetUserId: number | null = null;
                 const targetType = stage.rejectionTargetType || 'previous_sender';

@@ -1,59 +1,136 @@
 <div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
-    <app-page-header [title]="showHistorical() ? 'Histórico de Producción' : 'Gestión de Producción (Beta)'"
-        [subtitle]="showHistorical() ? 'Registro de solicitudes completadas y entregadas' : 'Seguimiento de solicitudes en el flujo de producción'"
-        [icon]="showHistorical() ? 'history' : 'cog'">
+    <app-page-header title="Gestión de Producción (Beta)"
+        subtitle="Seguimiento de solicitudes en el flujo de producción"
+        icon="cog">
         <div class="flex gap-2">
-            <p-button *ngIf="!showHistorical()" [outlined]="true" (click)="slaRulesVisible.set(true)"><lucide-icon
+            <p-button [outlined]="true" (click)="slaRulesVisible.set(true)"><lucide-icon
                     name="info" class="mr-2"></lucide-icon>Reglas SLA</p-button>
-            <p-button *ngIf="!showHistorical() && canViewHistory()" [outlined]="true"
-                (click)="showHistorical.set(true)"><lucide-icon name="history"
-                    class="mr-2"></lucide-icon>Histórico</p-button>
-            <p-button *ngIf="showHistorical()" [outlined]="true" (click)="showHistorical.set(false)"><lucide-icon
-                    name="arrow-left" class="mr-2"></lucide-icon>Volver al Tablero</p-button>
-            <p-button *ngIf="!showHistorical() && canCreateRequest()" (click)="openDialog()"><lucide-icon name="plus"
+            <p-button [outlined]="true" (click)="goToAdmin()"><lucide-icon
+                    name="sliders" class="mr-2"></lucide-icon>Administrar</p-button>
+            <p-button *ngIf="canCreateRequest()" (click)="openDialog()"><lucide-icon name="plus"
                     class="mr-2"></lucide-icon>Nueva Solicitud</p-button>
         </div>
     </app-page-header>
 
-    <div class="grid">
-        <div class="col-12 text-center p-5" *ngIf="dynamicSubmissions().length === 0">
-            <lucide-icon name="inbox" class="text-5xl text-400 mb-3"></lucide-icon>
-            <h3 class="text-700 m-0">No hay solicitudes activas</h3>
-            <p class="text-500">Crea una nueva solicitud para comenzar.</p>
+    <div class="flex flex-column gap-4">
+        <!-- SECCIÓN 1: APROBACIONES Y TAREAS PENDIENTES (SCROLL HORIZONTAL) -->
+        <div class="flex flex-column">
+            <h3 class="text-xl font-bold text-900 mb-3 flex align-items-center gap-2">
+                <lucide-icon name="inbox" class="text-primary" style="width: 1.5rem; height: 1.5rem;"></lucide-icon>
+                <span>Aprobaciones y Tareas Pendientes</span>
+            </h3>
+            
+            <div *ngIf="pendingTasks().length === 0 && !loadingTasks()" class="text-center p-5 border-round surface-card border-1 surface-border">
+                <i class="pi pi-check-circle text-4xl text-green-500 mb-2 block"></i>
+                <p class="text-600 m-0 font-medium">¡Al día! No tienes tareas ni aprobaciones pendientes.</p>
+            </div>
+
+            <div *ngIf="loadingTasks()" class="flex justify-content-center p-5">
+                <p-progressSpinner styleClass="w-3rem h-3rem"></p-progressSpinner>
+            </div>
+
+            <div *ngIf="pendingTasks().length > 0 && !loadingTasks()" class="flex flex-row overflow-x-auto gap-3 pb-3 w-full" style="scroll-behavior: smooth; -webkit-overflow-scrolling: touch;">
+                <div *ngFor="let task of pendingTasks()" class="flex-shrink-0 pb-1" style="width: 320px;">
+                    <p-card [style]="{ height: '100%', display: 'flex', flexDirection: 'column' }"
+                        styleClass="flex flex-column h-full shadow-2 hover:shadow-6 transition-duration-200 border-round-xl">
+                        <ng-template pTemplate="header">
+                            <div class="flex justify-content-between align-items-start p-3 pb-0">
+                                <h3 class="text-lg font-bold m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap flex-1 mr-2"
+                                    [pTooltip]="task.formName">
+                                    <i [class]="getFormIcon(task)" class="mr-2"></i>{{ task.formName }}
+                                </h3>
+                                <p-tag severity="warn" value="Pendiente Consecutivo" *ngIf="task.submissionStatus === 'Pending Consecutive'"></p-tag>
+                                <p-tag severity="info" [value]="task.stageName" *ngIf="task.submissionStatus !== 'Pending Consecutive'"></p-tag>
+                            </div>
+                        </ng-template>
+
+                        <div class="flex flex-column gap-3 p-3 pt-3 flex-grow-1">
+                            <div class="flex align-items-center gap-2 text-sm text-600">
+                                <lucide-icon name="user"></lucide-icon>
+                                <span>Solicitante: <strong>{{ task.requesterName }}</strong></span>
+                            </div>
+
+                            <div class="flex align-items-center gap-2 text-sm text-600">
+                                <i class="pi pi-calendar"></i>
+                                <span>Solicitado: <strong>{{ task.createdAt | date:'dd/MM/yyyy HH:mm' }}</strong></span>
+                            </div>
+
+                            <div class="flex align-items-center gap-2 text-sm text-600">
+                                <i class="pi pi-clock"></i>
+                                <span>Asignado: <strong>{{ task.assignedAt | date:'dd/MM/yyyy HH:mm' }}</strong></span>
+                            </div>
+                        </div>
+
+                        <ng-template pTemplate="footer">
+                            <div class="flex justify-content-end border-top-1 surface-border pt-3">
+                                <p-button label="Ingresar Consecutivo" icon="pi pi-hashtag" severity="warn" size="small" (onClick)="openConsecutiveDialogDirectly(task)" *ngIf="task.submissionStatus === 'Pending Consecutive'"></p-button>
+                                <p-button label="Revisar y Decidir" icon="pi pi-search" size="small" (onClick)="openActionDialog(task)" *ngIf="task.submissionStatus !== 'Pending Consecutive'"></p-button>
+                            </div>
+                        </ng-template>
+                    </p-card>
+                </div>
+            </div>
         </div>
 
-        <div *ngFor="let sub of dynamicSubmissions()" class="col-12 md:col-6 lg:col-4 xl:col-3">
-            <p-card [style]="{ height: '100%', display: 'flex', flexDirection: 'column' }"
-                styleClass="flex flex-column h-full shadow-2 hover:shadow-6 transition-duration-200 border-round-xl">
-                <ng-template pTemplate="header">
-                    <div class="flex justify-content-between align-items-start p-3 pb-0">
-                        <h3 class="text-xl font-bold m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap flex-1 mr-2"
-                            [pTooltip]="sub.formName">{{ sub.formName }}</h3>
-                        <p-tag [severity]="getStatusSeverity(sub.status)" [value]="sub.status"></p-tag>
-                    </div>
-                </ng-template>
+        <!-- SECCIÓN 2: HISTORIAL Y SEGUIMIENTO DE SOLICITUDES (CUADRÍCULA VERTICAL) -->
+        <div class="flex flex-column mt-3">
+            <h3 class="text-xl font-bold text-900 mb-3 flex align-items-center gap-2">
+                <lucide-icon name="history" class="text-secondary" style="width: 1.5rem; height: 1.5rem;"></lucide-icon>
+                <span>Historial y Seguimiento de Solicitudes</span>
+            </h3>
 
-                <div class="flex flex-column gap-3 p-3 pt-3 flex-grow-1">
-                    <div class="flex align-items-center gap-2 text-sm text-600">
-                        <i class="pi pi-calendar"></i>
-                        <span>Solicitado: <strong>{{ sub.createdAt | date:'dd/MM/yyyy HH:mm' }}</strong></span>
-                    </div>
+            <div *ngIf="sortedAllSubmissions().length === 0" class="text-center p-5 border-round surface-card border-1 surface-border">
+                <lucide-icon name="archive" class="text-4xl text-400 mb-2"></lucide-icon>
+                <p class="text-600 m-0">No hay solicitudes registradas.</p>
+            </div>
 
-                    <div class="flex align-items-center gap-2 text-sm text-600">
-                        <lucide-icon name="cog"></lucide-icon>
-                        <span>Etapa actual: <strong>{{ sub.stageName }}</strong></span>
-                    </div>
+            <div *ngIf="sortedAllSubmissions().length > 0" class="grid">
+                <div *ngFor="let sub of sortedAllSubmissions()" class="col-12 md:col-6 lg:col-4 xl:col-3">
+                    <p-card [style]="{ height: '100%', display: 'flex', flexDirection: 'column' }"
+                        styleClass="flex flex-column h-full shadow-2 hover:shadow-6 transition-duration-200 border-round-xl">
+                        <ng-template pTemplate="header">
+                            <div class="flex justify-content-between align-items-start p-3 pb-0">
+                                <h3 class="text-lg font-bold m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap flex-1 mr-2"
+                                    [pTooltip]="sub.formName">
+                                    <i [class]="getFormIcon(sub)" class="mr-2"></i>{{ sub.formName }}
+                                </h3>
+                                <p-tag [severity]="getStatusSeverity(sub.status)" [value]="sub.status"></p-tag>
+                            </div>
+                        </ng-template>
 
-                    <div class="flex align-items-center gap-2 text-sm text-600">
-                        <lucide-icon name="user"></lucide-icon>
-                        <div class="flex flex-column">
-                            <span>Asignado a: <strong>{{ sub.assigneeName }}</strong></span>
-                            <span *ngIf="sub.assigneeEmail" class="text-xs text-500 font-medium">{{ sub.assigneeEmail
-                                }}</span>
+                        <div class="flex flex-column gap-3 p-3 pt-3 flex-grow-1">
+                            <div class="flex align-items-center gap-2 text-sm text-600">
+                                <i class="pi pi-calendar"></i>
+                                <span>Solicitado: <strong>{{ sub.createdAt | date:'dd/MM/yyyy HH:mm' }}</strong></span>
+                            </div>
+
+                            <div class="flex align-items-center gap-2 text-sm text-600">
+                                <lucide-icon name="cog"></lucide-icon>
+                                <span>Etapa actual: <strong>{{ sub.stageName }}</strong></span>
+                            </div>
+
+                            <div class="flex align-items-center gap-2 text-sm text-green-700 font-bold" *ngIf="sub.consecutive">
+                                <i class="pi pi-hashtag"></i>
+                                <span>Consecutivo: <strong>{{ sub.consecutive }}</strong></span>
+                            </div>
+
+                            <div class="flex align-items-center gap-2 text-sm text-600">
+                                <lucide-icon name="user"></lucide-icon>
+                                <div class="flex flex-column">
+                                    <span>Asignado a: <strong>{{ sub.assigneeName }}</strong></span>
+                                    <span *ngIf="sub.assigneeEmail" class="text-xs text-500 font-medium">{{ sub.assigneeEmail }}</span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+
+                        <ng-template pTemplate="footer">
+                            <div class="flex justify-content-end border-top-1 surface-border pt-3">
+                                <p-button label="Ver Detalles" icon="pi pi-eye" size="small" [outlined]="true" (onClick)="viewSubmissionDetails(sub.id)"></p-button>
+                            </div>
+                        </ng-template>
+                    </p-card>
                 </div>
-            </p-card>
+            </div>
         </div>
     </div>
 
@@ -97,7 +174,7 @@
                         (click)="$event.stopPropagation()"></p-checkbox>
                     <div class="flex align-items-center justify-content-center border-round surface-100"
                         style="width: 2.8rem; height: 2.8rem;">
-                        <lucide-icon [name]="getTypeIcon(item.name)" style="font-size: 1.5rem"></lucide-icon>
+                        <i [class]="getFormIcon(item)" style="font-size: 1.5rem"></i>
                     </div>
                     <div class="flex flex-column flex-1">
                         <label [for]="'type-' + item.id" class="font-semibold text-900 cursor-pointer mb-1">{{ item.name
@@ -228,6 +305,286 @@
                     [label]="(currentFormIndex() + 1 === selectedRequestTypes().length) ? 'Finalizar' : 'Siguiente'"
                     severity="primary" (onClick)="continueFormFlow()"><lucide-icon
                         name="chevron-right"></lucide-icon></p-button>
+            </div>
+        </ng-template>
+    </p-dialog>
+
+    <!-- Modal 3: Decisión de Aprobación / Rechazo / Corrección -->
+    <p-dialog [header]="isCorrection(selectedTask()) ? 'Corregir Solicitud: ' + (selectedTask()?.formName || '') : 'Revisión: ' + (selectedTask()?.formName || '')" [(visible)]="showActionDialog" 
+              [modal]="true" [style]="{width: '650px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
+        <div class="flex flex-column gap-4 px-4 py-2" *ngIf="selectedTask()">
+            
+            <!-- Rejection Alert Banner -->
+            <div *ngIf="isCorrection(selectedTask())" class="p-3 bg-red-50 text-red-700 border-round border-1 border-red-200 mb-2">
+                <div class="flex align-items-center gap-2 mb-2 font-bold">
+                    <lucide-icon name="alert-triangle"></lucide-icon>
+                    <span>Solicitud Devuelta para Corrección</span>
+                </div>
+                <p class="m-0 text-sm font-semibold">Comentarios del revisor:</p>
+                <p class="m-0 text-sm mt-1 italic">"{{ selectedTask().rejectionNotes || 'Sin comentarios.' }}"</p>
+            </div>
+
+            <!-- Section 1: Original Form Data (Only if not correction) -->
+            <div class="flex flex-column gap-3" *ngIf="!isCorrection(selectedTask())">
+                <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">Datos de la Solicitud</span>
+                <div class="grid row-gap-3">
+                    <div *ngFor="let val of selectedTask().values" class="col-12 md:col-6 flex flex-column gap-1">
+                        <span class="text-xs text-500 font-medium">{{ val.label }}</span>
+                        <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
+                            <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
+                                <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                <p-button icon="pi pi-download" [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)"></p-button>
+                            </div>
+                        </div>
+                        <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value)">{{ val.value || 'N/A' }}</span>
+                    </div>
+                </div>
+                <div class="text-xs text-500 mt-2">
+                    Creado por: <strong>{{ selectedTask().requesterName }}</strong> ({{ selectedTask().requesterEmail }}) el {{ selectedTask().createdAt | date:'dd/MM/yyyy HH:mm' }}
+                </div>
+            </div>
+
+            <!-- Section 1.5: Datos y Archivos de Aprobaciones Anteriores (Only if not correction) -->
+            <div class="flex flex-column gap-3 mt-2" *ngIf="!isCorrection(selectedTask()) && selectedTask().historyStages && selectedTask().historyStages.length > 0">
+                <div class="flex flex-column gap-3">
+                    <div *ngFor="let hStage of selectedTask().historyStages" class="border-round border-1 surface-border p-3 surface-card flex flex-column gap-2">
+                        <!-- Stage header -->
+                        <div class="flex justify-content-between align-items-center border-bottom-1 surface-border pb-2">
+                            <span class="font-bold text-900 text-sm"><i class="pi pi-info-circle mr-1 text-primary"></i>{{ hStage.formName || hStage.stageName }}</span>
+                            <p-tag [severity]="hStage.status === 'Approved' ? 'success' : 'danger'" [value]="hStage.status === 'Approved' ? 'Aprobado' : 'Rechazado'"></p-tag>
+                        </div>
+                        
+                        <!-- Values (if any) -->
+                        <div class="grid mt-1" *ngIf="hStage.values && hStage.values.length > 0">
+                            <div *ngFor="let val of hStage.values" class="col-12 md:col-6 flex flex-column gap-1">
+                                <span class="text-xs text-500 font-medium">{{ val.label }}</span>
+                                <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
+                                    <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
+                                        <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                        <p-button icon="pi pi-download" [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)"></p-button>
+                                    </div>
+                                </div>
+                                <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value)">{{ val.value || 'N/A' }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Notes/Comments -->
+                        <div class="text-xs mt-1" *ngIf="hStage.notes">
+                            <span class="text-500 font-medium mr-1">Observaciones de la etapa:</span>
+                            <span class="text-700 font-semibold italic">"{{ hStage.notes }}"</span>
+                        </div>
+
+                        <!-- Simplified Footer -->
+                        <div class="text-xs text-500 mt-2">
+                            {{ hStage.status === 'Approved' ? 'Aprobado' : 'Rechazado' }} por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Conditional approval form to fill or correction editor -->
+            <div class="flex flex-column gap-3 mt-2" *ngIf="selectedTask().formIdToFill || isCorrection(selectedTask())">
+                <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">
+                    {{ isCorrection(selectedTask()) ? 'Modificar Datos de la Solicitud' : 'Formulario Requerido en esta Etapa: ' + selectedTask().formToFill?.name }}
+                </span>
+                
+                <div *ngIf="loadingStageFields()" class="flex justify-content-center p-3">
+                    <lucide-icon name="loader-2" class="lucide-spin text-primary text-xl"></lucide-icon>
+                </div>
+ 
+                <div *ngIf="!loadingStageFields()" class="flex flex-column gap-3">
+                    <div *ngFor="let field of stageFormFields()" class="flex flex-column gap-1">
+                        <label [for]="'stage-field-' + field.name" class="font-medium text-900">
+                            {{ field.label }} <span class="text-red-500" *ngIf="field.isRequired">*</span>
+                        </label>
+                        <span class="text-xs text-500 mb-1" *ngIf="field.description">{{ field.description }}</span>
+                        
+                        <ng-container [ngSwitch]="field.type">
+                            <input *ngSwitchCase="'date'" type="date" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [disabled]="field.isReadOnly" />
+                            
+                            <ng-container *ngSwitchCase="'datetime'">
+                                <input type="datetime-local" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [disabled]="field.isReadOnly" *ngIf="!field.isReadOnly" />
+                                <input type="text" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [disabled]="true" *ngIf="field.isReadOnly" />
+                            </ng-container>
+ 
+                            <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
+                            
+                            <input *ngSwitchCase="'number'" type="number" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
+                            
+                            <!-- File type -->
+                            <ng-container *ngSwitchCase="'file'">
+                                <div class="flex flex-column gap-2 w-full">
+                                    <input type="file" [id]="'stage-field-' + field.name" [multiple]="(field.metadata?.maxFileCount || 1) > 1"
+                                           [accept]="field.metadata?.allowedFormats || '*'" (change)="onStageFileSelected($event, field)"
+                                           class="hidden" #fileInput />
+                                    
+                                    <div class="flex gap-2">
+                                        <p-button label="Seleccionar archivo" icon="pi pi-upload" [outlined]="true" size="small"
+                                                  (onClick)="fileInput.click()" [disabled]="field.isReadOnly"></p-button>
+                                        <span class="text-xs text-500 align-self-center">
+                                            Máx: {{ field.metadata?.maxFileCount || 1 }} archivos ({{ field.metadata?.maxFileSize || 10 }}MB c/u). Formatos: {{ field.metadata?.allowedFormats || 'Cualquiera' }}
+                                        </span>
+                                    </div>
+ 
+                                    <!-- Selected files list -->
+                                    <div class="flex flex-column gap-1 mt-1" *ngIf="getStageSelectedFiles(field.name).length > 0">
+                                        <div *ngFor="let file of getStageSelectedFiles(field.name); let fIdx = index" class="flex justify-content-between align-items-center bg-light p-2 border-round text-sm border-1 surface-border">
+                                            <span class="font-medium text-600"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }} ({{ (file.size / 1024 / 1024) | number:'1.1-2' }} MB)</span>
+                                            <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small" (onClick)="removeStageSelectedFile(field.name, fIdx)" *ngIf="!field.isReadOnly"></p-button>
+                                        </div>
+                                    </div>
+ 
+                                    <!-- Uploaded files list (for viewing/downloading) -->
+                                    <div class="flex flex-column gap-1 mt-1" *ngIf="getStageUploadedFiles(stageFormValues[field.name]).length > 0">
+                                        <div *ngFor="let file of getStageUploadedFiles(stageFormValues[field.name])" class="flex justify-content-between align-items-center bg-blue-50 p-2 border-round text-sm border-1 border-blue-200">
+                                            <span class="font-medium text-blue-700"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                            <p-button icon="pi pi-download" [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)"></p-button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </ng-container>
+ 
+                            <input *ngSwitchDefault type="text" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
+                        </ng-container>
+                    </div>
+                </div>
+            </div>
+ 
+
+
+            <!-- Section 3: Comments (Only if not correction) -->
+            <div class="flex flex-column gap-2 mt-2" *ngIf="!isCorrection(selectedTask())">
+                <label for="comments" class="font-bold text-sm text-900">Comentarios / Observaciones</label>
+                <textarea id="comments" class="w-full p-inputtext border-round" [(ngModel)]="comments" rows="3" placeholder="Escribe notas adicionales o la razón en caso de rechazo..." style="resize: vertical; font-family: inherit;"></textarea>
+            </div>
+        </div>
+ 
+        <ng-template pTemplate="footer">
+            <div class="flex justify-content-end gap-2 px-4 pb-3">
+                <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary" (onClick)="showActionDialog.set(false)" [disabled]="loadingAction()"></p-button>
+                <ng-container *ngIf="!isCorrection(selectedTask())">
+                    <p-button label="Rechazar / Devolver" icon="pi pi-exclamation-circle" severity="danger" (onClick)="processAction('reject')" [loading]="loadingAction()"></p-button>
+                    <p-button label="Aprobar" icon="pi pi-check" severity="success" (onClick)="processAction('approve')" [loading]="loadingAction()"></p-button>
+                </ng-container>
+                <ng-container *ngIf="isCorrection(selectedTask())">
+                    <p-button label="Enviar Corrección" icon="pi pi-send" severity="success" (onClick)="processAction('approve')" [loading]="loadingAction()"></p-button>
+                </ng-container>
+            </div>
+        </ng-template>
+    </p-dialog>
+
+    <!-- Modal 4: Solicitar Consecutivo -->
+    <p-dialog header="Ingresar Consecutivo" [(visible)]="showConsecutiveDialog" 
+              [modal]="true" [style]="{width: '450px'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
+        <div class="flex flex-column gap-3 p-3" *ngIf="selectedTask()">
+            <div class="p-3 bg-blue-50 text-blue-700 border-round border-1 border-blue-200 text-sm">
+                <i class="pi pi-info-circle mr-2"></i>
+                <span>El flujo de la solicitud <strong>{{ selectedTask().formName }}</strong> ha finalizado. Por favor, asigne el número de consecutivo correspondiente para completarlo.</span>
+            </div>
+            
+            <div class="flex flex-column gap-1">
+                <label for="consec-field" class="font-bold text-sm text-900">Número de Consecutivo <span class="text-red-500">*</span></label>
+                <input id="consec-field" type="text" pInputText [(ngModel)]="consecutiveValue" placeholder="Ej: CL-2026-001" />
+            </div>
+        </div>
+        <ng-template pTemplate="footer">
+            <div class="flex justify-content-end gap-2 px-3 pb-3">
+                <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary" (onClick)="showConsecutiveDialog.set(false)"></p-button>
+                <p-button label="Guardar Consecutivo" icon="pi pi-save" severity="success" (onClick)="submitConsecutiveOnly()" [loading]="loadingAction()"></p-button>
+            </div>
+        </ng-template>
+    </p-dialog>
+
+    <!-- Modal 5: Detalles de Solicitud del Historial -->
+    <p-dialog [header]="'Detalle de la Solicitud: ' + (selectedDetails()?.formName || '')" [(visible)]="showDetailsDialog" 
+              [modal]="true" [style]="{width: '650px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
+        <div class="flex flex-column gap-4 px-4 py-2" *ngIf="selectedDetails()">
+            
+            <!-- Metadata summary grid -->
+            <div class="grid row-gap-2 surface-50 p-3 border-round border-1 surface-border">
+                <div class="col-6 flex flex-column gap-1">
+                    <span class="text-xs text-500 font-medium">Consecutivo</span>
+                    <span class="text-sm font-bold text-900"><i class="pi pi-hashtag mr-1"></i>{{ selectedDetails().consecutive || 'Sin consecutivo' }}</span>
+                </div>
+                <div class="col-6 flex flex-column gap-1">
+                    <span class="text-xs text-500 font-medium">Estado General</span>
+                    <div>
+                        <p-tag [severity]="getStatusSeverity(selectedDetails().status)" 
+                               [value]="selectedDetails().status"></p-tag>
+                    </div>
+                </div>
+                <div class="col-6 flex flex-column gap-1">
+                    <span class="text-xs text-500 font-medium">Fecha Creación</span>
+                    <span class="text-sm font-semibold text-700">{{ selectedDetails().createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                </div>
+                <div class="col-6 flex flex-column gap-1">
+                    <span class="text-xs text-500 font-medium">Etapa Actual</span>
+                    <span class="text-sm font-semibold text-700"><i class="pi pi-info-circle mr-1"></i>{{ selectedDetails().stageName }}</span>
+                </div>
+            </div>
+
+            <!-- Original Form Data -->
+            <div class="flex flex-column gap-3">
+                <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">Datos de la Solicitud</span>
+                <div class="grid row-gap-3">
+                    <div *ngFor="let val of selectedDetails().values" class="col-12 md:col-6 flex flex-column gap-1">
+                        <span class="text-xs text-500 font-medium">{{ val.label }}</span>
+                        <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
+                            <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
+                                <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                <p-button icon="pi pi-download" [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)"></p-button>
+                            </div>
+                        </div>
+                        <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value)">{{ val.value || 'N/A' }}</span>
+                    </div>
+                </div>
+                <div class="text-xs text-500 mt-2">
+                    Creado por: <strong>{{ selectedDetails().requesterName }}</strong> ({{ selectedDetails().requesterEmail }}) el {{ selectedDetails().createdAt | date:'dd/MM/yyyy HH:mm' }}
+                </div>
+            </div>
+
+            <!-- Intermediate Stage values -->
+            <div class="flex flex-column gap-3 mt-2" *ngIf="selectedDetails().historyStages && selectedDetails().historyStages.length > 0">
+                <div class="flex flex-column gap-3">
+                    <div *ngFor="let hStage of selectedDetails().historyStages" class="border-round border-1 surface-border p-3 surface-card flex flex-column gap-2">
+                        <!-- Stage header -->
+                        <div class="flex justify-content-between align-items-center border-bottom-1 surface-border pb-2">
+                            <span class="font-bold text-900 text-sm"><i class="pi pi-info-circle mr-1 text-primary"></i>{{ hStage.formName || hStage.stageName }}</span>
+                            <p-tag [severity]="hStage.status === 'Approved' ? 'success' : 'danger'" [value]="hStage.status === 'Approved' ? 'Aprobado' : 'Rechazado'"></p-tag>
+                        </div>
+                        
+                        <!-- Values (if any) -->
+                        <div class="grid mt-1" *ngIf="hStage.values && hStage.values.length > 0">
+                            <div *ngFor="let val of hStage.values" class="col-12 md:col-6 flex flex-column gap-1">
+                                <span class="text-xs text-500 font-medium">{{ val.label }}</span>
+                                <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
+                                    <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
+                                        <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                        <p-button icon="pi pi-download" [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)"></p-button>
+                                    </div>
+                                </div>
+                                <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value)">{{ val.value || 'N/A' }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Notes/Comments -->
+                        <div class="text-xs mt-1" *ngIf="hStage.notes">
+                            <span class="text-500 font-medium mr-1">Observaciones de la etapa:</span>
+                            <span class="text-700 font-semibold italic">"{{ hStage.notes }}"</span>
+                        </div>
+
+                        <!-- Simplified Footer -->
+                        <div class="text-xs text-500 mt-2">
+                            {{ hStage.status === 'Approved' ? 'Aprobado' : 'Rechazado' }} por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <ng-template pTemplate="footer">
+            <div class="flex justify-content-end px-4 pb-3">
+                <p-button label="Cerrar" icon="pi pi-times" severity="secondary" (onClick)="showDetailsDialog.set(false)"></p-button>
             </div>
         </ng-template>
     </p-dialog>

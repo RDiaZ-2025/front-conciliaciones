@@ -25,6 +25,9 @@ export class DynamicFormSubmission {
   @Column({ name: 'Status', type: 'nvarchar', length: 50, default: 'Pending' })
   status!: string; // 'Pending', 'In Progress', 'Approved', 'Rejected', 'Completed'
 
+  @Column({ name: 'Consecutive', type: 'nvarchar', length: 100, nullable: true })
+  consecutive!: string | null;
+
   @ManyToOne(() => DynamicForm, (form) => form.submissions)
   @JoinColumn({ name: 'FormId' })
   form!: DynamicForm;

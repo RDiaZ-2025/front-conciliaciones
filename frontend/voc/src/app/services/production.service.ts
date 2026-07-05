@@ -171,11 +171,15 @@ export class ProductionService extends BaseApiService {
     return this.http.post<any[]>(`${this.apiUrl}/admin/forms/${formId}/stages`, stages);
   }
 
+  getSubmissionDetails(submissionId: number): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/submissions/${submissionId}`);
+  }
+
   getPendingApprovals(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/approvals/pending`);
   }
 
-  actionApproval(stateId: number, action: 'approve' | 'reject', notes: string, formValues?: any): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/approvals/${stateId}/action`, { action, notes, formValues });
+  actionApproval(stateId: number, action: 'approve' | 'reject', notes: string, formValues?: any, consecutive?: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/approvals/${stateId}/action`, { action, notes, formValues, consecutive });
   }
 }

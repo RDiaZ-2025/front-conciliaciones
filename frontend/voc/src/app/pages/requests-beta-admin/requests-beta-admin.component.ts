@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -81,6 +81,7 @@ export class RequestsBetaAdminComponent implements OnInit {
   // States
   activeTab = signal<string>('forms');
   forms = signal<any[]>([]);
+  entryForms = computed(() => this.forms().filter(f => f.isEntryForm));
   loadingForms = signal<boolean>(false);
   
   // Users & Teams
@@ -97,8 +98,24 @@ export class RequestsBetaAdminComponent implements OnInit {
     isEntryForm: true,
     isActive: true,
     responsible: '',
-    role: ''
+    role: '',
+    icon: 'pi pi-tag text-secondary',
+    requireConsecutive: true
   });
+
+  iconOptions = [
+    { label: 'Documento / Editar (Naranja)', value: 'pi pi-file-edit text-orange-500', icon: 'pi pi-file-edit text-orange-500' },
+    { label: 'Base de Datos (Azul)', value: 'pi pi-database text-blue-500', icon: 'pi pi-database text-blue-500' },
+    { label: 'Idea / Foco (Amarillo)', value: 'pi pi-lightbulb text-yellow-500', icon: 'pi pi-lightbulb text-yellow-500' },
+    { label: 'Cohete / Lanzamiento (Rojo)', value: 'pi pi-rocket text-red-500', icon: 'pi pi-rocket text-red-500' },
+    { label: 'Gráfico / Tráfico (Verde)', value: 'pi pi-chart-line text-green-500', icon: 'pi pi-chart-line text-green-500' },
+    { label: 'Etiqueta (Gris)', value: 'pi pi-tag text-secondary', icon: 'pi pi-tag text-secondary' },
+    { label: 'Engranaje (Cian)', value: 'pi pi-cog text-cyan-500', icon: 'pi pi-cog text-cyan-500' },
+    { label: 'Usuarios (Púrpura)', value: 'pi pi-users text-purple-500', icon: 'pi pi-users text-purple-500' },
+    { label: 'Correo (Índigo)', value: 'pi pi-envelope text-indigo-500', icon: 'pi pi-envelope text-indigo-500' },
+    { label: 'Imagen (Rosado)', value: 'pi pi-image text-pink-500', icon: 'pi pi-image text-pink-500' },
+    { label: 'Carpeta (Marrón)', value: 'pi pi-folder text-yellow-600', icon: 'pi pi-folder text-yellow-600' }
+  ];
 
   // Fields editor state
   showFieldsDialog = signal<boolean>(false);
@@ -174,7 +191,9 @@ export class RequestsBetaAdminComponent implements OnInit {
       isEntryForm: true,
       isActive: true,
       responsible: '',
-      role: ''
+      role: '',
+      icon: 'pi pi-tag text-secondary',
+      requireConsecutive: true
     });
     this.showFormDialog.set(true);
   }

@@ -1,7 +1,7 @@
 <div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
-    <app-page-header [title]="'Administrador de Solicitudes Dinámicas'"
-        [subtitle]="'Configuración de plantillas de formularios y flujos de trabajo'"
-        [icon]="'pi pi-sliders-h'">
+    <app-page-header title="Administrador de Solicitudes Dinámicas"
+        subtitle="Configuración de plantillas de formularios y flujos de trabajo"
+        icon="sliders">
     </app-page-header>
 
     <p-card>
@@ -71,7 +71,7 @@
             <div class="flex flex-column gap-4">
                 <div class="flex align-items-center gap-3">
                     <label for="wfFormSelect" class="font-semibold text-900">Seleccionar Formulario:</label>
-                    <p-select id="wfFormSelect" [options]="forms()" [(ngModel)]="selectedWorkflowFormId" 
+                    <p-select id="wfFormSelect" [options]="entryForms()" [(ngModel)]="selectedWorkflowFormId" 
                                 optionLabel="name" optionValue="id" placeholder="Seleccione un formulario..."
                                 (onChange)="onWorkflowFormChange($event)" styleClass="w-20rem"></p-select>
                 </div>
@@ -213,9 +213,33 @@
                 <input pInputText id="formRole" [(ngModel)]="selectedForm().role" placeholder="Ej: Jefe de Preventa" />
             </div>
 
+            <div class="flex flex-column gap-1">
+                <label for="formIcon" class="font-semibold text-sm">Ícono de la Solicitud</label>
+                <p-select id="formIcon" [options]="iconOptions" [(ngModel)]="selectedForm().icon" 
+                          optionLabel="label" optionValue="value" placeholder="Seleccione ícono..." [appendTo]="'body'">
+                    <ng-template let-opt pTemplate="selectedItem">
+                        <div class="flex align-items-center gap-2" *ngIf="selectedForm().icon">
+                            <i [class]="selectedForm().icon"></i>
+                            <span>{{ opt.label }}</span>
+                        </div>
+                    </ng-template>
+                    <ng-template let-opt pTemplate="item">
+                        <div class="flex align-items-center gap-2">
+                            <i [class]="opt.icon"></i>
+                            <span>{{ opt.label }}</span>
+                        </div>
+                    </ng-template>
+                </p-select>
+            </div>
+
             <div class="flex align-items-center gap-3 mt-2">
                 <p-checkbox [(ngModel)]="selectedForm().isEntryForm" [binary]="true" id="isEntryForm"></p-checkbox>
                 <label for="isEntryForm" class="font-medium cursor-pointer">Mostrar en menú inicial de "Nueva Solicitud"</label>
+            </div>
+
+            <div class="flex align-items-center gap-3 mt-2">
+                <p-checkbox [(ngModel)]="selectedForm().requireConsecutive" [binary]="true" id="requireConsecutive"></p-checkbox>
+                <label for="requireConsecutive" class="font-medium cursor-pointer">Solicitar número de consecutivo al finalizar el flujo</label>
             </div>
 
             <div class="flex align-items-center gap-3" *ngIf="!isNewForm()">

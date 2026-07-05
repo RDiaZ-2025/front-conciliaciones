@@ -59,6 +59,8 @@ export class RequestsBetaInboxComponent implements OnInit {
   stageFormFields = signal<any[]>([]);
   stageFormValues: Record<string, string> = {};
   loadingStageFields = signal<boolean>(false);
+  showConsecutiveDialog = signal<boolean>(false);
+  consecutiveValue = '';
 
   ngOnInit() {
     this.loadPendingTasks();
@@ -319,19 +321,59 @@ export class RequestsBetaInboxComponent implements OnInit {
 
     // 2. Process action
     this.productionService.actionApproval(task.stateId, action, notes, action === 'approve' ? this.stageFormValues : undefined).subscribe({
-      next: () => {
+      next: (res) => {
         this.tempFiles = {};
-        this.messageService.add({ 
-          severity: 'success', 
-          summary: 'Éxito', 
-          detail: action === 'approve' ? (this.isCorrection(task) ? 'Corrección enviada con éxito.' : 'Solicitud aprobada con éxito.') : 'Solicitud rechazada/devuelta.' 
-        });
         this.showActionDialog.set(false);
+        this.loadPendingTasks();
+        this.loadingAction.set(false);
+
+        if (action === 'approve' && res && res.status === 'Pending Consecutive') {
+          this.messageService.add({
+            severity: 'info',
+            summary: 'Aprobación Registrada',
+            detail: 'La solicitud ha sido aprobada. Ahora ingrese el consecutivo para completarla.'
+          });
+          this.consecutiveValue = '';
+          this.showConsecutiveDialog.set(true);
+        } else {
+          this.messageService.add({ 
+            severity: 'success', 
+            summary: 'Éxito', 
+            detail: action === 'approve' ? (this.isCorrection(task) ? 'Corrección enviada con éxito.' : 'Solicitud aprobada con éxito.') : 'Solicitud rechazada/devuelta.' 
+          });
+        }
+      },
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Ocurrió un error al procesar la acción.' });
+        this.loadingAction.set(false);
+      }
+    });
+  }
+
+  openConsecutiveDialogDirectly(task: any) {
+    this.selectedTask.set(task);
+    this.consecutiveValue = '';
+    this.showConsecutiveDialog.set(true);
+  }
+
+  submitConsecutiveOnly() {
+    const task = this.selectedTask();
+    const val = this.consecutiveValue;
+    if (!val || !val.trim()) {
+      this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'Debe ingresar el número de consecutivo.' });
+      return;
+    }
+
+    this.loadingAction.set(true);
+    this.productionService.actionApproval(task.stateId, 'approve', 'Consecutivo ingresado', undefined, val).subscribe({
+      next: () => {
+        this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Consecutivo guardado y flujo completado.' });
+        this.showConsecutiveDialog.set(false);
         this.loadPendingTasks();
         this.loadingAction.set(false);
       },
       error: () => {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Ocurrió un error al procesar la acción.' });
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar el consecutivo.' });
         this.loadingAction.set(false);
       }
     });

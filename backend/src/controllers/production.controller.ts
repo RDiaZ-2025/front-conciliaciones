@@ -95,6 +95,12 @@ export const getSubmissions = asyncHandler(async (req: Request, res: Response): 
     return res.json(submissions);
 });
 
+export const getSubmissionDetails = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { submissionId } = req.params;
+    const result = await productionService.getSubmissionDetails(parseInt(submissionId));
+    return res.json(result);
+});
+
 export const adminGetForms = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
     const forms = await productionService.adminGetForms();
     return res.json(forms);
@@ -144,9 +150,9 @@ export const getPendingApprovals = asyncHandler(async (req: Request, res: Respon
 
 export const actionApproval = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
     const { stateId } = req.params;
-    const { action, notes, formValues } = req.body;
+    const { action, notes, formValues, consecutive } = req.body;
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: 'Usuario no autenticado' });
-    const result = await productionService.actionApproval(parseInt(stateId), userId, action, notes, formValues);
+    const result = await productionService.actionApproval(parseInt(stateId), userId, action, notes, formValues, consecutive);
     return res.json(result);
 });
