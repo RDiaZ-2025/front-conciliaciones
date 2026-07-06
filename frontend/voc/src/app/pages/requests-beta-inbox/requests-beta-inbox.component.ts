@@ -13,6 +13,7 @@ import { TagModule } from 'primeng/tag';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { MessageService } from 'primeng/api';
 import { PageHeaderComponent } from '../../components/page-header/page-header.component';
+import { LucideIconComponent } from '../../components/lucide-icon/lucide-icon.component';
 import { ProductionService } from '../../services/production.service';
 import { AuthService } from '../../services/auth.service';
 import { AzureStorageService } from '../../services/azure-storage.service';
@@ -33,7 +34,8 @@ import { AzureStorageService } from '../../services/azure-storage.service';
     TooltipModule,
     TagModule,
     ProgressSpinnerModule,
-    PageHeaderComponent
+    PageHeaderComponent,
+    LucideIconComponent
   ],
   templateUrl: './requests-beta-inbox.component.html',
   styleUrls: ['./requests-beta-inbox.component.css'],

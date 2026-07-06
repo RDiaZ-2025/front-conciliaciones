@@ -591,14 +591,14 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   }
 
   getTypeIcon(name: string | undefined | null): string {
-    if (!name) return 'pi pi-tag text-secondary';
+    if (!name) return 'tag';
     const n = name.toUpperCase();
-    if (n.includes('CONTENT')) return 'pi pi-file-edit text-orange-500';
-    if (n.includes('DATA')) return 'pi pi-database text-blue-500';
-    if (n.includes('ESTRATEGIA')) return 'pi pi-lightbulb text-yellow-500';
-    if (n.includes('IMPLEMENTACIÓN')) return 'pi pi-rocket text-red-500';
-    if (n.includes('TRÁFICO')) return 'pi pi-chart-line text-green-500';
-    return 'pi pi-tag text-secondary';
+    if (n.includes('CONTENT')) return 'edit';
+    if (n.includes('DATA')) return 'database';
+    if (n.includes('ESTRATEGIA')) return 'lightbulb';
+    if (n.includes('IMPLEMENTACIÓN')) return 'rocket';
+    if (n.includes('TRÁFICO')) return 'trending-up';
+    return 'tag';
   }
 
   getFormIcon(item: any): string {
@@ -607,6 +607,18 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }
     const name = item ? (item.name || item.formName) : '';
     return this.getTypeIcon(name);
+  }
+
+  getFormIconColor(item: any): string {
+    const name = item ? (item.name || item.formName || '') : '';
+    const n = name.toUpperCase();
+    if (n.includes('CONTENT')) return 'text-orange-500';
+    if (n.includes('DATA')) return 'text-blue-500';
+    if (n.includes('ESTRATEGIA')) return 'text-yellow-500';
+    if (n.includes('IMPLEMENTACIÓN')) return 'text-red-500';
+    if (n.includes('TRÁFICO')) return 'text-green-500';
+    if (n.includes('PRUEBA')) return 'text-cyan-500';
+    return 'text-secondary';
   }
 
   getStatusSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
@@ -835,7 +847,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         this.confirmationService.confirm({
           message: '¿Estás seguro de continuar a la etapa de Implementación?',
           header: 'Confirmación',
-          icon: 'pi pi-exclamation-triangle',
+          icon: 'alert-triangle',
           acceptLabel: 'Sí, continuar',
           rejectLabel: 'Cancelar',
           accept: () => {
@@ -861,7 +873,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         this.confirmationService.confirm({
           message: '¿Estás seguro de finalizar la solicitud y marcarla como completada?',
           header: 'Confirmación de Cierre',
-          icon: 'pi pi-check-circle',
+          icon: 'check-circle',
           acceptLabel: 'Sí, finalizar',
           rejectLabel: 'Cancelar',
           accept: () => {

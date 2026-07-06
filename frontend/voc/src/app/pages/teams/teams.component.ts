@@ -74,7 +74,7 @@ export class TeamsComponent implements OnInit {
     this.confirmationService.confirm({
       message: '¿Está seguro de eliminar este equipo?',
       header: 'Confirmar',
-      icon: 'pi pi-exclamation-triangle',
+      icon: 'alert-triangle',
       accept: () => {
         this.loading.set(true);
         this.teamService.deleteTeam(team.id).subscribe({

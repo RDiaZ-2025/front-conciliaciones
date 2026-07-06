@@ -15,9 +15,11 @@ import { BadgeModule } from 'primeng/badge';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { PageHeaderComponent } from '../../components/page-header/page-header.component';
+import { LucideIconComponent } from '../../components/lucide-icon/lucide-icon.component';
 import { ProductionService } from '../../services/production.service';
 import { UserService, User } from '../../services/user.service';
 import { TeamService } from '../../services/team.service';
+import { AuthService } from '../../services/auth.service';
 
 interface FormFieldItem {
   id?: number;
@@ -65,7 +67,8 @@ interface WorkflowStageItem {
     TagModule,
     BadgeModule,
     TooltipModule,
-    PageHeaderComponent
+    PageHeaderComponent,
+    LucideIconComponent
   ],
   templateUrl: './requests-beta-admin.component.html',
   styleUrls: ['./requests-beta-admin.component.css'],
@@ -75,13 +78,17 @@ export class RequestsBetaAdminComponent implements OnInit {
   private productionService = inject(ProductionService);
   private userService = inject(UserService);
   private teamService = inject(TeamService);
+  private authService = inject(AuthService);
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
+
+  currentUser = computed(() => this.authService.currentUser());
 
   // States
   activeTab = signal<string>('forms');
   forms = signal<any[]>([]);
   entryForms = computed(() => this.forms().filter(f => f.isEntryForm));
+  internalForms = computed(() => this.forms().filter(f => !f.isEntryForm));
   loadingForms = signal<boolean>(false);
   
   // Users & Teams
@@ -99,22 +106,22 @@ export class RequestsBetaAdminComponent implements OnInit {
     isActive: true,
     responsible: '',
     role: '',
-    icon: 'pi pi-tag text-secondary',
+    icon: 'tag',
     requireConsecutive: true
   });
 
   iconOptions = [
-    { label: 'Documento / Editar (Naranja)', value: 'pi pi-file-edit text-orange-500', icon: 'pi pi-file-edit text-orange-500' },
-    { label: 'Base de Datos (Azul)', value: 'pi pi-database text-blue-500', icon: 'pi pi-database text-blue-500' },
-    { label: 'Idea / Foco (Amarillo)', value: 'pi pi-lightbulb text-yellow-500', icon: 'pi pi-lightbulb text-yellow-500' },
-    { label: 'Cohete / Lanzamiento (Rojo)', value: 'pi pi-rocket text-red-500', icon: 'pi pi-rocket text-red-500' },
-    { label: 'Gráfico / Tráfico (Verde)', value: 'pi pi-chart-line text-green-500', icon: 'pi pi-chart-line text-green-500' },
-    { label: 'Etiqueta (Gris)', value: 'pi pi-tag text-secondary', icon: 'pi pi-tag text-secondary' },
-    { label: 'Engranaje (Cian)', value: 'pi pi-cog text-cyan-500', icon: 'pi pi-cog text-cyan-500' },
-    { label: 'Usuarios (Púrpura)', value: 'pi pi-users text-purple-500', icon: 'pi pi-users text-purple-500' },
-    { label: 'Correo (Índigo)', value: 'pi pi-envelope text-indigo-500', icon: 'pi pi-envelope text-indigo-500' },
-    { label: 'Imagen (Rosado)', value: 'pi pi-image text-pink-500', icon: 'pi pi-image text-pink-500' },
-    { label: 'Carpeta (Marrón)', value: 'pi pi-folder text-yellow-600', icon: 'pi pi-folder text-yellow-600' }
+    { label: 'Documento / Editar', value: 'edit' },
+    { label: 'Base de Datos', value: 'database' },
+    { label: 'Idea / Foco', value: 'lightbulb' },
+    { label: 'Cohete / Lanzamiento', value: 'rocket' },
+    { label: 'Gráfico / Tráfico', value: 'trending-up' },
+    { label: 'Etiqueta', value: 'tag' },
+    { label: 'Engranaje', value: 'settings' },
+    { label: 'Usuarios', value: 'users' },
+    { label: 'Correo', value: 'mail' },
+    { label: 'Imagen', value: 'image' },
+    { label: 'Carpeta', value: 'folder' }
   ];
 
   // Fields editor state
@@ -144,6 +151,7 @@ export class RequestsBetaAdminComponent implements OnInit {
   // Assignee & Rejection Type options
   assigneeTypeOptions = [
     { label: 'Usuario Específico', value: 'specific_user' },
+    { label: 'Creador de la Solicitud', value: 'requester' },
     { label: 'Jefe Directo del Solicitante', value: 'requester_boss' },
     { label: 'Equipo / Rol', value: 'team' }
   ];
@@ -192,7 +200,7 @@ export class RequestsBetaAdminComponent implements OnInit {
       isActive: true,
       responsible: '',
       role: '',
-      icon: 'pi pi-tag text-secondary',
+      icon: 'tag',
       requireConsecutive: true
     });
     this.showFormDialog.set(true);
@@ -249,7 +257,7 @@ export class RequestsBetaAdminComponent implements OnInit {
     this.confirmationService.confirm({
       message: `¿Está seguro de que desea desactivar el formulario "${form.name}"?`,
       header: 'Confirmación',
-      icon: 'pi pi-exclamation-triangle',
+      icon: 'alert-triangle',
       acceptLabel: 'Desactivar',
       rejectLabel: 'Cancelar',
       accept: () => {

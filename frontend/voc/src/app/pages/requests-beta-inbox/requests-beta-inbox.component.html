@@ -6,7 +6,7 @@
 
     <div class="grid" *ngIf="!loadingTasks()">
         <div class="col-12 text-center p-5 surface-card border-round-xl border-1 surface-border" *ngIf="pendingTasks().length === 0">
-            <i class="pi pi-check-circle text-5xl text-success mb-3 block"></i>
+            <lucide-icon name="check-circle" class="text-5xl text-success mb-3 block"></lucide-icon>
             <h3 class="text-700 m-0">¡Todo al día!</h3>
             <p class="text-500">No tienes tareas ni aprobaciones pendientes en este momento.</p>
         </div>
@@ -25,25 +25,31 @@
 
                 <div class="flex flex-column gap-3 p-3 pt-3 flex-grow-1">
                     <div class="flex align-items-center gap-2 text-sm text-600">
-                        <i class="pi pi-user"></i>
+                        <lucide-icon name="user"></lucide-icon>
                         <span>Solicitante: <strong>{{ task.requesterName }}</strong></span>
                     </div>
 
                     <div class="flex align-items-center gap-2 text-sm text-600">
-                        <i class="pi pi-calendar"></i>
+                        <lucide-icon name="calendar"></lucide-icon>
                         <span>Solicitado: <strong>{{ task.createdAt | date:'dd/MM/yyyy HH:mm' }}</strong></span>
                     </div>
 
                     <div class="flex align-items-center gap-2 text-sm text-600">
-                        <i class="pi pi-clock"></i>
+                        <lucide-icon name="clock"></lucide-icon>
                         <span>Asignado: <strong>{{ task.assignedAt | date:'dd/MM/yyyy HH:mm' }}</strong></span>
                     </div>
                 </div>
 
                 <ng-template pTemplate="footer">
                     <div class="flex justify-content-end border-top-1 surface-border pt-3">
-                        <p-button label="Ingresar Consecutivo" icon="pi pi-hashtag" severity="warn" size="small" (onClick)="openConsecutiveDialogDirectly(task)" *ngIf="task.submissionStatus === 'Pending Consecutive'"></p-button>
-                        <p-button label="Revisar y Decidir" icon="pi pi-search" size="small" (onClick)="openActionDialog(task)" *ngIf="task.submissionStatus !== 'Pending Consecutive'"></p-button>
+                        <p-button severity="warn" size="small" (onClick)="openConsecutiveDialogDirectly(task)" *ngIf="task.submissionStatus === 'Pending Consecutive'">
+                            <lucide-icon name="hash" class="mr-2"></lucide-icon>
+                            Ingresar Consecutivo
+                        </p-button>
+                        <p-button size="small" (onClick)="openActionDialog(task)" *ngIf="task.submissionStatus !== 'Pending Consecutive'">
+                            <lucide-icon name="search" class="mr-2"></lucide-icon>
+                            Revisar y Decidir
+                        </p-button>
                     </div>
                 </ng-template>
             </p-card>
@@ -60,9 +66,10 @@
         <div class="flex flex-column gap-4 px-4 py-2" *ngIf="selectedTask()">
             
             <!-- Rejection Alert Banner -->
+            <!-- Rejection Alert Banner -->
             <div *ngIf="isCorrection(selectedTask())" class="p-3 bg-red-50 text-red-700 border-round border-1 border-red-200 mb-2">
                 <div class="flex align-items-center gap-2 mb-2 font-bold">
-                    <i class="pi pi-exclamation-triangle"></i>
+                    <lucide-icon name="alert-triangle"></lucide-icon>
                     <span>Solicitud Devuelta para Corrección</span>
                 </div>
                 <p class="m-0 text-sm font-semibold">Comentarios del revisor:</p>
@@ -77,8 +84,10 @@
                         <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                         <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                             <div *ngFor="let file of getUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><i class="pi pi-file mr-2"></i>{{ file.name }}</span>
-                                <p-button icon="pi pi-download" [text]="true" severity="primary" size="small" (onClick)="downloadFormFile(file)"></p-button>
+                                <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                <p-button [text]="true" severity="primary" size="small" (onClick)="downloadFormFile(file)">
+                                    <lucide-icon name="download"></lucide-icon>
+                                </p-button>
                             </div>
                         </div>
                         <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value)">{{ val.value || 'N/A' }}</span>
@@ -95,7 +104,11 @@
                     <div *ngFor="let hStage of selectedTask().historyStages" class="border-round border-1 surface-border p-3 surface-card flex flex-column gap-2">
                         <!-- Stage header -->
                         <div class="flex justify-content-between align-items-center border-bottom-1 surface-border pb-2">
-                            <span class="font-bold text-900 text-sm"><i class="pi pi-info-circle mr-1 text-primary"></i>{{ hStage.formName || hStage.stageName }}</span>
+                            <span class="font-bold text-900 text-sm flex align-items-center gap-1">
+                                <lucide-icon name="info" class="text-primary" style="width: 1.1rem; height: 1.1rem; flex-shrink: 0;"></lucide-icon>
+                                <span>{{ hStage.stageName }}</span>
+                                <span class="text-500 font-normal" *ngIf="hStage.formName && hStage.formName !== hStage.stageName">({{ hStage.formName }})</span>
+                            </span>
                             <p-tag [severity]="hStage.status === 'Approved' ? 'success' : 'danger'" [value]="hStage.status === 'Approved' ? 'Aprobado' : 'Rechazado'"></p-tag>
                         </div>
                         
@@ -105,8 +118,10 @@
                                 <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                                 <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                     <div *ngFor="let file of getUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                        <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><i class="pi pi-file mr-2"></i>{{ file.name }}</span>
-                                        <p-button icon="pi pi-download" [text]="true" severity="primary" size="small" (onClick)="downloadFormFile(file)"></p-button>
+                                        <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                        <p-button [text]="true" severity="primary" size="small" (onClick)="downloadFormFile(file)">
+                                            <lucide-icon name="download"></lucide-icon>
+                                        </p-button>
                                     </div>
                                 </div>
                                 <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value)">{{ val.value || 'N/A' }}</span>
@@ -134,7 +149,7 @@
                 </span>
                 
                 <div *ngIf="loadingStageFields()" class="flex justify-content-center p-3">
-                    <i class="pi pi-spin pi-spinner text-primary text-xl"></i>
+                    <lucide-icon name="loader-2" class="lucide-spin text-primary text-xl"></lucide-icon>
                 </div>
  
                 <div *ngIf="!loadingStageFields()" class="flex flex-column gap-3">
@@ -164,8 +179,10 @@
                                            class="hidden" #fileInput />
                                     
                                     <div class="flex gap-2">
-                                        <p-button label="Seleccionar archivo" icon="pi pi-upload" [outlined]="true" size="small"
-                                                  (onClick)="fileInput.click()" [disabled]="field.isReadOnly"></p-button>
+                                        <p-button [outlined]="true" size="small" (onClick)="fileInput.click()" [disabled]="field.isReadOnly">
+                                            <lucide-icon name="upload" class="mr-2"></lucide-icon>
+                                            Seleccionar archivo
+                                        </p-button>
                                         <span class="text-xs text-500 align-self-center">
                                             Máx: {{ field.metadata?.maxFileCount || 1 }} archivos ({{ field.metadata?.maxFileSize || 10 }}MB c/u). Formatos: {{ field.metadata?.allowedFormats || 'Cualquiera' }}
                                         </span>
@@ -174,16 +191,20 @@
                                     <!-- Selected files list -->
                                     <div class="flex flex-column gap-1 mt-1" *ngIf="getSelectedFiles(field.name).length > 0">
                                         <div *ngFor="let file of getSelectedFiles(field.name); let fIdx = index" class="flex justify-content-between align-items-center bg-light p-2 border-round text-sm border-1 surface-border">
-                                            <span class="font-medium text-600"><i class="pi pi-file mr-2"></i>{{ file.name }} ({{ (file.size / 1024 / 1024) | number:'1.1-2' }} MB)</span>
-                                            <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small" (onClick)="removeSelectedFile(field.name, fIdx)" *ngIf="!field.isReadOnly"></p-button>
+                                            <span class="font-medium text-600"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }} ({{ (file.size / 1024 / 1024) | number:'1.1-2' }} MB)</span>
+                                            <p-button [text]="true" severity="danger" size="small" (onClick)="removeSelectedFile(field.name, fIdx)" *ngIf="!field.isReadOnly">
+                                                <lucide-icon name="trash"></lucide-icon>
+                                            </p-button>
                                         </div>
                                     </div>
 
                                     <!-- Uploaded files list (for viewing/downloading) -->
                                     <div class="flex flex-column gap-1 mt-1" *ngIf="getUploadedFiles(stageFormValues[field.name]).length > 0">
                                         <div *ngFor="let file of getUploadedFiles(stageFormValues[field.name])" class="flex justify-content-between align-items-center bg-blue-50 p-2 border-round text-sm border-1 border-blue-200">
-                                            <span class="font-medium text-blue-700"><i class="pi pi-file mr-2"></i>{{ file.name }}</span>
-                                            <p-button icon="pi pi-download" [text]="true" severity="primary" size="small" (onClick)="downloadFormFile(file)"></p-button>
+                                            <span class="font-medium text-blue-700"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                            <p-button [text]="true" severity="primary" size="small" (onClick)="downloadFormFile(file)">
+                                                <lucide-icon name="download"></lucide-icon>
+                                            </p-button>
                                         </div>
                                     </div>
                                 </div>
@@ -204,13 +225,25 @@
  
         <ng-template pTemplate="footer">
             <div class="flex justify-content-end gap-2 px-4 pb-3">
-                <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary" (onClick)="showActionDialog.set(false)" [disabled]="loadingAction()"></p-button>
+                <p-button [text]="true" severity="secondary" (onClick)="showActionDialog.set(false)" [disabled]="loadingAction()">
+                    <lucide-icon name="x" class="mr-2"></lucide-icon>
+                    Cancelar
+                </p-button>
                 <ng-container *ngIf="!isCorrection(selectedTask())">
-                    <p-button label="Rechazar / Devolver" icon="pi pi-exclamation-circle" severity="danger" (onClick)="processAction('reject')" [loading]="loadingAction()"></p-button>
-                    <p-button label="Aprobar" icon="pi pi-check" severity="success" (onClick)="processAction('approve')" [loading]="loadingAction()"></p-button>
+                    <p-button severity="danger" (onClick)="processAction('reject')" [loading]="loadingAction()">
+                        <lucide-icon name="alert-triangle" class="mr-2"></lucide-icon>
+                        Rechazar / Devolver
+                    </p-button>
+                    <p-button severity="success" (onClick)="processAction('approve')" [loading]="loadingAction()">
+                        <lucide-icon name="check" class="mr-2"></lucide-icon>
+                        Aprobar
+                    </p-button>
                 </ng-container>
                 <ng-container *ngIf="isCorrection(selectedTask())">
-                    <p-button label="Enviar Corrección" icon="pi pi-send" severity="success" (onClick)="processAction('approve')" [loading]="loadingAction()"></p-button>
+                    <p-button severity="success" (onClick)="processAction('approve')" [loading]="loadingAction()">
+                        <lucide-icon name="send" class="mr-2"></lucide-icon>
+                        Enviar Corrección
+                    </p-button>
                 </ng-container>
             </div>
         </ng-template>
@@ -221,7 +254,7 @@
               [modal]="true" [style]="{width: '450px'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
         <div class="flex flex-column gap-3 p-3" *ngIf="selectedTask()">
             <div class="p-3 bg-blue-50 text-blue-700 border-round border-1 border-blue-200 text-sm">
-                <i class="pi pi-info-circle mr-2"></i>
+                <lucide-icon name="info" class="mr-2" style="width: 1.1rem; height: 1.1rem; display: inline-block; vertical-align: middle;"></lucide-icon>
                 <span>El flujo de la solicitud <strong>{{ selectedTask().formName }}</strong> ha finalizado. Por favor, asigne el número de consecutivo correspondiente para completarlo.</span>
             </div>
             
@@ -232,8 +265,14 @@
         </div>
         <ng-template pTemplate="footer">
             <div class="flex justify-content-end gap-2 px-3 pb-3">
-                <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary" (onClick)="showConsecutiveDialog.set(false)"></p-button>
-                <p-button label="Guardar Consecutivo" icon="pi pi-save" severity="success" (onClick)="submitConsecutiveOnly()" [loading]="loadingAction()"></p-button>
+                <p-button [text]="true" severity="secondary" (onClick)="showConsecutiveDialog.set(false)">
+                    <lucide-icon name="x" class="mr-2"></lucide-icon>
+                    Cancelar
+                </p-button>
+                <p-button severity="success" (onClick)="submitConsecutiveOnly()" [loading]="loadingAction()">
+                    <lucide-icon name="save" class="mr-2"></lucide-icon>
+                    Guardar Consecutivo
+                </p-button>
             </div>
         </ng-template>
     </p-dialog>

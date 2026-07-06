@@ -7,17 +7,24 @@
     <p-card>
         <!-- Pill Switcher for Tabs -->
         <div class="flex gap-2 mb-4 border-bottom-1 surface-border pb-3">
-            <button pButton label="Formularios Dinámicos" icon="pi pi-file-edit" 
-                    [outlined]="activeTab() !== 'forms'" (click)="activeTab.set('forms')"></button>
-            <button pButton label="Flujos de Trabajo" icon="pi pi-share-alt" 
-                    [outlined]="activeTab() !== 'workflows'" (click)="activeTab.set('workflows')"></button>
+            <p-button [outlined]="activeTab() !== 'forms'" (onClick)="activeTab.set('forms')">
+                <lucide-icon name="edit" class="mr-2"></lucide-icon>
+                Formularios Dinámicos
+            </p-button>
+            <p-button [outlined]="activeTab() !== 'workflows'" (onClick)="activeTab.set('workflows')">
+                <lucide-icon name="git-branch" class="mr-2"></lucide-icon>
+                Flujos de Trabajo
+            </p-button>
         </div>
 
         <!-- TAB 1: FORMULARIOS -->
         <div *ngIf="activeTab() === 'forms'">
             <div class="flex justify-content-between align-items-center mb-3">
                 <span class="text-700 font-medium">Listado de plantillas de formularios configuradas</span>
-                <p-button label="Nuevo Formulario" icon="pi pi-plus" (click)="openCreateFormDialog()"></p-button>
+                <p-button (onClick)="openCreateFormDialog()">
+                    <lucide-icon name="plus" class="mr-2"></lucide-icon>
+                    Nuevo Formulario
+                </p-button>
             </div>
 
             <p-table [value]="forms()" [loading]="loadingForms()" responsiveLayout="scroll" styleClass="p-datatable-striped">
@@ -48,12 +55,18 @@
                         </td>
                         <td class="text-center">
                             <div class="flex justify-content-center gap-2">
-                                <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="secondary" 
-                                          pTooltip="Editar Metadatos" (click)="openEditFormDialog(form)"></p-button>
-                                <p-button icon="pi pi-list" [text]="true" [rounded]="true" severity="info" 
-                                          pTooltip="Configurar Campos" (click)="openFieldsConfigurator(form)"></p-button>
-                                <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" 
-                                          pTooltip="Desactivar" *ngIf="form.isActive" (click)="deleteForm(form)"></p-button>
+                                <p-button [text]="true" [rounded]="true" severity="secondary" 
+                                          pTooltip="Editar Metadatos" (onClick)="openEditFormDialog(form)">
+                                    <lucide-icon name="edit-2"></lucide-icon>
+                                </p-button>
+                                <p-button [text]="true" [rounded]="true" severity="info" 
+                                          pTooltip="Configurar Campos" (onClick)="openFieldsConfigurator(form)">
+                                    <lucide-icon name="list"></lucide-icon>
+                                </p-button>
+                                <p-button [text]="true" [rounded]="true" severity="danger" 
+                                          pTooltip="Desactivar" *ngIf="form.isActive" (onClick)="deleteForm(form)">
+                                    <lucide-icon name="trash"></lucide-icon>
+                                </p-button>
                             </div>
                         </td>
                     </tr>
@@ -77,18 +90,21 @@
                 </div>
 
                 <div *ngIf="!selectedWorkflowFormId()" class="text-center p-5 text-500 border-round border-1 surface-border surface-card">
-                    <i class="pi pi-info-circle text-4xl mb-3 block text-400"></i>
+                    <lucide-icon name="info" class="text-4xl mb-3 block text-400"></lucide-icon>
                     Seleccione un formulario de la lista para diseñar su flujo de aprobación secuencial.
                 </div>
 
                 <div *ngIf="selectedWorkflowFormId()" class="flex flex-column gap-3">
                     <div class="flex justify-content-between align-items-center">
                         <h3 class="text-xl font-bold m-0 text-900">Diseño del Flujo Secuencial</h3>
-                        <p-button label="Añadir Etapa" icon="pi pi-plus" [outlined]="true" (click)="addStage()"></p-button>
+                        <p-button [outlined]="true" (onClick)="addStage()">
+                            <lucide-icon name="plus" class="mr-2"></lucide-icon>
+                            Añadir Etapa
+                        </p-button>
                     </div>
 
                     <div *ngIf="loadingStages()" class="flex justify-content-center p-5">
-                        <i class="pi pi-spin pi-spinner text-primary text-3xl"></i>
+                        <lucide-icon name="loader-2" class="lucide-spin text-primary text-3xl"></lucide-icon>
                     </div>
 
                     <div *ngIf="!loadingStages()" class="flex flex-column gap-3">
@@ -101,9 +117,15 @@
                                     <span class="font-bold text-lg text-900">Etapa {{ stage.stepOrder }}</span>
                                 </div>
                                 <div class="flex gap-1">
-                                    <p-button icon="pi pi-arrow-up" [text]="true" severity="secondary" [disabled]="i === 0" (onClick)="moveStageUp(i)" pTooltip="Subir Orden"></p-button>
-                                    <p-button icon="pi pi-arrow-down" [text]="true" severity="secondary" [disabled]="i === workflowStages().length - 1" (onClick)="moveStageDown(i)" pTooltip="Bajar Orden"></p-button>
-                                    <p-button icon="pi pi-trash" [text]="true" severity="danger" (onClick)="removeStage(i)" pTooltip="Eliminar Etapa"></p-button>
+                                    <p-button [text]="true" severity="secondary" [disabled]="i === 0" (onClick)="moveStageUp(i)" pTooltip="Subir Orden">
+                                        <lucide-icon name="arrow-up"></lucide-icon>
+                                    </p-button>
+                                    <p-button [text]="true" severity="secondary" [disabled]="i === workflowStages().length - 1" (onClick)="moveStageDown(i)" pTooltip="Bajar Orden">
+                                        <lucide-icon name="arrow-down"></lucide-icon>
+                                    </p-button>
+                                    <p-button [text]="true" severity="danger" (onClick)="removeStage(i)" pTooltip="Eliminar Etapa">
+                                        <lucide-icon name="trash"></lucide-icon>
+                                    </p-button>
                                 </div>
                             </div>
 
@@ -122,6 +144,11 @@
                                 <div class="col-12 md:col-4 flex flex-column gap-2">
                                     <label class="font-semibold text-sm">Asignar a (Tipo) *</label>
                                     <p-select [options]="assigneeTypeOptions" [(ngModel)]="stage.assigneeType" class="w-full"></p-select>
+                                </div>
+
+                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'requester'">
+                                    <label class="font-semibold text-sm">Usuario Aprobador *</label>
+                                    <input pInputText [disabled]="true" [value]="currentUser()?.name || 'Creador de la Solicitud'" class="w-full font-semibold bg-gray-100" />
                                 </div>
 
                                 <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'specific_user'">
@@ -143,7 +170,7 @@
 
                                 <div class="col-12 md:col-4 flex flex-column gap-2">
                                     <label class="font-semibold text-sm">Formulario a Rellenar (Opcional)</label>
-                                    <p-select [options]="forms()" [(ngModel)]="stage.formIdToFill" optionLabel="name" optionValue="id" [showClear]="true" placeholder="Ninguno (Decisión simple)" class="w-full"></p-select>
+                                    <p-select [options]="internalForms()" [(ngModel)]="stage.formIdToFill" optionLabel="name" optionValue="id" [showClear]="true" placeholder="Ninguno (Decisión simple)" class="w-full"></p-select>
                                 </div>
 
                                 <!-- Regla de Rechazo -->
@@ -172,7 +199,10 @@
                         </div>
 
                         <div class="flex justify-content-end gap-2 mt-4">
-                            <p-button label="Guardar Flujo de Trabajo" icon="pi pi-save" severity="primary" (onClick)="saveWorkflow()"></p-button>
+                            <p-button severity="primary" (onClick)="saveWorkflow()">
+                                <lucide-icon name="save" class="mr-2"></lucide-icon>
+                                Guardar Flujo de Trabajo
+                            </p-button>
                         </div>
                     </div>
                 </div>
@@ -219,13 +249,13 @@
                           optionLabel="label" optionValue="value" placeholder="Seleccione ícono..." [appendTo]="'body'">
                     <ng-template let-opt pTemplate="selectedItem">
                         <div class="flex align-items-center gap-2" *ngIf="selectedForm().icon">
-                            <i [class]="selectedForm().icon"></i>
+                            <lucide-icon [name]="selectedForm().icon" class="text-primary"></lucide-icon>
                             <span>{{ opt.label }}</span>
                         </div>
                     </ng-template>
                     <ng-template let-opt pTemplate="item">
                         <div class="flex align-items-center gap-2">
-                            <i [class]="opt.icon"></i>
+                            <lucide-icon [name]="opt.value" class="text-primary"></lucide-icon>
                             <span>{{ opt.label }}</span>
                         </div>
                     </ng-template>
@@ -248,8 +278,14 @@
             </div>
         </div>
         <ng-template pTemplate="footer">
-            <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary" (onClick)="showFormDialog.set(false)"></p-button>
-            <p-button label="Guardar" icon="pi pi-save" severity="primary" (onClick)="saveForm()"></p-button>
+            <p-button [text]="true" severity="secondary" (onClick)="showFormDialog.set(false)">
+                <lucide-icon name="x" class="mr-2"></lucide-icon>
+                Cancelar
+            </p-button>
+            <p-button severity="primary" (onClick)="saveForm()">
+                <lucide-icon name="save" class="mr-2"></lucide-icon>
+                Guardar
+            </p-button>
         </ng-template>
     </p-dialog>
 
@@ -259,7 +295,10 @@
         <div class="flex flex-column gap-3 py-2 px-3">
             <div class="flex justify-content-between align-items-center">
                 <span class="text-600 font-medium">Define los campos de entrada de datos para esta plantilla</span>
-                <p-button label="Añadir Campo" icon="pi pi-plus" [outlined]="true" size="small" (click)="addField()"></p-button>
+                <p-button [outlined]="true" size="small" (onClick)="addField()">
+                    <lucide-icon name="plus" class="mr-2"></lucide-icon>
+                    Añadir Campo
+                </p-button>
             </div>
 
             <div class="overflow-y-auto" style="max-height: 60vh;">
@@ -290,7 +329,10 @@
                             <td>
                                  <div class="flex flex-column gap-1">
                                      <p-select [options]="fieldTypeOptions" [(ngModel)]="field.type" styleClass="p-inputtext-sm w-full" appendTo="body"></p-select>
-                                     <p-button *ngIf="field.type === 'file'" label="Configurar" icon="pi pi-cog" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openFileConfigDialog(field)"></p-button>
+                                     <p-button *ngIf="field.type === 'file'" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openFileConfigDialog(field)">
+                                         <lucide-icon name="settings" class="mr-2"></lucide-icon>
+                                         Configurar
+                                     </p-button>
                                  </div>
                             </td>
                             <td>
@@ -303,7 +345,9 @@
                                 <p-checkbox [(ngModel)]="field.isReadOnly" [binary]="true"></p-checkbox>
                             </td>
                             <td class="text-center">
-                                <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" size="small" (onClick)="removeField(rowIndex)"></p-button>
+                                <p-button [text]="true" [rounded]="true" severity="danger" size="small" (onClick)="removeField(rowIndex)">
+                                    <lucide-icon name="trash"></lucide-icon>
+                                </p-button>
                             </td>
                         </tr>
                     </ng-template>
@@ -316,8 +360,14 @@
             </div>
         </div>
         <ng-template pTemplate="footer">
-            <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary" (onClick)="showFieldsDialog.set(false)"></p-button>
-            <p-button label="Guardar Configuración" icon="pi pi-save" severity="primary" (onClick)="saveFields()"></p-button>
+            <p-button [text]="true" severity="secondary" (onClick)="showFieldsDialog.set(false)">
+                <lucide-icon name="x" class="mr-2"></lucide-icon>
+                Cancelar
+            </p-button>
+            <p-button severity="primary" (onClick)="saveFields()">
+                <lucide-icon name="save" class="mr-2"></lucide-icon>
+                Guardar Configuración
+            </p-button>
         </ng-template>
     </p-dialog>
 
@@ -342,11 +392,24 @@
         </div>
         <ng-template pTemplate="footer">
             <div class="flex justify-content-end gap-2 px-4 pb-3">
-                <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary" (onClick)="showFileConfigDialog.set(false)"></p-button>
-                <p-button label="Aceptar" icon="pi pi-check" severity="success" (onClick)="saveFileConfig()"></p-button>
+                <p-button [text]="true" severity="secondary" (onClick)="showFileConfigDialog.set(false)">
+                    <lucide-icon name="x" class="mr-2"></lucide-icon>
+                    Cancelar
+                </p-button>
+                <p-button severity="success" (onClick)="saveFileConfig()">
+                    <lucide-icon name="check" class="mr-2"></lucide-icon>
+                    Aceptar
+                </p-button>
             </div>
         </ng-template>
     </p-dialog>
 </div>
 <p-toast></p-toast>
-<p-confirmDialog [style]="{width: '450px'}"></p-confirmDialog>
+<p-confirmDialog [style]="{width: '450px'}">
+    <ng-template pTemplate="message" let-message>
+        <div class="flex align-items-center gap-3 w-full">
+            <lucide-icon name="alert-triangle" class="text-red-500 text-3xl" style="flex-shrink: 0;"></lucide-icon>
+            <span class="text-sm text-700 font-semibold">{{ message.message }}</span>
+        </div>
+    </ng-template>
+</p-confirmDialog>

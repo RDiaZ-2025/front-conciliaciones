@@ -522,7 +522,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
         this.confirmationService.confirm({
           message: '¿Estás seguro de continuar a la etapa de Implementación?',
           header: 'Confirmación',
-          icon: 'pi pi-exclamation-triangle',
+          icon: 'alert-triangle',
           acceptLabel: 'Sí, continuar',
           rejectLabel: 'Cancelar',
           accept: () => {
@@ -548,7 +548,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
         this.confirmationService.confirm({
           message: '¿Estás seguro de finalizar la solicitud y marcarla como completada?',
           header: 'Confirmación de Cierre',
-          icon: 'pi pi-check-circle',
+          icon: 'check-circle',
           acceptLabel: 'Sí, finalizar',
           rejectLabel: 'Cancelar',
           accept: () => {

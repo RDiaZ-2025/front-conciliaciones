@@ -86,7 +86,7 @@ export class PermissionsComponent implements OnInit {
     this.confirmationService.confirm({
       message: '¿Está seguro de eliminar este permiso?',
       header: 'Confirmar',
-      icon: 'pi pi-exclamation-triangle',
+      icon: 'alert-triangle',
       accept: () => {
         this.loading.set(true);
         this.permissionService.deletePermission(permission.id).subscribe({

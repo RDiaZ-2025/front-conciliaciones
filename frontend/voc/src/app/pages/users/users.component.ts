@@ -164,7 +164,7 @@ export class UsersComponent implements OnInit {
     this.confirmationService.confirm({
       message: `¿Estás seguro de que quieres ${action} a ${user.name}?`,
       header: 'Confirmación',
-      icon: 'pi pi-exclamation-triangle',
+      icon: 'alert-triangle',
       acceptLabel: 'Sí',
       rejectLabel: 'No',
       accept: () => {

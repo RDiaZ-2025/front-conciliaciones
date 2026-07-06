@@ -178,6 +178,8 @@ export class ProductionService {
                 let assigneeUserId: number | null = null;
                 if (firstStage.assigneeType === 'specific_user') {
                     assigneeUserId = firstStage.assigneeUserId;
+                } else if (firstStage.assigneeType === 'requester') {
+                    assigneeUserId = requesterUserId;
                 } else if (firstStage.assigneeType === 'requester_boss') {
                     const requester = await userRepo.findOne({ where: { id: requesterUserId } });
                     assigneeUserId = requester?.bossId || firstStage.assigneeUserId || 1; // Fallback to admin/specific_user if no boss
@@ -934,6 +936,8 @@ export class ProductionService {
                 let assigneeUserId: number | null = null;
                 if (stage.assigneeType === 'specific_user') {
                     assigneeUserId = stage.assigneeUserId;
+                } else if (stage.assigneeType === 'requester') {
+                    assigneeUserId = submission.requesterUserId;
                 } else if (stage.assigneeType === 'requester_boss') {
                     const requester = await userRepo.findOne({ where: { id: submission.requesterUserId } });
                     assigneeUserId = requester?.bossId || stage.assigneeUserId || 1;
@@ -1023,6 +1027,8 @@ export class ProductionService {
                     let assigneeUserId: number | null = null;
                     if (nextStage.assigneeType === 'specific_user') {
                         assigneeUserId = nextStage.assigneeUserId;
+                    } else if (nextStage.assigneeType === 'requester') {
+                        assigneeUserId = submission.requesterUserId;
                     } else if (nextStage.assigneeType === 'requester_boss') {
                         const requester = await userRepo.findOne({ where: { id: submission.requesterUserId } });
                         assigneeUserId = requester?.bossId || nextStage.assigneeUserId || 1;
