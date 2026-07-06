@@ -143,15 +143,25 @@ export class ProductionService {
 
                 // Auto-fill read-only defaults if not provided or to ensure integrity
                 if (field.isReadOnly && field.defaultValueExpression) {
-                    if (field.defaultValueExpression === '{{CURRENT_DATE_TIME}}') {
-                        // Format: YYYY-MM-DD HH:mm (24h)
+                    let evaluated = field.defaultValueExpression;
+
+                    if (evaluated.includes('{{CURRENT_DATE_TIME}}')) {
                         const now = new Date();
                         const pad = (n: number) => n.toString().padStart(2, '0');
-                        valueStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-                    } else if (field.defaultValueExpression === '{{LOGGED_USER_NAME}}') {
-                        const requester = await userRepo.findOne({ where: { id: requesterUserId } });
-                        valueStr = requester?.name || 'Usuario';
+                        const formatted = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+                        evaluated = evaluated.replace(/\{\{CURRENT_DATE_TIME\}\}/g, formatted);
                     }
+                    if (evaluated.includes('{{LOGGED_USER_NAME}}')) {
+                        const requester = await userRepo.findOne({ where: { id: requesterUserId } });
+                        const name = requester?.name || 'Usuario';
+                        evaluated = evaluated.replace(/\{\{LOGGED_USER_NAME\}\}/g, name);
+                    }
+                    if (evaluated.includes('{{LOGGED_USER_EMAIL}}')) {
+                        const requester = await userRepo.findOne({ where: { id: requesterUserId } });
+                        const email = requester?.email || '';
+                        evaluated = evaluated.replace(/\{\{LOGGED_USER_EMAIL\}\}/g, email);
+                    }
+                    valueStr = evaluated;
                 }
 
                 if (valueStr !== undefined && valueStr !== null) {

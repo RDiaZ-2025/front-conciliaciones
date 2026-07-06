@@ -309,7 +309,16 @@
                             <th style="width: 10rem;">Clave/Key (Técnico)</th>
                             <th style="width: 15rem;">Descripción explicativa</th>
                             <th style="width: 10rem;">Tipo</th>
-                            <th>Exp. Defecto</th>
+                            <th>
+                                <div class="flex align-items-center gap-1">
+                                    <span>Exp. Defecto</span>
+                                    <lucide-icon name="help-circle" class="text-500 cursor-pointer text-xs" 
+                                                 [pTooltip]="'Haz clic para ver las expresiones dinámicas disponibles (ej: {{CURRENT_DATE_TIME}}, {{LOGGED_USER_NAME}}).'" 
+                                                 [tooltipPosition]="'top'"
+                                                 (click)="showExpressionsHelpDialog.set(true)"
+                                                 style="width: 1rem; height: 1rem;"></lucide-icon>
+                                </div>
+                            </th>
                             <th class="text-center" style="width: 4rem;">Req</th>
                             <th class="text-center" style="width: 4rem;">Lec</th>
                             <th class="text-center" style="width: 4rem;">Elim</th>
@@ -332,6 +341,10 @@
                                      <p-button *ngIf="field.type === 'file'" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openFileConfigDialog(field)">
                                          <lucide-icon name="settings" class="mr-2"></lucide-icon>
                                          Configurar
+                                     </p-button>
+                                     <p-button *ngIf="field.type === 'select'" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openSelectConfigDialog(field)">
+                                         <lucide-icon name="list" class="mr-2"></lucide-icon>
+                                         Opciones
                                      </p-button>
                                  </div>
                             </td>
@@ -399,6 +412,88 @@
                 <p-button severity="success" (onClick)="saveFileConfig()">
                     <lucide-icon name="check" class="mr-2"></lucide-icon>
                     Aceptar
+                </p-button>
+            </div>
+        </ng-template>
+    </p-dialog>
+
+    <!-- Dialog 4: Select Options Config -->
+    <p-dialog [header]="'Configurar opciones: ' + (selectedFieldForSelectConfig()?.label || '')" [(visible)]="showSelectConfigDialog" 
+              [modal]="true" [style]="{width: '450px'}" [draggable]="false" [resizable]="false" styleClass="p-fluid">
+        <div class="flex flex-column gap-3 py-2 px-3" *ngIf="selectedFieldForSelectConfig()">
+            <div class="flex justify-content-between align-items-center mb-1">
+                <span class="font-semibold text-sm text-900">Opciones de la lista desplegable *</span>
+                <p-button [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="addSelectOption()">
+                    <lucide-icon name="plus" class="mr-1" style="width: 0.9rem; height: 0.9rem; vertical-align: middle;"></lucide-icon>
+                    Añadir Opción
+                </p-button>
+            </div>
+            
+            <div class="overflow-y-auto pr-1 flex flex-column gap-2" style="max-height: 250px;">
+                <div *ngFor="let opt of tempSelectOptions(); let idx = index" class="flex gap-2 align-items-center w-full">
+                    <input pInputText [(ngModel)]="opt.value" placeholder="Escribe una opción..." class="flex-1 p-inputtext-sm" />
+                    <p-button [text]="true" [rounded]="true" severity="danger" size="small" (onClick)="removeSelectOption(idx)" styleClass="p-button-sm">
+                        <lucide-icon name="trash" style="width: 1rem; height: 1rem;"></lucide-icon>
+                    </p-button>
+                </div>
+                <div *ngIf="tempSelectOptions().length === 0" class="text-center p-3 text-500 text-sm">
+                    No hay opciones añadidas. Haz click en "Añadir Opción" para comenzar.
+                </div>
+            </div>
+        </div>
+        <ng-template pTemplate="footer">
+            <div class="flex justify-content-end gap-2 px-4 pb-3">
+                <p-button [text]="true" severity="secondary" (onClick)="showSelectConfigDialog.set(false)">
+                    <lucide-icon name="x" class="mr-2"></lucide-icon>
+                    Cancelar
+                </p-button>
+                <p-button severity="success" (onClick)="saveSelectConfig()">
+                    <lucide-icon name="check" class="mr-2"></lucide-icon>
+                    Aceptar
+                </p-button>
+            </div>
+        </ng-template>
+    </p-dialog>
+
+    <!-- Dialog 5: Expressions Documentation Helper -->
+    <p-dialog header="Expresiones por Defecto Disponibles" [(visible)]="showExpressionsHelpDialog" 
+              [modal]="true" [style]="{width: '520px'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
+        <div class="flex flex-column gap-3 py-2 px-3">
+            <p class="text-700 leading-normal m-0 text-sm">
+                Puedes utilizar las siguientes expresiones en la columna <strong>"Exp. Defecto"</strong> para autocompletar dinámicamente los valores al iniciar un formulario o flujo (recomendado para campos marcados como <em>Solo Lectura</em>):
+            </p>
+            
+            <div class="flex flex-column gap-3 mt-2">
+                <div class="flex flex-column gap-1 p-2 border-round surface-50 border-1 surface-border">
+                    <div class="flex justify-content-between align-items-center mb-1">
+                        <code class="bg-white px-2 py-0.5 border-round font-medium text-blue-700 border-1 border-blue-200 text-xs">{{ '{{CURRENT_DATE_TIME}}' }}</code>
+                        <span class="text-xs text-500 font-semibold">Fecha y Hora</span>
+                    </div>
+                    <span class="text-xs text-600">Inserta la fecha y hora actual local del sistema en formato de 24 horas (<code>YYYY-MM-DD HH:mm</code>).</span>
+                </div>
+
+                <div class="flex flex-column gap-1 p-2 border-round surface-50 border-1 surface-border">
+                    <div class="flex justify-content-between align-items-center mb-1">
+                        <code class="bg-white px-2 py-0.5 border-round font-medium text-blue-700 border-1 border-blue-200 text-xs">{{ '{{LOGGED_USER_NAME}}' }}</code>
+                        <span class="text-xs text-500 font-semibold">Nombre de Usuario</span>
+                    </div>
+                    <span class="text-xs text-600">Inserta el nombre completo del usuario que tiene iniciada la sesión actualmente en el sistema.</span>
+                </div>
+
+                <div class="flex flex-column gap-1 p-2 border-round surface-50 border-1 surface-border">
+                    <div class="flex justify-content-between align-items-center mb-1">
+                        <code class="bg-white px-2 py-0.5 border-round font-medium text-blue-700 border-1 border-blue-200 text-xs">{{ '{{LOGGED_USER_EMAIL}}' }}</code>
+                        <span class="text-xs text-500 font-semibold">Correo de Usuario</span>
+                    </div>
+                    <span class="text-xs text-600">Inserta la dirección de correo electrónico del usuario que tiene iniciada la sesión actualmente.</span>
+                </div>
+            </div>
+        </div>
+        <ng-template pTemplate="footer">
+            <div class="flex justify-content-end gap-2 px-4 pb-3">
+                <p-button severity="primary" (onClick)="showExpressionsHelpDialog.set(false)">
+                    <lucide-icon name="check" class="mr-2"></lucide-icon>
+                    Entendido
                 </p-button>
             </div>
         </ng-template>

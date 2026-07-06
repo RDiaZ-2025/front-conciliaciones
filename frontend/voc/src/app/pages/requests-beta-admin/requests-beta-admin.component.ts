@@ -133,6 +133,12 @@ export class RequestsBetaAdminComponent implements OnInit {
   showFileConfigDialog = signal<boolean>(false);
   selectedFieldForFileConfig = signal<any>(null);
 
+  // Select option configuration editor state
+  showSelectConfigDialog = signal<boolean>(false);
+  selectedFieldForSelectConfig = signal<any>(null);
+  tempSelectOptions = signal<{ value: string }[]>([]);
+  showExpressionsHelpDialog = signal<boolean>(false);
+
   // Workflow editor state
   selectedWorkflowFormId = signal<number | null>(null);
   workflowStages = signal<WorkflowStageItem[]>([]);
@@ -145,6 +151,7 @@ export class RequestsBetaAdminComponent implements OnInit {
     { label: 'Número', value: 'number' },
     { label: 'Fecha Simple', value: 'date' },
     { label: 'Fecha y Hora (24h)', value: 'datetime' },
+    { label: 'Lista Desplegable / Listado', value: 'select' },
     { label: 'Archivo / Adjunto', value: 'file' }
   ];
 
@@ -329,6 +336,38 @@ export class RequestsBetaAdminComponent implements OnInit {
 
   saveFileConfig() {
     this.showFileConfigDialog.set(false);
+  }
+
+  openSelectConfigDialog(field: any) {
+    if (!field.metadata) field.metadata = {};
+    if (!field.metadata.options) field.metadata.options = [];
+
+    this.selectedFieldForSelectConfig.set(field);
+    const optsObj = field.metadata.options.map((opt: string) => ({ value: opt }));
+    this.tempSelectOptions.set(optsObj);
+    this.showSelectConfigDialog.set(true);
+  }
+
+  addSelectOption() {
+    const current = this.tempSelectOptions();
+    this.tempSelectOptions.set([...current, { value: '' }]);
+  }
+
+  removeSelectOption(index: number) {
+    const current = [...this.tempSelectOptions()];
+    current.splice(index, 1);
+    this.tempSelectOptions.set(current);
+  }
+
+  saveSelectConfig() {
+    const field = this.selectedFieldForSelectConfig();
+    if (field) {
+      const opts = this.tempSelectOptions()
+        .map(opt => opt.value.trim())
+        .filter(val => val.length > 0);
+      field.metadata.options = opts;
+    }
+    this.showSelectConfigDialog.set(false);
   }
 
   removeField(index: number) {

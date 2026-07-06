@@ -24,6 +24,7 @@ import { ProductionService } from '../../services/production.service';
 import { AuthService } from '../../services/auth.service';
 import { CheckboxModule } from 'primeng/checkbox';
 import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
 import { ProductionRequest } from '../../models/common/production-request';
 import { ProductionDialogComponent } from '../production_2/production-dialog/production-dialog.component';
@@ -62,6 +63,7 @@ import { MaterialRegisterListDialogComponent } from '../production_2/material-re
     AnsDialogComponent,
     CheckboxModule,
     InputTextModule,
+    SelectModule,
     FormsModule
   ],
   providers: [DialogService, ConfirmationService, MessageService],
@@ -383,19 +385,24 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         const pad = (n: number) => n.toString().padStart(2, '0');
         const formattedDate = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
         const userName = this.authService.currentUser()?.name || '';
+        const userEmail = this.authService.currentUser()?.email || '';
 
         fields.forEach(f => {
           if (f.metadata && typeof f.metadata === 'string') {
             try { f.metadata = JSON.parse(f.metadata); } catch(e){}
           }
           if (f.isReadOnly && f.defaultValueExpression) {
-            if (f.defaultValueExpression === '{{CURRENT_DATE_TIME}}') {
-              initialValues[f.name] = formattedDate;
-            } else if (f.defaultValueExpression === '{{LOGGED_USER_NAME}}') {
-              initialValues[f.name] = userName;
-            } else {
-              initialValues[f.name] = f.defaultValueExpression;
+            let evaluated = f.defaultValueExpression;
+            if (evaluated.includes('{{CURRENT_DATE_TIME}}')) {
+              evaluated = evaluated.replace(/\{\{CURRENT_DATE_TIME\}\}/g, formattedDate);
             }
+            if (evaluated.includes('{{LOGGED_USER_NAME}}')) {
+              evaluated = evaluated.replace(/\{\{LOGGED_USER_NAME\}\}/g, userName);
+            }
+            if (evaluated.includes('{{LOGGED_USER_EMAIL}}')) {
+              evaluated = evaluated.replace(/\{\{LOGGED_USER_EMAIL\}\}/g, userEmail);
+            }
+            initialValues[f.name] = evaluated;
           } else {
             initialValues[f.name] = '';
           }
@@ -1062,19 +1069,24 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           const pad = (n: number) => n.toString().padStart(2, '0');
           const formattedDate = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
           const userName = this.authService.currentUser()?.name || '';
+          const userEmail = this.authService.currentUser()?.email || '';
 
           fields.forEach(f => {
             if (f.metadata && typeof f.metadata === 'string') {
               try { f.metadata = JSON.parse(f.metadata); } catch(e){}
             }
             if (f.isReadOnly && f.defaultValueExpression) {
-              if (f.defaultValueExpression === '{{CURRENT_DATE_TIME}}') {
-                initialValues[f.name] = formattedDate;
-              } else if (f.defaultValueExpression === '{{LOGGED_USER_NAME}}') {
-                initialValues[f.name] = userName;
-              } else {
-                initialValues[f.name] = f.defaultValueExpression;
+              let evaluated = f.defaultValueExpression;
+              if (evaluated.includes('{{CURRENT_DATE_TIME}}')) {
+                evaluated = evaluated.replace(/\{\{CURRENT_DATE_TIME\}\}/g, formattedDate);
               }
+              if (evaluated.includes('{{LOGGED_USER_NAME}}')) {
+                evaluated = evaluated.replace(/\{\{LOGGED_USER_NAME\}\}/g, userName);
+              }
+              if (evaluated.includes('{{LOGGED_USER_EMAIL}}')) {
+                evaluated = evaluated.replace(/\{\{LOGGED_USER_EMAIL\}\}/g, userEmail);
+              }
+              initialValues[f.name] = evaluated;
             } else {
               initialValues[f.name] = '';
             }

@@ -171,6 +171,10 @@
                             
                             <input *ngSwitchCase="'number'" type="number" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
                             
+                            <p-select *ngSwitchCase="'select'" [options]="field.metadata?.options || []"
+                                      [(ngModel)]="stageFormValues[field.name]" [placeholder]="field.placeholder || 'Seleccione opción...'"
+                                      [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-select>
+                            
                             <!-- File type -->
                             <ng-container *ngSwitchCase="'file'">
                                 <div class="flex flex-column gap-2 w-full">
