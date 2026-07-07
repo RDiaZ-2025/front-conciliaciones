@@ -131,8 +131,10 @@ export class ProductionService extends BaseApiService {
     return this.http.get<Status[]>(this.statusUrl);
   }
 
-  getDynamicFormFields(formId: number): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/forms/${formId}/fields`);
+  getDynamicFormFields(formId: number, includeInactive: boolean = false): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/forms/${formId}/fields`, {
+      params: { includeInactive: String(includeInactive) }
+    });
   }
 
   submitDynamicForm(formId: number, values: any): Observable<any> {
@@ -155,8 +157,10 @@ export class ProductionService extends BaseApiService {
     return this.http.put<any>(`${this.apiUrl}/admin/forms/${id}`, data);
   }
 
-  adminDeleteForm(id: number): Observable<any> {
-    return this.http.delete<any>(`${this.apiUrl}/admin/forms/${id}`);
+  adminDeleteForm(id: number, physicalDelete: boolean = false): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/admin/forms/${id}`, {
+      params: { physicalDelete: String(physicalDelete) }
+    });
   }
 
   adminSaveFields(formId: number, fields: any[]): Observable<any[]> {

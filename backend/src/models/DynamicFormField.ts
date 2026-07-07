@@ -31,6 +31,9 @@ export class DynamicFormField {
   @Column({ name: 'IsReadOnly', type: 'bit', default: false })
   isReadOnly!: boolean;
 
+  @Column({ name: 'IsActive', type: 'bit', default: true })
+  isActive!: boolean;
+
   @Column({ name: 'DefaultValueExpression', type: 'nvarchar', length: 255, nullable: true })
   defaultValueExpression!: string | null; // '{{CURRENT_DATE_TIME}}', '{{LOGGED_USER_NAME}}'
 

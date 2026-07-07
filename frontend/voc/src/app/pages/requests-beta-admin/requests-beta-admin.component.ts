@@ -32,6 +32,7 @@ interface FormFieldItem {
   isReadOnly: boolean;
   defaultValueExpression: string;
   displayOrder: number;
+  isActive?: boolean;
   metadata?: any;
 }
 
@@ -260,20 +261,52 @@ export class RequestsBetaAdminComponent implements OnInit {
     }
   }
 
-  deleteForm(form: any) {
+  confirmSoftDeleteForm(form: any) {
     this.confirmationService.confirm({
-      message: `¿Está seguro de que desea desactivar el formulario "${form.name}"?`,
-      header: 'Confirmación',
-      icon: 'alert-triangle',
-      acceptLabel: 'Desactivar',
-      rejectLabel: 'Cancelar',
+      message: `El formulario "${form.name}" se ocultará y ya no se podrá utilizar para nuevas solicitudes ni aparecerá en la bandeja, pero se conservará en el histórico. ¿Deseas continuar?`,
+      header: 'Confirmar eliminación',
+      icon: 'pi pi-trash',
       accept: () => {
-        this.productionService.adminDeleteForm(form.id).subscribe({
+        this.productionService.adminDeleteForm(form.id, false).subscribe({
           next: () => {
-            this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Formulario desactivado.' });
+            this.messageService.add({ severity: 'success', summary: 'Formulario eliminado', detail: `El formulario "${form.name}" ha sido desactivado.` });
             this.loadForms();
           },
           error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo desactivar el formulario.' })
+        });
+      }
+    });
+  }
+
+  confirmRestoreForm(form: any) {
+    this.confirmationService.confirm({
+      message: `El formulario "${form.name}" volverá a activarse y estará disponible para nuevas solicitudes y flujos de trabajo. ¿Deseas continuar?`,
+      header: 'Confirmar restauración',
+      icon: 'pi pi-refresh',
+      accept: () => {
+        this.productionService.adminUpdateForm(form.id, { isActive: true }).subscribe({
+          next: () => {
+            this.messageService.add({ severity: 'success', summary: 'Formulario restaurado', detail: `El formulario "${form.name}" ha sido reactivado.` });
+            this.loadForms();
+          },
+          error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo activar el formulario.' })
+        });
+      }
+    });
+  }
+
+  confirmPhysicalDeleteForm(form: any) {
+    this.confirmationService.confirm({
+      message: `¡CUIDADO! Esta acción eliminará FÍSICAMENTE el formulario "${form.name}" de la base de datos y BORRARÁ permanentemente todas las solicitudes creadas, respuestas y flujos asociados a este formulario de forma irreversible. ¿Deseas continuar?`,
+      header: 'Confirmar eliminación definitiva',
+      icon: 'pi pi-exclamation-triangle',
+      accept: () => {
+        this.productionService.adminDeleteForm(form.id, true).subscribe({
+          next: () => {
+            this.messageService.add({ severity: 'success', summary: 'Formulario eliminado definitivamente', detail: `El formulario "${form.name}" ha sido eliminado físicamente.` });
+            this.loadForms();
+          },
+          error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar el formulario físicamente.' })
         });
       }
     });
@@ -285,7 +318,7 @@ export class RequestsBetaAdminComponent implements OnInit {
     this.formFields.set([]);
     this.showFieldsDialog.set(true);
 
-    this.productionService.getDynamicFormFields(form.id).subscribe({
+    this.productionService.getDynamicFormFields(form.id, true).subscribe({
       next: (data) => {
         this.formFields.set(data.map(f => ({
           id: f.id,
@@ -296,6 +329,7 @@ export class RequestsBetaAdminComponent implements OnInit {
           placeholder: f.placeholder || '',
           isRequired: !!f.isRequired,
           isReadOnly: !!f.isReadOnly,
+          isActive: f.isActive !== false,
           defaultValueExpression: f.defaultValueExpression || '',
           displayOrder: f.displayOrder,
           metadata: f.metadata ? (typeof f.metadata === 'string' ? JSON.parse(f.metadata) : f.metadata) : {}
@@ -317,6 +351,7 @@ export class RequestsBetaAdminComponent implements OnInit {
         placeholder: '',
         isRequired: false,
         isReadOnly: false,
+        isActive: true,
         defaultValueExpression: '',
         displayOrder: currentFields.length + 1,
         metadata: {}
@@ -368,6 +403,43 @@ export class RequestsBetaAdminComponent implements OnInit {
       field.metadata.options = opts;
     }
     this.showSelectConfigDialog.set(false);
+  }
+
+  confirmSoftDeleteField(field: FormFieldItem) {
+    this.confirmationService.confirm({
+      message: `El campo "${field.label}" se ocultará y no se solicitará ni mostrará al crear nuevas solicitudes, pero se conservarán sus respuestas en el histórico de solicitudes pasadas. ¿Deseas continuar?`,
+      header: 'Confirmar eliminación',
+      icon: 'pi pi-trash',
+      accept: () => {
+        field.isActive = false;
+        this.messageService.add({ severity: 'info', summary: 'Campo eliminado', detail: `El campo "${field.label}" ha sido ocultado.` });
+      }
+    });
+  }
+
+  confirmRestoreField(field: FormFieldItem) {
+    this.confirmationService.confirm({
+      message: `El campo "${field.label}" volverá a activarse y se solicitará de forma obligatoria o según esté configurado en todas las nuevas solicitudes de ahora en adelante. ¿Deseas continuar?`,
+      header: 'Confirmar restauración',
+      icon: 'pi pi-refresh',
+      accept: () => {
+        field.isActive = true;
+        this.messageService.add({ severity: 'success', summary: 'Campo restaurado', detail: `El campo "${field.label}" ha sido reactivado.` });
+      }
+    });
+  }
+
+  confirmPhysicalDeleteField(index: number) {
+    const field = this.formFields()[index];
+    this.confirmationService.confirm({
+      message: `¡CUIDADO! Esta acción eliminará FÍSICAMENTE el campo "${field.label}" de la base de datos y BORRARÁ permanentemente todos los datos históricos llenados para este campo en solicitudes anteriores de forma irreversible. ¿Deseas continuar?`,
+      header: 'Confirmar eliminación definitiva',
+      icon: 'pi pi-exclamation-triangle',
+      accept: () => {
+        this.removeField(index);
+        this.messageService.add({ severity: 'warn', summary: 'Campo eliminado definitivamente', detail: `El campo "${field.label}" ha sido eliminado de la lista.` });
+      }
+    });
   }
 
   removeField(index: number) {

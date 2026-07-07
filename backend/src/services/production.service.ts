@@ -105,10 +105,14 @@ export class ProductionService {
         });
     }
 
-    async getFormFields(formId: number) {
+    async getFormFields(formId: number, includeInactive: boolean = false) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+        const whereClause: any = { formId };
+        if (!includeInactive) {
+            whereClause.isActive = true;
+        }
         return await AppDataSource.getRepository(DynamicFormField).find({
-            where: { formId },
+            where: whereClause,
             order: { displayOrder: 'ASC' }
         });
     }
@@ -647,13 +651,59 @@ export class ProductionService {
         return await repo.save(form);
     }
 
-    async adminDeleteForm(id: number) {
+    async adminDeleteForm(id: number, physicalDelete: boolean = false) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
-        const repo = AppDataSource.getRepository(DynamicForm);
-        const form = await repo.findOne({ where: { id } });
-        if (!form) throw new Error('Formulario no encontrado');
-        form.isActive = false;
-        return await repo.save(form);
+        
+        if (physicalDelete) {
+            return await AppDataSource.transaction(async (manager) => {
+                const formRepo = manager.getRepository(DynamicForm);
+                const fieldRepo = manager.getRepository(DynamicFormField);
+                const stageRepo = manager.getRepository(DynamicWorkflowStage);
+                const subRepo = manager.getRepository(DynamicFormSubmission);
+                const valRepo = manager.getRepository(DynamicFormFieldValue);
+                const stateRepo = manager.getRepository(DynamicSubmissionWorkflowState);
+
+                const fields = await fieldRepo.find({ where: { formId: id } });
+                const fieldIds = fields.map(f => f.id);
+
+                const stages = await stageRepo.find({ where: { formId: id } });
+                const stageIds = stages.map(s => s.id);
+
+                const subs = await subRepo.find({ where: { formId: id } });
+                const subIds = subs.map(s => s.id);
+
+                await stageRepo.update({ formIdToFill: id }, { formIdToFill: null });
+
+                if (fieldIds.length > 0) {
+                    await valRepo.delete({ fieldId: In(fieldIds) });
+                }
+
+                if (subIds.length > 0) {
+                    await stateRepo.delete({ submissionId: In(subIds) });
+                }
+
+                if (subIds.length > 0) {
+                    await subRepo.delete({ id: In(subIds) });
+                }
+
+                if (fieldIds.length > 0) {
+                    await fieldRepo.delete({ id: In(fieldIds) });
+                }
+
+                if (stageIds.length > 0) {
+                    await stageRepo.delete({ id: In(stageIds) });
+                }
+
+                await formRepo.delete({ id });
+                return { id, deleted: true };
+            });
+        } else {
+            const repo = AppDataSource.getRepository(DynamicForm);
+            const form = await repo.findOne({ where: { id } });
+            if (!form) throw new Error('Formulario no encontrado');
+            form.isActive = false;
+            return await repo.save(form);
+        }
     }
 
     async adminSaveFields(formId: number, fields: Partial<DynamicFormField>[]) {
@@ -665,9 +715,11 @@ export class ProductionService {
             const existingFields = await fieldRepo.find({ where: { formId } });
             const inputIds = fields.map(f => f.id).filter(id => !!id) as number[];
             
-            // Delete fields that are not in the input list
+            // Delete fields that are not in the input list (Cascade delete values and field itself)
             const fieldsToDelete = existingFields.filter(ef => !inputIds.includes(ef.id));
             if (fieldsToDelete.length > 0) {
+                const ids = fieldsToDelete.map(f => f.id);
+                await manager.getRepository(DynamicFormFieldValue).delete({ fieldId: In(ids) });
                 await fieldRepo.remove(fieldsToDelete);
             }
 
@@ -687,6 +739,7 @@ export class ProductionService {
                         placeholder: f.placeholder,
                         isRequired: f.isRequired ?? false,
                         isReadOnly: f.isReadOnly ?? false,
+                        isActive: f.isActive ?? true,
                         defaultValueExpression: f.defaultValueExpression,
                         displayOrder: f.displayOrder ?? (i + 1),
                         metadata: f.metadata ? (typeof f.metadata === 'string' ? f.metadata : JSON.stringify(f.metadata)) : null
@@ -699,6 +752,7 @@ export class ProductionService {
                     if (f.placeholder !== undefined) fieldEntity.placeholder = f.placeholder;
                     if (f.isRequired !== undefined) fieldEntity.isRequired = f.isRequired;
                     if (f.isReadOnly !== undefined) fieldEntity.isReadOnly = f.isReadOnly;
+                    if (f.isActive !== undefined) fieldEntity.isActive = f.isActive;
                     if (f.defaultValueExpression !== undefined) fieldEntity.defaultValueExpression = f.defaultValueExpression;
                     if (f.displayOrder !== undefined) fieldEntity.displayOrder = f.displayOrder;
                     if (f.metadata !== undefined) fieldEntity.metadata = f.metadata ? (typeof f.metadata === 'string' ? f.metadata : JSON.stringify(f.metadata)) : null;

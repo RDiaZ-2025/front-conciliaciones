@@ -41,31 +41,43 @@
                 </ng-template>
                 <ng-template pTemplate="body" let-form>
                     <tr>
-                        <td class="font-bold text-900">{{ form.name }}</td>
-                        <td>{{ form.description || 'Sin descripción' }}</td>
-                        <td>{{ form.responsible || 'Sin asignar' }}</td>
-                        <td>{{ form.role || 'Sin asignar' }}</td>
-                        <td class="text-center">
+                        <td class="font-bold text-900" [class.opacity-60]="!form.isActive" [class.surface-100]="!form.isActive">{{ form.name }}</td>
+                        <td [class.opacity-60]="!form.isActive" [class.surface-100]="!form.isActive">{{ form.description || 'Sin descripción' }}</td>
+                        <td [class.opacity-60]="!form.isActive" [class.surface-100]="!form.isActive">{{ form.responsible || 'Sin asignar' }}</td>
+                        <td [class.opacity-60]="!form.isActive" [class.surface-100]="!form.isActive">{{ form.role || 'Sin asignar' }}</td>
+                        <td class="text-center" [class.opacity-60]="!form.isActive" [class.surface-100]="!form.isActive">
                             <p-tag [value]="form.isEntryForm ? 'Inicial' : 'Interno'" 
                                    [severity]="form.isEntryForm ? 'success' : 'warn'"></p-tag>
                         </td>
-                        <td class="text-center">
+                        <td class="text-center" [class.opacity-60]="!form.isActive" [class.surface-100]="!form.isActive">
                             <p-tag [value]="form.isActive ? 'Activo' : 'Inactivo'" 
                                    [severity]="form.isActive ? 'success' : 'danger'"></p-tag>
                         </td>
                         <td class="text-center">
                             <div class="flex justify-content-center gap-2">
                                 <p-button [text]="true" [rounded]="true" severity="secondary" 
-                                          pTooltip="Editar Metadatos" (onClick)="openEditFormDialog(form)">
+                                          pTooltip="Editar Metadatos" (onClick)="openEditFormDialog(form)" [disabled]="!form.isActive">
                                     <lucide-icon name="edit-2"></lucide-icon>
                                 </p-button>
                                 <p-button [text]="true" [rounded]="true" severity="info" 
-                                          pTooltip="Configurar Campos" (onClick)="openFieldsConfigurator(form)">
+                                          pTooltip="Configurar Campos" (onClick)="openFieldsConfigurator(form)" [disabled]="!form.isActive">
                                     <lucide-icon name="list"></lucide-icon>
                                 </p-button>
-                                <p-button [text]="true" [rounded]="true" severity="danger" 
-                                          pTooltip="Desactivar" *ngIf="form.isActive" (onClick)="deleteForm(form)">
+                                
+                                <!-- Si está activo: Botón para Eliminar (Desactivar) -->
+                                <p-button *ngIf="form.isActive" [text]="true" [rounded]="true" severity="danger" 
+                                          pTooltip="Eliminar" (onClick)="confirmSoftDeleteForm(form)">
                                     <lucide-icon name="trash"></lucide-icon>
+                                </p-button>
+                                
+                                <!-- Si está inactivo: Botones para Restaurar o Eliminar Definitivamente -->
+                                <p-button *ngIf="!form.isActive" [text]="true" [rounded]="true" severity="success" 
+                                          pTooltip="Restaurar" (onClick)="confirmRestoreForm(form)">
+                                    <lucide-icon name="rotate-ccw"></lucide-icon>
+                                </p-button>
+                                <p-button *ngIf="!form.isActive" [text]="true" [rounded]="true" severity="danger" 
+                                          pTooltip="Eliminar Definitivamente" (onClick)="confirmPhysicalDeleteForm(form)">
+                                    <lucide-icon name="trash-2"></lucide-icon>
                                 </p-button>
                             </div>
                         </td>
@@ -326,41 +338,64 @@
                     </ng-template>
                     <ng-template pTemplate="body" let-field let-rowIndex="rowIndex">
                         <tr>
-                            <td>
-                                <input pInputText [(ngModel)]="field.label" placeholder="Nombre visible" class="p-inputtext-sm" />
+                            <td [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
+                                <div class="flex flex-column gap-1">
+                                    <input pInputText [(ngModel)]="field.label" placeholder="Nombre visible" class="p-inputtext-sm" [disabled]="!field.isActive" />
+                                    <span class="text-xs text-red-500 font-semibold" *ngIf="!field.isActive">
+                                        <lucide-icon name="eye-off" class="mr-1" style="width: 0.8rem; height: 0.8rem; display: inline-block; vertical-align: middle;"></lucide-icon>
+                                        Desactivado (Oculto)
+                                    </span>
+                                </div>
                             </td>
-                            <td>
-                                <input pInputText [(ngModel)]="field.name" placeholder="Ej: clientName" class="p-inputtext-sm" />
+                            <td [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
+                                <input pInputText [(ngModel)]="field.name" placeholder="Ej: clientName" class="p-inputtext-sm" [disabled]="!field.isActive" />
                             </td>
-                            <td>
-                                <input pInputText [(ngModel)]="field.description" placeholder="Texto de ayuda" class="p-inputtext-sm" />
+                            <td [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
+                                <input pInputText [(ngModel)]="field.description" placeholder="Texto de ayuda" class="p-inputtext-sm" [disabled]="!field.isActive" />
                             </td>
-                            <td>
+                            <td [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
                                  <div class="flex flex-column gap-1">
-                                     <p-select [options]="fieldTypeOptions" [(ngModel)]="field.type" styleClass="p-inputtext-sm w-full" appendTo="body"></p-select>
-                                     <p-button *ngIf="field.type === 'file'" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openFileConfigDialog(field)">
+                                     <p-select [options]="fieldTypeOptions" [(ngModel)]="field.type" styleClass="p-inputtext-sm w-full" appendTo="body" [disabled]="!field.isActive"></p-select>
+                                     <p-button *ngIf="field.type === 'file'" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openFileConfigDialog(field)" [disabled]="!field.isActive">
                                          <lucide-icon name="settings" class="mr-2"></lucide-icon>
                                          Configurar
                                      </p-button>
-                                     <p-button *ngIf="field.type === 'select'" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openSelectConfigDialog(field)">
+                                     <p-button *ngIf="field.type === 'select'" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openSelectConfigDialog(field)" [disabled]="!field.isActive">
                                          <lucide-icon name="list" class="mr-2"></lucide-icon>
                                          Opciones
                                      </p-button>
                                  </div>
                             </td>
-                            <td>
-                                <input pInputText [(ngModel)]="field.defaultValueExpression" placeholder="Ej: CURRENT_DATE_TIME" class="p-inputtext-sm" />
+                            <td [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
+                                <input pInputText [(ngModel)]="field.defaultValueExpression" placeholder="Ej: CURRENT_DATE_TIME" class="p-inputtext-sm" [disabled]="!field.isActive" />
+                            </td>
+                            <td class="text-center" [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
+                                <p-checkbox [(ngModel)]="field.isRequired" [binary]="true" [disabled]="!field.isActive"></p-checkbox>
+                            </td>
+                            <td class="text-center" [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
+                                <p-checkbox [(ngModel)]="field.isReadOnly" [binary]="true" [disabled]="!field.isActive"></p-checkbox>
                             </td>
                             <td class="text-center">
-                                <p-checkbox [(ngModel)]="field.isRequired" [binary]="true"></p-checkbox>
-                            </td>
-                            <td class="text-center">
-                                <p-checkbox [(ngModel)]="field.isReadOnly" [binary]="true"></p-checkbox>
-                            </td>
-                            <td class="text-center">
-                                <p-button [text]="true" [rounded]="true" severity="danger" size="small" (onClick)="removeField(rowIndex)">
-                                    <lucide-icon name="trash"></lucide-icon>
-                                </p-button>
+                                <div class="flex justify-content-center gap-1">
+                                    <!-- Si está activo: Botón para Eliminar (Desactivar) -->
+                                    <p-button *ngIf="field.isActive" [text]="true" [rounded]="true" severity="danger" size="small" 
+                                              [pTooltip]="'Eliminar'" tooltipPosition="top"
+                                              (onClick)="confirmSoftDeleteField(field)">
+                                        <lucide-icon name="trash"></lucide-icon>
+                                    </p-button>
+                                    
+                                    <!-- Si está inactivo: Botones para Restaurar o Eliminar Definitivamente -->
+                                    <p-button *ngIf="!field.isActive" [text]="true" [rounded]="true" severity="success" size="small"
+                                              [pTooltip]="'Restaurar'" tooltipPosition="top"
+                                              (onClick)="confirmRestoreField(field)">
+                                        <lucide-icon name="rotate-ccw"></lucide-icon>
+                                    </p-button>
+                                    <p-button *ngIf="!field.isActive" [text]="true" [rounded]="true" severity="danger" size="small"
+                                              [pTooltip]="'Eliminar Definitivamente'" tooltipPosition="top"
+                                              (onClick)="confirmPhysicalDeleteField(rowIndex)">
+                                        <lucide-icon name="trash-2"></lucide-icon>
+                                    </p-button>
+                                </div>
                             </td>
                         </tr>
                     </ng-template>

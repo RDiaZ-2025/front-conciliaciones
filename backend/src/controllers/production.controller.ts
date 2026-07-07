@@ -76,7 +76,8 @@ export const updateMaterialData = updateProductionRequestPartial;
 
 export const getFormFields = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
     const { id } = req.params;
-    const fields = await productionService.getFormFields(parseInt(id));
+    const includeInactive = req.query.includeInactive === 'true';
+    const fields = await productionService.getFormFields(parseInt(id), includeInactive);
     return res.json(fields);
 });
 
@@ -119,7 +120,8 @@ export const adminUpdateForm = asyncHandler(async (req: Request, res: Response):
 
 export const adminDeleteForm = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
     const { id } = req.params;
-    const form = await productionService.adminDeleteForm(parseInt(id));
+    const physicalDelete = req.query.physicalDelete === 'true';
+    const form = await productionService.adminDeleteForm(parseInt(id), physicalDelete);
     return res.json(form);
 });
 
