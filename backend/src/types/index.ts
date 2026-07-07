@@ -111,6 +111,7 @@ export interface DatabaseConfig {
     enableArithAbort: boolean;
     requestTimeout: number;
     connectionTimeout: number;
+    useUTC?: boolean;
   };
   pool: {
     max: number;

@@ -23,6 +23,7 @@ export const AppDataSource = new DataSource({
     encrypt: process.env.DB_ENCRYPT === 'true',
     trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE === 'true',
     enableArithAbort: true,
+    useUTC: true,
   },
   
   // Timeout settings
