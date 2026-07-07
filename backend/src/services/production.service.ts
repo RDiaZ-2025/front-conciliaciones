@@ -172,7 +172,7 @@ export class ProductionService {
                     const fieldValue = valRepo.create({
                         submissionId: savedSubmission.id,
                         fieldId: field.id,
-                        value: valueStr
+                        value: String(valueStr)
                     });
                     await valRepo.save(fieldValue);
                 }
@@ -1061,7 +1061,7 @@ export class ProductionService {
                         const fieldValue = valRepo.create({
                             submissionId: submission.id,
                             fieldId: field.id,
-                            value: valueStr
+                            value: String(valueStr)
                         });
                         await valRepo.save(fieldValue);
                     }
