@@ -22,6 +22,7 @@ export * from './Presupuesto';
 export * from './IngresoPortal';
 export * from './IngresoRedes';
 export * from './NocNewsScheduler';
+export * from './NocNewsDraft';
 export * from './ProductionRequestType';
 export * from './DynamicForm';
 export * from './DynamicFormField';
@@ -70,6 +71,7 @@ import { IngresoPortal } from './IngresoPortal';
 import { IngresoRedes } from './IngresoRedes';
 import { PrecioDolar } from './PrecioDolar';
 import { NocNewsScheduler } from './NocNewsScheduler';
+import { NocNewsDraft } from './NocNewsDraft';
 import { ProductionRequestType } from './ProductionRequestType';
 import { DynamicForm } from './DynamicForm';
 import { DynamicFormField } from './DynamicFormField';
@@ -112,6 +114,7 @@ export const entities = [
   IngresoRedes,
   PrecioDolar,
   NocNewsScheduler,
+  NocNewsDraft,
   ProductionRequestType,
   DynamicForm,
   DynamicFormField,

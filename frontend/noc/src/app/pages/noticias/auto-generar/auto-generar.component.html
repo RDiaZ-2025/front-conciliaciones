@@ -29,8 +29,9 @@
           <th>Fuentes</th>
           <th>Programación</th>
           <th>Próxima Ejecución</th>
+          <th class="text-center">Autopublicar</th>
           <th class="text-center">Estado</th>
-          <th class="text-center" style="width: 180px;">Acciones</th>
+          <th class="text-center" style="width: 220px;">Acciones</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-schedule>
@@ -60,12 +61,28 @@
             <div class="text-xs text-muted mt-1" *ngIf="schedule.lastRunAt">Última: {{ schedule.lastRunAt | date:'short' }}</div>
           </td>
           <td class="text-center">
+            <p-tag [severity]="schedule.publishAutomatically ? 'success' : 'secondary'" 
+                   [value]="schedule.publishAutomatically ? 'Sí' : 'No'" [rounded]="true"></p-tag>
+          </td>
+          <td class="text-center">
             <span class="cursor-pointer" (click)="toggleActive(schedule)" title="Haz clic para activar/desactivar">
               <p-tag [severity]="schedule.isActive ? 'success' : 'danger'" [value]="schedule.isActive ? 'Activo' : 'Inactivo'" [rounded]="true"></p-tag>
             </span>
           </td>
           <td class="text-center">
             <div class="flex justify-content-center gap-2">
+              <div class="relative inline-block">
+                <button pButton pRipple class="p-button-rounded p-button-success p-button-text" 
+                        pTooltip="Ver Borradores" tooltipPosition="top"
+                        (click)="viewDrafts(schedule)">
+                  <lucide-icon name="newspaper"></lucide-icon>
+                </button>
+                <span *ngIf="schedule.pendingDraftsCount && schedule.pendingDraftsCount > 0" 
+                      class="absolute bg-red-500 text-white font-bold border-circle flex align-items-center justify-content-center pointer-events-none"
+                      style="top: -2px; right: -2px; width: 16px; height: 16px; font-size: 8px; border: 1px solid white; line-height: 1; z-index: 1;">
+                  {{ schedule.pendingDraftsCount }}
+                </span>
+              </div>
               <button pButton pRipple class="p-button-rounded p-button-warning p-button-text" 
                       [loading]="isExecuting(schedule.id)" pTooltip="Ejecutar Ahora" tooltipPosition="top"
                       (click)="executeNow(schedule)"><lucide-icon name="zap"></lucide-icon></button>
@@ -191,6 +208,12 @@
         <small class="form-help">El agendamiento se desactivará automáticamente después de esta fecha.</small>
       </div>
 
+      <!-- Publicación Automática -->
+      <div class="form-checkbox-field flex align-items-center gap-2 mt-2 p-3 border-round-lg border-1 border-main">
+        <input type="checkbox" id="publishAutomatically" formControlName="publishAutomatically" class="custom-checkbox" />
+        <label for="publishAutomatically" class="form-label cursor-pointer m-0 text-sm font-medium">Publicar automáticamente (sin revisión humana)</label>
+      </div>
+
       <!-- Estado Activo/Inactivo -->
       <div class="form-checkbox-field flex align-items-center gap-2 mt-2 p-3 border-round-lg border-1 border-main">
         <input type="checkbox" id="isActive" formControlName="isActive" class="custom-checkbox" />
@@ -203,6 +226,71 @@
     <div class="flex justify-content-end gap-2 pt-2">
       <button pButton pRipple class="p-button-text p-button-secondary border-round-lg" (click)="displayDialog = false"><lucide-icon name="x" class="mr-2"></lucide-icon>Cancelar</button>
       <button pButton pRipple class="p-button-primary border-round-lg" (click)="saveSchedule()"><lucide-icon name="check" class="mr-2"></lucide-icon>Guardar Agendamiento</button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog 1: List Pending Drafts -->
+<p-dialog [(visible)]="displayDraftsDialog" [header]="'Borradores Pendientes: ' + (selectedScheduleForDrafts?.name || '')" 
+          [modal]="true" [style]="{width: '750px'}" [breakpoints]="{'960px': '85vw', '640px': '95vw'}" 
+          styleClass="custom-scheduler-modal">
+  <ng-template pTemplate="content">
+    <p-table [value]="pendingDrafts()" [loading]="loadingDrafts()" [rows]="5" [paginator]="true" styleClass="p-datatable-striped">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Fecha de Generación</th>
+          <th>Identificador / Ruta</th>
+          <th class="text-center" style="width: 240px;">Acciones</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-draft>
+        <tr>
+          <td>{{ draft.createdAt | date:'medium' }}</td>
+          <td><code class="text-xs bg-light p-1 border-round">{{ draft.path }}</code></td>
+          <td class="text-center">
+            <div class="flex justify-content-center gap-2">
+              <button pButton pRipple type="button" class="p-button-outlined p-button-sm border-round-md" (click)="previewDraft(draft)">
+                <lucide-icon name="eye" class="mr-1" [size]="16"></lucide-icon> Previsualizar
+              </button>
+              <button pButton pRipple type="button" class="p-button-success p-button-sm border-round-md" (click)="publishDraft(draft)">
+                <lucide-icon name="globe" class="mr-1" [size]="16"></lucide-icon> Publicar
+              </button>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="3" class="text-center p-4 text-muted">
+            No hay borradores pendientes de aprobación para este agendamiento.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </ng-template>
+  <ng-template pTemplate="footer">
+    <div class="flex justify-content-end pt-2">
+      <button pButton pRipple class="p-button-text p-button-secondary border-round-lg" (click)="displayDraftsDialog = false"><lucide-icon name="x" class="mr-2"></lucide-icon>Cerrar</button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog 2: Preview Rendered News -->
+<p-dialog [(visible)]="displayPreviewDialog" [header]="previewTitle()" 
+          [modal]="true" [style]="{width: '800px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false"
+          styleClass="custom-scheduler-modal">
+  <ng-template pTemplate="content">
+    <div class="border-round border-1 surface-border bg-white overflow-hidden" style="height: 60vh;">
+      <div *ngIf="loadingPreview()" class="flex flex-column align-items-center justify-content-center p-5 gap-3 h-full">
+        <i class="pi pi-spin pi-spinner text-primary text-4xl"></i>
+        <span class="font-medium text-muted">Consultando previsualización al webhook...</span>
+      </div>
+      <iframe *ngIf="!loadingPreview()" [srcdoc]="previewHtml()" style="width: 100%; height: 100%; border: none; display: block;"></iframe>
+    </div>
+  </ng-template>
+  <ng-template pTemplate="footer">
+    <div class="flex justify-content-end pt-2">
+      <button pButton pRipple class="p-button-text p-button-secondary border-round-lg" (click)="displayPreviewDialog = false"><lucide-icon name="x" class="mr-2"></lucide-icon>Cerrar</button>
     </div>
   </ng-template>
 </p-dialog>

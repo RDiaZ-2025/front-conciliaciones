@@ -17,6 +17,8 @@ export interface NewsSchedule {
   cronExpression?: string | null;
   scheduleConfig: any; // Flexible JSON config
   isActive: boolean;
+  publishAutomatically?: boolean;
+  pendingDraftsCount?: number;
   status?: string;
   lastRunAt?: string | null;
   nextRunAt?: string | null;
@@ -64,10 +66,13 @@ export class NewsSchedulerService extends BaseApiService {
   }
 
   triggerNow(schedule: NewsSchedule): Observable<any> {
-    const payload: WebhookPayload = {
-      sources: schedule.sources && schedule.sources.length > 0 ? schedule.sources : [],
-      topic: schedule.topic,
-      userInstructions: schedule.userInstructions ? schedule.userInstructions : null
+    const payload = {
+      data: {
+        sources: schedule.sources && schedule.sources.length > 0 ? schedule.sources : [],
+        topic: schedule.topic,
+        userInstructions: schedule.userInstructions ? schedule.userInstructions : null
+      },
+      async: false
     };
 
     return this.http.post(this.webhookUrl, payload);
@@ -75,5 +80,21 @@ export class NewsSchedulerService extends BaseApiService {
 
   recordExecution(id: string): Observable<NewsSchedule> {
     return this.http.post<NewsSchedule>(`${this.apiUrl}/${id}/record-execution`, {});
+  }
+
+  getPendingDrafts(scheduleId: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/${scheduleId}/drafts`);
+  }
+
+  previewDraft(path: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/drafts/preview`, { path });
+  }
+
+  publishDraft(draftId: number): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/drafts/${draftId}/publish`, {});
+  }
+
+  saveDraft(scheduleId: string, path: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/draft`, { scheduleId, path });
   }
 }

@@ -102,3 +102,5 @@
 .custom-schedule-table .p-datatable-tbody > tr:nth-child(even) {
   background-color: var(--surface-hover, rgba(128, 128, 128, 0.05));
 }
+
+

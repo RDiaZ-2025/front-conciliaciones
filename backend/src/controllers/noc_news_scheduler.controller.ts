@@ -31,7 +31,7 @@ export class NocNewsSchedulerController {
 
     async createSchedule(req: Request, res: Response): Promise<void> {
         try {
-            const { name, topic, userInstructions, sources, startAt, scheduleConfig, isActive } = req.body;
+            const { name, topic, userInstructions, sources, startAt, scheduleConfig, isActive, publishAutomatically } = req.body;
             if (!name || !topic || !sources || !startAt || !scheduleConfig) {
                 res.status(400).json({ message: 'Faltan campos requeridos para el agendamiento' });
                 return;
@@ -43,7 +43,8 @@ export class NocNewsSchedulerController {
                 sources,
                 startAt,
                 scheduleConfig,
-                isActive
+                isActive,
+                publishAutomatically
             });
             res.status(201).json(schedule);
         } catch (error: any) {
@@ -109,6 +110,58 @@ export class NocNewsSchedulerController {
         } catch (error: any) {
             console.error('Error recording execution:', error);
             res.status(500).json({ message: 'Error interno al registrar ejecución', error: error.message });
+        }
+    }
+
+    async saveDraft(req: Request, res: Response): Promise<void> {
+        try {
+            const { scheduleId, path } = req.body;
+            if (!scheduleId || !path) {
+                res.status(400).json({ message: 'Faltan campos requeridos (scheduleId, path)' });
+                return;
+            }
+            const draft = await schedulerService.saveDraft(scheduleId, path);
+            res.status(201).json(draft);
+        } catch (error: any) {
+            console.error('Error saving news draft:', error);
+            res.status(500).json({ message: 'Error interno al guardar el borrador de noticia', error: error.message });
+        }
+    }
+
+    async getDrafts(req: Request, res: Response): Promise<void> {
+        try {
+            const { id } = req.params; // Schedule ID
+            const drafts = await schedulerService.getDraftsByScheduleId(id);
+            res.status(200).json(drafts);
+        } catch (error: any) {
+            console.error('Error fetching news drafts:', error);
+            res.status(500).json({ message: 'Error interno al obtener los borradores de noticias', error: error.message });
+        }
+    }
+
+    async previewDraft(req: Request, res: Response): Promise<void> {
+        try {
+            const { path } = req.body;
+            if (!path) {
+                res.status(400).json({ message: 'Falta campo requerido (path)' });
+                return;
+            }
+            const preview = await schedulerService.previewDraft(path);
+            res.status(200).json(preview);
+        } catch (error: any) {
+            console.error('Error previewing news draft:', error);
+            res.status(500).json({ message: 'Error interno al obtener la previsualización de la noticia', error: error.message });
+        }
+    }
+
+    async publishDraft(req: Request, res: Response): Promise<void> {
+        try {
+            const { id } = req.params; // Draft ID
+            const draft = await schedulerService.publishDraft(parseInt(id));
+            res.status(200).json(draft);
+        } catch (error: any) {
+            console.error('Error publishing news draft:', error);
+            res.status(500).json({ message: 'Error interno al publicar la noticia', error: error.message });
         }
     }
 }

@@ -51,5 +51,11 @@ router.patch(['/news-scheduler/:id/toggle', '/noc/news-scheduler/:id/toggle'], a
 router.post(['/news-scheduler/:id/record-execution', '/noc/news-scheduler/:id/record-execution'], authenticateToken, (req, res) => nocNewsSchedulerController.recordExecution(req, res));
 router.delete(['/news-scheduler/:id', '/noc/news-scheduler/:id'], authenticateToken, (req, res) => nocNewsSchedulerController.deleteSchedule(req, res));
 
+// Borradores / Drafts
+router.post(['/news-scheduler/draft', '/noc/news-scheduler/draft'], (req, res) => nocNewsSchedulerController.saveDraft(req, res)); // PUBLIC
+router.get(['/news-scheduler/:id/drafts', '/noc/news-scheduler/:id/drafts'], authenticateToken, (req, res) => nocNewsSchedulerController.getDrafts(req, res));
+router.post(['/news-scheduler/drafts/preview', '/noc/news-scheduler/drafts/preview'], authenticateToken, (req, res) => nocNewsSchedulerController.previewDraft(req, res));
+router.post(['/news-scheduler/drafts/:id/publish', '/noc/news-scheduler/drafts/:id/publish'], authenticateToken, (req, res) => nocNewsSchedulerController.publishDraft(req, res));
+
 export default router;
 

@@ -2,6 +2,7 @@ import { LucideIconComponent } from '../../../components/lucide-icon/lucide-icon
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 // PrimeNG Imports
 import { TableModule } from 'primeng/table';
@@ -81,7 +82,8 @@ export class AutoGenerarComponent implements OnInit {
     private fb: FormBuilder,
     private schedulerService: NewsSchedulerService,
     private messageService: MessageService,
-    private confirmationService: ConfirmationService
+    private confirmationService: ConfirmationService,
+    private sanitizer: DomSanitizer
   ) {}
 
   ngOnInit(): void {
@@ -103,7 +105,8 @@ export class AutoGenerarComponent implements OnInit {
       intervalMinutes: [0, [Validators.required]], // 0 = weekly day/time rules, >0 = regular intervals
       endAt: [''],
       weeklyRules: this.fb.array([]),
-      isActive: [true]
+      isActive: [true],
+      publishAutomatically: [false]
     });
 
     // Make sure we have at least one weekly rule by default
@@ -175,7 +178,8 @@ export class AutoGenerarComponent implements OnInit {
       startAt: nowISO,
       intervalMinutes: 0,
       endAt: '',
-      isActive: true
+      isActive: true,
+      publishAutomatically: false
     });
 
     this.sourcesArray.clear();
@@ -204,7 +208,8 @@ export class AutoGenerarComponent implements OnInit {
       startAt: formattedStartAt,
       intervalMinutes: intervalMin,
       endAt: config.endAt ? config.endAt.slice(0, 16) : '',
-      isActive: schedule.isActive
+      isActive: schedule.isActive,
+      publishAutomatically: schedule.publishAutomatically || false
     });
 
     this.sourcesArray.clear();
@@ -293,7 +298,8 @@ export class AutoGenerarComponent implements OnInit {
       startAt: formVal.startAt,
       intervalMinutes: interval > 0 ? interval : 1440,
       scheduleConfig,
-      isActive: formVal.isActive
+      isActive: formVal.isActive,
+      publishAutomatically: formVal.publishAutomatically
     };
 
     if (this.isEditMode && this.currentScheduleId) {
@@ -403,16 +409,41 @@ export class AutoGenerarComponent implements OnInit {
     });
 
     this.schedulerService.triggerNow(schedule).subscribe({
-      next: () => {
+      next: (res: any) => {
         this.schedulerService.recordExecution(schedule.id).subscribe({
           next: () => this.loadSchedules(),
           error: () => this.loadSchedules()
         });
+        
         this.messageService.add({
           severity: 'success',
           summary: 'Noticia Generada',
           detail: 'El webhook de generación de noticias respondió con éxito.'
         });
+
+        // Guardar el borrador en base de datos si viene en la respuesta
+        const draftPath = res?.data?.[0]?.name;
+        if (draftPath) {
+          this.schedulerService.saveDraft(schedule.id, draftPath).subscribe({
+            next: () => {
+              this.messageService.add({
+                severity: 'info',
+                summary: 'Borrador Registrado',
+                detail: 'La noticia se ha guardado en la bandeja de borradores pendientes.'
+              });
+              this.loadSchedules();
+            },
+            error: (err) => {
+              console.error('Error al registrar borrador en el backend:', err);
+              this.messageService.add({
+                severity: 'error',
+                summary: 'Error de Registro',
+                detail: 'No se pudo guardar la noticia en la base de datos del backend.'
+              });
+            }
+          });
+        }
+
         this.removeExecuting(schedule.id);
       },
       error: (err) => {
@@ -500,5 +531,132 @@ export class AutoGenerarComponent implements OnInit {
       label += ` (hasta ${endFormatted})`;
     }
     return label;
+  }
+
+  // --- Borradores / Drafts UI State and Actions ---
+  displayDraftsDialog = false;
+  selectedScheduleForDrafts: NewsSchedule | null = null;
+  pendingDrafts = signal<any[]>([]);
+  loadingDrafts = signal(false);
+
+  // Previsualización / Preview UI State
+  displayPreviewDialog = false;
+  previewHtml = signal<string>('');
+  loadingPreview = signal(false);
+  previewTitle = signal<string>('');
+
+  viewDrafts(schedule: NewsSchedule): void {
+    this.selectedScheduleForDrafts = schedule;
+    this.displayDraftsDialog = true;
+    this.loadDrafts(schedule.id);
+  }
+
+  loadDrafts(scheduleId: string): void {
+    this.loadingDrafts.set(true);
+    this.schedulerService.getPendingDrafts(scheduleId).subscribe({
+      next: (data) => {
+        this.pendingDrafts.set(data);
+        this.loadingDrafts.set(false);
+      },
+      error: (err) => {
+        console.error('Error loading drafts', err);
+        this.loadingDrafts.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'No se pudieron cargar los borradores.'
+        });
+      }
+    });
+  }
+
+  previewDraft(draft: any): void {
+    this.previewTitle.set(`Previsualizar Borrador: ${this.selectedScheduleForDrafts?.topic || 'Noticia'}`);
+    this.displayPreviewDialog = true;
+    this.loadingPreview.set(true);
+    this.previewHtml.set('');
+
+    this.schedulerService.previewDraft(draft.path).subscribe({
+      next: (res) => {
+        let rendered = res?.data?.[0]?.body?.rendered || '';
+        
+        // Resolve relative image URLs by prepending the production domain
+        rendered = rendered.replace(/src=["']\/img\//g, 'src="https://redmas.com.co/img/');
+        rendered = rendered.replace(/src=["']img\//g, 'src="https://redmas.com.co/img/');
+
+        const documentHtml = `
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="utf-8">
+              <style>
+                body {
+                  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                  line-height: 1.6;
+                  color: #333333;
+                  margin: 20px;
+                  padding: 0;
+                  background-color: #ffffff;
+                }
+                h1 { font-size: 2.2em; font-weight: 800; margin-top: 1.5em; margin-bottom: 1rem; color: #1a252f; }
+                h2 { font-size: 1.6em; font-weight: 700; margin-top: 2rem; margin-bottom: 0.75rem; color: #2c3e50; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; }
+                h3 { font-size: 1.25em; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; color: #2c3e50; }
+                p { margin-top: 0; margin-bottom: 1.25rem; font-size: 1.05rem; line-height: 1.75; color: #2c3e50; }
+                strong, b { font-weight: 700; color: #000000; }
+                img { max-width: 100%; height: auto; display: block; margin: 1.5rem auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+                figure { margin: 1.5rem 0; text-align: center; }
+                figcaption { font-size: 0.9rem; color: #7f8c8d; margin-top: 0.5rem; font-style: italic; text-align: center; }
+                ul, ol { padding-left: 2rem; margin-bottom: 1.25rem; }
+                li { margin-bottom: 0.5rem; font-size: 1.05rem; color: #2c3e50; }
+              </style>
+            </head>
+            <body>
+              ${rendered}
+            </body>
+          </html>
+        `;
+
+        this.previewHtml.set(documentHtml);
+        this.loadingPreview.set(false);
+      },
+      error: (err) => {
+        console.error('Error fetching preview', err);
+        this.loadingPreview.set(false);
+        this.previewHtml.set('<div style="color: red; font-weight: bold; text-align: center; padding: 20px;">Error al cargar la previsualización del webhook.</div>');
+      }
+    });
+  }
+
+  publishDraft(draft: any): void {
+    this.confirmationService.confirm({
+      message: `¿Estás seguro de que deseas publicar definitivamente la noticia asociada al identificador "${draft.path}"?`,
+      header: 'Confirmar Publicación',
+      icon: 'alert-triangle',
+      acceptLabel: 'Publicar',
+      rejectLabel: 'Cancelar',
+      accept: () => {
+        this.schedulerService.publishDraft(draft.id).subscribe({
+          next: () => {
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Publicado',
+              detail: 'La noticia se ha publicado correctamente.'
+            });
+            if (this.selectedScheduleForDrafts) {
+              this.loadDrafts(this.selectedScheduleForDrafts.id);
+            }
+            this.loadSchedules();
+          },
+          error: (err) => {
+            console.error('Error publishing draft', err);
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error',
+              detail: 'No se pudo publicar la noticia.'
+            });
+          }
+        });
+      }
+    });
   }
 }

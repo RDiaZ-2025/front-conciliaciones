@@ -1,6 +1,8 @@
 import { Repository } from 'typeorm';
+import axios from 'axios';
 import { AppDataSource } from '../config/typeorm.config';
 import { NocNewsScheduler } from '../models/NocNewsScheduler';
+import { NocNewsDraft } from '../models/NocNewsDraft';
 
 export interface CreateNewsScheduleDto {
     name: string;
@@ -10,6 +12,7 @@ export interface CreateNewsScheduleDto {
     startAt: string;
     scheduleConfig: any; // Raw JSON config from frontend
     isActive?: boolean;
+    publishAutomatically?: boolean;
 }
 
 export interface UpdateNewsScheduleDto {
@@ -21,6 +24,7 @@ export interface UpdateNewsScheduleDto {
     scheduleConfig?: any; // Raw JSON config from frontend
     isActive?: boolean;
     status?: string;
+    publishAutomatically?: boolean;
 }
 
 export class NocNewsSchedulerService {
@@ -155,10 +159,24 @@ export class NocNewsSchedulerService {
             order: { createdAt: 'DESC' }
         });
 
+        const draftRepo = AppDataSource.getRepository(NocNewsDraft);
+        const counts = await draftRepo.createQueryBuilder('draft')
+            .select('draft.scheduleId', 'scheduleId')
+            .addSelect('COUNT(draft.id)', 'count')
+            .where('draft.status = :status', { status: 'pending' })
+            .groupBy('draft.scheduleId')
+            .getRawMany();
+
+        const countMap = counts.reduce((acc, curr) => {
+            acc[curr.scheduleId] = parseInt(curr.count, 10);
+            return acc;
+        }, {} as Record<string, number>);
+
         return schedules.map((item: NocNewsScheduler) => ({
             ...item,
             sources: JSON.parse(item.sources || '[]'),
-            scheduleConfig: JSON.parse(item.scheduleConfig || '{}')
+            scheduleConfig: JSON.parse(item.scheduleConfig || '{}'),
+            pendingDraftsCount: countMap[item.id] || 0
         }));
     }
 
@@ -199,6 +217,7 @@ export class NocNewsSchedulerService {
             cronExpression: dto.scheduleConfig?.intervalMinutes ? this.minutesToCron(dto.scheduleConfig.intervalMinutes) : null,
             scheduleConfig: JSON.stringify(dto.scheduleConfig || {}),
             isActive: dto.isActive !== undefined ? dto.isActive : true,
+            publishAutomatically: dto.publishAutomatically !== undefined ? dto.publishAutomatically : false,
             status: dto.isActive !== false ? (nextRun ? 'Pending' : 'Completed') : 'Cancelled',
             nextRunAt: nextRun
         });
@@ -226,6 +245,9 @@ export class NocNewsSchedulerService {
         if (dto.isActive !== undefined) {
             schedule.isActive = dto.isActive;
             schedule.status = dto.isActive ? 'Pending' : 'Cancelled';
+        }
+        if (dto.publishAutomatically !== undefined) {
+            schedule.publishAutomatically = dto.publishAutomatically;
         }
         if (dto.status !== undefined) schedule.status = dto.status;
 
@@ -318,5 +340,85 @@ export class NocNewsSchedulerService {
             sources: JSON.parse(saved.sources),
             scheduleConfig: JSON.parse(saved.scheduleConfig)
         };
+    }
+
+    async saveDraft(scheduleId: string, path: string) {
+        if (!AppDataSource.isInitialized) {
+            throw new Error('Database not initialized');
+        }
+        
+        const schedule = await this.repository.findOne({ where: { id: scheduleId } });
+        if (!schedule) {
+            throw new Error(`Schedule with ID ${scheduleId} not found`);
+        }
+
+        const draftRepo = AppDataSource.getRepository(NocNewsDraft);
+        const newDraft = draftRepo.create({
+            scheduleId,
+            path,
+            status: 'pending'
+        });
+
+        return await draftRepo.save(newDraft);
+    }
+
+    async getDraftsByScheduleId(scheduleId: string) {
+        if (!AppDataSource.isInitialized) {
+            return [];
+        }
+        const draftRepo = AppDataSource.getRepository(NocNewsDraft);
+        return await draftRepo.find({
+            where: { scheduleId, status: 'pending' },
+            order: { createdAt: 'DESC' }
+        });
+    }
+
+    async getDraftById(id: number) {
+        if (!AppDataSource.isInitialized) {
+            return null;
+        }
+        const draftRepo = AppDataSource.getRepository(NocNewsDraft);
+        return await draftRepo.findOne({ where: { id } });
+    }
+
+    async publishDraft(draftId: number) {
+        if (!AppDataSource.isInitialized) {
+            throw new Error('Database not initialized');
+        }
+        const draftRepo = AppDataSource.getRepository(NocNewsDraft);
+        const draft = await draftRepo.findOne({ where: { id: draftId } });
+        if (!draft) {
+            throw new Error('Borrador no encontrado');
+        }
+
+        try {
+            console.log(`[Publishing News Draft] Sending request to publish path: ${draft.path}`);
+            await axios.post('https://n8n.srv865978.hstgr.cloud/webhook/noc/post-news', {
+                data: {
+                    path: draft.path
+                },
+                async: false
+            });
+        } catch (error: any) {
+            console.error('Error in publish request:', error);
+            throw new Error(`Error en el webhook de publicación: ${error.message}`);
+        }
+
+        draft.status = 'published';
+        draft.publishedAt = new Date();
+        return await draftRepo.save(draft);
+    }
+
+    async previewDraft(path: string) {
+        try {
+            const response = await axios.post('https://n8n.srv865978.hstgr.cloud/webhook/noc/prev-new', {
+                data: { path },
+                async: false
+            });
+            return response.data;
+        } catch (error: any) {
+            console.error('Error fetching preview from n8n webhook:', error);
+            throw new Error(`Failed to fetch preview: ${error.message}`);
+        }
     }
 }

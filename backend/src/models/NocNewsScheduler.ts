@@ -38,6 +38,9 @@ export class NocNewsScheduler {
     @Column({ name: 'isActive', type: 'bit', nullable: false, default: 1 })
     isActive!: boolean;
 
+    @Column({ name: 'publishAutomatically', type: 'bit', nullable: false, default: 0 })
+    publishAutomatically!: boolean;
+
     @Column({ name: 'status', type: 'nvarchar', length: 20, nullable: false, default: 'Pending' })
     status!: string;
 
