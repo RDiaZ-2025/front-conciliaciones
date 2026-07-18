@@ -432,14 +432,26 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     for (const form of forms) {
       for (const field of form.fields) {
         if (field.isRequired) {
-          const val = values[form.id + '_' + field.name];
-          if (!val || !val.trim()) {
-            this.messageService.add({ 
-              severity: 'error', 
-              summary: 'Error de Validación', 
-              detail: `El campo "${field.label}" en el formulario "${form.name}" es obligatorio.` 
-            });
-            return;
+          if (field.type === 'file') {
+            const files = this.getInitialSelectedFiles(form.id, field.name);
+            if (files.length === 0) {
+              this.messageService.add({ 
+                severity: 'error', 
+                summary: 'Error de Validación', 
+                detail: `El campo "${field.label}" en el formulario "${form.name}" requiere cargar al menos un archivo.` 
+              });
+              return;
+            }
+          } else {
+            const val = values[form.id + '_' + field.name];
+            if (!val || !val.trim()) {
+              this.messageService.add({ 
+                severity: 'error', 
+                summary: 'Error de Validación', 
+                detail: `El campo "${field.label}" en el formulario "${form.name}" es obligatorio.` 
+              });
+              return;
+            }
           }
         }
       }
@@ -457,6 +469,31 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }
 
     this.loadingRequestTypes.set(true);
+
+    // Upload files for initial forms if any
+    for (const form of forms) {
+      for (const field of form.fields) {
+        if (field.type === 'file') {
+          const fileKey = form.id + '_' + field.name;
+          const filesToUpload = this.tempFiles[fileKey] || [];
+          if (filesToUpload.length > 0) {
+            const uploadResults = [];
+            for (const file of filesToUpload) {
+              const folderPath = `initial-submissions/form_${form.id}/${field.name}`;
+              const res = await this.azureService.uploadFile(file, { containerName: 'private', folderPath });
+              if (res.success) {
+                uploadResults.push({ name: file.name, url: res.url });
+              } else {
+                this.messageService.add({ severity: 'error', summary: 'Error de carga', detail: `No se pudo subir el archivo: ${file.name}. ${res.error}` });
+                this.loadingRequestTypes.set(false);
+                return;
+              }
+            }
+            values[fileKey] = JSON.stringify(uploadResults);
+          }
+        }
+      }
+    }
 
     const targetFormIds = selectedAreas.map(a => a.id);
 
@@ -477,6 +514,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           summary: 'Éxito', 
           detail: 'Solicitud enviada exitosamente.' 
         });
+        this.tempFiles = {}; // Clear temp files
         this.loadRequests(); // Reload list
         this.loadingRequestTypes.set(false);
       },
@@ -641,6 +679,55 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     const current = this.tempFiles[fieldName] || [];
     current.splice(index, 1);
     this.tempFiles[fieldName] = current;
+  }
+
+  onInitialFileSelected(event: any, formId: number, field: any) {
+    const files: FileList = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const maxCount = field.metadata?.maxFileCount || 1;
+    const maxMB = field.metadata?.maxFileSize || 10;
+    const allowed = field.metadata?.allowedFormats ? field.metadata.allowedFormats.toLowerCase().split(',') : [];
+
+    const fileKey = formId + '_' + field.name;
+    const currentList = this.tempFiles[fileKey] || [];
+    const newList = [...currentList];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      if (newList.length >= maxCount) {
+        this.messageService.add({ severity: 'warn', summary: 'Límite excedido', detail: `Solo se permiten máximo ${maxCount} archivos en el campo "${field.label}".` });
+        break;
+      }
+
+      if (file.size > maxMB * 1024 * 1024) {
+        this.messageService.add({ severity: 'error', summary: 'Archivo muy grande', detail: `El archivo "${file.name}" supera el peso máximo permitido de ${maxMB}MB.` });
+        continue;
+      }
+
+      const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+      if (allowed.length > 0 && !allowed.includes(ext)) {
+        this.messageService.add({ severity: 'error', summary: 'Formato no permitido', detail: `El formato de "${file.name}" no está permitido. Formatos aceptados: ${field.metadata.allowedFormats}.` });
+        continue;
+      }
+
+      newList.push(file);
+    }
+
+    this.tempFiles[fileKey] = newList;
+    event.target.value = '';
+  }
+
+  getInitialSelectedFiles(formId: number, fieldName: string): File[] {
+    return this.tempFiles[formId + '_' + fieldName] || [];
+  }
+
+  removeInitialSelectedFile(formId: number, fieldName: string, index: number) {
+    const fileKey = formId + '_' + fieldName;
+    const current = this.tempFiles[fileKey] || [];
+    current.splice(index, 1);
+    this.tempFiles[fileKey] = current;
   }
 
   getUploadedFiles(valueStr: string): any[] {
