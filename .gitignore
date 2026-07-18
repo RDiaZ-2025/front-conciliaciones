@@ -25,3 +25,4 @@ dist-ssr
 *.env
 .env
 backend/error_log.txt
+dist.*
