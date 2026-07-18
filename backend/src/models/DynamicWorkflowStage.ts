@@ -11,6 +11,9 @@ export class DynamicWorkflowStage {
   @Column({ name: 'FormId', type: 'int', nullable: false })
   formId!: number;
 
+  @Column({ name: 'IsDeleted', type: 'bit', default: false })
+  isDeleted!: boolean;
+
   @Column({ name: 'Name', type: 'nvarchar', length: 255, nullable: false })
   name!: string;
 

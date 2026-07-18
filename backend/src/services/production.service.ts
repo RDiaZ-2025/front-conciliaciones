@@ -100,8 +100,15 @@ export class ProductionService {
     async getRequestTypes() {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         return await AppDataSource.getRepository(DynamicForm).find({
-            where: { isEntryForm: true, isActive: true },
+            where: { isEntryForm: true, isActive: true, isInitialForm: false },
             order: { id: 'ASC' }
+        });
+    }
+
+    async getInitialForm() {
+        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+        return await AppDataSource.getRepository(DynamicForm).find({
+            where: { isInitialForm: true, isActive: true }
         });
     }
 
@@ -117,7 +124,13 @@ export class ProductionService {
         });
     }
 
-    async createSubmission(formId: number, requesterUserId: number, values: Record<string, string>) {
+    async createSubmission(
+        formId: number, 
+        requesterUserId: number, 
+        values: Record<string, string>, 
+        targetFormIds?: number[], 
+        submissions?: { formId: number; values: Record<string, string> }[]
+    ) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         
         return await AppDataSource.transaction(async (transactionManager) => {
@@ -127,6 +140,292 @@ export class ProductionService {
             const stateRepo = transactionManager.getRepository(DynamicSubmissionWorkflowState);
             const userRepo = transactionManager.getRepository(User);
 
+            if (submissions && submissions.length > 0) {
+                // 1. Create root parent submission from first element
+                const rootEntry = submissions[0];
+                const rootSub = subRepo.create({
+                    formId: rootEntry.formId,
+                    requesterUserId,
+                    status: 'Completed'
+                });
+                const savedRootSub = await subRepo.save(rootSub);
+
+                // Insert values for root parent
+                const rootFields = await transactionManager.getRepository(DynamicFormField).find({
+                    where: { formId: rootEntry.formId },
+                    order: { displayOrder: 'ASC' }
+                });
+                for (const field of rootFields) {
+                    const valueStr = rootEntry.values[field.name];
+                    if (valueStr !== undefined && valueStr !== null) {
+                        const fieldValue = valRepo.create({
+                            submissionId: savedRootSub.id,
+                            fieldId: field.id,
+                            value: String(valueStr)
+                        });
+                        await valRepo.save(fieldValue);
+                    }
+                }
+
+                // 2. Create sibling parent submissions for subsequent entries
+                for (let i = 1; i < submissions.length; i++) {
+                    const entry = submissions[i];
+                    const sibSub = subRepo.create({
+                        formId: entry.formId,
+                        requesterUserId,
+                        parentSubmissionId: savedRootSub.id,
+                        status: 'Completed'
+                    });
+                    const savedSibSub = await subRepo.save(sibSub);
+
+                    const sibFields = await transactionManager.getRepository(DynamicFormField).find({
+                        where: { formId: entry.formId },
+                        order: { displayOrder: 'ASC' }
+                    });
+                    for (const field of sibFields) {
+                        const valueStr = entry.values[field.name];
+                        if (valueStr !== undefined && valueStr !== null) {
+                            const fieldValue = valRepo.create({
+                                submissionId: savedSibSub.id,
+                                fieldId: field.id,
+                                value: String(valueStr)
+                            });
+                            await valRepo.save(fieldValue);
+                        }
+                    }
+                }
+
+                // 3. Create child submissions for each selected area linked to root parent
+                if (targetFormIds && targetFormIds.length > 0) {
+                    for (const targetFormId of targetFormIds) {
+                        const targetForm = await transactionManager.getRepository(DynamicForm).findOne({ where: { id: targetFormId } });
+                        if (!targetForm) continue;
+
+                        const childSub = subRepo.create({
+                            formId: targetFormId,
+                            requesterUserId,
+                            parentSubmissionId: savedRootSub.id,
+                            status: 'Pending'
+                        });
+                        const savedChildSub = await subRepo.save(childSub);
+
+                        const firstStage = await stageRepo.findOne({
+                            where: { formId: targetFormId, stepOrder: 1, isDeleted: false }
+                        });
+
+                        if (firstStage) {
+                            savedChildSub.currentStageId = firstStage.id;
+                            savedChildSub.status = 'In Progress';
+                            await subRepo.save(savedChildSub);
+
+                            // Resolve leader as assignee
+                            let assigneeUserId: number | null = null;
+                            if (targetForm.responsible) {
+                                const leader = await userRepo.findOne({
+                                    where: { name: targetForm.responsible }
+                                });
+                                if (leader) {
+                                    assigneeUserId = leader.id;
+                                }
+                            }
+
+                            // Fallback to normal assignee resolution if leader user not found
+                            if (!assigneeUserId) {
+                                if (firstStage.assigneeType === 'specific_user') {
+                                    assigneeUserId = firstStage.assigneeUserId;
+                                } else if (firstStage.assigneeType === 'requester') {
+                                    assigneeUserId = requesterUserId;
+                                } else if (firstStage.assigneeType === 'requester_boss') {
+                                    const requester = await userRepo.findOne({ where: { id: requesterUserId } });
+                                    assigneeUserId = requester?.bossId || firstStage.assigneeUserId || 1;
+                                } else if (firstStage.assigneeType === 'team' && firstStage.assigneeTeamId) {
+                                    const teamUsers = await userRepo.find({
+                                        where: { teamId: firstStage.assigneeTeamId, status: 1 }
+                                    });
+                                    if (teamUsers.length > 0) {
+                                        const workloads = await Promise.all(teamUsers.map(async (u) => {
+                                            const count = await stateRepo.count({
+                                                where: { assignedUserId: u.id, status: 'Pending' }
+                                            });
+                                            return { userId: u.id, count };
+                                        }));
+                                        workloads.sort((a, b) => a.count - b.count);
+                                        assigneeUserId = workloads[0].userId;
+                                    } else {
+                                        assigneeUserId = firstStage.assigneeUserId || 1;
+                                    }
+                                }
+                            }
+
+                            if (!assigneeUserId) assigneeUserId = 1;
+
+                            // Create initial stage workflow entry
+                            const state = stateRepo.create({
+                                submissionId: savedChildSub.id,
+                                stageId: firstStage.id,
+                                assignedUserId: assigneeUserId,
+                                status: 'Pending'
+                            });
+                            await stateRepo.save(state);
+
+                            // Send notification to leader
+                            try {
+                                const requester = await userRepo.findOne({ where: { id: requesterUserId } });
+                                const reqName = requester?.name || 'Un usuario';
+                                await notificationService.createNotification(
+                                    assigneeUserId,
+                                    'Nueva Solicitud Asignada',
+                                    `${reqName} ha creado una nueva solicitud. Por favor complete el formulario de "${targetForm.name}" para iniciar el flujo.`,
+                                    'info'
+                                );
+                            } catch (err) {
+                                console.error('Error sending notification:', err);
+                            }
+                        }
+                    }
+                }
+                return savedRootSub;
+            }
+
+            const form = await transactionManager.getRepository(DynamicForm).findOne({ where: { id: formId } });
+            if (form && form.isInitialForm) {
+                // Create parent submission header
+                const submission = subRepo.create({
+                    formId,
+                    requesterUserId,
+                    status: 'Completed'
+                });
+                const savedSubmission = await subRepo.save(submission);
+
+                // Insert values for parent
+                const fields = await transactionManager.getRepository(DynamicFormField).find({
+                    where: { formId },
+                    order: { displayOrder: 'ASC' }
+                });
+
+                for (const field of fields) {
+                    let valueStr = values[field.name];
+                    if (field.isReadOnly && field.defaultValueExpression) {
+                        let evaluated = field.defaultValueExpression;
+                        if (evaluated.includes('{{CURRENT_DATE_TIME}}')) {
+                            const now = new Date();
+                            const pad = (n: number) => n.toString().padStart(2, '0');
+                            const formatted = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+                            evaluated = evaluated.replace(/\{\{CURRENT_DATE_TIME\}\}/g, formatted);
+                        }
+                        if (evaluated.includes('{{LOGGED_USER_NAME}}')) {
+                            const requester = await userRepo.findOne({ where: { id: requesterUserId } });
+                            evaluated = evaluated.replace(/\{\{LOGGED_USER_NAME\}\}/g, requester?.name || 'Usuario');
+                        }
+                        if (evaluated.includes('{{LOGGED_USER_EMAIL}}')) {
+                            const requester = await userRepo.findOne({ where: { id: requesterUserId } });
+                            evaluated = evaluated.replace(/\{\{LOGGED_USER_EMAIL\}\}/g, requester?.email || '');
+                        }
+                        valueStr = evaluated;
+                    }
+                    if (valueStr !== undefined && valueStr !== null) {
+                        const fieldValue = valRepo.create({
+                            submissionId: savedSubmission.id,
+                            fieldId: field.id,
+                            value: String(valueStr)
+                        });
+                        await valRepo.save(fieldValue);
+                    }
+                }
+
+                // Create child submissions for each selected area
+                if (targetFormIds && targetFormIds.length > 0) {
+                    for (const targetFormId of targetFormIds) {
+                        const targetForm = await transactionManager.getRepository(DynamicForm).findOne({ where: { id: targetFormId } });
+                        if (!targetForm) continue;
+
+                        const childSub = subRepo.create({
+                            formId: targetFormId,
+                            requesterUserId,
+                            parentSubmissionId: savedSubmission.id,
+                            status: 'Pending'
+                        });
+                        const savedChildSub = await subRepo.save(childSub);
+
+                        const firstStage = await stageRepo.findOne({
+                            where: { formId: targetFormId, stepOrder: 1 }
+                        });
+
+                        if (firstStage) {
+                            savedChildSub.currentStageId = firstStage.id;
+                            savedChildSub.status = 'In Progress';
+                            await subRepo.save(savedChildSub);
+
+                            // Resolve leader as assignee
+                            let assigneeUserId: number | null = null;
+                            if (targetForm.responsible) {
+                                const leader = await userRepo.findOne({
+                                    where: { name: targetForm.responsible }
+                                });
+                                if (leader) {
+                                    assigneeUserId = leader.id;
+                                }
+                            }
+
+                            // Fallback to normal assignee resolution if leader user not found
+                            if (!assigneeUserId) {
+                                if (firstStage.assigneeType === 'specific_user') {
+                                    assigneeUserId = firstStage.assigneeUserId;
+                                } else if (firstStage.assigneeType === 'requester') {
+                                    assigneeUserId = requesterUserId;
+                                } else if (firstStage.assigneeType === 'requester_boss') {
+                                    const requester = await userRepo.findOne({ where: { id: requesterUserId } });
+                                    assigneeUserId = requester?.bossId || firstStage.assigneeUserId || 1;
+                                } else if (firstStage.assigneeType === 'team' && firstStage.assigneeTeamId) {
+                                    const teamUsers = await userRepo.find({
+                                        where: { teamId: firstStage.assigneeTeamId, status: 1 }
+                                    });
+                                    if (teamUsers.length > 0) {
+                                        const workloads = await Promise.all(teamUsers.map(async (u) => {
+                                            const count = await stateRepo.count({
+                                                where: { assignedUserId: u.id, status: 'Pending' }
+                                            });
+                                            return { userId: u.id, count };
+                                        }));
+                                        workloads.sort((a, b) => a.count - b.count);
+                                        assigneeUserId = workloads[0].userId;
+                                    } else {
+                                        assigneeUserId = firstStage.assigneeUserId || 1;
+                                    }
+                                }
+                            }
+
+                            if (!assigneeUserId) assigneeUserId = 1;
+
+                            // Create initial stage workflow entry
+                            const state = stateRepo.create({
+                                submissionId: savedChildSub.id,
+                                stageId: firstStage.id,
+                                assignedUserId: assigneeUserId,
+                                status: 'Pending'
+                            });
+                            await stateRepo.save(state);
+
+                            // Send notification to leader
+                            try {
+                                const requester = await userRepo.findOne({ where: { id: requesterUserId } });
+                                const reqName = requester?.name || 'Un usuario';
+                                await notificationService.createNotification(
+                                    assigneeUserId,
+                                    'Nueva Solicitud Asignada',
+                                    `${reqName} ha creado una nueva solicitud. Por favor complete el formulario de "${targetForm.name}" para iniciar el flujo.`,
+                                    'info'
+                                );
+                            } catch (err) {
+                                console.error('Error sending notification:', err);
+                            }
+                        }
+                    }
+                }
+                return savedSubmission;
+            }
+
+            // --- NORMAL SUBMISSION LOGIC ---
             // Create submission header
             const submission = subRepo.create({
                 formId,
@@ -333,6 +632,28 @@ export class ProductionService {
             };
         });
 
+        const parentSubmissions = sub.parentSubmissionId ? await AppDataSource.getRepository(DynamicFormSubmission).find({
+            where: [
+                { id: sub.parentSubmissionId },
+                { parentSubmissionId: sub.parentSubmissionId, form: { isInitialForm: true } }
+            ],
+            relations: ['form']
+        }) : [];
+
+        const parentSubIds = parentSubmissions.map(p => p.id);
+        const parentValues = [];
+        if (parentSubIds.length > 0) {
+            const pVals = await valRepo.find({
+                where: { submissionId: In(parentSubIds) },
+                relations: ['field', 'field.form']
+            });
+            parentValues.push(...pVals.map(v => ({
+                label: v.field.label,
+                value: v.value,
+                formName: v.field.form ? v.field.form.name : 'Inicial'
+            })));
+        }
+
         return {
             id: sub.id,
             formName: sub.form.name,
@@ -346,6 +667,7 @@ export class ProductionService {
                 label: v.field.label,
                 value: v.value
             })),
+            parentValues,
             stageValues: stageValues.map(v => ({
                 label: v.field.label,
                 value: v.value,
@@ -620,10 +942,12 @@ export class ProductionService {
     async adminCreateForm(data: Partial<DynamicForm>) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const repo = AppDataSource.getRepository(DynamicForm);
+        
         const form = repo.create({
             name: data.name,
             description: data.description,
             isEntryForm: data.isEntryForm ?? true,
+            isInitialForm: data.isInitialForm ?? false,
             isActive: data.isActive ?? true,
             responsible: data.responsible,
             role: data.role,
@@ -639,6 +963,10 @@ export class ProductionService {
         const form = await repo.findOne({ where: { id } });
         if (!form) throw new Error('Formulario no encontrado');
         
+        if (data.isInitialForm !== undefined) {
+            form.isInitialForm = data.isInitialForm;
+        }
+
         if (data.name !== undefined) form.name = data.name;
         if (data.description !== undefined) form.description = data.description;
         if (data.isEntryForm !== undefined) form.isEntryForm = data.isEntryForm;
@@ -769,7 +1097,7 @@ export class ProductionService {
     async adminGetStages(formId: number) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         return await AppDataSource.getRepository(DynamicWorkflowStage).find({
-            where: { formId },
+            where: { formId, isDeleted: false },
             relations: ['assigneeUser', 'assigneeTeam', 'formToFill', 'rejectionTargetUser', 'rejectionTargetTeam'],
             order: { stepOrder: 'ASC' }
         });
@@ -784,10 +1112,13 @@ export class ProductionService {
             const existingStages = await stageRepo.find({ where: { formId } });
             const inputIds = stages.map(s => s.id).filter(id => !!id) as number[];
 
-            // Delete stages that are not in the input list
+            // Soft delete stages that are not in the input list
             const stagesToDelete = existingStages.filter(es => !inputIds.includes(es.id));
             if (stagesToDelete.length > 0) {
-                await stageRepo.remove(stagesToDelete);
+                for (const es of stagesToDelete) {
+                    es.isDeleted = true;
+                    await stageRepo.save(es);
+                }
             }
 
             // Insert or Update stages
@@ -799,6 +1130,7 @@ export class ProductionService {
                 if (!stageEntity) {
                     stageEntity = stageRepo.create({
                         formId,
+                        isDeleted: false,
                         name: s.name || `Etapa ${i + 1}`,
                         description: s.description,
                         stepOrder: s.stepOrder ?? (i + 1),
@@ -811,6 +1143,7 @@ export class ProductionService {
                         rejectionTargetTeamId: s.rejectionTargetTeamId || null
                     });
                 } else {
+                    stageEntity.isDeleted = false; // Reactivate if it was soft-deleted
                     if (s.name !== undefined) stageEntity.name = s.name;
                     if (s.description !== undefined) stageEntity.description = s.description;
                     if (s.stepOrder !== undefined) stageEntity.stepOrder = s.stepOrder;
@@ -867,6 +1200,7 @@ export class ProductionService {
                 .createQueryBuilder("stage")
                 .where("stage.formId = :formId", { formId: state.submission.formId })
                 .andWhere("stage.stepOrder > :stepOrder", { stepOrder: state.stage.stepOrder })
+                .andWhere("stage.isDeleted = :isDeleted", { isDeleted: false })
                 .getOne();
             const isFinalStage = !nextStage;
 
@@ -901,6 +1235,77 @@ export class ProductionService {
                 };
             });
 
+            const originalFormValues = values.filter(v => v && v.field && v.field.formId === state.submission.formId);
+            const hasOriginalValues = originalFormValues.length > 0;
+            const isPendingFormFill = !hasOriginalValues && !!state.submission.parentSubmissionId;
+
+            const parentSubmissions = state.submission.parentSubmissionId ? await AppDataSource.getRepository(DynamicFormSubmission).find({
+                where: [
+                    { id: state.submission.parentSubmissionId },
+                    { parentSubmissionId: state.submission.parentSubmissionId, form: { isInitialForm: true } }
+                ],
+                relations: ['form']
+            }) : [];
+
+            const parentSubIds = parentSubmissions.map(p => p.id);
+            const parentVals = [];
+            if (parentSubIds.length > 0) {
+                const pVals = await valRepo.find({
+                    where: { submissionId: In(parentSubIds) },
+                    relations: ['field', 'field.form']
+                });
+                parentVals.push(...pVals.map(v => ({
+                    label: v.field.label,
+                    value: v.value,
+                    formName: v.field.form ? v.field.form.name : 'Inicial'
+                })));
+            }
+
+            const isCorrection = (state.submission.status === 'Rejected' && state.assignedUserId === state.submission.requesterUserId);
+            const parentForms = [];
+            if (isCorrection && parentSubmissions.length > 0) {
+                const fieldRepo = AppDataSource.getRepository(DynamicFormField);
+                for (const pSub of parentSubmissions) {
+                    const fields = await fieldRepo.find({
+                        where: { formId: pSub.formId }
+                    });
+                    const pSubVals = await valRepo.find({
+                        where: { submissionId: pSub.id },
+                        relations: ['field']
+                    });
+
+                    const mappedFields = fields.map((f: any) => {
+                        const valObj = pSubVals.find(v => v.fieldId === f.id);
+                        let parsedMeta = f.metadata;
+                        if (parsedMeta && typeof parsedMeta === 'string') {
+                            try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
+                        }
+                        return {
+                            id: f.id,
+                            name: f.name,
+                            type: f.type,
+                            label: f.label,
+                            placeholder: f.placeholder,
+                            isRequired: f.isRequired,
+                            options: f.options,
+                            metadata: parsedMeta,
+                            isReadOnly: f.isReadOnly,
+                            value: valObj ? valObj.value : ''
+                        };
+                    });
+
+                    parentForms.push({
+                        formId: pSub.formId,
+                        formName: pSub.form.name,
+                        fields: mappedFields
+                    });
+                }
+            }
+
+            const formIdToFill = isPendingFormFill ? state.submission.formId : state.stage.formIdToFill;
+            const stageName = isPendingFormFill ? `Llenar Formulario: ${state.submission.form.name}` : state.stage.name;
+            const stageDescription = isPendingFormFill ? `Debe completar los campos del formulario de su área para iniciar el flujo.` : state.stage.description;
+
             results.push({
                 stateId: state.id,
                 submissionId: state.submissionId,
@@ -913,16 +1318,18 @@ export class ProductionService {
                 requesterEmail: state.submission.requesterUser ? state.submission.requesterUser.email : '',
                 createdAt: state.submission.createdAt,
                 assignedAt: state.createdAt,
-                stageName: state.stage.name,
-                stageDescription: state.stage.description,
-                formIdToFill: state.stage.formIdToFill,
-                formToFill: state.stage.formToFill,
+                stageName: stageName,
+                stageDescription: stageDescription,
+                formIdToFill: formIdToFill,
+                formToFill: isPendingFormFill ? state.submission.form : state.stage.formToFill,
                 isFinalStage,
                 icon: state.submission.form.icon,
                 values: values.filter(v => v && v.field && v.field.formId === state.submission.formId).map(v => ({
                     label: v.field.label,
                     value: v.value
                 })),
+                parentValues: parentVals,
+                parentForms,
                 stageValues: values.filter(v => v && v.field && v.field.formId !== state.submission.formId).map(v => ({
                     label: v.field.label,
                     value: v.value,
@@ -959,27 +1366,71 @@ export class ProductionService {
             const isCorrection = (submission.status === 'Rejected' && currentState.assignedUserId === submission.requesterUserId);
 
             if (isCorrection) {
-                // 1. Save / Update original form fields
+                // 1. Save / Update original form fields (which are parent forms)
                 if (formValues) {
-                    const fieldsToSave = await manager.getRepository(DynamicFormField).find({
-                        where: { formId: submission.formId }
-                    });
-                    for (const field of fieldsToSave) {
-                        const valueStr = formValues[field.name];
-                        if (valueStr !== undefined && valueStr !== null) {
-                            let existingVal = await valRepo.findOne({
-                                where: { submissionId: submission.id, fieldId: field.id }
+                    const parentSubIds = [];
+                    if (submission.parentSubmissionId) {
+                        parentSubIds.push(submission.parentSubmissionId);
+                        const siblings = await subRepo.find({
+                            where: { parentSubmissionId: submission.parentSubmissionId, form: { isInitialForm: true } },
+                            relations: ['form']
+                        });
+                        parentSubIds.push(...siblings.map(s => s.id));
+                    }
+
+                    if (parentSubIds.length > 0) {
+                        const parentSubs = await subRepo.find({
+                            where: { id: In(parentSubIds) }
+                        });
+                        for (const pSub of parentSubs) {
+                            const fields = await manager.getRepository(DynamicFormField).find({
+                                where: { formId: pSub.formId }
                             });
-                            if (existingVal) {
-                                existingVal.value = valueStr;
-                                await valRepo.save(existingVal);
-                            } else {
-                                const newVal = valRepo.create({
-                                    submissionId: submission.id,
-                                    fieldId: field.id,
-                                    value: valueStr
+                            for (const field of fields) {
+                                const valueStr = formValues[`${pSub.formId}_${field.name}`] !== undefined 
+                                    ? formValues[`${pSub.formId}_${field.name}`] 
+                                    : formValues[field.name];
+
+                                if (valueStr !== undefined && valueStr !== null) {
+                                    let existingVal = await valRepo.findOne({
+                                        where: { submissionId: pSub.id, fieldId: field.id }
+                                    });
+                                    if (existingVal) {
+                                        existingVal.value = String(valueStr);
+                                        await valRepo.save(existingVal);
+                                    } else {
+                                        const newVal = valRepo.create({
+                                            submissionId: pSub.id,
+                                            fieldId: field.id,
+                                            value: String(valueStr)
+                                        });
+                                        await valRepo.save(newVal);
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Fallback to update child submission if there are no parent submissions
+                        const fieldsToSave = await manager.getRepository(DynamicFormField).find({
+                            where: { formId: submission.formId }
+                        });
+                        for (const field of fieldsToSave) {
+                            const valueStr = formValues[field.name];
+                            if (valueStr !== undefined && valueStr !== null) {
+                                let existingVal = await valRepo.findOne({
+                                    where: { submissionId: submission.id, fieldId: field.id }
                                 });
-                                await valRepo.save(newVal);
+                                if (existingVal) {
+                                    existingVal.value = String(valueStr);
+                                    await valRepo.save(existingVal);
+                                } else {
+                                    const newVal = valRepo.create({
+                                        submissionId: submission.id,
+                                        fieldId: field.id,
+                                        value: String(valueStr)
+                                    });
+                                    await valRepo.save(newVal);
+                                }
                             }
                         }
                     }
@@ -1049,8 +1500,31 @@ export class ProductionService {
             }
 
             // --- STANDARD WORKFLOW (Approve / Reject) ---
+            const originalFields = await manager.getRepository(DynamicFormField).find({ where: { formId: submission.formId } });
+            const originalFieldIds = originalFields.map(f => f.id);
+            let hasOriginalValues = false;
+            if (originalFieldIds.length > 0) {
+                const originalVals = await valRepo.find({ where: { submissionId: submission.id, fieldId: In(originalFieldIds) } });
+                hasOriginalValues = originalVals.length > 0;
+            }
+            const isPendingFormFill = !hasOriginalValues && !!submission.parentSubmissionId;
+
             // 2. If approved and there are values to fill, save them
-            if (action === 'approve' && stage.formIdToFill && formValues) {
+            if (action === 'approve' && isPendingFormFill && formValues) {
+                // Save these filled values as the original form values!
+                for (const field of originalFields) {
+                    const valueStr = formValues[field.name];
+                    if (valueStr !== undefined && valueStr !== null) {
+                        const fieldValue = valRepo.create({
+                            submissionId: submission.id,
+                            fieldId: field.id,
+                            value: String(valueStr)
+                        });
+                        await valRepo.save(fieldValue);
+                    }
+                }
+            }
+            else if (action === 'approve' && stage.formIdToFill && formValues) {
                 // Save these filled values under this submission!
                 const fields = await manager.getRepository(DynamicFormField).find({
                     where: { formId: stage.formIdToFill }
@@ -1073,6 +1547,7 @@ export class ProductionService {
                 const nextStage = await stageRepo.createQueryBuilder("stage")
                     .where("stage.formId = :formId", { formId: submission.formId })
                     .andWhere("stage.stepOrder > :stepOrder", { stepOrder: stage.stepOrder })
+                    .andWhere("stage.isDeleted = :isDeleted", { isDeleted: false })
                     .orderBy("stage.stepOrder", "ASC")
                     .getOne();
 

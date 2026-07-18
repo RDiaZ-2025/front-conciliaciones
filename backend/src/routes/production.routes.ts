@@ -14,6 +14,7 @@ router.get('/format-types', productionController.getFormatTypes);
 router.get('/rights-durations', productionController.getRightsDurations);
 router.get('/workflow-stages', productionController.getWorkflowStages);
 router.get('/request-types', productionController.getRequestTypes);
+router.get('/initial-form', productionController.getInitialForm);
 
 // Protected routes
 router.use(authenticateToken);

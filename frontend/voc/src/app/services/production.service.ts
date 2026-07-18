@@ -127,6 +127,10 @@ export class ProductionService extends BaseApiService {
     return this.http.get<any[]>(`${this.apiUrl}/request-types`);
   }
 
+  getInitialForm(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/initial-form`);
+  }
+
   getStatuses(): Observable<Status[]> {
     return this.http.get<Status[]>(this.statusUrl);
   }
@@ -137,8 +141,8 @@ export class ProductionService extends BaseApiService {
     });
   }
 
-  submitDynamicForm(formId: number, values: any): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/submissions`, { formId, values });
+  submitDynamicForm(formId: number, values: any, targetFormIds?: number[], submissions?: any[]): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/submissions`, { formId, values, targetFormIds, submissions });
   }
 
   getDynamicSubmissions(): Observable<any[]> {

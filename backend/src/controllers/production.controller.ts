@@ -25,6 +25,12 @@ export class ProductionController {
         const requestTypes = await productionService.getRequestTypes();
         return res.json(requestTypes);
     });
+
+    getInitialForm = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+        const form = await productionService.getInitialForm();
+        if (!form) return res.status(404).json({ message: 'Formulario inicial no encontrado' });
+        return res.json(form);
+    });
 }
 
 export const getAllProductionRequests = asyncHandler(async (req: Request, res: Response): Promise<Response | void> => {
@@ -82,10 +88,16 @@ export const getFormFields = asyncHandler(async (req: Request, res: Response): P
 });
 
 export const createSubmission = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
-    const { formId, values } = req.body;
+    const { formId, values, targetFormIds, submissions } = req.body;
     const requesterUserId = req.user?.userId;
     if (!requesterUserId) return res.status(401).json({ message: 'Usuario no autenticado' });
-    const submission = await productionService.createSubmission(parseInt(formId), requesterUserId, values);
+    const submission = await productionService.createSubmission(
+        formId ? parseInt(formId) : 0, 
+        requesterUserId, 
+        values, 
+        targetFormIds, 
+        submissions
+    );
     return res.status(201).json(submission);
 });
 

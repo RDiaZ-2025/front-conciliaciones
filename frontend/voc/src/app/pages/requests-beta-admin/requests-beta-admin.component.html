@@ -46,7 +46,8 @@
                         <td [class.opacity-60]="!form.isActive" [class.surface-100]="!form.isActive">{{ form.responsible || 'Sin asignar' }}</td>
                         <td [class.opacity-60]="!form.isActive" [class.surface-100]="!form.isActive">{{ form.role || 'Sin asignar' }}</td>
                         <td class="text-center" [class.opacity-60]="!form.isActive" [class.surface-100]="!form.isActive">
-                            <p-tag [value]="form.isEntryForm ? 'Inicial' : 'Interno'" 
+                            <p-tag *ngIf="form.isInitialForm" value="Solicitud Inicial" severity="info"></p-tag>
+                            <p-tag *ngIf="!form.isInitialForm" [value]="form.isEntryForm ? 'Área / Entrada' : 'Interno'" 
                                    [severity]="form.isEntryForm ? 'success' : 'warn'"></p-tag>
                         </td>
                         <td class="text-center" [class.opacity-60]="!form.isActive" [class.surface-100]="!form.isActive">
@@ -276,7 +277,12 @@
 
             <div class="flex align-items-center gap-3 mt-2">
                 <p-checkbox [(ngModel)]="selectedForm().isEntryForm" [binary]="true" id="isEntryForm"></p-checkbox>
-                <label for="isEntryForm" class="font-medium cursor-pointer">Mostrar en menú inicial de "Nueva Solicitud"</label>
+                <label for="isEntryForm" class="font-medium cursor-pointer">Mostrar en menú inicial de "Nueva Solicitud" (Área Destinataria)</label>
+            </div>
+
+            <div class="flex align-items-center gap-3 mt-2">
+                <p-checkbox [(ngModel)]="selectedForm().isInitialForm" [binary]="true" id="isInitialForm"></p-checkbox>
+                <label for="isInitialForm" class="font-medium cursor-pointer">Definir como "Solicitud Inicial" principal</label>
             </div>
 
             <div class="flex align-items-center gap-3 mt-2">

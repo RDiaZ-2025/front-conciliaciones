@@ -55,6 +55,7 @@ export class RequestsBetaInboxComponent implements OnInit {
   showActionDialog = signal<boolean>(false);
   loadingAction = signal<boolean>(false);
   selectedTask = signal<any>(null);
+  parentFormGroups = signal<any[]>([]);
   comments = signal<string>('');
 
   // Additional form to fill at this stage
@@ -87,35 +88,71 @@ export class RequestsBetaInboxComponent implements OnInit {
     return task.submissionStatus === 'Rejected' && task.requesterUserId === this.authService.currentUser()?.id;
   }
 
+  isPendingFormFill(task: any): boolean {
+    if (!task) return false;
+    return !!task.stageName?.startsWith('Llenar Formulario');
+  }
+
   openActionDialog(task: any) {
+    console.log('Task selected in inbox:', task);
     this.selectedTask.set(task);
     this.comments.set('');
     this.stageFormFields.set([]);
     this.stageFormValues = {};
     this.showActionDialog.set(true);
 
+    if (task && task.parentValues) {
+      const groupsMap = new Map<string, any[]>();
+      (task.parentValues || []).forEach((v: any) => {
+        const formName = v.formName || 'Inicial';
+        if (!groupsMap.has(formName)) {
+          groupsMap.set(formName, []);
+        }
+        groupsMap.get(formName)!.push(v);
+      });
+      const groups = Array.from(groupsMap.entries()).map(([formName, values]) => ({
+        formName,
+        values
+      }));
+      this.parentFormGroups.set(groups);
+    } else {
+      this.parentFormGroups.set([]);
+    }
+
     const isCorr = this.isCorrection(task);
 
     if (isCorr) {
-      this.loadingStageFields.set(true);
-      this.productionService.getDynamicFormFields(task.formId).subscribe({
-        next: (fields) => {
-          const initialValues: Record<string, string> = {};
-          fields.forEach(f => {
-            if (f.metadata && typeof f.metadata === 'string') {
-              try { f.metadata = JSON.parse(f.metadata); } catch(e){}
-            }
-            initialValues[f.name] = task.submittedValuesRaw[f.name] || '';
+      if (task && task.parentForms && task.parentForms.length > 0) {
+        const initialValues: Record<string, string> = {};
+        task.parentForms.forEach((form: any) => {
+          form.fields.forEach((f: any) => {
+            initialValues[form.formId + '_' + f.name] = f.value || '';
           });
-          this.stageFormValues = initialValues;
-          this.stageFormFields.set(fields);
-          this.loadingStageFields.set(false);
-        },
-        error: () => {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los campos del formulario original.' });
-          this.loadingStageFields.set(false);
-        }
-      });
+        });
+        this.stageFormValues = initialValues;
+        this.stageFormFields.set([]);
+        this.loadingStageFields.set(false);
+      } else {
+        this.loadingStageFields.set(true);
+        this.productionService.getDynamicFormFields(task.formId).subscribe({
+          next: (fields) => {
+            const initialValues: Record<string, string> = {};
+            fields.forEach(f => {
+              if (f.metadata && typeof f.metadata === 'string') {
+                try { f.metadata = JSON.parse(f.metadata); } catch(e){}
+              }
+              initialValues[f.name] = task.submittedValuesRaw[f.name] || '';
+            });
+            this.stageFormValues = initialValues;
+            this.stageFormFields.set(fields);
+            this.loadingStageFields.set(false);
+          },
+          error: () => {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los campos del formulario original.' });
+            this.loadingStageFields.set(false);
+          }
+        });
+      }
     } else if (task.formIdToFill) {
       this.loadingStageFields.set(true);
       this.productionService.getDynamicFormFields(task.formIdToFill).subscribe({
@@ -264,6 +301,44 @@ export class RequestsBetaInboxComponent implements OnInit {
     event.target.value = '';
   }
 
+  onParentFileSelected(event: any, formId: number, field: any) {
+    const files: FileList = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const maxCount = field.metadata?.maxFileCount || 1;
+    const maxMB = field.metadata?.maxFileSize || 10;
+    const allowed = field.metadata?.allowedFormats ? field.metadata.allowedFormats.toLowerCase().split(',') : [];
+
+    const fileKey = formId + '_' + field.name;
+    const currentList = this.tempFiles[fileKey] || [];
+    const newList = [...currentList];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      if (newList.length >= maxCount) {
+        this.messageService.add({ severity: 'warn', summary: 'Límite excedido', detail: `Solo se permiten máximo ${maxCount} archivos en el campo "${field.label}".` });
+        break;
+      }
+
+      if (file.size > maxMB * 1024 * 1024) {
+        this.messageService.add({ severity: 'error', summary: 'Archivo muy grande', detail: `El archivo "${file.name}" supera el peso máximo permitido de ${maxMB}MB.` });
+        continue;
+      }
+
+      const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+      if (allowed.length > 0 && !allowed.includes(ext)) {
+        this.messageService.add({ severity: 'error', summary: 'Formato no permitido', detail: `El formato de "${file.name}" no está permitido. Formatos aceptados: ${field.metadata.allowedFormats}.` });
+        continue;
+      }
+
+      newList.push(file);
+    }
+
+    this.tempFiles[fileKey] = newList;
+    event.target.value = '';
+  }
+
   getSelectedFiles(fieldName: string): File[] {
     return this.tempFiles[fieldName] || [];
   }
@@ -322,6 +397,32 @@ export class RequestsBetaInboxComponent implements OnInit {
             }
           }
           this.stageFormValues[field.name] = JSON.stringify(uploadResults);
+        }
+      }
+    }
+
+    // 1.5. Upload files from parent correction forms if any
+    const parentForms = task.parentForms || [];
+    for (const form of parentForms) {
+      for (const field of form.fields) {
+        if (field.type === 'file') {
+          const fileKey = form.formId + '_' + field.name;
+          const filesToUpload = this.tempFiles[fileKey] || [];
+          if (filesToUpload.length > 0) {
+            const uploadResults = [];
+            for (const file of filesToUpload) {
+              const folderPath = `dynamic-submissions/task_${task.stateId}/${field.name}`;
+              const res = await this.azureService.uploadFile(file, { containerName: 'private', folderPath });
+              if (res.success) {
+                uploadResults.push({ name: file.name, url: res.url });
+              } else {
+                this.messageService.add({ severity: 'error', summary: 'Error de carga', detail: `No se pudo subir el archivo: ${file.name}. ${res.error}` });
+                this.loadingAction.set(false);
+                return;
+              }
+            }
+            this.stageFormValues[fileKey] = JSON.stringify(uploadResults);
+          }
         }
       }
     }

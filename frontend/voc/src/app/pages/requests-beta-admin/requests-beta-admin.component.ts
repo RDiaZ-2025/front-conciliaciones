@@ -205,6 +205,7 @@ export class RequestsBetaAdminComponent implements OnInit {
       name: '',
       description: '',
       isEntryForm: true,
+      isInitialForm: false,
       isActive: true,
       responsible: '',
       role: '',

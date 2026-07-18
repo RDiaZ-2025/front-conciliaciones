@@ -17,6 +17,9 @@ export class DynamicForm {
   @Column({ name: 'IsEntryForm', type: 'bit', default: false })
   isEntryForm!: boolean;
 
+  @Column({ name: 'IsInitialForm', type: 'bit', default: false })
+  isInitialForm!: boolean;
+
   @Column({ name: 'IsActive', type: 'bit', default: true })
   isActive!: boolean;
 

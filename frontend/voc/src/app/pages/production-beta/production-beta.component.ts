@@ -3,6 +3,7 @@ import { CoreDialogService } from '../../services/core-dialog.service';
 import { Component, inject, OnInit, OnDestroy, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin, of } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { filter, take } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
@@ -157,9 +158,15 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   loadingRequestTypes = signal<boolean>(false);
   requestTypes = signal<any[]>([]);
   selectedRequestTypes = signal<any[]>([]);
+  parentFormGroups = signal<any[]>([]);
   showFormDialog = signal<boolean>(false);
   currentFormIndex = signal<number>(0);
   currentFormFields = signal<any[]>([]);
+  initialForm = signal<any>(null);
+  initialForms = signal<any[]>([]);
+  selectedInitialForm = signal<any>(null);
+  initialFormFields = signal<any[]>([]);
+  initialFormValues = signal<Record<string, string>>({});
   formValues: Record<string, string> = {};
   isProcessingMove = signal<boolean>(false);
   currentRequestProcessing: ProductionRequest | null = null;
@@ -358,6 +365,49 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
   async openBetaRequestWizard() {
     this.loadingRequestTypes.set(true);
+    this.initialForms.set([]);
+    this.initialFormValues.set({});
+    
+    // Fetch initial forms
+    this.productionService.getInitialForm().subscribe({
+      next: (forms: any[]) => {
+        this.initialForms.set(forms);
+        if (forms && forms.length > 0) {
+          const fieldsObservables = forms.map(form => 
+            this.productionService.getDynamicFormFields(form.id)
+          );
+          
+          forkJoin(fieldsObservables).subscribe({
+            next: (allFieldsArray: any[][]) => {
+              const vals: Record<string, string> = {};
+              forms.forEach((form, idx) => {
+                const fields = allFieldsArray[idx];
+                fields.forEach((f: any) => {
+                  if (f.metadata && typeof f.metadata === 'string') {
+                    try { f.metadata = JSON.parse(f.metadata); } catch(e){}
+                  }
+                  vals[form.id + '_' + f.name] = '';
+                });
+                form.fields = fields; // store fields inside form object
+              });
+              this.initialFormValues.set(vals);
+              this.loadingRequestTypes.set(false);
+            },
+            error: () => {
+              this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los campos de los formularios.' });
+              this.loadingRequestTypes.set(false);
+            }
+          });
+        } else {
+          this.loadingRequestTypes.set(false);
+        }
+      },
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar la lista de formularios iniciales.' });
+        this.loadingRequestTypes.set(false);
+      }
+    });
+
     this.productionService.getRequestTypes().subscribe({
       next: (types) => {
         this.requestTypes.set(types.map(t => ({ ...t, selected: false })));
@@ -366,8 +416,72 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los tipos de solicitud.' });
+      }
+    });
+  }
+
+  async submitInitialRequest() {
+    const forms = this.initialForms();
+    if (!forms || forms.length === 0) {
+      this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'No hay formularios iniciales configurados.' });
+      return;
+    }
+
+    // Validate fields for all initial forms
+    const values = this.initialFormValues();
+    for (const form of forms) {
+      for (const field of form.fields) {
+        if (field.isRequired) {
+          const val = values[form.id + '_' + field.name];
+          if (!val || !val.trim()) {
+            this.messageService.add({ 
+              severity: 'error', 
+              summary: 'Error de Validación', 
+              detail: `El campo "${field.label}" en el formulario "${form.name}" es obligatorio.` 
+            });
+            return;
+          }
+        }
+      }
+    }
+
+    // Validate areas selected
+    const selectedAreas = this.requestTypes().filter(t => t.selected);
+    if (selectedAreas.length === 0) {
+      this.messageService.add({ 
+        severity: 'warn', 
+        summary: 'Atención', 
+        detail: 'Debe seleccionar al menos un área o tipo de solicitud.' 
+      });
+      return;
+    }
+
+    this.loadingRequestTypes.set(true);
+
+    const targetFormIds = selectedAreas.map(a => a.id);
+
+    // Build the submissions array payload
+    const submissions = forms.map(form => {
+      const formValues: Record<string, string> = {};
+      form.fields.forEach((f: any) => {
+        formValues[f.name] = values[form.id + '_' + f.name];
+      });
+      return { formId: form.id, values: formValues };
+    });
+
+    this.productionService.submitDynamicForm(0, {}, targetFormIds, submissions).subscribe({
+      next: () => {
+        this.showTypeSelectionDialog.set(false);
+        this.messageService.add({ 
+          severity: 'success', 
+          summary: 'Éxito', 
+          detail: 'Solicitud enviada exitosamente.' 
+        });
+        this.loadRequests(); // Reload list
+        this.loadingRequestTypes.set(false);
       },
-      complete: () => {
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo registrar la solicitud.' });
         this.loadingRequestTypes.set(false);
       }
     });
@@ -1031,35 +1145,71 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     return task.submissionStatus === 'Rejected' && task.requesterUserId === this.authService.currentUser()?.id;
   }
 
+  isPendingFormFill(task: any): boolean {
+    if (!task) return false;
+    return !!task.stageName?.startsWith('Llenar Formulario');
+  }
+
   openActionDialog(task: any) {
+    console.log('Task selected in dashboard inbox:', task);
     this.selectedTask.set(task);
     this.comments.set('');
     this.stageFormFields.set([]);
     this.stageFormValues = {};
     this.showActionDialog.set(true);
 
+    if (task && task.parentValues) {
+      const groupsMap = new Map<string, any[]>();
+      (task.parentValues || []).forEach((v: any) => {
+        const formName = v.formName || 'Inicial';
+        if (!groupsMap.has(formName)) {
+          groupsMap.set(formName, []);
+        }
+        groupsMap.get(formName)!.push(v);
+      });
+      const groups = Array.from(groupsMap.entries()).map(([formName, values]) => ({
+        formName,
+        values
+      }));
+      this.parentFormGroups.set(groups);
+    } else {
+      this.parentFormGroups.set([]);
+    }
+
     const isCorr = this.isCorrection(task);
 
     if (isCorr) {
-      this.loadingStageFields.set(true);
-      this.productionService.getDynamicFormFields(task.formId).subscribe({
-        next: (fields) => {
-          const initialValues: Record<string, string> = {};
-          fields.forEach(f => {
-            if (f.metadata && typeof f.metadata === 'string') {
-              try { f.metadata = JSON.parse(f.metadata); } catch(e){}
-            }
-            initialValues[f.name] = task.submittedValuesRaw[f.name] || '';
+      if (task && task.parentForms && task.parentForms.length > 0) {
+        const initialValues: Record<string, string> = {};
+        task.parentForms.forEach((form: any) => {
+          form.fields.forEach((f: any) => {
+            initialValues[form.formId + '_' + f.name] = f.value || '';
           });
-          this.stageFormValues = initialValues;
-          this.stageFormFields.set(fields);
-          this.loadingStageFields.set(false);
-        },
-        error: () => {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los campos del formulario original.' });
-          this.loadingStageFields.set(false);
-        }
-      });
+        });
+        this.stageFormValues = initialValues;
+        this.stageFormFields.set([]);
+        this.loadingStageFields.set(false);
+      } else {
+        this.loadingStageFields.set(true);
+        this.productionService.getDynamicFormFields(task.formId).subscribe({
+          next: (fields) => {
+            const initialValues: Record<string, string> = {};
+            fields.forEach(f => {
+              if (f.metadata && typeof f.metadata === 'string') {
+                try { f.metadata = JSON.parse(f.metadata); } catch(e){}
+              }
+              initialValues[f.name] = task.submittedValuesRaw[f.name] || '';
+            });
+            this.stageFormValues = initialValues;
+            this.stageFormFields.set(fields);
+            this.loadingStageFields.set(false);
+          },
+          error: () => {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los campos del formulario original.' });
+            this.loadingStageFields.set(false);
+          }
+        });
+      }
     } else if (task.formIdToFill) {
       this.loadingStageFields.set(true);
       this.productionService.getDynamicFormFields(task.formIdToFill).subscribe({
@@ -1204,6 +1354,44 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     event.target.value = '';
   }
 
+  onParentFileSelected(event: any, formId: number, field: any) {
+    const files: FileList = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const maxCount = field.metadata?.maxFileCount || 1;
+    const maxMB = field.metadata?.maxFileSize || 10;
+    const allowed = field.metadata?.allowedFormats ? field.metadata.allowedFormats.toLowerCase().split(',') : [];
+
+    const fileKey = formId + '_' + field.name;
+    const currentList = this.stageTempFiles[fileKey] || [];
+    const newList = [...currentList];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      if (newList.length >= maxCount) {
+        this.messageService.add({ severity: 'warn', summary: 'Límite excedido', detail: `Solo se permiten máximo ${maxCount} archivos en el campo "${field.label}".` });
+        break;
+      }
+
+      if (file.size > maxMB * 1024 * 1024) {
+        this.messageService.add({ severity: 'error', summary: 'Archivo muy grande', detail: `El archivo "${file.name}" supera el peso máximo permitido de ${maxMB}MB.` });
+        continue;
+      }
+
+      const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+      if (allowed.length > 0 && !allowed.includes(ext)) {
+        this.messageService.add({ severity: 'error', summary: 'Formato no permitido', detail: `El formato de "${file.name}" no está permitido. Formatos aceptados: ${field.metadata.allowedFormats}.` });
+        continue;
+      }
+
+      newList.push(file);
+    }
+
+    this.stageTempFiles[fileKey] = newList;
+    event.target.value = '';
+  }
+
   getStageSelectedFiles(fieldName: string): File[] {
     return this.stageTempFiles[fieldName] || [];
   }
@@ -1261,6 +1449,32 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
             }
           }
           this.stageFormValues[field.name] = JSON.stringify(uploadResults);
+        }
+      }
+    }
+
+    // 1.5. Upload files from parent correction forms if any
+    const parentForms = task.parentForms || [];
+    for (const form of parentForms) {
+      for (const field of form.fields) {
+        if (field.type === 'file') {
+          const fileKey = form.formId + '_' + field.name;
+          const filesToUpload = this.stageTempFiles[fileKey] || [];
+          if (filesToUpload.length > 0) {
+            const uploadResults = [];
+            for (const file of filesToUpload) {
+              const folderPath = `dynamic-submissions/task_${task.stateId}/${field.name}`;
+              const res = await this.azureService.uploadFile(file, { containerName: 'private', folderPath });
+              if (res.success) {
+                uploadResults.push({ name: file.name, url: res.url });
+              } else {
+                this.messageService.add({ severity: 'error', summary: 'Error de carga', detail: `No se pudo subir el archivo: ${file.name}. ${res.error}` });
+                this.loadingAction.set(false);
+                return;
+              }
+            }
+            this.stageFormValues[fileKey] = JSON.stringify(uploadResults);
+          }
         }
       }
     }

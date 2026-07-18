@@ -28,6 +28,9 @@ export class DynamicFormSubmission {
   @Column({ name: 'Consecutive', type: 'nvarchar', length: 100, nullable: true })
   consecutive!: string | null;
 
+  @Column({ name: 'ParentSubmissionId', type: 'int', nullable: true })
+  parentSubmissionId!: number | null;
+
   @ManyToOne(() => DynamicForm, (form) => form.submissions)
   @JoinColumn({ name: 'FormId' })
   form!: DynamicForm;
@@ -39,6 +42,10 @@ export class DynamicFormSubmission {
   @ManyToOne(() => DynamicWorkflowStage)
   @JoinColumn({ name: 'CurrentStageId' })
   currentStage!: DynamicWorkflowStage | null;
+
+  @ManyToOne(() => DynamicFormSubmission)
+  @JoinColumn({ name: 'ParentSubmissionId' })
+  parentSubmission!: DynamicFormSubmission | null;
 
   @OneToMany(() => DynamicFormFieldValue, (val) => val.submission)
   values!: DynamicFormFieldValue[];
