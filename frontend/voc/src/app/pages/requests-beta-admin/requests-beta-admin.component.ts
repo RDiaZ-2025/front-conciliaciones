@@ -140,6 +140,13 @@ export class RequestsBetaAdminComponent implements OnInit {
   tempSelectOptions = signal<{ value: string }[]>([]);
   showExpressionsHelpDialog = signal<boolean>(false);
 
+  // Formula editor state
+  showFormulaConfigDialog = signal<boolean>(false);
+  selectedFieldForFormulaConfig = signal<any>(null);
+  tempFormulaExpression = signal<string>('');
+  tempFormulaRounding = signal<number>(2);
+  showFormulaHelpDialog = signal<boolean>(false);
+
   // Workflow editor state
   selectedWorkflowFormId = signal<number | null>(null);
   workflowStages = signal<WorkflowStageItem[]>([]);
@@ -153,7 +160,8 @@ export class RequestsBetaAdminComponent implements OnInit {
     { label: 'Fecha Simple', value: 'date' },
     { label: 'Fecha y Hora (24h)', value: 'datetime' },
     { label: 'Lista Desplegable / Listado', value: 'select' },
-    { label: 'Archivo / Adjunto', value: 'file' }
+    { label: 'Archivo / Adjunto', value: 'file' },
+    { label: 'Cálculo Matemático / Fórmula', value: 'formula' }
   ];
 
   // Assignee & Rejection Type options
@@ -210,7 +218,8 @@ export class RequestsBetaAdminComponent implements OnInit {
       responsible: '',
       role: '',
       icon: 'tag',
-      requireConsecutive: true
+      requireConsecutive: true,
+      displayOrder: 0
     });
     this.showFormDialog.set(true);
   }
@@ -404,6 +413,41 @@ export class RequestsBetaAdminComponent implements OnInit {
       field.metadata.options = opts;
     }
     this.showSelectConfigDialog.set(false);
+  }
+
+  openFormulaConfigDialog(field: any) {
+    if (!field.metadata) field.metadata = {};
+    if (field.metadata.formula === undefined) field.metadata.formula = '';
+    if (field.metadata.formulaRounding === undefined) field.metadata.formulaRounding = 2;
+
+    this.selectedFieldForFormulaConfig.set(field);
+    this.tempFormulaExpression.set(field.metadata.formula);
+    this.tempFormulaRounding.set(field.metadata.formulaRounding);
+    this.showFormulaConfigDialog.set(true);
+  }
+
+  getAvailableFormulaFields(): any[] {
+    const current = this.selectedFieldForFormulaConfig();
+    if (!current) return [];
+    // Return all active fields in the form that are number fields and are not the current field itself
+    return this.formFields().filter(f => f.name !== current.name && f.isActive && f.type === 'number');
+  }
+
+  insertFieldKeyToFormula(key: string) {
+    const expr = this.tempFormulaExpression();
+    this.tempFormulaExpression.set(expr ? expr + ' ' + key : key);
+  }
+
+  saveFormulaConfig() {
+    const field = this.selectedFieldForFormulaConfig();
+    if (field) {
+      if (!field.metadata) field.metadata = {};
+      field.metadata.formula = this.tempFormulaExpression().trim();
+      field.metadata.formulaRounding = this.tempFormulaRounding();
+      // Ensure the field is read-only since it is a formula calculated field
+      field.isReadOnly = true;
+    }
+    this.showFormulaConfigDialog.set(false);
   }
 
   confirmSoftDeleteField(field: FormFieldItem) {

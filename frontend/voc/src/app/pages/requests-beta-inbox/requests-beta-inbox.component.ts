@@ -486,4 +486,83 @@ export class RequestsBetaInboxComponent implements OnInit {
       }
     });
   }
+
+  evaluateFormula(formula: string, values: Record<string, string>, rounding: number = 2): number {
+    try {
+      if (!formula) return 0;
+      let sanitized = formula;
+      const keys = Object.keys(values).sort((a, b) => b.length - a.length);
+      for (const key of keys) {
+        const val = parseFloat(values[key]) || 0;
+        sanitized = sanitized.split(key).join(String(val));
+      }
+      sanitized = sanitized.split('^').join('**');
+      let safetyCheck = sanitized;
+      const allowedMath = ['Math.abs', 'Math.round', 'Math.ceil', 'Math.floor', 'Math.sqrt', 'Math.pow', 'Math.max', 'Math.min'];
+      for (const m of allowedMath) {
+        safetyCheck = safetyCheck.split(m).join('');
+      }
+      safetyCheck = safetyCheck.replace(/[0-9.+\-*/%() \s]/g, '');
+      if (safetyCheck.length > 0) {
+        console.warn('Unsafe characters detected in evaluated formula:', safetyCheck);
+        return 0;
+      }
+      const result = Function('"use strict"; return (' + sanitized + ')')();
+      if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
+        const factor = Math.pow(10, rounding);
+        return Math.round(result * factor) / factor;
+      }
+      return 0;
+    } catch (e) {
+      console.error('Error evaluating formula:', e);
+      return 0;
+    }
+  }
+
+  recalculateStageFormulas() {
+    const fields = this.stageFormFields();
+    const values = this.stageFormValues;
+    let changed = false;
+    for (const field of fields) {
+      if (field.type === 'formula') {
+        const formula = field.metadata?.formula || '';
+        const rounding = field.metadata?.formulaRounding ?? 2;
+        const labelValues: Record<string, string> = {};
+        fields.forEach((f: any) => {
+          if (f.name !== field.name) {
+            labelValues[f.label] = values[f.name] || '';
+          }
+        });
+        const result = this.evaluateFormula(formula, labelValues, rounding);
+        const resultStr = String(result);
+        if (values[field.name] !== resultStr) {
+          values[field.name] = resultStr;
+          changed = true;
+        }
+      }
+    }
+  }
+
+  recalculateParentFormulas() {
+    const task = this.selectedTask();
+    if (!task || !task.parentForms) return;
+    const values = this.stageFormValues;
+    for (const form of task.parentForms) {
+      for (const field of form.fields) {
+        if (field.type === 'formula') {
+          const key = form.formId + '_' + field.name;
+          const formula = field.metadata?.formula || '';
+          const rounding = field.metadata?.formulaRounding ?? 2;
+          const labelValues: Record<string, string> = {};
+          form.fields.forEach((f: any) => {
+            if (f.name !== field.name) {
+              labelValues[f.label] = values[form.formId + '_' + f.name] || '';
+            }
+          });
+          const result = this.evaluateFormula(formula, labelValues, rounding);
+          values[key] = String(result);
+        }
+      }
+    }
+  }
 }

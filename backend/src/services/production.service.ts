@@ -108,7 +108,8 @@ export class ProductionService {
     async getInitialForm() {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         return await AppDataSource.getRepository(DynamicForm).find({
-            where: { isInitialForm: true, isActive: true }
+            where: { isInitialForm: true, isActive: true },
+            order: { displayOrder: 'ASC', id: 'ASC' }
         });
     }
 
@@ -952,7 +953,8 @@ export class ProductionService {
             responsible: data.responsible,
             role: data.role,
             icon: data.icon,
-            requireConsecutive: data.requireConsecutive ?? true
+            requireConsecutive: data.requireConsecutive ?? true,
+            displayOrder: data.displayOrder ?? 0
         });
         return await repo.save(form);
     }
@@ -975,6 +977,7 @@ export class ProductionService {
         if (data.role !== undefined) form.role = data.role;
         if (data.icon !== undefined) form.icon = data.icon;
         if (data.requireConsecutive !== undefined) form.requireConsecutive = data.requireConsecutive;
+        if (data.displayOrder !== undefined) form.displayOrder = data.displayOrder;
 
         return await repo.save(form);
     }

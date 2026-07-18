@@ -186,21 +186,31 @@
                                 <span class="text-xs text-500 mb-1" *ngIf="field.description">{{ field.description }}</span>
                                 
                                 <ng-container [ngSwitch]="field.type">
-                                    <input *ngSwitchCase="'date'" type="date" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" [disabled]="field.isReadOnly" />
+                                    <input *ngSwitchCase="'date'" type="date" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
                                     
                                     <ng-container *ngSwitchCase="'datetime'">
-                                        <input type="datetime-local" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" [disabled]="field.isReadOnly" *ngIf="!field.isReadOnly" />
+                                        <input type="datetime-local" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" *ngIf="!field.isReadOnly" />
                                         <input type="text" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" [disabled]="true" *ngIf="field.isReadOnly" />
                                     </ng-container>
 
-                                    <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
+                                    <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
                                     
-                                    <input *ngSwitchCase="'number'" type="number" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
+                                    <input *ngSwitchCase="'number'" type="number" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
                                     
                                     <p-select *ngSwitchCase="'select'" [options]="field.metadata?.options || []"
-                                              [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" [placeholder]="field.placeholder || 'Seleccione opción...'"
+                                              [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
                                               [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-select>
                                     
+                                    <!-- Formula type -->
+                                    <div *ngSwitchCase="'formula'" class="flex align-items-center w-full relative">
+                                        <input type="text" pInputText [id]="'corr-field-' + form.formId + '-' + field.name"
+                                            [ngModel]="stageFormValues[form.formId + '_' + field.name]" [disabled]="true" 
+                                            class="w-full font-bold bg-50 border-round text-900 border-1 surface-border px-3 py-2" />
+                                        <div class="absolute right-0 mr-3 text-400">
+                                            <lucide-icon name="calculator" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+                                        </div>
+                                    </div>
+
                                     <!-- File type -->
                                     <ng-container *ngSwitchCase="'file'">
                                         <div class="flex flex-column gap-2 w-full">
@@ -240,7 +250,7 @@
                                         </div>
                                     </ng-container>
 
-                                    <input *ngSwitchDefault type="text" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
+                                    <input *ngSwitchDefault type="text" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
                                 </ng-container>
                             </div>
                         </div>
@@ -254,22 +264,32 @@
                             </label>
                             <span class="text-xs text-500 mb-1" *ngIf="field.description">{{ field.description }}</span>
                             
-                            <ng-container [ngSwitch]="field.type">
-                                <input *ngSwitchCase="'date'" type="date" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [disabled]="field.isReadOnly" />
+                             <ng-container [ngSwitch]="field.type">
+                                <input *ngSwitchCase="'date'" type="date" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [disabled]="field.isReadOnly" />
                                 
                                 <ng-container *ngSwitchCase="'datetime'">
-                                    <input type="datetime-local" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [disabled]="field.isReadOnly" *ngIf="!field.isReadOnly" />
+                                    <input type="datetime-local" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [disabled]="field.isReadOnly" *ngIf="!field.isReadOnly" />
                                     <input type="text" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [disabled]="true" *ngIf="field.isReadOnly" />
                                 </ng-container>
 
-                                <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
+                                <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
                                 
-                                <input *ngSwitchCase="'number'" type="number" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
+                                <input *ngSwitchCase="'number'" type="number" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
                                 
                                 <p-select *ngSwitchCase="'select'" [options]="field.metadata?.options || []"
-                                          [(ngModel)]="stageFormValues[field.name]" [placeholder]="field.placeholder || 'Seleccione opción...'"
+                                          [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
                                           [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-select>
                                 
+                                <!-- Formula type -->
+                                <div *ngSwitchCase="'formula'" class="flex align-items-center w-full relative">
+                                    <input type="text" pInputText [id]="'stage-field-' + field.name"
+                                        [ngModel]="stageFormValues[field.name]" [disabled]="true" 
+                                        class="w-full font-bold bg-50 border-round text-900 border-1 surface-border px-3 py-2" />
+                                    <div class="absolute right-0 mr-3 text-400">
+                                        <lucide-icon name="calculator" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+                                    </div>
+                                </div>
+
                                 <!-- File type -->
                                 <ng-container *ngSwitchCase="'file'">
                                     <div class="flex flex-column gap-2 w-full">
@@ -309,7 +329,7 @@
                                     </div>
                                 </ng-container>
 
-                                <input *ngSwitchDefault type="text" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
+                                <input *ngSwitchDefault type="text" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
                             </ng-container>
                         </div>
                     </ng-container>

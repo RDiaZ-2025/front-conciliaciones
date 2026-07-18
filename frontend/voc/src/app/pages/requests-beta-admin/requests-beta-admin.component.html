@@ -46,7 +46,10 @@
                         <td [class.opacity-60]="!form.isActive" [class.surface-100]="!form.isActive">{{ form.responsible || 'Sin asignar' }}</td>
                         <td [class.opacity-60]="!form.isActive" [class.surface-100]="!form.isActive">{{ form.role || 'Sin asignar' }}</td>
                         <td class="text-center" [class.opacity-60]="!form.isActive" [class.surface-100]="!form.isActive">
-                            <p-tag *ngIf="form.isInitialForm" value="Solicitud Inicial" severity="info"></p-tag>
+                            <div class="flex flex-column align-items-center gap-1" *ngIf="form.isInitialForm">
+                                <p-tag value="Solicitud Inicial" severity="info"></p-tag>
+                                <span class="text-xs text-500 font-semibold">Orden: {{ form.displayOrder ?? 0 }}</span>
+                            </div>
                             <p-tag *ngIf="!form.isInitialForm" [value]="form.isEntryForm ? 'Área / Entrada' : 'Interno'" 
                                    [severity]="form.isEntryForm ? 'success' : 'warn'"></p-tag>
                         </td>
@@ -285,6 +288,13 @@
                 <label for="isInitialForm" class="font-medium cursor-pointer">Definir como "Solicitud Inicial" principal</label>
             </div>
 
+            <!-- Display Order for Initial Forms -->
+            <div class="flex flex-column gap-1" *ngIf="selectedForm().isInitialForm">
+                <label for="formDisplayOrder" class="font-semibold text-sm">Orden de Visualización</label>
+                <input type="number" pInputText id="formDisplayOrder" [(ngModel)]="selectedForm().displayOrder" placeholder="Ej: 1, 2, 3..." min="0" />
+                <span class="text-xs text-500">Determina el orden en que aparecerá este formulario en la secuencia de Solicitudes Iniciales.</span>
+            </div>
+
             <div class="flex align-items-center gap-3 mt-2">
                 <p-checkbox [(ngModel)]="selectedForm().requireConsecutive" [binary]="true" id="requireConsecutive"></p-checkbox>
                 <label for="requireConsecutive" class="font-medium cursor-pointer">Solicitar número de consecutivo al finalizar el flujo</label>
@@ -369,6 +379,10 @@
                                      <p-button *ngIf="field.type === 'select'" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openSelectConfigDialog(field)" [disabled]="!field.isActive">
                                          <lucide-icon name="list" class="mr-2"></lucide-icon>
                                          Opciones
+                                     </p-button>
+                                     <p-button *ngIf="field.type === 'formula'" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openFormulaConfigDialog(field)" [disabled]="!field.isActive">
+                                         <lucide-icon name="calculator" class="mr-2"></lucide-icon>
+                                         Configurar
                                      </p-button>
                                  </div>
                             </td>
@@ -496,6 +510,66 @@
         </ng-template>
     </p-dialog>
 
+    <!-- Dialog 4.5: Formula mathematical expression Config -->
+    <p-dialog [header]="'Configurar Fórmula: ' + (selectedFieldForFormulaConfig()?.label || '')" [(visible)]="showFormulaConfigDialog" 
+              [modal]="true" [style]="{width: '550px'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
+        <div class="flex flex-column gap-3 py-2 px-3" *ngIf="selectedFieldForFormulaConfig()">
+            <div class="p-3 bg-blue-50 text-blue-700 border-round border-1 border-blue-200 text-sm">
+                <lucide-icon name="info" class="mr-2" style="width: 1.1rem; height: 1.1rem; display: inline-block; vertical-align: middle;"></lucide-icon>
+                <span>Escribe la expresión matemática utilizando las etiquetas de los campos. Ejemplo: <code>num1 * num2</code></span>
+            </div>
+            
+            <div class="flex flex-column gap-1">
+                <div class="flex align-items-center justify-content-between">
+                    <label for="formula-expr" class="font-bold text-sm text-900">Fórmula / Expresión <span class="text-red-500">*</span></label>
+                    <lucide-icon name="help-circle" class="text-500 cursor-pointer hover:text-primary transition-colors" 
+                                 [pTooltip]="'Haz clic para ver la guía de operadores y funciones matemáticas soportadas.'" 
+                                 (click)="showFormulaHelpDialog.set(true)"
+                                 style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+                </div>
+                <input id="formula-expr" type="text" pInputText [(ngModel)]="tempFormulaExpression" placeholder="Ej: num1 + num2" />
+            </div>
+
+            <div class="flex flex-column gap-1">
+                <label for="formula-round" class="font-bold text-sm text-900">Decimales de Redondeo</label>
+                <p-select [options]="[
+                    { label: 'Sin decimales (Entero)', value: 0 },
+                    { label: '1 decimal', value: 1 },
+                    { label: '2 decimales', value: 2 },
+                    { label: '3 decimales', value: 3 },
+                    { label: '4 decimales', value: 4 }
+                ]" [(ngModel)]="tempFormulaRounding" optionLabel="label" optionValue="value" id="formula-round" class="w-full" [appendTo]="'body'"></p-select>
+            </div>
+
+            <!-- List of available fields to copy -->
+            <div class="flex flex-column gap-2 mt-2">
+                <span class="font-bold text-sm text-900">Campos Disponibles en este Formulario:</span>
+                <span class="text-xs text-500">Haz clic en un campo para insertarlo en la expresión:</span>
+                <div class="flex flex-wrap gap-2 max-h-10rem overflow-y-auto p-2 border-1 surface-border border-round bg-light">
+                    <div *ngFor="let f of getAvailableFormulaFields()" 
+                         class="cursor-pointer bg-white p-2 border-round border-1 surface-border hover:bg-blue-50 transition-colors text-xs font-semibold text-primary truncate max-w-15rem"
+                         [pTooltip]="'Etiqueta: ' + f.label"
+                         (click)="insertFieldKeyToFormula(f.label)">
+                        {{ f.label }}
+                    </div>
+                    <div *ngIf="getAvailableFormulaFields().length === 0" class="text-center w-full text-xs text-500 py-2">
+                        No hay otros campos numéricos definidos en este formulario aún.
+                    </div>
+                </div>
+            </div>
+        </div>
+        <ng-template pTemplate="footer">
+            <div class="flex justify-content-end gap-2 px-4 pb-3">
+                <p-button [text]="true" severity="secondary" (onClick)="showFormulaConfigDialog.set(false)">
+                    Cancelar
+                </p-button>
+                <p-button severity="primary" (onClick)="saveFormulaConfig()">
+                    Guardar Fórmula
+                </p-button>
+            </div>
+        </ng-template>
+    </p-dialog>
+
     <!-- Dialog 5: Expressions Documentation Helper -->
     <p-dialog header="Expresiones por Defecto Disponibles" [(visible)]="showExpressionsHelpDialog" 
               [modal]="true" [style]="{width: '520px'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
@@ -533,6 +607,91 @@
         <ng-template pTemplate="footer">
             <div class="flex justify-content-end gap-2 px-4 pb-3">
                 <p-button severity="primary" (onClick)="showExpressionsHelpDialog.set(false)">
+                    <lucide-icon name="check" class="mr-2"></lucide-icon>
+                    Entendido
+                </p-button>
+            </div>
+        </ng-template>
+    </p-dialog>
+
+    <!-- Dialog 6: Formula Help Documentation -->
+    <p-dialog header="Guía de Fórmulas Matemáticas" [(visible)]="showFormulaHelpDialog" 
+              [modal]="true" [style]="{width: '580px', 'max-height': '85vh'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
+        <div class="flex flex-column gap-3 py-2 px-3 overflow-y-auto" style="max-height: 60vh;">
+            <p class="text-700 leading-normal m-0 text-sm">
+                Puedes escribir cualquier expresión matemática utilizando los nombres técnicos de los campos (ej: <code>campo_1784398591184</code>) y números fijos.
+            </p>
+            
+            <!-- Operadores Soportados -->
+            <div class="flex flex-column gap-2">
+                <span class="font-bold text-sm text-900 border-bottom-1 pb-1 surface-border">Operadores Soportados</span>
+                <div class="grid text-xs text-700">
+                    <div class="col-4 font-semibold"><code>+</code> , <code>-</code></div>
+                    <div class="col-8">Suma y Resta (Ej: <code>campo_1 + campo_2 - 10</code>)</div>
+                    
+                    <div class="col-4 font-semibold"><code>*</code> , <code>/</code></div>
+                    <div class="col-8">Multiplicación y División (Ej: <code>(campo_1 * 100) / campo_2</code>)</div>
+                    
+                    <div class="col-4 font-semibold"><code>%</code></div>
+                    <div class="col-8">Módulo o residuo de la división (Ej: <code>campo_1 % 2</code>)</div>
+                    
+                    <div class="col-4 font-semibold"><code>^</code></div>
+                    <div class="col-8">Exponente / Potencia (Ej: <code>campo_1 ^ 2</code> para elevar al cuadrado)</div>
+                </div>
+            </div>
+
+            <!-- Funciones Especiales -->
+            <div class="flex flex-column gap-2 mt-2">
+                <span class="font-bold text-sm text-900 border-bottom-1 pb-1 surface-border">Funciones Especiales (Math)</span>
+                <div class="flex flex-column gap-2 text-xs text-700">
+                    <div>
+                        <code class="font-bold text-blue-700">Math.round(x)</code> - Redondea al entero más cercano.
+                        <div class="text-500 mt-0.5">Ejemplo: <code>Math.round(campo_1 / campo_2)</code></div>
+                    </div>
+                    <div>
+                        <code class="font-bold text-blue-700">Math.floor(x)</code> - Redondea hacia abajo (entero inferior).
+                        <div class="text-500 mt-0.5">Ejemplo: <code>Math.floor(campo_1 * 1.19)</code></div>
+                    </div>
+                    <div>
+                        <code class="font-bold text-blue-700">Math.ceil(x)</code> - Redondea hacia arriba (entero superior).
+                        <div class="text-500 mt-0.5">Ejemplo: <code>Math.ceil(campo_1 / 3)</code></div>
+                    </div>
+                    <div>
+                        <code class="font-bold text-blue-700">Math.sqrt(x)</code> - Calcula la raíz cuadarada.
+                        <div class="text-500 mt-0.5">Ejemplo: <code>Math.sqrt(campo_1)</code></div>
+                    </div>
+                    <div>
+                        <code class="font-bold text-blue-700">Math.pow(base, exponente)</code> - Eleva un número a una potencia.
+                        <div class="text-500 mt-0.5">Ejemplo: <code>Math.pow(campo_1, 3)</code></div>
+                    </div>
+                    <div>
+                        <code class="font-bold text-blue-700">Math.max(a, b, ...)</code> - Retorna el valor más alto.
+                        <div class="text-500 mt-0.5">Ejemplo: <code>Math.max(campo_1, campo_2, 0)</code></div>
+                    </div>
+                    <div>
+                        <code class="font-bold text-blue-700">Math.min(a, b, ...)</code> - Retorna el valor más bajo.
+                        <div class="text-500 mt-0.5">Ejemplo: <code>Math.min(campo_1, campo_2)</code></div>
+                    </div>
+                    <div>
+                        <code class="font-bold text-blue-700">Math.abs(x)</code> - Retorna el valor absoluto (sin signo).
+                        <div class="text-500 mt-0.5">Ejemplo: <code>Math.abs(campo_1 - campo_2)</code></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Consideraciones -->
+            <div class="p-3 bg-yellow-50 text-yellow-800 border-round border-1 border-yellow-200 text-xs mt-2">
+                <strong class="block mb-1">Notas importantes:</strong>
+                <ul class="m-0 pl-3 leading-normal">
+                    <li>Los campos vacíos o con valores no numéricos se evalúan automáticamente como <code>0</code>.</li>
+                    <li>Las claves de los campos deben estar escritas idénticas (se recomienda hacer clic en los botones de "Campos Disponibles" para insertarlas sin errores).</li>
+                    <li>La división por cero no genera error; se captura y retorna <code>0</code>.</li>
+                </ul>
+            </div>
+        </div>
+        <ng-template pTemplate="footer">
+            <div class="flex justify-content-end gap-2 px-4 pb-3">
+                <p-button severity="primary" (onClick)="showFormulaHelpDialog.set(false)">
                     <lucide-icon name="check" class="mr-2"></lucide-icon>
                     Entendido
                 </p-button>

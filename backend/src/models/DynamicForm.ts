@@ -23,6 +23,9 @@ export class DynamicForm {
   @Column({ name: 'IsActive', type: 'bit', default: true })
   isActive!: boolean;
 
+  @Column({ name: 'DisplayOrder', type: 'int', default: 0 })
+  displayOrder!: number;
+
   @Column({ name: 'RequireConsecutive', type: 'bit', default: true })
   requireConsecutive!: boolean;
 
