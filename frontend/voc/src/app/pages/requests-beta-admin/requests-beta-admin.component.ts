@@ -569,6 +569,36 @@ export class RequestsBetaAdminComponent implements OnInit {
     this.formFields.set(currentFields);
   }
 
+  moveFieldUp(index: number) {
+    if (index <= 0) return;
+    const fields = [...this.formFields()];
+    const temp = fields[index];
+    fields[index] = fields[index - 1];
+    fields[index - 1] = temp;
+    
+    // Update displayOrder values based on their new indices
+    fields.forEach((f, idx) => {
+      f.displayOrder = idx + 1;
+    });
+    
+    this.formFields.set(fields);
+  }
+
+  moveFieldDown(index: number) {
+    const fields = [...this.formFields()];
+    if (index >= fields.length - 1) return;
+    const temp = fields[index];
+    fields[index] = fields[index + 1];
+    fields[index + 1] = temp;
+
+    // Update displayOrder values based on their new indices
+    fields.forEach((f, idx) => {
+      f.displayOrder = idx + 1;
+    });
+
+    this.formFields.set(fields);
+  }
+
   saveFields() {
     const form = this.editingFormForFields();
     const fields = this.formFields();

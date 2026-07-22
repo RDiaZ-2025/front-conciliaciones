@@ -333,6 +333,7 @@
                 <p-table [value]="formFields()" responsiveLayout="scroll" styleClass="p-datatable-striped p-datatable-sm">
                     <ng-template pTemplate="header">
                         <tr>
+                            <th style="width: 6rem;" class="text-center">Posición</th>
                             <th style="width: 15rem;">Etiqueta (Label) *</th>
                             <th style="width: 10rem;">Clave/Key (Técnico)</th>
                             <th style="width: 15rem;">Descripción explicativa</th>
@@ -354,6 +355,16 @@
                     </ng-template>
                     <ng-template pTemplate="body" let-field let-rowIndex="rowIndex">
                         <tr>
+                            <td class="text-center" [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
+                                <div class="flex justify-content-center gap-1">
+                                    <p-button [text]="true" severity="secondary" size="small" [disabled]="rowIndex === 0 || !field.isActive" (onClick)="moveFieldUp(rowIndex)" pTooltip="Subir" tooltipPosition="top">
+                                        <lucide-icon name="arrow-up" style="width: 0.9rem; height: 0.9rem;"></lucide-icon>
+                                    </p-button>
+                                    <p-button [text]="true" severity="secondary" size="small" [disabled]="rowIndex === formFields().length - 1 || !field.isActive" (onClick)="moveFieldDown(rowIndex)" pTooltip="Bajar" tooltipPosition="top">
+                                        <lucide-icon name="arrow-down" style="width: 0.9rem; height: 0.9rem;"></lucide-icon>
+                                    </p-button>
+                                </div>
+                            </td>
                             <td [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
                                 <div class="flex flex-column gap-1">
                                     <input pInputText [(ngModel)]="field.label" placeholder="Nombre visible" class="p-inputtext-sm" [disabled]="!field.isActive" />
