@@ -445,7 +445,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     const values = this.initialFormValues();
     for (const form of forms) {
       for (const field of form.fields) {
-        if (field.isRequired) {
+        if (field.isRequired && field.type !== 'section_header') {
           if (field.type === 'file') {
             const files = this.getInitialSelectedFiles(form.id, field.name);
             if (files.length === 0) {
@@ -615,7 +615,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   continueFormFlow() {
     const fields = this.currentFormFields();
     for (const field of fields) {
-      if (field.isRequired) {
+      if (field.isRequired && field.type !== 'section_header') {
         if (field.type === 'file') {
           const files = this.getSelectedFiles(field.name);
           const val = this.formValues[field.name];
@@ -1384,7 +1384,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       if (task.formIdToFill || isCorr) {
         const fields = this.stageFormFields();
         for (const field of fields) {
-          if (field.isRequired) {
+          if (field.isRequired && field.type !== 'section_header') {
             if (field.type === 'file') {
               const files = this.getStageSelectedFiles(field.name);
               const val = this.stageFormValues[field.name];

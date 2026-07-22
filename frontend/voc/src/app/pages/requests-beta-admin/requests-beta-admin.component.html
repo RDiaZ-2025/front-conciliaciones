@@ -391,13 +391,13 @@
                                  </div>
                             </td>
                             <td [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
-                                <input pInputText [(ngModel)]="field.defaultValueExpression" placeholder="Ej: CURRENT_DATE_TIME" class="p-inputtext-sm" [disabled]="!field.isActive" />
+                                <input pInputText [(ngModel)]="field.defaultValueExpression" placeholder="Ej: CURRENT_DATE_TIME" class="p-inputtext-sm" [disabled]="!field.isActive || field.type === 'section_header'" />
                             </td>
                             <td class="text-center" [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
-                                <p-checkbox [(ngModel)]="field.isRequired" [binary]="true" [disabled]="!field.isActive"></p-checkbox>
+                                <p-checkbox [(ngModel)]="field.isRequired" [binary]="true" [disabled]="!field.isActive || field.type === 'section_header'"></p-checkbox>
                             </td>
                             <td class="text-center" [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
-                                <p-checkbox [(ngModel)]="field.isReadOnly" [binary]="true" [disabled]="!field.isActive"></p-checkbox>
+                                <p-checkbox [(ngModel)]="field.isReadOnly" [binary]="true" [disabled]="!field.isActive || field.type === 'section_header'"></p-checkbox>
                             </td>
                             <td class="text-center">
                                 <div class="flex justify-content-center gap-1">

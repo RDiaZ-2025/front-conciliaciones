@@ -254,11 +254,11 @@
                     <ng-container *ngIf="isCorrection(selectedTask()) && selectedTask()?.parentForms && selectedTask()?.parentForms?.length > 0">
                         <div *ngFor="let form of selectedTask().parentForms" class="flex flex-column gap-3 border-round border-1 surface-border p-3 surface-card mb-2">
                             <span class="text-primary font-bold text-sm border-bottom-1 pb-1 surface-border uppercase">{{ form.formName }}</span>
-                            <div *ngFor="let field of form.fields" class="flex flex-column gap-1">
-                                <label [for]="'corr-field-' + form.formId + '-' + field.name" class="font-medium text-900">
+                            <div *ngFor="let field of form.fields" class="flex flex-column gap-1" [class.col-12]="field.type === 'section_header'">
+                                <label [for]="'corr-field-' + form.formId + '-' + field.name" class="font-medium text-900" *ngIf="field.type !== 'section_header'">
                                     {{ field.label }} <span class="text-red-500" *ngIf="field.isRequired">*</span>
                                 </label>
-                                <span class="text-xs text-500 mb-1" *ngIf="field.description">{{ field.description }}</span>
+                                <span class="text-xs text-500 mb-1" *ngIf="field.description && field.type !== 'section_header'">{{ field.description }}</span>
                                 
                                 <ng-container [ngSwitch]="field.type">
                                     <input *ngSwitchCase="'date'" type="date" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
@@ -371,6 +371,13 @@
                                         </div>
                                     </ng-container>
 
+                                    <!-- Section Header type -->
+                                    <div *ngSwitchCase="'section_header'" class="w-full mt-3 mb-1">
+                                        <div class="bg-red-600 text-white font-bold text-center py-2 px-3 border-round text-sm uppercase tracking-wider shadow-1">
+                                            {{ field.label }}
+                                        </div>
+                                    </div>
+
                                     <input *ngSwitchDefault type="text" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
                                 </ng-container>
                             </div>
@@ -379,11 +386,11 @@
 
                     <!-- Case B: Normal stage form to fill or fallback correction -->
                     <ng-container *ngIf="!(isCorrection(selectedTask()) && selectedTask()?.parentForms && selectedTask()?.parentForms?.length > 0)">
-                        <div *ngFor="let field of stageFormFields()" class="flex flex-column gap-1">
-                            <label [for]="'stage-field-' + field.name" class="font-medium text-900">
+                        <div *ngFor="let field of stageFormFields()" class="flex flex-column gap-1" [class.col-12]="field.type === 'section_header'">
+                            <label [for]="'stage-field-' + field.name" class="font-medium text-900" *ngIf="field.type !== 'section_header'">
                                 {{ field.label }} <span class="text-red-500" *ngIf="field.isRequired">*</span>
                             </label>
-                            <span class="text-xs text-500 mb-1" *ngIf="field.description">{{ field.description }}</span>
+                            <span class="text-xs text-500 mb-1" *ngIf="field.description && field.type !== 'section_header'">{{ field.description }}</span>
                             
                              <ng-container [ngSwitch]="field.type">
                                 <input *ngSwitchCase="'date'" type="date" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [disabled]="field.isReadOnly" />
@@ -495,6 +502,13 @@
                                         </div>
                                     </div>
                                 </ng-container>
+
+                                <!-- Section Header type -->
+                                <div *ngSwitchCase="'section_header'" class="w-full mt-3 mb-1">
+                                    <div class="bg-red-600 text-white font-bold text-center py-2 px-3 border-round text-sm uppercase tracking-wider shadow-1">
+                                        {{ field.label }}
+                                    </div>
+                                </div>
 
                                 <input *ngSwitchDefault type="text" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
                             </ng-container>

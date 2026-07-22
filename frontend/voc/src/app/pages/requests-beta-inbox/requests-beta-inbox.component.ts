@@ -224,7 +224,7 @@ export class RequestsBetaInboxComponent implements OnInit {
     if (action === 'approve' && (task.formIdToFill || isCorr)) {
       const fields = this.stageFormFields();
       for (const field of fields) {
-        if (field.isRequired) {
+        if (field.isRequired && field.type !== 'section_header') {
           if (field.type === 'file') {
             const files = this.getSelectedFiles(field.name);
             const val = this.stageFormValues[field.name];
