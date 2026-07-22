@@ -384,6 +384,10 @@
                                          <lucide-icon name="calculator" class="mr-2"></lucide-icon>
                                          Configurar
                                      </p-button>
+                                     <p-button *ngIf="field.type === 'dynamic_list'" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openDynamicListConfigDialog(field)" [disabled]="!field.isActive">
+                                         <lucide-icon name="list-plus" class="mr-2"></lucide-icon>
+                                         Configurar Items
+                                     </p-button>
                                  </div>
                             </td>
                             <td [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
@@ -503,6 +507,71 @@
                     Cancelar
                 </p-button>
                 <p-button severity="success" (onClick)="saveSelectConfig()">
+                    <lucide-icon name="check" class="mr-2"></lucide-icon>
+                    Aceptar
+                </p-button>
+            </div>
+        </ng-template>
+    </p-dialog>
+
+    <!-- Dialog 4.4: Dynamic List Config -->
+    <p-dialog [header]="'Configurar Tabla Dinámica: ' + (selectedFieldForDynamicListConfig()?.label || '')" [(visible)]="showDynamicListConfigDialog" 
+              [modal]="true" [style]="{width: '500px'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
+        <div class="flex flex-column gap-4 py-2 px-3" *ngIf="selectedFieldForDynamicListConfig()">
+            <!-- Options (Products/Services) -->
+            <div class="flex flex-column gap-2">
+                <div class="flex justify-content-between align-items-center mb-1">
+                    <span class="font-bold text-sm text-900">1. Lista de Opciones (Productos / Servicios) *</span>
+                    <p-button [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="addDynamicListOption()">
+                        <lucide-icon name="plus" class="mr-1" style="width: 0.9rem; height: 0.9rem; vertical-align: middle;"></lucide-icon>
+                        Añadir Opción
+                    </p-button>
+                </div>
+                <div class="overflow-y-auto pr-1 flex flex-column gap-2" style="max-height: 200px;">
+                    <div *ngFor="let opt of tempDynamicListOptions(); let idx = index" class="flex gap-2 align-items-center w-full">
+                        <input pInputText [(ngModel)]="opt.value" placeholder="Escribe un producto/servicio..." class="flex-1 p-inputtext-sm" />
+                        <p-button [text]="true" [rounded]="true" severity="danger" size="small" (onClick)="removeDynamicListOption(idx)" styleClass="p-button-sm">
+                            <lucide-icon name="trash" style="width: 1rem; height: 1rem;"></lucide-icon>
+                        </p-button>
+                    </div>
+                    <div *ngIf="tempDynamicListOptions().length === 0" class="text-center p-3 text-500 text-sm">
+                        No hay productos/servicios añadidos. Haz click en "Añadir Opción".
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sub-fields (Columns) -->
+            <div class="flex flex-column gap-2 border-top-1 surface-border pt-3">
+                <div class="flex justify-content-between align-items-center mb-1">
+                    <span class="font-bold text-sm text-900">2. Columnas / Datos por Item *</span>
+                    <p-button [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="addDynamicListSubField()">
+                        <lucide-icon name="plus" class="mr-1" style="width: 0.9rem; height: 0.9rem; vertical-align: middle;"></lucide-icon>
+                        Añadir Columna
+                    </p-button>
+                </div>
+                <div class="overflow-y-auto pr-1 flex flex-column gap-2" style="max-height: 180px;">
+                    <div *ngFor="let sf of tempDynamicListSubFields(); let idx = index" class="flex gap-2 align-items-center w-full">
+                        <div class="flex-1 flex gap-2">
+                            <input pInputText [(ngModel)]="sf.label" placeholder="Etiqueta (ej: Cantidad)" class="flex-1 p-inputtext-sm" (ngModelChange)="sf.name = sf.label.toLowerCase().replace(' ', '_')" />
+                            <p-select [options]="[{label:'Número', value:'number'}, {label:'Texto', value:'text'}]" [(ngModel)]="sf.type" class="p-inputtext-sm" style="width: 8rem;" appendTo="body"></p-select>
+                        </div>
+                        <p-button [text]="true" [rounded]="true" severity="danger" size="small" (onClick)="removeDynamicListSubField(idx)" styleClass="p-button-sm">
+                            <lucide-icon name="trash" style="width: 1rem; height: 1rem;"></lucide-icon>
+                        </p-button>
+                    </div>
+                    <div *ngIf="tempDynamicListSubFields().length === 0" class="text-center p-3 text-500 text-sm">
+                        No hay columnas configuradas. Se requiere al menos una (ej: Cantidad).
+                    </div>
+                </div>
+            </div>
+        </div>
+        <ng-template pTemplate="footer">
+            <div class="flex justify-content-end gap-2 px-4 pb-3">
+                <p-button [text]="true" severity="secondary" (onClick)="showDynamicListConfigDialog.set(false)">
+                    <lucide-icon name="x" class="mr-2"></lucide-icon>
+                    Cancelar
+                </p-button>
+                <p-button severity="success" (onClick)="saveDynamicListConfig()">
                     <lucide-icon name="check" class="mr-2"></lucide-icon>
                     Aceptar
                 </p-button>

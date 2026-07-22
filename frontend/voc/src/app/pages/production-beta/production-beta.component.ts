@@ -3,7 +3,7 @@ import { CoreDialogService } from '../../services/core-dialog.service';
 import { Component, inject, OnInit, OnDestroy, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin, of } from 'rxjs';
+import { forkJoin, of, firstValueFrom } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { filter, take } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
@@ -26,6 +26,7 @@ import { AuthService } from '../../services/auth.service';
 import { CheckboxModule } from 'primeng/checkbox';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { FormsModule } from '@angular/forms';
 import { ProductionRequest } from '../../models/common/production-request';
 import { ProductionDialogComponent } from '../production_2/production-dialog/production-dialog.component';
@@ -65,6 +66,7 @@ import { MaterialRegisterListDialogComponent } from '../production_2/material-re
     CheckboxModule,
     InputTextModule,
     SelectModule,
+    MultiSelectModule,
     FormsModule
   ],
   providers: [DialogService, ConfirmationService, MessageService],
@@ -363,37 +365,47 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }
   }
 
-  async openBetaRequestWizard() {
+  openBetaRequestWizard() {
     this.loadingRequestTypes.set(true);
     this.initialForms.set([]);
     this.initialFormValues.set({});
-    
-    // Fetch initial forms
+    this.dynamicListRows = {};
+
     this.productionService.getInitialForm().subscribe({
       next: (forms: any[]) => {
-        this.initialForms.set(forms);
-        if (forms && forms.length > 0) {
-          const fieldsObservables = forms.map(form => 
+        const formsList = Array.isArray(forms) ? forms : (forms ? [forms] : []);
+        this.initialForms.set(formsList);
+        if (formsList.length > 0) {
+          const fieldsObservables = formsList.map(form => 
             this.productionService.getDynamicFormFields(form.id)
           );
           
           forkJoin(fieldsObservables).subscribe({
             next: (allFieldsArray: any[][]) => {
               const vals: Record<string, string> = {};
-              forms.forEach((form, idx) => {
-                const fields = allFieldsArray[idx];
+              formsList.forEach((form, idx) => {
+                const fields = allFieldsArray[idx] || [];
                 fields.forEach((f: any) => {
-                  if (f.metadata && typeof f.metadata === 'string') {
-                    try { f.metadata = JSON.parse(f.metadata); } catch(e){}
+                  if (f.metadata) {
+                    if (typeof f.metadata === 'string') {
+                      try { f.metadata = JSON.parse(f.metadata); } catch(e){}
+                    }
+                  } else {
+                    f.metadata = {};
                   }
                   vals[form.id + '_' + f.name] = '';
+
+                  if (f.type === 'dynamic_list') {
+                    this.initDynamicListField(form.id + '_' + f.name, '');
+                  }
                 });
                 form.fields = fields; // store fields inside form object
               });
               this.initialFormValues.set(vals);
               this.loadingRequestTypes.set(false);
             },
-            error: () => {
+            error: (err) => {
+              console.error('Error loading fields:', err);
               this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los campos de los formularios.' });
               this.loadingRequestTypes.set(false);
             }
@@ -402,7 +414,8 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           this.loadingRequestTypes.set(false);
         }
       },
-      error: () => {
+      error: (err) => {
+        console.error('Error loading initial forms:', err);
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar la lista de formularios iniciales.' });
         this.loadingRequestTypes.set(false);
       }
@@ -410,11 +423,12 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
     this.productionService.getRequestTypes().subscribe({
       next: (types) => {
-        this.requestTypes.set(types.map(t => ({ ...t, selected: false })));
+        this.requestTypes.set((types || []).map(t => ({ ...t, selected: false })));
         this.selectedRequestTypes.set([]);
         this.showTypeSelectionDialog.set(true);
       },
       error: (err) => {
+        console.error('Error loading request types:', err);
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los tipos de solicitud.' });
       }
     });
@@ -557,6 +571,10 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
             initialValues[f.name] = evaluated;
           } else {
             initialValues[f.name] = '';
+          }
+
+          if (f.type === 'dynamic_list') {
+            this.initDynamicListField(f.name, initialValues[f.name]);
           }
         });
 
@@ -1271,6 +1289,9 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         task.parentForms.forEach((form: any) => {
           form.fields.forEach((f: any) => {
             initialValues[form.formId + '_' + f.name] = f.value || '';
+            if (f.type === 'dynamic_list') {
+              this.initDynamicListField(form.formId + '_' + f.name, f.value || '');
+            }
           });
         });
         this.stageFormValues = initialValues;
@@ -1285,7 +1306,11 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
               if (f.metadata && typeof f.metadata === 'string') {
                 try { f.metadata = JSON.parse(f.metadata); } catch(e){}
               }
-              initialValues[f.name] = task.submittedValuesRaw[f.name] || '';
+              const val = task.submittedValuesRaw[f.name] || '';
+              initialValues[f.name] = val;
+              if (f.type === 'dynamic_list') {
+                this.initDynamicListField(f.name, val);
+              }
             });
             this.stageFormValues = initialValues;
             this.stageFormFields.set(fields);
@@ -1326,6 +1351,10 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
               initialValues[f.name] = evaluated;
             } else {
               initialValues[f.name] = '';
+            }
+
+            if (f.type === 'dynamic_list') {
+              this.initDynamicListField(f.name, initialValues[f.name]);
             }
           });
 
@@ -1746,5 +1775,134 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         }
       }
     }
+  }
+
+  dynamicListSelected: Record<string, string[]> = {};
+  dynamicListRows: Record<string, any[]> = {};
+
+  initDynamicListField(key: string, rawVal: string) {
+    if (!this.dynamicListRows[key]) {
+      this.dynamicListRows[key] = [];
+    }
+    if (rawVal) {
+      try {
+        const parsed = JSON.parse(rawVal);
+        if (Array.isArray(parsed)) {
+          this.dynamicListRows[key] = parsed;
+          this.dynamicListSelected[key] = parsed.map(i => i.item || i.product).filter(Boolean);
+          return;
+        }
+      } catch(e){}
+    }
+    this.dynamicListRows[key] = [];
+    this.dynamicListSelected[key] = [];
+  }
+
+  onDynamicListSelectionChange(key: string, selectedOptions: string[], field: any, containerType: 'initial' | 'stage') {
+    this.dynamicListSelected[key] = selectedOptions || [];
+    if (!this.dynamicListRows[key]) {
+      this.dynamicListRows[key] = [];
+    }
+    const currentList = this.dynamicListRows[key];
+    const subFields = field?.metadata?.subFields && field.metadata.subFields.length > 0
+      ? field.metadata.subFields
+      : [{ name: 'quantity', label: 'Cantidad', type: 'number' }];
+
+    const newList = (selectedOptions || []).map(opt => {
+      const existing = currentList.find(i => (i.item || i.product) === opt);
+      if (existing) return existing;
+      const itemObj: Record<string, any> = { item: opt };
+      subFields.forEach((sf: any) => {
+        itemObj[sf.name] = sf.type === 'number' ? 1 : '';
+      });
+      return itemObj;
+    });
+
+    this.dynamicListRows[key] = newList;
+    
+    const jsonVal = JSON.stringify(newList);
+    if (containerType === 'initial') {
+      const vals = this.initialFormValues();
+      vals[key] = jsonVal;
+      this.initialFormValues.set({ ...vals });
+      this.recalculateInitialFormulas();
+    } else {
+      this.stageFormValues[key] = jsonVal;
+      this.recalculateStageFormulas();
+    }
+  }
+
+  updateDynamicListItemValue(key: string, itemIdx: number, subFieldName: string, newVal: any, containerType: 'initial' | 'stage') {
+    const list = this.dynamicListRows[key] || [];
+    if (list[itemIdx]) {
+      list[itemIdx][subFieldName] = newVal;
+      const jsonVal = JSON.stringify(list);
+      if (containerType === 'initial') {
+        const vals = this.initialFormValues();
+        vals[key] = jsonVal;
+        this.initialFormValues.set({ ...vals });
+        this.recalculateInitialFormulas();
+      } else {
+        this.stageFormValues[key] = jsonVal;
+        this.recalculateStageFormulas();
+      }
+    }
+  }
+
+  removeDynamicListItem(key: string, itemIdx: number, containerType: 'initial' | 'stage') {
+    const list = this.dynamicListRows[key] || [];
+    const removedItem = list[itemIdx];
+    list.splice(itemIdx, 1);
+    
+    if (removedItem) {
+      const name = removedItem.item || removedItem.product;
+      this.dynamicListSelected[key] = (this.dynamicListSelected[key] || []).filter(i => i !== name);
+    }
+
+    const jsonVal = JSON.stringify(list);
+    if (containerType === 'initial') {
+      const vals = this.initialFormValues();
+      vals[key] = jsonVal;
+      this.initialFormValues.set({ ...vals });
+      this.recalculateInitialFormulas();
+    } else {
+      this.stageFormValues[key] = jsonVal;
+      this.recalculateStageFormulas();
+    }
+  }
+
+  isDynamicListValue(val: any): boolean {
+    if (typeof val !== 'string' || !val.trim().startsWith('[')) return false;
+    try {
+      const parsed = this.parseDynamicList(val);
+      return parsed.length > 0 && typeof parsed[0] === 'object' && parsed[0] !== null && ('item' in parsed[0] || 'product' in parsed[0]);
+    } catch {
+      return false;
+    }
+  }
+
+  private parsedListCache = new Map<string, any[]>();
+  parseDynamicList(val: any): any[] {
+    if (!val || typeof val !== 'string') return [];
+    if (this.parsedListCache.has(val)) {
+      return this.parsedListCache.get(val)!;
+    }
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) {
+        this.parsedListCache.set(val, parsed);
+        return parsed;
+      }
+    } catch {}
+    return [];
+  }
+
+  getDynamicListKeys(item: any): string[] {
+    if (!item || typeof item !== 'object') return [];
+    return Object.keys(item).filter(k => k !== 'item' && k !== 'product');
+  }
+
+  formatLabel(key: string): string {
+    return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 }

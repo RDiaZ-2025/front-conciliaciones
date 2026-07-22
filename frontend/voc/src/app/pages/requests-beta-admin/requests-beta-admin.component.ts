@@ -140,6 +140,12 @@ export class RequestsBetaAdminComponent implements OnInit {
   tempSelectOptions = signal<{ value: string }[]>([]);
   showExpressionsHelpDialog = signal<boolean>(false);
 
+  // Dynamic list option configuration editor state
+  showDynamicListConfigDialog = signal<boolean>(false);
+  selectedFieldForDynamicListConfig = signal<any>(null);
+  tempDynamicListOptions = signal<{ value: string }[]>([]);
+  tempDynamicListSubFields = signal<{ name: string; label: string; type: string }[]>([]);
+
   // Formula editor state
   showFormulaConfigDialog = signal<boolean>(false);
   selectedFieldForFormulaConfig = signal<any>(null);
@@ -161,7 +167,8 @@ export class RequestsBetaAdminComponent implements OnInit {
     { label: 'Fecha y Hora (24h)', value: 'datetime' },
     { label: 'Lista Desplegable / Listado', value: 'select' },
     { label: 'Archivo / Adjunto', value: 'file' },
-    { label: 'Cálculo Matemático / Fórmula', value: 'formula' }
+    { label: 'Cálculo Matemático / Fórmula', value: 'formula' },
+    { label: 'Tabla / Lista Dinámica de Items', value: 'dynamic_list' }
   ];
 
   // Assignee & Rejection Type options
@@ -413,6 +420,72 @@ export class RequestsBetaAdminComponent implements OnInit {
       field.metadata.options = opts;
     }
     this.showSelectConfigDialog.set(false);
+  }
+
+  openDynamicListConfigDialog(field: any) {
+    if (!field.metadata) field.metadata = {};
+    if (!field.metadata.options) field.metadata.options = [];
+    if (!field.metadata.subFields) {
+      field.metadata.subFields = [{ name: 'quantity', label: 'Cantidad', type: 'number' }];
+    }
+
+    this.selectedFieldForDynamicListConfig.set(field);
+    const optsObj = field.metadata.options.map((opt: string) => ({ value: opt }));
+    this.tempDynamicListOptions.set(optsObj);
+
+    const subFieldsObj = field.metadata.subFields.map((sf: any) => ({
+      name: sf.name || 'quantity',
+      label: sf.label || 'Cantidad',
+      type: sf.type || 'number'
+    }));
+    this.tempDynamicListSubFields.set(subFieldsObj);
+
+    this.showDynamicListConfigDialog.set(true);
+  }
+
+  addDynamicListOption() {
+    const current = this.tempDynamicListOptions();
+    this.tempDynamicListOptions.set([...current, { value: '' }]);
+  }
+
+  removeDynamicListOption(index: number) {
+    const current = [...this.tempDynamicListOptions()];
+    current.splice(index, 1);
+    this.tempDynamicListOptions.set(current);
+  }
+
+  addDynamicListSubField() {
+    const current = this.tempDynamicListSubFields();
+    this.tempDynamicListSubFields.set([...current, { name: `col_${Date.now()}`, label: 'Nueva Columna', type: 'number' }]);
+  }
+
+  removeDynamicListSubField(index: number) {
+    const current = [...this.tempDynamicListSubFields()];
+    current.splice(index, 1);
+    this.tempDynamicListSubFields.set(current);
+  }
+
+  saveDynamicListConfig() {
+    const field = this.selectedFieldForDynamicListConfig();
+    if (field) {
+      const opts = this.tempDynamicListOptions()
+        .map(opt => opt.value.trim())
+        .filter(val => val.length > 0);
+      
+      const subFields = this.tempDynamicListSubFields()
+        .map(sf => ({
+          name: sf.name.trim() || `col_${Date.now()}`,
+          label: sf.label.trim() || 'Columna',
+          type: sf.type || 'number'
+        }));
+
+      field.metadata = {
+        ...field.metadata,
+        options: opts,
+        subFields: subFields.length > 0 ? subFields : [{ name: 'quantity', label: 'Cantidad', type: 'number' }]
+      };
+    }
+    this.showDynamicListConfigDialog.set(false);
   }
 
   openFormulaConfigDialog(field: any) {

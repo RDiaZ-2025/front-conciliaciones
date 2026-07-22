@@ -7,6 +7,7 @@ import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { CheckboxModule } from 'primeng/checkbox';
 import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { TagModule } from 'primeng/tag';
@@ -30,6 +31,7 @@ import { AzureStorageService } from '../../services/azure-storage.service';
     InputTextModule,
     CheckboxModule,
     SelectModule,
+    MultiSelectModule,
     ToastModule,
     TooltipModule,
     TagModule,
@@ -127,6 +129,9 @@ export class RequestsBetaInboxComponent implements OnInit {
         task.parentForms.forEach((form: any) => {
           form.fields.forEach((f: any) => {
             initialValues[form.formId + '_' + f.name] = f.value || '';
+            if (f.type === 'dynamic_list') {
+              this.initDynamicListField(form.formId + '_' + f.name, f.value || '');
+            }
           });
         });
         this.stageFormValues = initialValues;
@@ -141,7 +146,11 @@ export class RequestsBetaInboxComponent implements OnInit {
               if (f.metadata && typeof f.metadata === 'string') {
                 try { f.metadata = JSON.parse(f.metadata); } catch(e){}
               }
-              initialValues[f.name] = task.submittedValuesRaw[f.name] || '';
+              const val = task.submittedValuesRaw[f.name] || '';
+              initialValues[f.name] = val;
+              if (f.type === 'dynamic_list') {
+                this.initDynamicListField(f.name, val);
+              }
             });
             this.stageFormValues = initialValues;
             this.stageFormFields.set(fields);
@@ -182,6 +191,10 @@ export class RequestsBetaInboxComponent implements OnInit {
               initialValues[f.name] = evaluated;
             } else {
               initialValues[f.name] = '';
+            }
+
+            if (f.type === 'dynamic_list') {
+              this.initDynamicListField(f.name, initialValues[f.name]);
             }
           });
 
@@ -564,5 +577,125 @@ export class RequestsBetaInboxComponent implements OnInit {
         }
       }
     }
+  }
+
+  dynamicListSelected: Record<string, string[]> = {};
+  dynamicListRows: Record<string, any[]> = {};
+
+  initDynamicListField(key: string, rawVal: string) {
+    if (!this.dynamicListRows[key]) {
+      this.dynamicListRows[key] = [];
+    }
+    if (rawVal) {
+      try {
+        const parsed = JSON.parse(rawVal);
+        if (Array.isArray(parsed)) {
+          this.dynamicListRows[key] = parsed;
+          this.dynamicListSelected[key] = parsed.map(i => i.item || i.product).filter(Boolean);
+          return;
+        }
+      } catch(e){}
+    }
+    this.dynamicListRows[key] = [];
+    this.dynamicListSelected[key] = [];
+  }
+
+  onDynamicListSelectionChange(key: string, selectedOptions: string[], field: any, valuesContainer: Record<string, any>) {
+    this.dynamicListSelected[key] = selectedOptions || [];
+    if (!this.dynamicListRows[key]) {
+      this.dynamicListRows[key] = [];
+    }
+    const currentList = this.dynamicListRows[key];
+    const subFields = field?.metadata?.subFields && field.metadata.subFields.length > 0
+      ? field.metadata.subFields
+      : [{ name: 'quantity', label: 'Cantidad', type: 'number' }];
+
+    const newList = (selectedOptions || []).map(opt => {
+      const existing = currentList.find(i => (i.item || i.product) === opt);
+      if (existing) return existing;
+      const itemObj: Record<string, any> = { item: opt };
+      subFields.forEach((sf: any) => {
+        itemObj[sf.name] = sf.type === 'number' ? 1 : '';
+      });
+      return itemObj;
+    });
+
+    this.dynamicListRows[key] = newList;
+    
+    const jsonVal = JSON.stringify(newList);
+    valuesContainer[key] = jsonVal;
+    if (key.includes('_')) {
+      this.recalculateParentFormulas();
+    } else {
+      this.recalculateStageFormulas();
+    }
+  }
+
+  updateDynamicListItemValue(key: string, itemIdx: number, subFieldName: string, newVal: any, valuesContainer: Record<string, any>) {
+    const list = this.dynamicListRows[key] || [];
+    if (list[itemIdx]) {
+      list[itemIdx][subFieldName] = newVal;
+      const jsonVal = JSON.stringify(list);
+      valuesContainer[key] = jsonVal;
+      if (key.includes('_')) {
+        this.recalculateParentFormulas();
+      } else {
+        this.recalculateStageFormulas();
+      }
+    }
+  }
+
+  removeDynamicListItem(key: string, itemIdx: number, valuesContainer: Record<string, any>) {
+    const list = this.dynamicListRows[key] || [];
+    const removedItem = list[itemIdx];
+    list.splice(itemIdx, 1);
+    
+    if (removedItem) {
+      const name = removedItem.item || removedItem.product;
+      this.dynamicListSelected[key] = (this.dynamicListSelected[key] || []).filter(i => i !== name);
+    }
+
+    const jsonVal = JSON.stringify(list);
+    valuesContainer[key] = jsonVal;
+    if (key.includes('_')) {
+      this.recalculateParentFormulas();
+    } else {
+      this.recalculateStageFormulas();
+    }
+  }
+
+  isDynamicListValue(val: any): boolean {
+    if (typeof val !== 'string' || !val.trim().startsWith('[')) return false;
+    try {
+      const parsed = this.parseDynamicList(val);
+      return parsed.length > 0 && typeof parsed[0] === 'object' && parsed[0] !== null && ('item' in parsed[0] || 'product' in parsed[0]);
+    } catch {
+      return false;
+    }
+  }
+
+  private parsedListCache = new Map<string, any[]>();
+  parseDynamicList(val: any): any[] {
+    if (!val || typeof val !== 'string') return [];
+    if (this.parsedListCache.has(val)) {
+      return this.parsedListCache.get(val)!;
+    }
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) {
+        this.parsedListCache.set(val, parsed);
+        return parsed;
+      }
+    } catch {}
+    return [];
+  }
+
+  getDynamicListKeys(item: any): string[] {
+    if (!item || typeof item !== 'object') return [];
+    return Object.keys(item).filter(k => k !== 'item' && k !== 'product');
+  }
+
+  formatLabel(key: string): string {
+    return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 }

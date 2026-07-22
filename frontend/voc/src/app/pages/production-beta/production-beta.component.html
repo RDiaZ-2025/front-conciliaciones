@@ -214,6 +214,52 @@
                                       [(ngModel)]="initialFormValues()[form.id + '_' + field.name]" (ngModelChange)="recalculateInitialFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
                                       [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-select>
 
+                            <!-- Dynamic List type -->
+                            <div *ngSwitchCase="'dynamic_list'" class="flex flex-column gap-3 w-full">
+                                <p-multiSelect *ngIf="!field.isReadOnly"
+                                          [options]="field.metadata?.options || []"
+                                          [ngModel]="dynamicListSelected[form.id + '_' + field.name]"
+                                          (onChange)="onDynamicListSelectionChange(form.id + '_' + field.name, $event.value, field, 'initial')"
+                                          [placeholder]="field.placeholder || 'Seleccione productos / ítems...'"
+                                          [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-multiSelect>
+
+                                <div class="border-round border-1 surface-border bg-white overflow-hidden w-full" *ngIf="(dynamicListRows[form.id + '_' + field.name] || []).length > 0">
+                                    <table class="w-full text-sm text-left border-collapse">
+                                        <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
+                                            <tr>
+                                                <th class="p-2 pl-3">Producto / Servicio</th>
+                                                <th *ngFor="let sf of (field.metadata?.subFields || [{ label: 'Cantidad' }])" class="p-2 text-center" style="width: 12rem;">
+                                                    {{ sf.label }}
+                                                </th>
+                                                <th class="p-2 text-center" style="width: 3rem;" *ngIf="!field.isReadOnly"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr *ngFor="let itemRow of (dynamicListRows[form.id + '_' + field.name] || []); let rIdx = index" class="border-bottom-1 surface-border hover:bg-50">
+                                                <td class="p-2 pl-3 font-semibold text-900 align-middle">
+                                                    {{ itemRow.item }}
+                                                </td>
+                                                <td *ngFor="let sf of (field.metadata?.subFields || [{ name: 'quantity', type: 'number' }])" class="p-2 text-center align-middle">
+                                                    <input *ngIf="!field.isReadOnly"
+                                                           [type]="sf.type === 'number' ? 'number' : 'text'"
+                                                           pInputText
+                                                           [ngModel]="itemRow[sf.name]"
+                                                           (ngModelChange)="updateDynamicListItemValue(form.id + '_' + field.name, rIdx, sf.name, $event, 'initial')"
+                                                           min="1"
+                                                           class="w-full text-center p-inputtext-sm font-bold" />
+                                                    <span *ngIf="field.isReadOnly" class="font-bold text-900">{{ itemRow[sf.name] }}</span>
+                                                </td>
+                                                <td class="p-2 text-center align-middle" *ngIf="!field.isReadOnly">
+                                                    <p-button [text]="true" severity="danger" size="small" (onClick)="removeDynamicListItem(form.id + '_' + field.name, rIdx, 'initial')">
+                                                        <lucide-icon name="trash"></lucide-icon>
+                                                    </p-button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
                             <!-- Formula type -->
                             <div *ngSwitchCase="'formula'" class="flex align-items-center w-full relative">
                                 <input type="text" pInputText [id]="'initial-' + form.id + '-' + field.name"
@@ -329,7 +375,32 @@
                                     </p-button>
                                 </div>
                             </div>
-                            <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value)">{{ val.value || 'N/A' }}</span>
+
+                            <!-- Dynamic List read-only view -->
+                            <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full">
+                                <table class="w-full text-xs text-left border-collapse">
+                                    <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
+                                        <tr>
+                                            <th class="p-2 pl-3">Producto / Servicio</th>
+                                            <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" class="p-2 text-center" style="width: 8rem;">
+                                                {{ formatLabel(col) }}
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr *ngFor="let itemRow of parseDynamicList(val.value)" class="border-bottom-1 surface-border hover:bg-50">
+                                            <td class="p-2 pl-3 font-semibold text-900 align-middle">
+                                                {{ itemRow.item || itemRow.product }}
+                                            </td>
+                                            <td *ngFor="let col of getDynamicListKeys(itemRow)" class="p-2 text-center align-middle font-bold text-900">
+                                                {{ itemRow[col] }}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ val.value || 'N/A' }}</span>
                         </div>
                     </div>
                 </div>
@@ -349,7 +420,32 @@
                                 </p-button>
                             </div>
                         </div>
-                        <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value)">{{ val.value || 'N/A' }}</span>
+
+                        <!-- Dynamic List read-only view -->
+                        <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full">
+                            <table class="w-full text-xs text-left border-collapse">
+                                <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
+                                    <tr>
+                                        <th class="p-2 pl-3">Producto / Servicio</th>
+                                        <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" class="p-2 text-center" style="width: 8rem;">
+                                            {{ formatLabel(col) }}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr *ngFor="let itemRow of parseDynamicList(val.value)" class="border-bottom-1 surface-border hover:bg-50">
+                                        <td class="p-2 pl-3 font-semibold text-900 align-middle">
+                                            {{ itemRow.item || itemRow.product }}
+                                        </td>
+                                        <td *ngFor="let col of getDynamicListKeys(itemRow)" class="p-2 text-center align-middle font-bold text-900">
+                                            {{ itemRow[col] }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ val.value || 'N/A' }}</span>
                     </div>
                 </div>
                 <div class="text-xs text-500 mt-2">
@@ -437,6 +533,52 @@
                                     <p-select *ngSwitchCase="'select'" [options]="field.metadata?.options || []"
                                               [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
                                               [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-select>
+
+                                    <!-- Dynamic List type -->
+                                    <div *ngSwitchCase="'dynamic_list'" class="flex flex-column gap-3 w-full">
+                                        <p-multiSelect *ngIf="!field.isReadOnly"
+                                                  [options]="field.metadata?.options || []"
+                                                  [ngModel]="dynamicListSelected[form.formId + '_' + field.name]"
+                                                  (onChange)="onDynamicListSelectionChange(form.formId + '_' + field.name, $event.value, field, 'initial')"
+                                                  [placeholder]="field.placeholder || 'Seleccione productos / ítems...'"
+                                                  [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-multiSelect>
+
+                                        <div class="border-round border-1 surface-border bg-white overflow-hidden w-full" *ngIf="(dynamicListRows[form.formId + '_' + field.name] || []).length > 0">
+                                            <table class="w-full text-sm text-left border-collapse">
+                                                <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
+                                                    <tr>
+                                                        <th class="p-2 pl-3">Producto / Servicio</th>
+                                                        <th *ngFor="let sf of (field.metadata?.subFields || [{ label: 'Cantidad' }])" class="p-2 text-center" style="width: 12rem;">
+                                                            {{ sf.label }}
+                                                        </th>
+                                                        <th class="p-2 text-center" style="width: 3rem;" *ngIf="!field.isReadOnly"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr *ngFor="let itemRow of (dynamicListRows[form.formId + '_' + field.name] || []); let rIdx = index" class="border-bottom-1 surface-border hover:bg-50">
+                                                        <td class="p-2 pl-3 font-semibold text-900 align-middle">
+                                                            {{ itemRow.item }}
+                                                        </td>
+                                                        <td *ngFor="let sf of (field.metadata?.subFields || [{ name: 'quantity', type: 'number' }])" class="p-2 text-center align-middle">
+                                                            <input *ngIf="!field.isReadOnly"
+                                                                   [type]="sf.type === 'number' ? 'number' : 'text'"
+                                                                   pInputText
+                                                                   [ngModel]="itemRow[sf.name]"
+                                                                   (ngModelChange)="updateDynamicListItemValue(form.formId + '_' + field.name, rIdx, sf.name, $event, 'initial')"
+                                                                   min="1"
+                                                                   class="w-full text-center p-inputtext-sm font-bold" />
+                                                            <span *ngIf="field.isReadOnly" class="font-bold text-900">{{ itemRow[sf.name] }}</span>
+                                                        </td>
+                                                        <td class="p-2 text-center align-middle" *ngIf="!field.isReadOnly">
+                                                            <p-button [text]="true" severity="danger" size="small" (onClick)="removeDynamicListItem(form.formId + '_' + field.name, rIdx, 'initial')">
+                                                                <lucide-icon name="trash"></lucide-icon>
+                                                            </p-button>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                     
                                     <!-- Formula type -->
                                     <div *ngSwitchCase="'formula'" class="flex align-items-center w-full relative">
@@ -516,6 +658,52 @@
                                 <p-select *ngSwitchCase="'select'" [options]="field.metadata?.options || []"
                                           [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
                                           [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-select>
+
+                                <!-- Dynamic List type -->
+                                <div *ngSwitchCase="'dynamic_list'" class="flex flex-column gap-3 w-full">
+                                    <p-multiSelect *ngIf="!field.isReadOnly"
+                                              [options]="field.metadata?.options || []"
+                                              [ngModel]="dynamicListSelected[field.name]"
+                                              (onChange)="onDynamicListSelectionChange(field.name, $event.value, field, 'stage')"
+                                              [placeholder]="field.placeholder || 'Seleccione productos / ítems...'"
+                                              [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-multiSelect>
+
+                                    <div class="border-round border-1 surface-border bg-white overflow-hidden w-full" *ngIf="(dynamicListRows[field.name] || []).length > 0">
+                                        <table class="w-full text-sm text-left border-collapse">
+                                            <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
+                                                <tr>
+                                                    <th class="p-2 pl-3">Producto / Servicio</th>
+                                                    <th *ngFor="let sf of (field.metadata?.subFields || [{ label: 'Cantidad' }])" class="p-2 text-center" style="width: 12rem;">
+                                                        {{ sf.label }}
+                                                    </th>
+                                                    <th class="p-2 text-center" style="width: 3rem;" *ngIf="!field.isReadOnly"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr *ngFor="let itemRow of (dynamicListRows[field.name] || []); let rIdx = index" class="border-bottom-1 surface-border hover:bg-50">
+                                                    <td class="p-2 pl-3 font-semibold text-900 align-middle">
+                                                        {{ itemRow.item }}
+                                                    </td>
+                                                    <td *ngFor="let sf of (field.metadata?.subFields || [{ name: 'quantity', type: 'number' }])" class="p-2 text-center align-middle">
+                                                        <input *ngIf="!field.isReadOnly"
+                                                               [type]="sf.type === 'number' ? 'number' : 'text'"
+                                                               pInputText
+                                                               [ngModel]="itemRow[sf.name]"
+                                                               (ngModelChange)="updateDynamicListItemValue(field.name, rIdx, sf.name, $event, 'stage')"
+                                                               min="1"
+                                                               class="w-full text-center p-inputtext-sm font-bold" />
+                                                        <span *ngIf="field.isReadOnly" class="font-bold text-900">{{ itemRow[sf.name] }}</span>
+                                                    </td>
+                                                    <td class="p-2 text-center align-middle" *ngIf="!field.isReadOnly">
+                                                        <p-button [text]="true" severity="danger" size="small" (onClick)="removeDynamicListItem(field.name, rIdx, 'stage')">
+                                                            <lucide-icon name="trash"></lucide-icon>
+                                                        </p-button>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                                 
                                 <!-- Formula type -->
                                 <div *ngSwitchCase="'formula'" class="flex align-items-center w-full relative">
