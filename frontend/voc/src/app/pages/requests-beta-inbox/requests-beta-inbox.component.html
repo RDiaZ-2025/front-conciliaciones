@@ -254,7 +254,8 @@
                     <ng-container *ngIf="isCorrection(selectedTask()) && selectedTask()?.parentForms && selectedTask()?.parentForms?.length > 0">
                         <div *ngFor="let form of selectedTask().parentForms" class="flex flex-column gap-3 border-round border-1 surface-border p-3 surface-card mb-2">
                             <span class="text-primary font-bold text-sm border-bottom-1 pb-1 surface-border uppercase">{{ form.formName }}</span>
-                            <div *ngFor="let field of form.fields" class="flex flex-column gap-1" [class.col-12]="field.type === 'section_header'">
+                            <ng-container *ngFor="let field of form.fields">
+                            <div *ngIf="isFieldVisible(field, form.fields, stageFormValues, form.formId)" class="flex flex-column gap-1" [class.col-12]="field.type === 'section_header'">
                                 <label [for]="'corr-field-' + form.formId + '-' + field.name" class="font-medium text-900" *ngIf="field.type !== 'section_header'">
                                     {{ field.label }} <span class="text-red-500" *ngIf="field.isRequired">*</span>
                                 </label>
@@ -264,7 +265,7 @@
                                     <input *ngSwitchCase="'date'" type="date" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
                                     
                                     <input *ngSwitchCase="'datetime'" type="datetime-local" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
-
+ 
                                     <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
                                     
                                     <input *ngSwitchCase="'number'" type="number" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
@@ -273,6 +274,13 @@
                                               [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
                                               [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-select>
 
+                                    <!-- Multiselect type -->
+                                    <p-multiSelect *ngSwitchCase="'multiselect'" [options]="field.metadata?.options || []"
+                                              [ngModel]="multiselectSelected[form.formId + '_' + field.name]"
+                                              (onChange)="onMultiselectSelectionChange(form.formId + '_' + field.name, $event.value, stageFormValues)"
+                                              [placeholder]="field.placeholder || 'Seleccione opciones...'"
+                                              [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-multiSelect>
+ 
                                     <!-- Dynamic List type -->
                                     <div *ngSwitchCase="'dynamic_list'" class="flex flex-column gap-3 w-full">
                                         <p-multiSelect *ngIf="!field.isReadOnly"
@@ -281,7 +289,7 @@
                                                   (onChange)="onDynamicListSelectionChange(form.formId + '_' + field.name, $event.value, field, stageFormValues)"
                                                   [placeholder]="field.placeholder || 'Seleccione productos / ítems...'"
                                                   [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-multiSelect>
-
+ 
                                         <div class="border-round border-1 surface-border bg-white overflow-hidden w-full" *ngIf="(dynamicListRows[form.formId + '_' + field.name] || []).length > 0">
                                             <table class="w-full text-sm text-left border-collapse">
                                                 <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
@@ -328,7 +336,7 @@
                                             <lucide-icon name="calculator" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
                                         </div>
                                     </div>
-
+ 
                                     <!-- File type -->
                                     <ng-container *ngSwitchCase="'file'">
                                         <div class="flex flex-column gap-2 w-full">
@@ -345,7 +353,7 @@
                                                     Máx: {{ field.metadata?.maxFileCount || 1 }} archivos ({{ field.metadata?.maxFileSize || 10 }}MB c/u). Formatos: {{ field.metadata?.allowedFormats || 'Cualquiera' }}
                                                 </span>
                                             </div>
-
+ 
                                             <!-- Selected files list -->
                                             <div class="flex flex-column gap-1 mt-1" *ngIf="getSelectedFiles(form.formId + '_' + field.name).length > 0">
                                                 <div *ngFor="let file of getSelectedFiles(form.formId + '_' + field.name); let fIdx = index" class="flex justify-content-between align-items-center bg-light p-2 border-round text-sm border-1 surface-border">
@@ -355,7 +363,7 @@
                                                     </p-button>
                                                 </div>
                                             </div>
-
+ 
                                             <!-- Uploaded files list (for viewing/downloading) -->
                                             <div class="flex flex-column gap-1 mt-1" *ngIf="getUploadedFiles(stageFormValues[form.formId + '_' + field.name]).length > 0">
                                                 <div *ngFor="let file of getUploadedFiles(stageFormValues[form.formId + '_' + field.name])" class="flex justify-content-between align-items-center bg-blue-50 p-2 border-round text-sm border-1 border-blue-200">
@@ -367,23 +375,25 @@
                                             </div>
                                         </div>
                                     </ng-container>
-
+ 
                                     <!-- Section Header type -->
                                     <div *ngSwitchCase="'section_header'" class="w-full mt-3 mb-1">
                                         <div class="bg-red-600 text-white font-bold text-center py-2 px-3 border-round text-sm uppercase tracking-wider shadow-1">
                                             {{ field.label }}
                                         </div>
                                     </div>
-
+ 
                                     <input *ngSwitchDefault type="text" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
                                 </ng-container>
                             </div>
+                            </ng-container>
                         </div>
                     </ng-container>
 
                     <!-- Case B: Normal stage form to fill or fallback correction -->
                     <ng-container *ngIf="!(isCorrection(selectedTask()) && selectedTask()?.parentForms && selectedTask()?.parentForms?.length > 0)">
-                        <div *ngFor="let field of stageFormFields()" class="flex flex-column gap-1" [class.col-12]="field.type === 'section_header'">
+                        <ng-container *ngFor="let field of stageFormFields()">
+                        <div *ngIf="isFieldVisible(field, stageFormFields(), stageFormValues)" class="flex flex-column gap-1" [class.col-12]="field.type === 'section_header'">
                             <label [for]="'stage-field-' + field.name" class="font-medium text-900" *ngIf="field.type !== 'section_header'">
                                 {{ field.label }} <span class="text-red-500" *ngIf="field.isRequired">*</span>
                             </label>
@@ -401,6 +411,13 @@
                                 <p-select *ngSwitchCase="'select'" [options]="field.metadata?.options || []"
                                           [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
                                           [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-select>
+
+                                <!-- Multiselect type -->
+                                <p-multiSelect *ngSwitchCase="'multiselect'" [options]="field.metadata?.options || []"
+                                          [ngModel]="multiselectSelected[field.name]"
+                                          (onChange)="onMultiselectSelectionChange(field.name, $event.value, stageFormValues)"
+                                          [placeholder]="field.placeholder || 'Seleccione opciones...'"
+                                          [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-multiSelect>
 
                                 <!-- Dynamic List type -->
                                 <div *ngSwitchCase="'dynamic_list'" class="flex flex-column gap-3 w-full">
@@ -507,6 +524,7 @@
                                 <input *ngSwitchDefault type="text" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
                             </ng-container>
                         </div>
+                        </ng-container>
                     </ng-container>
                 </div>
             </div>

@@ -383,26 +383,33 @@
                             <td [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
                                  <div class="flex flex-column gap-1">
                                      <p-select [options]="fieldTypeOptions" [(ngModel)]="field.type" styleClass="p-inputtext-sm w-full" appendTo="body" [disabled]="!field.isActive"></p-select>
-                                     <p-button *ngIf="field.type === 'file'" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openFileConfigDialog(field)" [disabled]="!field.isActive">
-                                         <lucide-icon name="settings" class="mr-2"></lucide-icon>
-                                         Configurar
-                                     </p-button>
-                                     <p-button *ngIf="field.type === 'select'" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openSelectConfigDialog(field)" [disabled]="!field.isActive">
-                                         <lucide-icon name="list" class="mr-2"></lucide-icon>
-                                         Opciones
-                                     </p-button>
-                                     <p-button *ngIf="field.type === 'formula'" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openFormulaConfigDialog(field)" [disabled]="!field.isActive">
-                                         <lucide-icon name="calculator" class="mr-2"></lucide-icon>
-                                         Configurar
-                                     </p-button>
-                                     <p-button *ngIf="field.type === 'dynamic_list'" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openDynamicListConfigDialog(field)" [disabled]="!field.isActive">
-                                         <lucide-icon name="list-plus" class="mr-2"></lucide-icon>
-                                         Configurar Items
-                                     </p-button>
+                                     <div class="flex gap-1 mt-1 flex-wrap w-full">
+                                         <p-button *ngIf="field.type === 'file'" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openFileConfigDialog(field)" [disabled]="!field.isActive">
+                                             <lucide-icon name="settings" class="mr-2"></lucide-icon>
+                                             Configurar
+                                         </p-button>
+                                         <p-button *ngIf="field.type === 'select' || field.type === 'multiselect'" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openSelectConfigDialog(field)" [disabled]="!field.isActive">
+                                             <lucide-icon name="list" class="mr-2"></lucide-icon>
+                                             Opciones
+                                         </p-button>
+                                         <p-button *ngIf="field.type === 'formula'" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openFormulaConfigDialog(field)" [disabled]="!field.isActive">
+                                             <lucide-icon name="calculator" class="mr-2"></lucide-icon>
+                                             Configurar
+                                         </p-button>
+                                         <p-button *ngIf="field.type === 'dynamic_list'" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openDynamicListConfigDialog(field)" [disabled]="!field.isActive">
+                                             <lucide-icon name="list-plus" class="mr-2"></lucide-icon>
+                                             Configurar Items
+                                         </p-button>
+                                         
+                                         <p-button [outlined]="true" severity="help" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openDependencyConfigDialog(field)" [disabled]="!field.isActive">
+                                             <lucide-icon name="eye" class="mr-2" style="width: 0.9rem; height: 0.9rem;"></lucide-icon>
+                                             Condición
+                                         </p-button>
+                                     </div>
                                  </div>
                             </td>
                             <td [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
-                                <input pInputText [(ngModel)]="field.defaultValueExpression" placeholder="Ej: CURRENT_DATE_TIME" class="p-inputtext-sm" [disabled]="!field.isActive || field.type === 'section_header'" />
+                                <input pInputText [(ngModel)]="field.defaultValueExpression" placeholder="Ej: CURRENT_DATE_TIME" class="p-inputtext-sm" [disabled]="!field.isActive" />
                             </td>
                             <td class="text-center" [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
                                 <p-checkbox [(ngModel)]="field.isRequired" [binary]="true" [disabled]="!field.isActive || field.type === 'section_header'"></p-checkbox>
@@ -775,6 +782,55 @@
                     <lucide-icon name="check" class="mr-2"></lucide-icon>
                     Entendido
                 </p-button>
+            </div>
+        </ng-template>
+    </p-dialog>
+
+    <!-- Dialog: Visibilidad Condicional (Dependencia) -->
+    <p-dialog [header]="'Condición de Visibilidad para: ' + (selectedFieldForDependencyConfig()?.label || '')" [(visible)]="showDependencyConfigDialog"
+              [modal]="true" [style]="{width: '500px'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
+        <div class="flex flex-column gap-3 py-2 px-3">
+            <span class="text-600 text-sm">Configura cuándo debe mostrarse este campo basado en el valor de otro campo del mismo formulario.</span>
+            
+            <div class="flex flex-column gap-1">
+                <label for="depFieldName" class="font-semibold text-900 text-sm">Depende de este campo:</label>
+                <p-select id="depFieldName" [options]="getAvailableDependencyFields()" [(ngModel)]="tempDependencyFieldName"
+                          optionLabel="label" optionValue="name" placeholder="Ninguno (Mostrar siempre)" [showClear]="true" appendTo="body"></p-select>
+            </div>
+
+            <div class="flex flex-column gap-1" *ngIf="tempDependencyFieldName()">
+                <label for="depValue" class="font-semibold text-900 text-sm">Valor requerido para mostrarse:</label>
+                
+                <!-- Si el campo padre tiene opciones (select o multiselect) -->
+                <p-multiSelect *ngIf="getParentFieldOptions().length > 0"
+                               [options]="getParentFieldOptions()"
+                               [(ngModel)]="tempDependencySelectedOptions"
+                               placeholder="Selecciona una o más opciones..."
+                               appendTo="body"></p-multiSelect>
+
+                <!-- Si no tiene opciones (ej. campos de texto/número) -->
+                <input *ngIf="getParentFieldOptions().length === 0"
+                       type="text" pInputText id="depValue" [(ngModel)]="tempDependencyValue"
+                       placeholder="Ingresa el valor requerido (ej: Sí)" />
+                       
+                <span class="text-xs text-500 mt-1">Si deseas múltiples valores de coincidencia separados por coma, ingrésalos así: Valor1, Valor2.</span>
+            </div>
+        </div>
+        <ng-template pTemplate="footer">
+            <div class="flex justify-content-between px-3 pb-3">
+                <p-button [outlined]="true" severity="danger" size="small" (onClick)="removeDependencyConfig()">
+                    <lucide-icon name="trash" class="mr-2"></lucide-icon>
+                    Quitar Condición
+                </p-button>
+                <div class="flex gap-2">
+                    <p-button [text]="true" severity="secondary" size="small" (onClick)="showDependencyConfigDialog.set(false)">
+                        Cancelar
+                    </p-button>
+                    <p-button severity="primary" size="small" (onClick)="saveDependencyConfig()">
+                        <lucide-icon name="save" class="mr-2"></lucide-icon>
+                        Guardar
+                    </p-button>
+                </div>
             </div>
         </ng-template>
     </p-dialog>

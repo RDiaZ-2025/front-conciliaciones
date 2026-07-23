@@ -14,6 +14,7 @@ import { TagModule } from 'primeng/tag';
 import { BadgeModule } from 'primeng/badge';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { PageHeaderComponent } from '../../components/page-header/page-header.component';
 import { LucideIconComponent } from '../../components/lucide-icon/lucide-icon.component';
 import { ProductionService } from '../../services/production.service';
@@ -30,10 +31,10 @@ interface FormFieldItem {
   placeholder: string;
   isRequired: boolean;
   isReadOnly: boolean;
+  isActive: boolean;
   defaultValueExpression: string;
   displayOrder: number;
-  isActive?: boolean;
-  metadata?: any;
+  metadata: any;
 }
 
 interface WorkflowStageItem {
@@ -41,11 +42,11 @@ interface WorkflowStageItem {
   name: string;
   description: string;
   stepOrder: number;
-  assigneeType: string; // 'specific_user', 'team', 'requester_boss'
+  assigneeType: 'specific_user' | 'requester' | 'requester_boss' | 'team';
   assigneeUserId: number | null;
   assigneeTeamId: number | null;
   formIdToFill: number | null;
-  rejectionTargetType: string; // 'previous_sender', 'specific_user', 'team_random'
+  rejectionTargetType: 'previous_sender' | 'specific_user' | 'team_random';
   rejectionTargetUserId: number | null;
   rejectionTargetTeamId: number | null;
 }
@@ -61,6 +62,7 @@ interface WorkflowStageItem {
     TableModule,
     DialogModule,
     SelectModule,
+    MultiSelectModule,
     CheckboxModule,
     InputTextModule,
     ToastModule,
@@ -153,6 +155,13 @@ export class RequestsBetaAdminComponent implements OnInit {
   tempFormulaRounding = signal<number>(2);
   showFormulaHelpDialog = signal<boolean>(false);
 
+  // Dependency/Conditional visibility configuration state
+  showDependencyConfigDialog = signal<boolean>(false);
+  selectedFieldForDependencyConfig = signal<any>(null);
+  tempDependencyFieldName = signal<string>('');
+  tempDependencyValue = signal<string>('');
+  tempDependencySelectedOptions = signal<string[]>([]);
+
   // Workflow editor state
   selectedWorkflowFormId = signal<number | null>(null);
   workflowStages = signal<WorkflowStageItem[]>([]);
@@ -166,6 +175,7 @@ export class RequestsBetaAdminComponent implements OnInit {
     { label: 'Fecha Simple', value: 'date' },
     { label: 'Fecha y Hora (24h)', value: 'datetime' },
     { label: 'Lista Desplegable / Listado', value: 'select' },
+    { label: 'Selección Múltiple / Multiselect', value: 'multiselect' },
     { label: 'Archivo / Adjunto', value: 'file' },
     { label: 'Cálculo Matemático / Fórmula', value: 'formula' },
     { label: 'Tabla / Lista Dinámica de Items', value: 'dynamic_list' },
@@ -522,6 +532,113 @@ export class RequestsBetaAdminComponent implements OnInit {
       field.isReadOnly = true;
     }
     this.showFormulaConfigDialog.set(false);
+  }
+
+  openDependencyConfigDialog(field: any) {
+    if (!field.metadata) field.metadata = {};
+    if (typeof field.metadata === 'string') {
+      try { field.metadata = JSON.parse(field.metadata); } catch(e){}
+    }
+    if (!field.metadata.dependency) {
+      field.metadata.dependency = { fieldName: '', value: '' };
+    }
+    
+    this.selectedFieldForDependencyConfig.set(field);
+    this.tempDependencyFieldName.set(field.metadata.dependency.fieldName || '');
+    
+    const val = field.metadata.dependency.value;
+    let arrVal: string[] = [];
+    if (Array.isArray(val)) {
+      arrVal = val;
+    } else if (val !== undefined && val !== null && val !== '') {
+      arrVal = [String(val)];
+    }
+    this.tempDependencySelectedOptions.set(arrVal);
+    this.tempDependencyValue.set(arrVal.join(', '));
+    
+    this.showDependencyConfigDialog.set(true);
+  }
+
+  getAvailableDependencyFields(): any[] {
+    const current = this.selectedFieldForDependencyConfig();
+    if (!current) return [];
+    return this.formFields().filter(f => f.name !== current.name && f.isActive && f.type !== 'section_header');
+  }
+
+  getParentFieldOptions(): string[] {
+    const parentName = this.tempDependencyFieldName();
+    if (!parentName) return [];
+    const parentField = this.formFields().find(f => f.name === parentName);
+    if (!parentField) return [];
+    
+    let metadataObj = parentField.metadata;
+    if (typeof metadataObj === 'string') {
+      try { metadataObj = JSON.parse(metadataObj); } catch(e) {}
+    }
+    
+    if (metadataObj && Array.isArray(metadataObj.options)) {
+      return metadataObj.options;
+    }
+    return [];
+  }
+
+  saveDependencyConfig() {
+    const field = this.selectedFieldForDependencyConfig();
+    if (field) {
+      if (!field.metadata) field.metadata = {};
+      if (typeof field.metadata === 'string') {
+        try { field.metadata = JSON.parse(field.metadata); } catch(e){}
+      }
+      
+      const parentName = this.tempDependencyFieldName();
+      if (!parentName) {
+        delete field.metadata.dependency;
+      } else {
+        const parentField = this.formFields().find(f => f.name === parentName);
+        let hasOptions = false;
+        if (parentField) {
+          let meta = parentField.metadata;
+          if (typeof meta === 'string') {
+            try { meta = JSON.parse(meta); } catch(e){}
+          }
+          if (meta && Array.isArray(meta.options)) {
+            hasOptions = true;
+          }
+        }
+           
+        let val: any;
+        if (hasOptions) {
+          const selected = this.tempDependencySelectedOptions();
+          val = selected.length === 1 ? selected[0] : selected;
+        } else {
+          const raw = this.tempDependencyValue().trim();
+          val = raw.split(',').map(s => s.trim()).filter(Boolean);
+          if (val.length === 1) {
+            val = val[0];
+          } else if (val.length === 0) {
+            val = raw;
+          }
+        }
+        
+        field.metadata.dependency = {
+          fieldName: parentName,
+          value: val
+        };
+      }
+    }
+    this.showDependencyConfigDialog.set(false);
+  }
+
+  removeDependencyConfig() {
+    const field = this.selectedFieldForDependencyConfig();
+    if (field) {
+      if (!field.metadata) field.metadata = {};
+      if (typeof field.metadata === 'string') {
+        try { field.metadata = JSON.parse(field.metadata); } catch(e){}
+      }
+      delete field.metadata.dependency;
+    }
+    this.showDependencyConfigDialog.set(false);
   }
 
   confirmSoftDeleteField(field: FormFieldItem) {

@@ -432,6 +432,9 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
                   if (f.type === 'dynamic_list') {
                     this.initDynamicListField(form.id + '_' + f.name, vals[form.id + '_' + f.name]);
                   }
+                  if (f.type === 'multiselect') {
+                    this.initMultiselectField(form.id + '_' + f.name, vals[form.id + '_' + f.name]);
+                  }
                 });
                 form.fields = fields; // store fields inside form object
               });
@@ -599,6 +602,9 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
           if (f.type === 'dynamic_list') {
             this.initDynamicListField(f.name, initialValues[f.name]);
+          }
+          if (f.type === 'multiselect') {
+            this.initMultiselectField(f.name, initialValues[f.name]);
           }
         });
 
@@ -1316,6 +1322,9 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
             if (f.type === 'dynamic_list') {
               this.initDynamicListField(form.formId + '_' + f.name, f.value || '');
             }
+            if (f.type === 'multiselect') {
+              this.initMultiselectField(form.formId + '_' + f.name, f.value || '');
+            }
           });
         });
         this.stageFormValues = initialValues;
@@ -1334,6 +1343,9 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
               initialValues[f.name] = val;
               if (f.type === 'dynamic_list') {
                 this.initDynamicListField(f.name, val);
+              }
+              if (f.type === 'multiselect') {
+                this.initMultiselectField(f.name, val);
               }
             });
             this.stageFormValues = initialValues;
@@ -1369,6 +1381,9 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
             if (f.type === 'dynamic_list') {
               this.initDynamicListField(f.name, initialValues[f.name]);
+            }
+            if (f.type === 'multiselect') {
+              this.initMultiselectField(f.name, initialValues[f.name]);
             }
           });
 
@@ -1793,6 +1808,84 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
   dynamicListSelected: Record<string, string[]> = {};
   dynamicListRows: Record<string, any[]> = {};
+  multiselectSelected: Record<string, string[]> = {};
+
+  initMultiselectField(key: string, rawVal: string) {
+    if (rawVal) {
+      try {
+        const parsed = JSON.parse(rawVal);
+        if (Array.isArray(parsed)) {
+          this.multiselectSelected[key] = parsed;
+          return;
+        }
+      } catch(e){}
+      if (rawVal.trim()) {
+        this.multiselectSelected[key] = rawVal.split(',').map(s => s.trim()).filter(Boolean);
+        return;
+      }
+    }
+    this.multiselectSelected[key] = [];
+  }
+
+  onMultiselectSelectionChange(key: string, selectedOptions: string[], containerType: 'initial' | 'stage') {
+    this.multiselectSelected[key] = selectedOptions || [];
+    const valStr = JSON.stringify(this.multiselectSelected[key]);
+    if (containerType === 'initial') {
+      const vals = this.initialFormValues();
+      vals[key] = valStr;
+      this.initialFormValues.set({ ...vals });
+      this.recalculateInitialFormulas();
+    } else {
+      this.stageFormValues[key] = valStr;
+      if (key.includes('_')) {
+        this.recalculateParentFormulas();
+      } else {
+        this.recalculateStageFormulas();
+      }
+    }
+  }
+
+  isFieldVisible(field: any, allFields: any[], formValues: Record<string, any>, formId?: number): boolean {
+    if (!field) return false;
+    
+    const dependency = field.metadata?.dependency;
+    if (!dependency || !dependency.fieldName) {
+      return true;
+    }
+
+    const parentName = dependency.fieldName;
+    const parentKey = formId ? `${formId}_${parentName}` : parentName;
+    const parentValue = formValues[parentKey];
+
+    if (parentValue === undefined || parentValue === null || parentValue === '') {
+      return false;
+    }
+
+    const parentField = allFields.find(f => f.name === parentName);
+    const requiredVal = dependency.value;
+
+    if (parentField && (parentField.type === 'multiselect' || parentField.type === 'dynamic_list')) {
+      let selectedList: string[] = [];
+      try {
+        const parsed = JSON.parse(parentValue);
+        if (Array.isArray(parsed)) {
+          selectedList = parsed.map(i => typeof i === 'object' ? (i.item || i.product) : i).filter(Boolean);
+        }
+      } catch(e) {
+        selectedList = String(parentValue).split(',').map(s => s.trim()).filter(Boolean);
+      }
+
+      if (Array.isArray(requiredVal)) {
+        return requiredVal.some(val => selectedList.includes(val));
+      }
+      return selectedList.includes(requiredVal);
+    }
+
+    if (Array.isArray(requiredVal)) {
+      return requiredVal.includes(String(parentValue));
+    }
+    return String(parentValue) === String(requiredVal);
+  }
 
   initDynamicListField(key: string, rawVal: string) {
     if (!this.dynamicListRows[key]) {

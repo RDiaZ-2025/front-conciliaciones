@@ -178,7 +178,8 @@
                 <!-- Stacked list of all active Initial Forms -->
                 <div *ngFor="let form of initialForms()" class="flex flex-column gap-3 p-3 border-round border-1 surface-border surface-card">
                     <span class="text-900 font-bold text-lg border-bottom-1 pb-2 surface-border">{{ form.name }}</span>
-                    <div *ngFor="let field of form.fields" class="flex flex-column gap-1" [class.col-12]="field.type === 'section_header'">
+                    <ng-container *ngFor="let field of form.fields">
+                    <div *ngIf="isFieldVisible(field, form.fields, initialFormValues(), form.id)" class="flex flex-column gap-1" [class.col-12]="field.type === 'section_header'">
                         <label [for]="'initial-' + form.id + '-' + field.name" class="font-medium text-900" *ngIf="field.type !== 'section_header'">
                             {{ field.label }}
                             <span class="text-red-500" *ngIf="field.isRequired">*</span>
@@ -209,6 +210,13 @@
                             <p-select *ngSwitchCase="'select'" [options]="field.metadata?.options || []"
                                       [(ngModel)]="initialFormValues()[form.id + '_' + field.name]" (ngModelChange)="recalculateInitialFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
                                       [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-select>
+
+                            <!-- Multiselect type -->
+                            <p-multiSelect *ngSwitchCase="'multiselect'" [options]="field.metadata?.options || []"
+                                      [ngModel]="multiselectSelected[form.id + '_' + field.name]"
+                                      (onChange)="onMultiselectSelectionChange(form.id + '_' + field.name, $event.value, 'initial')"
+                                      [placeholder]="field.placeholder || 'Seleccione opciones...'"
+                                      [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-multiSelect>
 
                             <!-- Dynamic List type -->
                             <div *ngSwitchCase="'dynamic_list'" class="flex flex-column gap-3 w-full">
@@ -308,6 +316,7 @@
                                 [disabled]="field.isReadOnly" class="w-full" />
                         </ng-container>
                     </div>
+                    </ng-container>
                 </div>
 
                 <!-- Selección de Áreas (Tipos de Solicitud) -->
@@ -515,7 +524,8 @@
                     <ng-container *ngIf="isCorrection(selectedTask()) && selectedTask()?.parentForms && selectedTask()?.parentForms?.length > 0">
                         <div *ngFor="let form of selectedTask().parentForms" class="flex flex-column gap-3 border-round border-1 surface-border p-3 surface-card mb-2">
                             <span class="text-primary font-bold text-sm border-bottom-1 pb-1 surface-border uppercase">{{ form.formName }}</span>
-                            <div *ngFor="let field of form.fields" class="flex flex-column gap-1" [class.col-12]="field.type === 'section_header'">
+                            <ng-container *ngFor="let field of form.fields">
+                            <div *ngIf="isFieldVisible(field, form.fields, stageFormValues, form.formId)" class="flex flex-column gap-1" [class.col-12]="field.type === 'section_header'">
                                 <label [for]="'corr-field-' + form.formId + '-' + field.name" class="font-medium text-900" *ngIf="field.type !== 'section_header'">
                                     {{ field.label }} <span class="text-red-500" *ngIf="field.isRequired">*</span>
                                 </label>
@@ -533,6 +543,13 @@
                                     <p-select *ngSwitchCase="'select'" [options]="field.metadata?.options || []"
                                               [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
                                               [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-select>
+
+                                    <!-- Multiselect type -->
+                                    <p-multiSelect *ngSwitchCase="'multiselect'" [options]="field.metadata?.options || []"
+                                              [ngModel]="multiselectSelected[form.formId + '_' + field.name]"
+                                              (onChange)="onMultiselectSelectionChange(form.formId + '_' + field.name, $event.value, 'stage')"
+                                              [placeholder]="field.placeholder || 'Seleccione opciones...'"
+                                              [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-multiSelect>
 
                                     <!-- Dynamic List type -->
                                     <div *ngSwitchCase="'dynamic_list'" class="flex flex-column gap-3 w-full">
@@ -639,12 +656,14 @@
                                     <input *ngSwitchDefault type="text" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
                                 </ng-container>
                             </div>
+                            </ng-container>
                         </div>
                     </ng-container>
 
                     <!-- Case B: Normal stage form to fill or fallback correction -->
                     <ng-container *ngIf="!(isCorrection(selectedTask()) && selectedTask()?.parentForms && selectedTask()?.parentForms?.length > 0)">
-                        <div *ngFor="let field of stageFormFields()" class="flex flex-column gap-1" [class.col-12]="field.type === 'section_header'">
+                        <ng-container *ngFor="let field of stageFormFields()">
+                        <div *ngIf="isFieldVisible(field, stageFormFields(), stageFormValues)" class="flex flex-column gap-1" [class.col-12]="field.type === 'section_header'">
                             <label [for]="'stage-field-' + field.name" class="font-medium text-900" *ngIf="field.type !== 'section_header'">
                                 {{ field.label }} <span class="text-red-500" *ngIf="field.isRequired">*</span>
                             </label>
@@ -662,6 +681,13 @@
                                 <p-select *ngSwitchCase="'select'" [options]="field.metadata?.options || []"
                                           [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
                                           [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-select>
+
+                                <!-- Multiselect type -->
+                                <p-multiSelect *ngSwitchCase="'multiselect'" [options]="field.metadata?.options || []"
+                                          [ngModel]="multiselectSelected[field.name]"
+                                          (onChange)="onMultiselectSelectionChange(field.name, $event.value, 'stage')"
+                                          [placeholder]="field.placeholder || 'Seleccione opciones...'"
+                                          [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-multiSelect>
 
                                 <!-- Dynamic List type -->
                                 <div *ngSwitchCase="'dynamic_list'" class="flex flex-column gap-3 w-full">
@@ -768,6 +794,7 @@
                                 <input *ngSwitchDefault type="text" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
                             </ng-container>
                         </div>
+                        </ng-container>
                     </ng-container>
                 </div>
             </div>
