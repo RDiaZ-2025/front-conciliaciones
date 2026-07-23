@@ -1,0 +1,10 @@
+/* Styles for CustomersComponent */
+.border-dashed {
+  border-style: dashed !important;
+}
+.cursor-pointer {
+  cursor: pointer;
+}
+.max-h-8rem {
+  max-height: 8rem;
+}

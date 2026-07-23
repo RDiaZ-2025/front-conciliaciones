@@ -179,7 +179,8 @@ export class RequestsBetaAdminComponent implements OnInit {
     { label: 'Archivo / Adjunto', value: 'file' },
     { label: 'Cálculo Matemático / Fórmula', value: 'formula' },
     { label: 'Tabla / Lista Dinámica de Items', value: 'dynamic_list' },
-    { label: 'Encabezado de Sección / Grupo', value: 'section_header' }
+    { label: 'Encabezado de Sección / Grupo', value: 'section_header' },
+    { label: 'Cliente (Autocompletar)', value: 'customer' }
   ];
 
   // Assignee & Rejection Type options

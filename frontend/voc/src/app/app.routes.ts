@@ -98,6 +98,10 @@ export const routes: Routes = [
         path: 'commercial/onboarding',
         loadComponent: () => import('./pages/commercial/commercial.component').then(m => m.CommercialComponent)
       },
+      {
+        path: 'customers',
+        loadComponent: () => import('./pages/customers/customers.component').then(m => m.CustomersComponent)
+      },
     ]
   },
 

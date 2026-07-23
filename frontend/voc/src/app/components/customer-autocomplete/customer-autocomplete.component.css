@@ -1,0 +1,10 @@
+/* Styles for CustomerAutocompleteComponent */
+.pl-5 {
+  padding-left: 2.2rem !important;
+}
+.z-5 {
+  z-index: 1000 !important;
+}
+.last\:border-none:last-child {
+  border-bottom: none !important;
+}

@@ -43,6 +43,8 @@ import { ConsecutiveDialogComponent } from '../production_2/consecutive-dialog/c
 import { AssignImplementationDialogComponent } from '../production_2/assign-implementation-dialog/assign-implementation-dialog.component';
 import { MaterialRegisterListDialogComponent } from '../production_2/material-register-list-dialog/material-register-list-dialog.component';
 
+import { CustomerAutocompleteComponent } from '../../components/customer-autocomplete/customer-autocomplete.component';
+
 @Component({
   selector: 'app-production-beta',
   standalone: true,
@@ -67,7 +69,8 @@ import { MaterialRegisterListDialogComponent } from '../production_2/material-re
     InputTextModule,
     SelectModule,
     MultiSelectModule,
-    FormsModule
+    FormsModule,
+    CustomerAutocompleteComponent
   ],
   providers: [DialogService, ConfirmationService, MessageService],
   templateUrl: './production-beta.component.html',

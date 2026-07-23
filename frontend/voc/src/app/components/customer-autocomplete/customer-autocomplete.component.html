@@ -1,0 +1,66 @@
+<div class="w-full relative flex flex-column gap-2">
+    <div class="flex gap-2 align-items-center w-full">
+        <div class="p-input-icon-left w-full relative">
+            <i class="pi pi-user" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-color-secondary); z-index: 1;"></i>
+            <input 
+                type="text" 
+                pInputText 
+                class="w-full pl-5 border-round-lg"
+                [placeholder]="placeholder || 'Escriba nombre o identificación del cliente...'"
+                [(ngModel)]="searchQuery"
+                (input)="onInputChange()"
+                [disabled]="disabled"
+                (focus)="showDropdown = true"
+                (blur)="onBlur()"
+                style="padding-left: 2rem !important;"
+            />
+            <i *ngIf="loading" class="pi pi-spin pi-spinner" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); z-index: 1;"></i>
+        </div>
+        <button *ngIf="selectedCustomer && !disabled" type="button" pButton icon="pi pi-times" class="p-button-secondary border-round-lg p-button-outlined" (click)="clearSelection()"></button>
+    </div>
+
+    <!-- Floating Dropdown Suggestions -->
+    <div *ngIf="showDropdown && searchQuery.length >= 3 && suggestions.length > 0" 
+         class="absolute left-0 w-full bg-white border-round-lg shadow-4 border-1 surface-border p-0 m-0 z-5" 
+         style="top: 100%; margin-top: 4px; max-height: 200px; overflow-y: auto;">
+        <ul class="list-none p-0 m-0">
+            <li *ngFor="let item of suggestions" 
+                (mousedown)="selectCustomer(item)"
+                class="p-3 cursor-pointer hover:bg-100 border-bottom-1 surface-border last:border-none flex justify-content-between align-items-center">
+                <div class="flex flex-column">
+                    <span class="font-bold text-900">{{ item.businessName || 'Persona Natural' }}</span>
+                    <span class="text-sm text-600">{{ item.documentType }} - {{ item.documentNumber }}</span>
+                </div>
+                <i class="pi pi-chevron-right text-400"></i>
+            </li>
+        </ul>
+    </div>
+    
+    <div *ngIf="showDropdown && searchQuery.length >= 3 && suggestions.length === 0 && !loading" 
+         class="absolute left-0 w-full bg-white border-round-lg shadow-4 border-1 surface-border p-3 m-0 z-5 text-center text-600 text-sm"
+         style="top: 100%; margin-top: 4px;">
+        No se encontraron clientes coincidentes.
+    </div>
+
+    <!-- Selected Customer Info Card -->
+    <div *ngIf="selectedCustomer" class="p-3 border-round-lg border-1 surface-border bg-50 flex flex-column gap-2 mt-1 shadow-1">
+        <div class="flex justify-content-between align-items-center border-bottom-1 surface-border pb-2">
+            <span class="text-xs font-bold text-600 uppercase">Detalle del Cliente Seleccionado</span>
+            <span class="p-tag p-tag-success text-xs font-bold bg-green-100 text-green-800 px-2 py-1 border-round">{{ selectedCustomer.documentType }}: {{ selectedCustomer.documentNumber }}</span>
+        </div>
+        <div class="grid m-0 p-0 text-xs">
+            <div class="col-12 md:col-6 p-1">
+                <span class="text-600 block">Razón Social / Nombre:</span>
+                <strong class="text-900">{{ selectedCustomer.businessName || 'N/A' }}</strong>
+            </div>
+            <div class="col-12 md:col-6 p-1">
+                <span class="text-600 block">Correo Electrónico:</span>
+                <strong class="text-900">{{ selectedCustomer.email }}</strong>
+            </div>
+            <div class="col-12 md:col-6 p-1">
+                <span class="text-600 block">Número Celular:</span>
+                <strong class="text-900">{{ selectedCustomer.phoneNumber || 'N/A' }}</strong>
+            </div>
+        </div>
+    </div>
+</div>

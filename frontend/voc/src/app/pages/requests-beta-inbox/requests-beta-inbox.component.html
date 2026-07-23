@@ -280,6 +280,13 @@
                                               (onChange)="onMultiselectSelectionChange(form.formId + '_' + field.name, $event.value, stageFormValues)"
                                               [placeholder]="field.placeholder || 'Seleccione opciones...'"
                                               [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-multiSelect>
+
+                                    <!-- Customer Autocomplete type -->
+                                    <app-customer-autocomplete *ngSwitchCase="'customer'"
+                                                               [(value)]="stageFormValues[form.formId + '_' + field.name]"
+                                                               [disabled]="field.isReadOnly"
+                                                               [placeholder]="field.placeholder || ''">
+                                    </app-customer-autocomplete>
  
                                     <!-- Dynamic List type -->
                                     <div *ngSwitchCase="'dynamic_list'" class="flex flex-column gap-3 w-full">
@@ -418,6 +425,13 @@
                                           (onChange)="onMultiselectSelectionChange(field.name, $event.value, stageFormValues)"
                                           [placeholder]="field.placeholder || 'Seleccione opciones...'"
                                           [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-multiSelect>
+
+                                <!-- Customer Autocomplete type -->
+                                <app-customer-autocomplete *ngSwitchCase="'customer'"
+                                                           [(value)]="stageFormValues[field.name]"
+                                                           [disabled]="field.isReadOnly"
+                                                           [placeholder]="field.placeholder || ''">
+                                </app-customer-autocomplete>
 
                                 <!-- Dynamic List type -->
                                 <div *ngSwitchCase="'dynamic_list'" class="flex flex-column gap-3 w-full">

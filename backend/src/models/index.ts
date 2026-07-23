@@ -30,6 +30,7 @@ export * from './DynamicFormSubmission';
 export * from './DynamicFormFieldValue';
 export * from './DynamicWorkflowStage';
 export * from './DynamicSubmissionWorkflowState';
+export * from './Customer';
 
 
 export { MenuItem } from './MenuItem';
@@ -79,6 +80,7 @@ import { DynamicFormSubmission } from './DynamicFormSubmission';
 import { DynamicFormFieldValue } from './DynamicFormFieldValue';
 import { DynamicWorkflowStage } from './DynamicWorkflowStage';
 import { DynamicSubmissionWorkflowState } from './DynamicSubmissionWorkflowState';
+import { Customer } from './Customer';
 
 
 export const entities = [
@@ -121,7 +123,8 @@ export const entities = [
   DynamicFormSubmission,
   DynamicFormFieldValue,
   DynamicWorkflowStage,
-  DynamicSubmissionWorkflowState
+  DynamicSubmissionWorkflowState,
+  Customer
 ];
 
 export const ModelCategories = {

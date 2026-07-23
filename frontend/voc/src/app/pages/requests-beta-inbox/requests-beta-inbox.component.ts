@@ -18,6 +18,7 @@ import { LucideIconComponent } from '../../components/lucide-icon/lucide-icon.co
 import { ProductionService } from '../../services/production.service';
 import { AuthService } from '../../services/auth.service';
 import { AzureStorageService } from '../../services/azure-storage.service';
+import { CustomerAutocompleteComponent } from '../../components/customer-autocomplete/customer-autocomplete.component';
 
 @Component({
   selector: 'app-requests-beta-inbox',
@@ -37,7 +38,8 @@ import { AzureStorageService } from '../../services/azure-storage.service';
     TagModule,
     ProgressSpinnerModule,
     PageHeaderComponent,
-    LucideIconComponent
+    LucideIconComponent,
+    CustomerAutocompleteComponent
   ],
   templateUrl: './requests-beta-inbox.component.html',
   styleUrls: ['./requests-beta-inbox.component.css'],
