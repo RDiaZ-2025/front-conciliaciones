@@ -8,3 +8,12 @@
 .last\:border-none:last-child {
   border-bottom: none !important;
 }
+
+@keyframes custom-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: custom-rotate 1s linear infinite !important;
+}

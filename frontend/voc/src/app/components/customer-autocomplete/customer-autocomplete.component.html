@@ -1,22 +1,31 @@
 <div class="w-full relative flex flex-column gap-2">
     <div class="flex gap-2 align-items-center w-full">
-        <div class="p-input-icon-left w-full relative">
-            <i class="pi pi-user" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-color-secondary); z-index: 1;"></i>
+        <div class="relative w-full">
+            <!-- Left Lucide Icon -->
+            <lucide-icon name="user" class="text-500" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); z-index: 2; pointer-events: none; width: 1.1rem; height: 1.1rem;"></lucide-icon>
+            
             <input 
                 type="text" 
                 pInputText 
-                class="w-full pl-5 border-round-lg"
+                class="w-full border-round-lg text-900"
                 [placeholder]="placeholder || 'Escriba nombre o identificación del cliente...'"
                 [(ngModel)]="searchQuery"
                 (input)="onInputChange()"
                 [disabled]="disabled"
                 (focus)="showDropdown = true"
                 (blur)="onBlur()"
-                style="padding-left: 2rem !important;"
+                autocomplete="off"
+                style="padding-left: 2.5rem !important; padding-right: 2.5rem !important;"
             />
-            <i *ngIf="loading" class="pi pi-spin pi-spinner" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); z-index: 1;"></i>
+            
+            <!-- Right Spinning Lucide Icon Container -->
+            <div *ngIf="loading" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); z-index: 2; display: flex; align-items: center; justify-content: center; width: 1.1rem; height: 1.1rem; pointer-events: none;">
+                <lucide-icon name="loader-2" class="animate-spin text-primary" style="width: 1.1rem; height: 1.1rem; display: block;"></lucide-icon>
+            </div>
         </div>
-        <button *ngIf="selectedCustomer && !disabled" type="button" pButton icon="pi pi-times" class="p-button-secondary border-round-lg p-button-outlined" (click)="clearSelection()"></button>
+        <p-button *ngIf="selectedCustomer && !disabled" severity="secondary" [outlined]="true" styleClass="border-round-lg px-3 py-2 flex align-items-center justify-content-center" (onClick)="clearSelection()">
+            <lucide-icon name="x" style="width: 1rem; height: 1rem;"></lucide-icon>
+        </p-button>
     </div>
 
     <!-- Floating Dropdown Suggestions -->
@@ -31,12 +40,12 @@
                     <span class="font-bold text-900">{{ item.businessName || 'Persona Natural' }}</span>
                     <span class="text-sm text-600">{{ item.documentType }} - {{ item.documentNumber }}</span>
                 </div>
-                <i class="pi pi-chevron-right text-400"></i>
+                <lucide-icon name="chevron-right" class="text-400" style="width: 1rem; height: 1rem;"></lucide-icon>
             </li>
         </ul>
     </div>
     
-    <div *ngIf="showDropdown && searchQuery.length >= 3 && suggestions.length === 0 && !loading" 
+    <div *ngIf="showDropdown && searchQuery.length >= 3 && suggestions.length === 0 && !loading && hasSearched" 
          class="absolute left-0 w-full bg-white border-round-lg shadow-4 border-1 surface-border p-3 m-0 z-5 text-center text-600 text-sm"
          style="top: 100%; margin-top: 4px;">
         No se encontraron clientes coincidentes.
