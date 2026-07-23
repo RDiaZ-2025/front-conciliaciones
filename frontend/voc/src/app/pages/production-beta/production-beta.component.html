@@ -191,12 +191,8 @@
                                 [(ngModel)]="initialFormValues()[form.id + '_' + field.name]" (ngModelChange)="recalculateInitialFormulas()" [disabled]="field.isReadOnly" class="w-full" />
 
                             <!-- Datetime type -->
-                            <ng-container *ngSwitchCase="'datetime'">
-                                <input type="datetime-local" pInputText [id]="'initial-' + form.id + '-' + field.name"
-                                    [(ngModel)]="initialFormValues()[form.id + '_' + field.name]" (ngModelChange)="recalculateInitialFormulas()" [disabled]="field.isReadOnly" *ngIf="!field.isReadOnly" class="w-full" />
-                                <input type="text" pInputText [id]="'initial-' + form.id + '-' + field.name"
-                                    [(ngModel)]="initialFormValues()[form.id + '_' + field.name]" [disabled]="true" *ngIf="field.isReadOnly" class="w-full" />
-                            </ng-container>
+                            <input *ngSwitchCase="'datetime'" type="datetime-local" pInputText [id]="'initial-' + form.id + '-' + field.name"
+                                [(ngModel)]="initialFormValues()[form.id + '_' + field.name]" (ngModelChange)="recalculateInitialFormulas()" [disabled]="field.isReadOnly" class="w-full" />
 
                             <!-- Textarea type -->
                             <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'initial-' + form.id + '-' + field.name"
@@ -528,10 +524,7 @@
                                 <ng-container [ngSwitch]="field.type">
                                     <input *ngSwitchCase="'date'" type="date" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
                                     
-                                    <ng-container *ngSwitchCase="'datetime'">
-                                        <input type="datetime-local" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" *ngIf="!field.isReadOnly" />
-                                        <input type="text" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" [disabled]="true" *ngIf="field.isReadOnly" />
-                                    </ng-container>
+                                    <input *ngSwitchCase="'datetime'" type="datetime-local" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
 
                                     <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
                                     
@@ -660,10 +653,7 @@
                             <ng-container [ngSwitch]="field.type">
                                 <input *ngSwitchCase="'date'" type="date" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [disabled]="field.isReadOnly" />
                                 
-                                <ng-container *ngSwitchCase="'datetime'">
-                                    <input type="datetime-local" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [disabled]="field.isReadOnly" *ngIf="!field.isReadOnly" />
-                                    <input type="text" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" [disabled]="true" *ngIf="field.isReadOnly" />
-                                </ng-container>
+                                <input *ngSwitchCase="'datetime'" type="datetime-local" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [disabled]="field.isReadOnly" />
 
                                 <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
                                 

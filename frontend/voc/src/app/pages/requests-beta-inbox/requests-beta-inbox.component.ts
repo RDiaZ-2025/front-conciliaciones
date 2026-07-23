@@ -95,6 +95,36 @@ export class RequestsBetaInboxComponent implements OnInit {
     return !!task.stageName?.startsWith('Llenar Formulario');
   }
 
+  evaluateDefaultValueExpression(f: any): string {
+    if (!f.defaultValueExpression) return '';
+    
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const formattedDateTimeLocal = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const formattedDate = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+    const userName = this.authService.currentUser()?.name || '';
+    const userEmail = this.authService.currentUser()?.email || '';
+
+    let evaluated = f.defaultValueExpression;
+    if (evaluated.includes('{{CURRENT_DATE_TIME}}')) {
+      if (f.type === 'datetime') {
+        evaluated = evaluated.replace(/\{\{CURRENT_DATE_TIME\}\}/g, formattedDateTimeLocal);
+      } else if (f.type === 'date') {
+        evaluated = evaluated.replace(/\{\{CURRENT_DATE_TIME\}\}/g, formattedDate);
+      } else {
+        const formattedDateTimeSpace = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        evaluated = evaluated.replace(/\{\{CURRENT_DATE_TIME\}\}/g, formattedDateTimeSpace);
+      }
+    }
+    if (evaluated.includes('{{LOGGED_USER_NAME}}')) {
+      evaluated = evaluated.replace(/\{\{LOGGED_USER_NAME\}\}/g, userName);
+    }
+    if (evaluated.includes('{{LOGGED_USER_EMAIL}}')) {
+      evaluated = evaluated.replace(/\{\{LOGGED_USER_EMAIL\}\}/g, userEmail);
+    }
+    return evaluated;
+  }
+
   openActionDialog(task: any) {
     console.log('Task selected in inbox:', task);
     this.selectedTask.set(task);
@@ -177,18 +207,8 @@ export class RequestsBetaInboxComponent implements OnInit {
             if (f.metadata && typeof f.metadata === 'string') {
               try { f.metadata = JSON.parse(f.metadata); } catch(e){}
             }
-            if (f.isReadOnly && f.defaultValueExpression) {
-              let evaluated = f.defaultValueExpression;
-              if (evaluated.includes('{{CURRENT_DATE_TIME}}')) {
-                evaluated = evaluated.replace(/\{\{CURRENT_DATE_TIME\}\}/g, formattedDate);
-              }
-              if (evaluated.includes('{{LOGGED_USER_NAME}}')) {
-                evaluated = evaluated.replace(/\{\{LOGGED_USER_NAME\}\}/g, userName);
-              }
-              if (evaluated.includes('{{LOGGED_USER_EMAIL}}')) {
-                evaluated = evaluated.replace(/\{\{LOGGED_USER_EMAIL\}\}/g, userEmail);
-              }
-              initialValues[f.name] = evaluated;
+            if (f.defaultValueExpression) {
+              initialValues[f.name] = this.evaluateDefaultValueExpression(f);
             } else {
               initialValues[f.name] = '';
             }
