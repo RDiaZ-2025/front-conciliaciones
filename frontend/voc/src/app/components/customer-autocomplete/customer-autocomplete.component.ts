@@ -5,11 +5,13 @@ import { CustomerService, Customer } from '../../services/customer.service';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { LucideIconComponent } from '../lucide-icon/lucide-icon.component';
+import { DialogModule } from 'primeng/dialog';
+import { SelectModule } from 'primeng/select';
 
 @Component({
   selector: 'app-customer-autocomplete',
   standalone: true,
-  imports: [CommonModule, FormsModule, InputTextModule, ButtonModule, LucideIconComponent],
+  imports: [CommonModule, FormsModule, InputTextModule, ButtonModule, LucideIconComponent, DialogModule, SelectModule],
   templateUrl: './customer-autocomplete.component.html',
   styleUrls: ['./customer-autocomplete.component.css']
 })
@@ -26,6 +28,25 @@ export class CustomerAutocompleteComponent implements OnInit, OnChanges {
   hasSearched: boolean = false;
   selectedCustomer: Customer | null = null;
   private debounceTimer: any = null;
+
+  // Modal properties for customer registration
+  displayCreateModal: boolean = false;
+  newCustomer: Partial<Customer> = {
+    documentType: 'NIT',
+    documentNumber: '',
+    businessName: '',
+    email: '',
+    phoneNumber: ''
+  };
+  docTypes = [
+    { label: 'NIT', value: 'NIT' },
+    { label: 'Cédula de Ciudadanía (CC)', value: 'CC' },
+    { label: 'Cédula de Extranjería (CE)', value: 'CE' },
+    { label: 'Pasaporte (PP)', value: 'PP' },
+    { label: 'Otro', value: 'OT' }
+  ];
+  saveLoading: boolean = false;
+  errorMessage: string = '';
 
   constructor(private customerService: CustomerService, private cdr: ChangeDetectorRef) {}
 
@@ -122,6 +143,88 @@ export class CustomerAutocompleteComponent implements OnInit, OnChanges {
     this.hasSearched = false;
     this.valueChange.emit('');
     this.cdr.detectChanges();
+  }
+
+  openCreateModal(event: MouseEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    this.showDropdown = false;
+    this.errorMessage = '';
+    
+    // Check if searchQuery is mostly digits to pre-fill doc number, else pre-fill name
+    const cleanSearch = this.searchQuery.trim();
+    const isNumeric = /^\d+$/.test(cleanSearch);
+    
+    this.newCustomer = {
+      documentType: 'NIT',
+      documentNumber: isNumeric ? cleanSearch : '',
+      businessName: isNumeric ? '' : cleanSearch,
+      email: '',
+      phoneNumber: ''
+    };
+    
+    this.displayCreateModal = true;
+    this.cdr.detectChanges();
+  }
+
+  saveNewCustomer() {
+    this.errorMessage = '';
+    
+    // Validate required fields
+    if (!this.newCustomer.documentType) {
+      this.errorMessage = 'El tipo de documento es obligatorio.';
+      return;
+    }
+    if (!this.newCustomer.documentNumber || !this.newCustomer.documentNumber.trim()) {
+      this.errorMessage = 'El número de documento es obligatorio.';
+      return;
+    }
+    if (!this.newCustomer.businessName || !this.newCustomer.businessName.trim()) {
+      this.errorMessage = 'La razón social o nombre es obligatorio.';
+      return;
+    }
+    if (!this.newCustomer.email || !this.newCustomer.email.trim()) {
+      this.errorMessage = 'El correo electrónico es obligatorio.';
+      return;
+    }
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(this.newCustomer.email.trim())) {
+      this.errorMessage = 'El formato del correo electrónico es inválido.';
+      return;
+    }
+    
+    // Check if phoneNumber contains only valid characters
+    if (this.newCustomer.phoneNumber && this.newCustomer.phoneNumber.trim()) {
+      const phoneClean = this.newCustomer.phoneNumber.trim();
+      const phoneRegex = /^[0-9+\-\s()]+$/;
+      if (!phoneRegex.test(phoneClean)) {
+        this.errorMessage = 'El número celular solo puede contener números, espacios o símbolos (+, -, parentesis).';
+        return;
+      }
+    }
+
+    this.saveLoading = true;
+    this.cdr.detectChanges();
+
+    this.customerService.createCustomer(this.newCustomer).subscribe({
+      next: (res) => {
+        this.saveLoading = false;
+        this.displayCreateModal = false;
+        
+        // Select the newly created customer immediately!
+        if (res && res.data) {
+          this.selectCustomer(res.data);
+        }
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.saveLoading = false;
+        this.errorMessage = err.error?.message || 'Error al registrar el cliente en el servidor.';
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   onBlur() {

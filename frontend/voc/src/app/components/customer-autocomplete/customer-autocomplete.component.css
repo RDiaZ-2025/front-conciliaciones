@@ -17,3 +17,21 @@
 .animate-spin {
   animation: custom-rotate 1s linear infinite !important;
 }
+
+/* Modal dialog spacing adjustments */
+::ng-deep .p-dialog {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+::ng-deep .p-dialog-header {
+  padding: 1.75rem 1.75rem 1rem 1.75rem !important;
+}
+
+::ng-deep .p-dialog-content {
+  padding: 0.5rem 1.75rem 1.5rem 1.75rem !important;
+}
+
+::ng-deep .p-dialog-footer {
+  padding: 1rem 1.75rem 1.75rem 1.75rem !important;
+}
