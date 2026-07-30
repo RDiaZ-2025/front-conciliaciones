@@ -395,6 +395,10 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     if (evaluated.includes('{{LOGGED_USER_EMAIL}}')) {
       evaluated = evaluated.replace(/\{\{LOGGED_USER_EMAIL\}\}/g, userEmail);
     }
+    if (evaluated.includes('{{LOGGED_USER_AREA}}')) {
+      const userArea = this.authService.currentUser()?.teams?.[0] || '';
+      evaluated = evaluated.replace(/\{\{LOGGED_USER_AREA\}\}/g, userArea);
+    }
     return evaluated;
   }
 

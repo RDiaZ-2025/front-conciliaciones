@@ -322,6 +322,13 @@ export class ProductionService {
                             const requester = await userRepo.findOne({ where: { id: requesterUserId } });
                             evaluated = evaluated.replace(/\{\{LOGGED_USER_EMAIL\}\}/g, requester?.email || '');
                         }
+                        if (evaluated.includes('{{LOGGED_USER_AREA}}')) {
+                            const requester = await userRepo.findOne({ 
+                                where: { id: requesterUserId }, 
+                                relations: ['team'] 
+                            });
+                            evaluated = evaluated.replace(/\{\{LOGGED_USER_AREA\}\}/g, requester?.team?.name || '');
+                        }
                         valueStr = evaluated;
                     }
                     if (valueStr !== undefined && valueStr !== null) {
@@ -464,6 +471,14 @@ export class ProductionService {
                         const requester = await userRepo.findOne({ where: { id: requesterUserId } });
                         const email = requester?.email || '';
                         evaluated = evaluated.replace(/\{\{LOGGED_USER_EMAIL\}\}/g, email);
+                    }
+                    if (evaluated.includes('{{LOGGED_USER_AREA}}')) {
+                        const requester = await userRepo.findOne({ 
+                            where: { id: requesterUserId }, 
+                            relations: ['team'] 
+                        });
+                        const area = requester?.team?.name || '';
+                        evaluated = evaluated.replace(/\{\{LOGGED_USER_AREA\}\}/g, area);
                     }
                     valueStr = evaluated;
                 }
