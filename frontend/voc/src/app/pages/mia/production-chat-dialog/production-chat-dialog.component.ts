@@ -10,12 +10,36 @@ import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { DrawerModule } from 'primeng/drawer';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Subject, Subscription, timer } from 'rxjs';
+import { takeUntil, switchMap } from 'rxjs/operators';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MarkdownPipe } from '../../../pipes/markdown.pipe';
 import { AuthService } from '../../../services/auth.service';
+import { AzureStorageService } from '../../../services/azure-storage.service';
 import { environment } from '../../../../environments/environment';
+
+export interface WebMessageFile {
+  path: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  extension: string;
+}
+
+export interface WebMessageContent {
+  text?: string | null;
+  type: string;
+  timestamp?: string | null;
+  file?: WebMessageFile | null;
+}
+
+export interface WebMessageRequest {
+  agentId: string;
+  conversationId?: string | null;
+  contactId: string;
+  channelId: string;
+  message: WebMessageContent;
+}
 
 interface ChatMessageAttachment {
   type: 'image' | 'audio' | 'video' | 'document';
@@ -131,6 +155,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   messageService = inject(MessageService);
   http = inject(HttpClient);
   private authService = inject(AuthService);
+  private azureService = inject(AzureStorageService);
   private sanitizer = inject(DomSanitizer);
   private hostEl = inject(ElementRef);
 
@@ -233,6 +258,14 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   private cancelPending$ = new Subject<void>();
   private destroy$ = new Subject<void>();
   private blobUrls: string[] = [];
+  private pollingSubscription: Subscription | null = null;
+
+  private stopPolling(): void {
+    if (this.pollingSubscription) {
+      this.pollingSubscription.unsubscribe();
+      this.pollingSubscription = null;
+    }
+  }
 
   getConvTitle(conv: ConversationItem): string {
     const words = (conv.lastMessage ?? '').split(' ');
@@ -254,6 +287,44 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     return d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
   }
 
+  private extractCleanPath(rawPath: string, name?: string): string {
+    if (!rawPath) return name || '';
+    let clean = rawPath.trim();
+
+    // Extract decoded object path from Firebase Storage URL format (/o/encodedPath?...)
+    if (clean.includes('/o/')) {
+      const afterO = clean.split('/o/')[1];
+      if (afterO) {
+        const encodedPath = afterO.split('?')[0].split('#')[0];
+        return decodeURIComponent(encodedPath);
+      }
+    }
+
+    // Handle generic HTTP/HTTPS URLs by stripping protocol and host
+    if (/^https?:\/\//i.test(clean)) {
+      try {
+        const url = new URL(clean);
+        clean = decodeURIComponent(url.pathname);
+        if (clean.startsWith('/')) {
+          clean = clean.substring(1);
+        }
+        return clean;
+      } catch (e) {
+        // Fallback
+      }
+    }
+
+    if (name && clean.endsWith(name)) {
+      return clean;
+    }
+
+    if (name && !clean.toLowerCase().endsWith(name.toLowerCase())) {
+      return clean.endsWith('/') ? clean + name : clean + '/' + name;
+    }
+
+    return clean;
+  }
+
   downloadDocument(attachment: ChatMessageAttachment, msgIndex: number): void {
     if (attachment.downloading) return;
 
@@ -273,7 +344,8 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       msgs.map((m, i) => i === msgIndex ? { ...m, attachment: { ...m.attachment!, downloading: true } } : m)
     );
     const headers = new HttpHeaders({ 'x-api-key': environment.chatApiKey });
-    const body = { agentId: environment.chatAgentId, channelId: environment.chatChannelId, path: attachment.path };
+    const cleanPath = this.extractCleanPath(attachment.path, attachment.name);
+    const body = { agentId: environment.chatAgentId, channelId: environment.chatChannelId, path: cleanPath };
     this.http.post(environment.chatDownloadFileUrl, body, { headers, responseType: 'blob' })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -338,11 +410,82 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     });
   }
 
+  private mapApiMessagesToChatMessages(data: ConversationMessage[]): ChatMessage[] {
+    const list = Array.isArray(data) ? data : [];
+    const unique = list.filter((m, i, arr) => arr.findIndex(x => x.id === m.id) === i);
+    const sorted = unique.sort(
+      (a, b) => a.messageContent.timestamp - b.messageContent.timestamp
+    );
+    return sorted.map(m => {
+      const meta = m.messageContent.metadata;
+      let attachment: ChatMessageAttachment | null = null;
+      if (meta?.path && meta?.name) {
+        const mimeType = meta.mimeType || meta.contentType || '';
+        const apiType = m.messageContent.type?.toLowerCase() ?? '';
+        let attType: ChatMessageAttachment['type'] = 'document';
+        if (apiType === 'file') {
+          attType = 'document';
+        } else if (mimeType.startsWith('image/') || apiType === 'image') {
+          attType = 'image';
+        } else if (mimeType.startsWith('audio/') || apiType === 'audio') {
+          attType = 'audio';
+        } else if (mimeType.startsWith('video/') || apiType === 'video') {
+          attType = 'video';
+        }
+        const cleanPath = this.extractCleanPath(meta.path, meta.name);
+        const isMedia = attType !== 'document';
+        attachment = { type: attType, name: meta.name, mimeType, path: cleanPath, blobUrl: null, loading: isMedia };
+      }
+      return {
+        role: m.sender.id === m.agentId ? 'assistant' : 'user',
+        content: m.messageContent.text,
+        timestamp: new Date(m.messageContent.timestamp * 1000),
+        ppt: (m.messageContent.type === 'File' && meta?.extension?.toLowerCase() === '.pptx')
+          ? meta.path
+          : null,
+        attachment
+      };
+    });
+  }
+
+  private loadAttachmentsForMessages(mapped: ChatMessage[]): void {
+    mapped.forEach((msg, index) => {
+      if (!msg.attachment || msg.attachment.type === 'document') return;
+      const dlHeaders = new HttpHeaders({ 'x-api-key': environment.chatApiKey });
+      const cleanPath = this.extractCleanPath(msg.attachment.path, msg.attachment.name);
+      const dlBody = { agentId: environment.chatAgentId, channelId: environment.chatChannelId, path: cleanPath };
+      this.http.post(environment.chatDownloadFileUrl, dlBody, { headers: dlHeaders, responseType: 'blob' })
+        .pipe(takeUntil(this.cancelPending$))
+        .subscribe({
+          next: (blob) => {
+            const b = blob as Blob;
+            if (b.size === 0) {
+              this.messages.update(msgs =>
+                msgs.map((m, i) => i === index ? { ...m, attachment: { ...m.attachment!, type: 'document', loading: false } } : m)
+              );
+              return;
+            }
+            const blobUrl = URL.createObjectURL(b);
+            this.blobUrls.push(blobUrl);
+            this.messages.update(msgs =>
+              msgs.map((m, i) => i === index ? { ...m, attachment: { ...m.attachment!, blobUrl, loading: false } } : m)
+            );
+          },
+          error: () => {
+            this.messages.update(msgs =>
+              msgs.map((m, i) => i === index ? { ...m, attachment: { ...m.attachment!, loading: false } } : m)
+            );
+          }
+        });
+    });
+  }
+
   selectConversation(conv: ConversationItem): void {
     if (this.isTyping()) return;
     const email = this.authService.currentUser()?.email;
     if (!email) return;
-    // Cancel any pending request before starting a new one
+    // Cancel any pending request or polling before starting a new conversation view
+    this.stopPolling();
     this.cancelPending$.next();
     this.selectedConversationId.set(conv.id);
     this.conversationMessagesLoading.set(true);
@@ -361,83 +504,89 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       { headers }
     ).pipe(takeUntil(this.cancelPending$)).subscribe({
       next: (data) => {
-        const list = Array.isArray(data) ? data : [];
-        // Deduplicate by id, then sort ascending by timestamp
-        const unique = list.filter((m, i, arr) => arr.findIndex(x => x.id === m.id) === i);
-        const sorted = unique.sort(
-          (a, b) => a.messageContent.timestamp - b.messageContent.timestamp
-        );
-        const mapped: ChatMessage[] = sorted.map(m => {
-          const meta = m.messageContent.metadata;
-          let attachment: ChatMessageAttachment | null = null;
-          if (meta?.path && meta?.name) {
-            const mimeType = meta.mimeType || meta.contentType || '';
-            const apiType = m.messageContent.type?.toLowerCase() ?? '';
-            let attType: ChatMessageAttachment['type'] = 'document';
-            // API type "file" always means document — takes absolute priority
-            if (apiType === 'file') {
-              attType = 'document';
-            } else if (mimeType.startsWith('image/') || apiType === 'image') {
-              attType = 'image';
-            } else if (mimeType.startsWith('audio/') || apiType === 'audio') {
-              attType = 'audio';
-            } else if (mimeType.startsWith('video/') || apiType === 'video') {
-              attType = 'video';
-            }
-            // application/, text/, font/, or unknown → document (default)
-            const fullPath = meta.path.endsWith('/') ? meta.path + meta.name : meta.path + '/' + meta.name;
-            const isMedia = attType !== 'document';
-            attachment = { type: attType, name: meta.name, mimeType, path: fullPath, blobUrl: null, loading: isMedia };
-          }
-          return {
-            role: m.sender.id === m.agentId ? 'assistant' : 'user',
-            content: m.messageContent.text,
-            timestamp: new Date(m.messageContent.timestamp * 1000),
-            ppt: (m.messageContent.type === 'File' && meta?.extension?.toLowerCase() === '.pptx')
-              ? meta.path
-              : null,
-            attachment
-          };
-        });
-
+        const mapped = this.mapApiMessagesToChatMessages(data);
         this.messages.set(mapped);
-
-        // Download media (images, audio, video) for messages that have attachments
-        mapped.forEach((msg, index) => {
-          if (!msg.attachment || msg.attachment.type === 'document') return;
-          const dlHeaders = new HttpHeaders({ 'x-api-key': environment.chatApiKey });
-          const dlBody = { agentId: environment.chatAgentId, channelId: environment.chatChannelId, path: msg.attachment.path };
-          this.http.post(environment.chatDownloadFileUrl, dlBody, { headers: dlHeaders, responseType: 'blob' })
-            .pipe(takeUntil(this.cancelPending$))
-            .subscribe({
-              next: (blob) => {
-                const b = blob as Blob;
-                if (b.size === 0) {
-                  // Empty response: file not found — degrade to document widget
-                  this.messages.update(msgs =>
-                    msgs.map((m, i) => i === index ? { ...m, attachment: { ...m.attachment!, type: 'document', loading: false } } : m)
-                  );
-                  return;
-                }
-                const blobUrl = URL.createObjectURL(b);
-                this.blobUrls.push(blobUrl);
-                this.messages.update(msgs =>
-                  msgs.map((m, i) => i === index ? { ...m, attachment: { ...m.attachment!, blobUrl, loading: false } } : m)
-                );
-              },
-              error: () => {
-                this.messages.update(msgs =>
-                  msgs.map((m, i) => i === index ? { ...m, attachment: { ...m.attachment!, loading: false } } : m)
-                );
-              }
-            });
-        });
-
+        this.loadAttachmentsForMessages(mapped);
         this.conversationMessagesLoading.set(false);
         setTimeout(() => this.scrollToBottom(), 50);
       },
       error: () => {
         this.conversationMessagesLoading.set(false);
+      }
+    });
+  }
+
+  private pollForAssistantResponse(targetConvId: string, sendTimeSeconds: number): void {
+    this.stopPolling();
+    const email = this.authService.currentUser()?.email;
+    if (!email) {
+      this.stopTypingMessageRotation();
+      this.isTyping.set(false);
+      return;
+    }
+
+    const headers = new HttpHeaders({ 'x-api-key': environment.chatApiKey });
+    const body = {
+      agentId: environment.chatAgentId,
+      channelId: environment.chatChannelId,
+      contactId: email,
+      conversationId: targetConvId
+    };
+
+    let attempts = 0;
+    const maxAttempts = 60; // Max 5 minutes (60 * 5s)
+
+    this.pollingSubscription = timer(5000, 5000).pipe(
+      takeUntil(this.cancelPending$),
+      switchMap(() => {
+        attempts++;
+        if (attempts > maxAttempts) {
+          throw new Error('Polling timeout');
+        }
+        return this.http.post<ConversationMessage[]>(
+          environment.chatGetMessagesUrl,
+          body,
+          { headers }
+        );
+      })
+    ).subscribe({
+      next: (data) => {
+        const list = Array.isArray(data) ? data : [];
+        if (list.length === 0) return;
+
+        const unique = list.filter((m, i, arr) => arr.findIndex(x => x.id === m.id) === i);
+        const sorted = unique.sort((a, b) => a.messageContent.timestamp - b.messageContent.timestamp);
+
+        // Check if there is an assistant response after/at user's message timestamp
+        const hasAssistantResponse = sorted.some(m =>
+          m.sender.id === m.agentId && m.messageContent.timestamp >= (sendTimeSeconds - 2)
+        );
+
+        if (hasAssistantResponse) {
+          this.stopPolling();
+          this.stopTypingMessageRotation();
+          this.isTyping.set(false);
+
+          const mapped = this.mapApiMessagesToChatMessages(sorted);
+          this.messages.set(mapped);
+          this.loadAttachmentsForMessages(mapped);
+
+          this.scrollToBottom();
+          this.loadConversations();
+        }
+      },
+      error: (err) => {
+        console.error('Error polling for assistant response:', err);
+        if (attempts > maxAttempts) {
+          this.stopPolling();
+          this.stopTypingMessageRotation();
+          this.isTyping.set(false);
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Tiempo de espera agotado',
+            detail: 'El asistente no respondió a tiempo.'
+          });
+        }
       }
     });
   }
@@ -483,7 +632,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   // --- Chat Logic ---
 
   sendMessage() {
-    if ((!this.inputText.trim() && this.files().length === 0) || this.isTyping()) return;
+    if (!this.inputText.trim() && this.files().length === 0) return;
 
     const text = this.inputText.trim();
     this.inputText = '';
@@ -513,57 +662,59 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     }
   }
 
-  private sendFilesWithText(text: string, files: File[]): void {
-    // Process files one by one, sending each with the text
-    // For multiple files, only the first one determines the message type
+  private async sendFilesWithText(text: string, files: File[]): Promise<void> {
     const file = files[0];
-    const reader = new FileReader();
+    const extension = file.name.includes('.') ? '.' + file.name.split('.').pop()! : '';
+    const isAudio = file.type.startsWith('audio/');
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
+    const messageType: string = isAudio ? 'audio' : (isImage ? 'image' : (isVideo ? 'video' : 'document'));
+    const blobUrl = URL.createObjectURL(file);
+    this.blobUrls.push(blobUrl);
 
-    reader.onload = (e) => {
-      const arrayBuffer = e.target?.result as ArrayBuffer;
-      const uint8Array = new Uint8Array(arrayBuffer);
-      let binary = '';
-      for (let j = 0; j < uint8Array.length; j++) {
-        binary += String.fromCharCode(uint8Array[j]);
+    // Agregar attachment al mensaje del usuario para que se vea el cuadro de documento/media
+    this.messages.update(msgs => {
+      const updated = [...msgs];
+      const lastIdx = updated.length - 1;
+      if (lastIdx >= 0 && updated[lastIdx].role === 'user') {
+        updated[lastIdx] = {
+          ...updated[lastIdx],
+          attachment: {
+            type: (isAudio ? 'audio' : (isImage ? 'image' : (isVideo ? 'video' : 'document'))),
+            name: file.name,
+            mimeType: file.type,
+            path: '',
+            blobUrl,
+            loading: false
+          }
+        };
       }
-      const base64 = btoa(binary);
-      const extension = file.name.includes('.') ? '.' + file.name.split('.').pop()! : '';
-      const isAudio = file.type.startsWith('audio/');
-      const messageType: 'document' | 'audio' = isAudio ? 'audio' : 'document';
-      const blobUrl = URL.createObjectURL(file);
-      this.blobUrls.push(blobUrl);
+      return updated;
+    });
 
-      // Agregar attachment al mensaje del usuario para que se vea el cuadro de documento
-      this.messages.update(msgs => {
-        const updated = [...msgs];
-        const lastIdx = updated.length - 1;
-        if (lastIdx >= 0 && updated[lastIdx].role === 'user') {
-          updated[lastIdx] = {
-            ...updated[lastIdx],
-            attachment: {
-              type: 'document',
-              name: file.name,
-              mimeType: file.type,
-              path: '',
-              blobUrl,
-              loading: false
-            }
-          };
-        }
-        return updated;
-      });
+    const user = this.authService.currentUser();
+    const email = user?.email ?? 'anonymous';
+    const folderPath = `webchat/${email}`;
 
-      this.askAssistant(text || `[Archivo adjunto: ${file.name}]`, {
-        name: file.name,
-        mimeType: file.type,
-        extension,
-        dataBase64: base64,
-        size: file.size,
-        messageType
-      });
+    let uploadedPath = `${folderPath}/${file.name}`;
+    try {
+      const uploadResult = await this.azureService.uploadFile(file, { folderPath, containerName: 'private' });
+      if (uploadResult.success) {
+        uploadedPath = `${folderPath}/${uploadResult.fileName}`;
+      }
+    } catch (err) {
+      console.error('Error uploading file to storage:', err);
+    }
+
+    const webFile: WebMessageFile = {
+      path: uploadedPath,
+      name: file.name,
+      mimeType: file.type,
+      size: file.size,
+      extension: extension
     };
 
-    reader.readAsArrayBuffer(file);
+    this.askAssistant(text || `[Archivo adjunto: ${file.name}]`, webFile, messageType);
   }
 
   onKeyDown(event: KeyboardEvent, textarea: HTMLTextAreaElement) {
@@ -588,6 +739,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   resetChat() {
+    this.stopPolling();
     this.cancelPending$.next();
     this.stopTypingMessageRotation();
     this.messages.set([]);
@@ -616,6 +768,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
+    this.stopPolling();
     this.blobUrls.forEach(url => URL.revokeObjectURL(url));
     this.blobUrls = [];
     if (this.scrollContainer) {
@@ -649,35 +802,25 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   // Call the AI assistant API
-  private askAssistant(userText: string, fileAttachment?: FileAttachment) {
+  private askAssistant(userText: string, webMessageFile?: WebMessageFile | null, fileMessageType: string = 'text') {
     this.isTyping.set(true);
     this.startTypingMessageRotation();
     const user = this.authService.currentUser();
     const email = user?.email ?? '';
 
     const conversationId = this.selectedConversationId();
-    const files: MessageFile[] = fileAttachment ? [{
-      name: fileAttachment.name,
-      extension: fileAttachment.extension,
-      size: fileAttachment.size,
-      mimeType: fileAttachment.mimeType,
-      contentType: fileAttachment.mimeType,
-      dataBase64: fileAttachment.dataBase64
-    }] : [];
+    const sendTimeSeconds = Math.floor(Date.now() / 1000);
 
-    const payload: any = {
-      async: false,
-      data: {
-        agentId: environment.chatAgentId,
-        conversationId: conversationId,
-        contactId: email || null,
-        channelId: environment.chatChannelId,
-        message: {
-          text: userText || '',
-          type: fileAttachment ? fileAttachment.messageType : 'text',
-          timestamp: String(Math.floor(Date.now() / 1000)),
-          files
-        }
+    const payload: WebMessageRequest = {
+      agentId: environment.chatAgentId,
+      conversationId: conversationId || null,
+      contactId: email || '',
+      channelId: environment.chatChannelId,
+      message: {
+        text: userText || null,
+        type: webMessageFile ? fileMessageType : 'text',
+        timestamp: String(sendTimeSeconds),
+        file: webMessageFile || null
       }
     };
 
@@ -687,78 +830,26 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       { headers: { 'x-api-key': environment.chatApiKey } }
     ).pipe(takeUntil(this.cancelPending$)).subscribe({
       next: (response) => {
-        this.stopTypingMessageRotation();
-        this.isTyping.set(false);
-
-        let responseText = '';
-        // Primary: new format { genericChat: { response: "..." }, conversationId: "..." }
-        if (response?.genericChat?.response) {
-          responseText = response.genericChat.response;
-        } else if (response?.output?.response) {
-          responseText = response.output.response;
-        } else if (Array.isArray(response) && response.length > 0 && response[0].output?.response) {
-          responseText = response[0].output.response;
-        } else if (response?.response) {
-          responseText = response.response;
-        } else if (typeof response === 'string') {
-          responseText = response;
-        } else if (response?.message) {
-          responseText = response.message;
-        } else if (response?.text) {
-          responseText = response.text;
-        } else if (response?.answer) {
-          responseText = response.answer;
-        } else {
-          try {
-            responseText = JSON.stringify(response);
-          } catch (e) {
-            responseText = 'Respuesta recibida en formato desconocido.';
-          }
-        }
-
-        const pptUrl: string | null =
-          response?.genericChat?.metadata?.connector_ppt ??
-          response?.genericChat?.ppt ??
-          response?.metadata?.connector_ppt ??
-          response?.output?.ppt ??
-          response?.ppt ??
-          null;
-
-        // Update conversationId if the API returns one
+        const convId = response?.conversationId || conversationId || this.selectedConversationId();
         if (response?.conversationId) {
           this.selectedConversationId.set(response.conversationId);
         }
 
-        this.messages.update(m => [...m, {
-          role: 'assistant',
-          content: responseText,
-          timestamp: new Date(),
-          ppt: pptUrl
-        }]);
-
-        // Si el API devuelve un resumen actualizado, lo usamos
-        if (response && response.summary) {
-          this.summary.set(response.summary);
+        if (convId) {
+          // Poll every 5 seconds for the assistant's response via POST /Agents/conversation-messages
+          this.pollForAssistantResponse(convId, sendTimeSeconds);
+        } else {
+          this.stopTypingMessageRotation();
+          this.isTyping.set(false);
         }
-
-        this.scrollToBottom();
-        this.loadConversations();
       },
       error: (err) => {
+        this.stopPolling();
         this.stopTypingMessageRotation();
         this.isTyping.set(false);
         console.error('Error asking assistant:', err);
 
-        // Check if the error is due to JSON parsing of a text response
-        if (err.error instanceof SyntaxError || err.name === 'HttpErrorResponse' && err.error && typeof err.error.text === 'string') {
-          this.messages.update(m => [...m, {
-            role: 'assistant',
-            content: err.error.text || err.error,
-            timestamp: new Date()
-          }]);
-        } else {
-          this.messageService.add({ severity: 'error', summary: 'Error de Asistente', detail: 'No se pudo obtener respuesta del asistente en este momento.' });
-        }
+        this.messageService.add({ severity: 'error', summary: 'Error de Asistente', detail: 'No se pudo enviar el mensaje al asistente.' });
         this.scrollToBottom();
       }
     });

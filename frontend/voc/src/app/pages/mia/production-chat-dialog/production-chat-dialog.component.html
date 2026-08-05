@@ -254,7 +254,7 @@
       </div>
 
       <div class="input-row">
-        <button class="input-plus-btn" [disabled]="isTyping()" (click)="toggleAttachPanel()">
+        <button class="input-plus-btn" (click)="toggleAttachPanel()">
           <lucide-icon name="plus"></lucide-icon>
         </button>
         <textarea
@@ -262,7 +262,6 @@
           class="input-textarea"
           rows="1"
           placeholder="Escribe aquí..."
-          [disabled]="isTyping()"
           (input)="autoResize(chatInput)"
           (keydown)="onKeyDown($event, chatInput)"
           [(ngModel)]="inputText">
@@ -272,7 +271,7 @@
         </button>
         <button
           class="input-send-btn"
-          [disabled]="(!inputText.trim() && files().length === 0) || isTyping()"
+          [disabled]="!inputText.trim() && files().length === 0"
           (click)="sendMessage()">
           Send <lucide-icon name="send"></lucide-icon>
         </button>
