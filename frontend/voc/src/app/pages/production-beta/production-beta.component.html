@@ -384,7 +384,8 @@
                 <div *ngFor="let group of parentFormGroups()" class="flex flex-column gap-2 mb-2 p-3 border-round border-1 surface-border surface-card">
                     <span class="text-primary font-bold text-sm border-bottom-1 pb-1 surface-border uppercase">{{ group.formName }}</span>
                     <div class="grid row-gap-3 mt-1">
-                        <div *ngFor="let val of group.values" class="col-12 md:col-6 flex flex-column gap-1">
+                        <ng-container *ngFor="let val of group.values">
+                        <div *ngIf="hasValue(val.value)" class="col-12 md:col-6 flex flex-column gap-1">
                             <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                             <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                 <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
@@ -419,8 +420,9 @@
                                 </table>
                             </div>
 
-                            <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ val.value || 'N/A' }}</span>
+                            <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ val.value }}</span>
                         </div>
+                        </ng-container>
                     </div>
                 </div>
             </div>
@@ -429,7 +431,8 @@
             <div class="flex flex-column gap-3" *ngIf="!isCorrection(selectedTask()) && selectedTask()?.values && selectedTask()?.values?.length > 0">
                 <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">Datos de la Solicitud</span>
                 <div class="grid row-gap-3">
-                    <div *ngFor="let val of selectedTask()?.values" class="col-12 md:col-6 flex flex-column gap-1">
+                    <ng-container *ngFor="let val of selectedTask()?.values">
+                    <div *ngIf="hasValue(val.value)" class="col-12 md:col-6 flex flex-column gap-1">
                         <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                         <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                             <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
@@ -464,8 +467,9 @@
                             </table>
                         </div>
 
-                        <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ val.value || 'N/A' }}</span>
+                        <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ val.value }}</span>
                     </div>
+                    </ng-container>
                 </div>
                 <div class="text-xs text-500 mt-2">
                     Creado por: <strong>{{ selectedTask().requesterName }}</strong> ({{ selectedTask().requesterEmail }}) el {{ selectedTask().createdAt | date:'dd/MM/yyyy HH:mm' }}
@@ -488,7 +492,8 @@
                         
                         <!-- Values (if any) -->
                         <div class="grid mt-1" *ngIf="hStage.values && hStage.values.length > 0">
-                            <div *ngFor="let val of hStage.values" class="col-12 md:col-6 flex flex-column gap-1">
+                            <ng-container *ngFor="let val of hStage.values">
+                            <div *ngIf="hasValue(val.value)" class="col-12 md:col-6 flex flex-column gap-1">
                                 <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                                 <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                     <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
@@ -498,8 +503,9 @@
                                         </p-button>
                                     </div>
                                 </div>
-                                <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value)">{{ val.value || 'N/A' }}</span>
+                                <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value)">{{ val.value }}</span>
                             </div>
+                            </ng-container>
                         </div>
 
                         <!-- Notes/Comments -->

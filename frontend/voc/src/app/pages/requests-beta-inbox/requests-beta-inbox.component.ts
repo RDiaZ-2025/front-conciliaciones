@@ -131,6 +131,12 @@ export class RequestsBetaInboxComponent implements OnInit {
     return evaluated;
   }
 
+  hasValue(val: any): boolean {
+    if (val === undefined || val === null) return false;
+    const s = String(val).trim();
+    return s !== '' && s !== '[]' && s !== '""' && s !== 'null';
+  }
+
   openActionDialog(task: any) {
     console.log('Task selected in inbox:', task);
     this.selectedTask.set(task);

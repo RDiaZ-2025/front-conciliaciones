@@ -1292,6 +1292,12 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     return !!task.stageName?.startsWith('Llenar Formulario');
   }
 
+  hasValue(val: any): boolean {
+    if (val === undefined || val === null) return false;
+    const s = String(val).trim();
+    return s !== '' && s !== '[]' && s !== '""' && s !== 'null';
+  }
+
   openActionDialog(task: any) {
     console.log('Task selected in dashboard inbox:', task);
     this.selectedTask.set(task);
