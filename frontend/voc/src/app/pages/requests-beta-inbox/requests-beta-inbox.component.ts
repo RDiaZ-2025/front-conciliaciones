@@ -274,7 +274,7 @@ export class RequestsBetaInboxComponent implements OnInit {
             }
           } else {
             const val = this.stageFormValues[field.name];
-            if (!val || !val.trim()) {
+            if (val === undefined || val === null || String(val).trim() === '') {
               this.messageService.add({ 
                 severity: 'error', 
                 summary: 'Validación', 

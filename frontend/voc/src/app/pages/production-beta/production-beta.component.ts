@@ -502,7 +502,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
             }
           } else {
             const val = values[form.id + '_' + field.name];
-            if (!val || !val.trim()) {
+            if (val === undefined || val === null || String(val).trim() === '') {
               this.messageService.add({ 
                 severity: 'error', 
                 summary: 'Error de Validación', 
@@ -667,7 +667,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           }
         } else {
           const val = this.formValues[field.name];
-          if (!val || !val.trim()) {
+          if (val === undefined || val === null || String(val).trim() === '') {
             this.messageService.add({ 
               severity: 'error', 
               summary: 'Error de Validación', 
@@ -1435,7 +1435,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
               }
             } else {
               const val = this.stageFormValues[field.name];
-              if (!val || !val.trim()) {
+              if (val === undefined || val === null || String(val).trim() === '') {
                 this.messageService.add({ 
                   severity: 'error', 
                   summary: 'Validación', 
