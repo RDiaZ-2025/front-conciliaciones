@@ -118,7 +118,7 @@
                                 </table>
                             </div>
 
-                            <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ val.value }}</span>
+                            <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ formatValue(val) }}</span>
                         </div>
                         </ng-container>
                     </div>
@@ -165,7 +165,7 @@
                             </table>
                         </div>
 
-                        <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ val.value }}</span>
+                        <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ formatValue(val) }}</span>
                     </div>
                     </ng-container>
                 </div>
@@ -226,7 +226,7 @@
                                     </table>
                                 </div>
 
-                                <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ val.value }}</span>
+                                <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ formatValue(val) }}</span>
                             </div>
                             </ng-container>
                         </div>
@@ -274,7 +274,99 @@
  
                                     <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
                                     
-                                    <input *ngSwitchCase="'number'" type="number" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
+                                    <!-- Number type -->
+                                    <ng-container *ngSwitchCase="'number'">
+                                        <!-- COP Currency Format -->
+                                        <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_cop'"
+                                                       mode="currency" currency="COP" locale="es-CO" [useGrouping]="true"
+                                                       [id]="'corr-field-' + form.formId + '-' + field.name"
+                                                       [ngModel]="toNumber(stageFormValues[form.formId + '_' + field.name])"
+                                                       (ngModelChange)="setFormValue(form.formId + '_' + field.name, $event, 'parent')"
+                                                       [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                       [minFractionDigits]="0" [maxFractionDigits]="0"
+                                                       styleClass="w-full" class="w-full"></p-inputNumber>
+                                        
+                                        <!-- USD Currency Format -->
+                                        <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
+                                                       mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
+                                                       [id]="'corr-field-' + form.formId + '-' + field.name"
+                                                       [ngModel]="toNumber(stageFormValues[form.formId + '_' + field.name])"
+                                                       (ngModelChange)="setFormValue(form.formId + '_' + field.name, $event, 'parent')"
+                                                       [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                       [minFractionDigits]="0" [maxFractionDigits]="0"
+                                                       styleClass="w-full" class="w-full"></p-inputNumber>
+
+                                        <!-- Dot Thousands Separator -->
+                                        <p-inputNumber *ngIf="field.metadata?.numberFormat === 'thousands_dot'"
+                                                       [useGrouping]="true" locale="de-DE"
+                                                       [id]="'corr-field-' + form.formId + '-' + field.name"
+                                                       [ngModel]="toNumber(stageFormValues[form.formId + '_' + field.name])"
+                                                       (ngModelChange)="setFormValue(form.formId + '_' + field.name, $event, 'parent')"
+                                                       [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                       [minFractionDigits]="0" [maxFractionDigits]="0"
+                                                       styleClass="w-full" class="w-full"></p-inputNumber>
+
+                                        <!-- Comma Thousands Separator -->
+                                        <p-inputNumber *ngIf="field.metadata?.numberFormat === 'thousands_comma'"
+                                                       [useGrouping]="true" locale="en-US"
+                                                       [id]="'corr-field-' + form.formId + '-' + field.name"
+                                                       [ngModel]="toNumber(stageFormValues[form.formId + '_' + field.name])"
+                                                       (ngModelChange)="setFormValue(form.formId + '_' + field.name, $event, 'parent')"
+                                                       [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                       [minFractionDigits]="0" [maxFractionDigits]="0"
+                                                       styleClass="w-full" class="w-full"></p-inputNumber>
+
+                                        <!-- None / Standard -->
+                                        <input *ngIf="!field.metadata?.numberFormat || field.metadata?.numberFormat === 'none'"
+                                               type="number" step="1" pInputText [id]="'corr-field-' + form.formId + '-' + field.name"
+                                               [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()"
+                                               [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" class="w-full" />
+                                    </ng-container>
+
+                                    <!-- Decimal type -->
+                                    <ng-container *ngSwitchCase="'decimal'">
+                                        <!-- COP Currency Format -->
+                                        <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_cop'"
+                                                       mode="currency" currency="COP" locale="es-CO" [useGrouping]="true"
+                                                       [id]="'corr-field-' + form.formId + '-' + field.name"
+                                                       [ngModel]="toNumber(stageFormValues[form.formId + '_' + field.name])"
+                                                       (ngModelChange)="setFormValue(form.formId + '_' + field.name, $event, 'parent')"
+                                                       [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                       styleClass="w-full" class="w-full"></p-inputNumber>
+                                        
+                                        <!-- USD Currency Format -->
+                                        <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
+                                                       mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
+                                                       [id]="'corr-field-' + form.formId + '-' + field.name"
+                                                       [ngModel]="toNumber(stageFormValues[form.formId + '_' + field.name])"
+                                                       (ngModelChange)="setFormValue(form.formId + '_' + field.name, $event, 'parent')"
+                                                       [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                       styleClass="w-full" class="w-full"></p-inputNumber>
+
+                                        <!-- Dot Thousands Separator -->
+                                        <p-inputNumber *ngIf="field.metadata?.numberFormat === 'thousands_dot'"
+                                                       [useGrouping]="true" locale="de-DE"
+                                                       [id]="'corr-field-' + form.formId + '-' + field.name"
+                                                       [ngModel]="toNumber(stageFormValues[form.formId + '_' + field.name])"
+                                                       (ngModelChange)="setFormValue(form.formId + '_' + field.name, $event, 'parent')"
+                                                       [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                       styleClass="w-full" class="w-full"></p-inputNumber>
+
+                                        <!-- Comma Thousands Separator -->
+                                        <p-inputNumber *ngIf="field.metadata?.numberFormat === 'thousands_comma'"
+                                                       [useGrouping]="true" locale="en-US"
+                                                       [id]="'corr-field-' + form.formId + '-' + field.name"
+                                                       [ngModel]="toNumber(stageFormValues[form.formId + '_' + field.name])"
+                                                       (ngModelChange)="setFormValue(form.formId + '_' + field.name, $event, 'parent')"
+                                                       [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                       styleClass="w-full" class="w-full"></p-inputNumber>
+
+                                        <!-- None / Standard -->
+                                        <input *ngIf="!field.metadata?.numberFormat || field.metadata?.numberFormat === 'none'"
+                                               type="number" step="any" pInputText [id]="'corr-field-' + form.formId + '-' + field.name"
+                                               [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()"
+                                               [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" class="w-full" />
+                                    </ng-container>
                                     
                                     <p-select *ngSwitchCase="'select'" [options]="field.metadata?.options || []"
                                               [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
@@ -321,7 +413,8 @@
                                                         </td>
                                                         <td *ngFor="let sf of (field.metadata?.subFields || [{ name: 'quantity', type: 'number' }])" class="p-2 text-center align-middle">
                                                             <input *ngIf="!field.isReadOnly"
-                                                                   [type]="sf.type === 'number' ? 'number' : 'text'"
+                                                                   [type]="(sf.type === 'number' || sf.type === 'decimal') ? 'number' : 'text'"
+                                                                   [attr.step]="sf.type === 'decimal' ? 'any' : (sf.type === 'number' ? '1' : null)"
                                                                    pInputText
                                                                    [ngModel]="itemRow[sf.name]"
                                                                    (ngModelChange)="updateDynamicListItemValue(form.formId + '_' + field.name, rIdx, sf.name, $event, stageFormValues)"
@@ -419,7 +512,99 @@
 
                                 <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
                                 
-                                <input *ngSwitchCase="'number'" type="number" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
+                                <!-- Number type -->
+                                <ng-container *ngSwitchCase="'number'">
+                                    <!-- COP Currency Format -->
+                                    <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_cop'"
+                                                   mode="currency" currency="COP" locale="es-CO" [useGrouping]="true"
+                                                   [id]="'stage-field-' + field.name"
+                                                   [ngModel]="toNumber(stageFormValues[field.name])"
+                                                   (ngModelChange)="setFormValue(field.name, $event, 'stage')"
+                                                   [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                   [minFractionDigits]="0" [maxFractionDigits]="0"
+                                                   styleClass="w-full" class="w-full"></p-inputNumber>
+                                    
+                                    <!-- USD Currency Format -->
+                                    <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
+                                                   mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
+                                                   [id]="'stage-field-' + field.name"
+                                                   [ngModel]="toNumber(stageFormValues[field.name])"
+                                                   (ngModelChange)="setFormValue(field.name, $event, 'stage')"
+                                                   [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                   [minFractionDigits]="0" [maxFractionDigits]="0"
+                                                   styleClass="w-full" class="w-full"></p-inputNumber>
+
+                                    <!-- Dot Thousands Separator -->
+                                    <p-inputNumber *ngIf="field.metadata?.numberFormat === 'thousands_dot'"
+                                                   [useGrouping]="true" locale="de-DE"
+                                                   [id]="'stage-field-' + field.name"
+                                                   [ngModel]="toNumber(stageFormValues[field.name])"
+                                                   (ngModelChange)="setFormValue(field.name, $event, 'stage')"
+                                                   [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                   [minFractionDigits]="0" [maxFractionDigits]="0"
+                                                   styleClass="w-full" class="w-full"></p-inputNumber>
+
+                                    <!-- Comma Thousands Separator -->
+                                    <p-inputNumber *ngIf="field.metadata?.numberFormat === 'thousands_comma'"
+                                                   [useGrouping]="true" locale="en-US"
+                                                   [id]="'stage-field-' + field.name"
+                                                   [ngModel]="toNumber(stageFormValues[field.name])"
+                                                   (ngModelChange)="setFormValue(field.name, $event, 'stage')"
+                                                   [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                   [minFractionDigits]="0" [maxFractionDigits]="0"
+                                                   styleClass="w-full" class="w-full"></p-inputNumber>
+
+                                    <!-- None / Standard -->
+                                    <input *ngIf="!field.metadata?.numberFormat || field.metadata?.numberFormat === 'none'"
+                                           type="number" step="1" pInputText [id]="'stage-field-' + field.name"
+                                           [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()"
+                                           [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" class="w-full" />
+                                </ng-container>
+
+                                <!-- Decimal type -->
+                                <ng-container *ngSwitchCase="'decimal'">
+                                    <!-- COP Currency Format -->
+                                    <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_cop'"
+                                                   mode="currency" currency="COP" locale="es-CO" [useGrouping]="true"
+                                                   [id]="'stage-field-' + field.name"
+                                                   [ngModel]="toNumber(stageFormValues[field.name])"
+                                                   (ngModelChange)="setFormValue(field.name, $event, 'stage')"
+                                                   [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                   styleClass="w-full" class="w-full"></p-inputNumber>
+                                    
+                                    <!-- USD Currency Format -->
+                                    <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
+                                                   mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
+                                                   [id]="'stage-field-' + field.name"
+                                                   [ngModel]="toNumber(stageFormValues[field.name])"
+                                                   (ngModelChange)="setFormValue(field.name, $event, 'stage')"
+                                                   [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                   styleClass="w-full" class="w-full"></p-inputNumber>
+
+                                    <!-- Dot Thousands Separator -->
+                                    <p-inputNumber *ngIf="field.metadata?.numberFormat === 'thousands_dot'"
+                                                   [useGrouping]="true" locale="de-DE"
+                                                   [id]="'stage-field-' + field.name"
+                                                   [ngModel]="toNumber(stageFormValues[field.name])"
+                                                   (ngModelChange)="setFormValue(field.name, $event, 'stage')"
+                                                   [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                   styleClass="w-full" class="w-full"></p-inputNumber>
+
+                                    <!-- Comma Thousands Separator -->
+                                    <p-inputNumber *ngIf="field.metadata?.numberFormat === 'thousands_comma'"
+                                                   [useGrouping]="true" locale="en-US"
+                                                   [id]="'stage-field-' + field.name"
+                                                   [ngModel]="toNumber(stageFormValues[field.name])"
+                                                   (ngModelChange)="setFormValue(field.name, $event, 'stage')"
+                                                   [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                   styleClass="w-full" class="w-full"></p-inputNumber>
+
+                                    <!-- None / Standard -->
+                                    <input *ngIf="!field.metadata?.numberFormat || field.metadata?.numberFormat === 'none'"
+                                           type="number" step="any" pInputText [id]="'stage-field-' + field.name"
+                                           [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()"
+                                           [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" class="w-full" />
+                                </ng-container>
                                 
                                 <p-select *ngSwitchCase="'select'" [options]="field.metadata?.options || []"
                                           [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
@@ -466,7 +651,8 @@
                                                     </td>
                                                     <td *ngFor="let sf of (field.metadata?.subFields || [{ name: 'quantity', type: 'number' }])" class="p-2 text-center align-middle">
                                                         <input *ngIf="!field.isReadOnly"
-                                                               [type]="sf.type === 'number' ? 'number' : 'text'"
+                                                               [type]="(sf.type === 'number' || sf.type === 'decimal') ? 'number' : 'text'"
+                                                               [attr.step]="sf.type === 'decimal' ? 'any' : (sf.type === 'number' ? '1' : null)"
                                                                pInputText
                                                                [ngModel]="itemRow[sf.name]"
                                                                (ngModelChange)="updateDynamicListItemValue(field.name, rIdx, sf.name, $event, stageFormValues)"

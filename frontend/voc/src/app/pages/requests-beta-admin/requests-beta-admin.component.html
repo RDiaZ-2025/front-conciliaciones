@@ -400,6 +400,10 @@
                                              <lucide-icon name="list-plus" class="mr-2"></lucide-icon>
                                              Configurar Items
                                          </p-button>
+                                         <p-button *ngIf="field.type === 'number'" [outlined]="true" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openNumberConfigDialog(field)" [disabled]="!field.isActive">
+                                             <lucide-icon name="dollar-sign" class="mr-2" style="width: 0.9rem; height: 0.9rem;"></lucide-icon>
+                                             Formato
+                                         </p-button>
                                          
                                          <p-button [outlined]="true" severity="help" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openDependencyConfigDialog(field)" [disabled]="!field.isActive">
                                              <lucide-icon name="eye" class="mr-2" style="width: 0.9rem; height: 0.9rem;"></lucide-icon>
@@ -571,7 +575,7 @@
                     <div *ngFor="let sf of tempDynamicListSubFields(); let idx = index" class="flex gap-2 align-items-center w-full">
                         <div class="flex-1 flex gap-2">
                             <input pInputText [(ngModel)]="sf.label" placeholder="Etiqueta (ej: Cantidad)" class="flex-1 p-inputtext-sm" (ngModelChange)="sf.name = sf.label.toLowerCase().replace(' ', '_')" />
-                            <p-select [options]="[{label:'Número', value:'number'}, {label:'Texto', value:'text'}]" [(ngModel)]="sf.type" class="p-inputtext-sm" style="width: 8rem;" appendTo="body"></p-select>
+                            <p-select [options]="[{label:'Número Entero', value:'number'}, {label:'Número Decimal', value:'decimal'}, {label:'Texto', value:'text'}]" [(ngModel)]="sf.type" class="p-inputtext-sm" style="width: 8rem;" appendTo="body"></p-select>
                         </div>
                         <p-button [text]="true" [rounded]="true" severity="danger" size="small" (onClick)="removeDynamicListSubField(idx)" styleClass="p-button-sm">
                             <lucide-icon name="trash" style="width: 1rem; height: 1rem;"></lucide-icon>
@@ -839,6 +843,31 @@
                         Guardar
                     </p-button>
                 </div>
+            </div>
+        </ng-template>
+    </p-dialog>
+
+    <!-- Dialog: Configurar Formato Numérico -->
+    <p-dialog [header]="'Configurar Formato: ' + (selectedFieldForNumberConfig()?.label || '')" [(visible)]="showNumberConfigDialog" 
+              [modal]="true" [style]="{width: '400px'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
+        <div class="flex flex-column gap-3 py-2 px-3">
+            <span class="text-600 text-sm">Configura cómo se mostrará el número de este campo en las pantallas de revisión.</span>
+            
+            <div class="flex flex-column gap-1">
+                <label for="num-format" class="font-semibold text-900 text-sm">Formato del Número:</label>
+                <p-select id="num-format" [options]="numberFormatOptions" [(ngModel)]="tempNumberFormat"
+                          optionLabel="label" optionValue="value" placeholder="Seleccione opción..." appendTo="body"></p-select>
+            </div>
+        </div>
+        <ng-template pTemplate="footer">
+            <div class="flex justify-content-end gap-2 px-3 pb-3">
+                <p-button [text]="true" severity="secondary" size="small" (onClick)="showNumberConfigDialog.set(false)">
+                    Cancelar
+                </p-button>
+                <p-button severity="primary" size="small" (onClick)="saveNumberConfig()">
+                    <lucide-icon name="save" class="mr-2"></lucide-icon>
+                    Guardar
+                </p-button>
             </div>
         </ng-template>
     </p-dialog>

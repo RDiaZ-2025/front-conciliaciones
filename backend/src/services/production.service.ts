@@ -650,10 +650,18 @@ export class ProductionService {
                  actionedAt: cState.updatedAt,
                  status: cState.status === 'Pending' ? 'Approved' : cState.status,
                  notes: cState.notes,
-                 values: stageVals.map(v => ({
-                     label: v.field.label,
-                     value: v.value
-                 }))
+                 values: stageVals.map(v => {
+                     let parsedMeta = v.field.metadata;
+                     if (parsedMeta && typeof parsedMeta === 'string') {
+                         try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
+                     }
+                     return {
+                         label: v.field.label,
+                         value: v.value,
+                         fieldType: v.field.type,
+                         metadata: parsedMeta || {}
+                     };
+                 })
              };
          });
 
@@ -688,16 +696,32 @@ export class ProductionService {
             stageName: sub.currentStage ? sub.currentStage.name : 'Completado',
             requesterName: sub.requesterUser ? sub.requesterUser.name : 'Usuario',
             requesterEmail: sub.requesterUser ? sub.requesterUser.email : '',
-            values: entryValues.map(v => ({
-                label: v.field.label,
-                value: v.value
-            })),
+            values: entryValues.map(v => {
+                 let parsedMeta = v.field.metadata;
+                 if (parsedMeta && typeof parsedMeta === 'string') {
+                     try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
+                 }
+                 return {
+                     label: v.field.label,
+                     value: v.value,
+                     fieldType: v.field.type,
+                     metadata: parsedMeta || {}
+                 };
+             }),
             parentValues,
-            stageValues: stageValues.map(v => ({
-                label: v.field.label,
-                value: v.value,
-                formName: v.field.form ? v.field.form.name : 'Etapa'
-            })),
+            stageValues: stageValues.map(v => {
+                 let parsedMeta = v.field.metadata;
+                 if (parsedMeta && typeof parsedMeta === 'string') {
+                     try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
+                 }
+                 return {
+                     label: v.field.label,
+                     value: v.value,
+                     fieldType: v.field.type,
+                     metadata: parsedMeta || {},
+                     formName: v.field.form ? v.field.form.name : 'Etapa'
+                 };
+             }),
             historyStages
         };
     }
@@ -1264,10 +1288,18 @@ export class ProductionService {
                     actionedAt: cState.updatedAt,
                     status: cState.status === 'Pending' ? 'Approved' : cState.status,
                     notes: cState.notes,
-                    values: stageVals.map(v => ({
-                        label: v.field.label,
-                        value: v.value
-                    }))
+                    values: stageVals.map(v => {
+                        let parsedMeta = v.field.metadata;
+                        if (parsedMeta && typeof parsedMeta === 'string') {
+                            try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
+                        }
+                        return {
+                            label: v.field.label,
+                            value: v.value,
+                            fieldType: v.field.type,
+                            metadata: parsedMeta || {}
+                        };
+                    })
                 };
             });
 
@@ -1291,11 +1323,19 @@ export class ProductionService {
                     where: { submissionId: In(parentSubIds) },
                     relations: ['field', 'field.form']
                 });
-                parentVals.push(...pVals.map(v => ({
-                    label: v.field.label,
-                    value: v.value,
-                    formName: v.field.form ? v.field.form.name : 'Inicial'
-                })));
+                parentVals.push(...pVals.map(v => {
+                    let parsedMeta = v.field.metadata;
+                    if (parsedMeta && typeof parsedMeta === 'string') {
+                        try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
+                    }
+                    return {
+                        label: v.field.label,
+                        value: v.value,
+                        fieldType: v.field.type,
+                        metadata: parsedMeta || {},
+                        formName: v.field.form ? v.field.form.name : 'Inicial'
+                    };
+                }));
             }
 
             const isCorrection = (state.submission.status === 'Rejected' && state.assignedUserId === state.submission.requesterUserId);
@@ -1361,17 +1401,33 @@ export class ProductionService {
                 formToFill: isPendingFormFill ? state.submission.form : state.stage.formToFill,
                 isFinalStage,
                 icon: state.submission.form.icon,
-                values: values.filter(v => v && v.field && v.field.formId === state.submission.formId).map(v => ({
-                    label: v.field.label,
-                    value: v.value
-                })),
+                values: values.filter(v => v && v.field && v.field.formId === state.submission.formId).map(v => {
+                    let parsedMeta = v.field.metadata;
+                    if (parsedMeta && typeof parsedMeta === 'string') {
+                        try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
+                    }
+                    return {
+                        label: v.field.label,
+                        value: v.value,
+                        fieldType: v.field.type,
+                        metadata: parsedMeta || {}
+                    };
+                }),
                 parentValues: parentVals,
                 parentForms,
-                stageValues: values.filter(v => v && v.field && v.field.formId !== state.submission.formId).map(v => ({
-                    label: v.field.label,
-                    value: v.value,
-                    formName: v.field.form ? v.field.form.name : 'Etapa'
-                })),
+                stageValues: values.filter(v => v && v.field && v.field.formId !== state.submission.formId).map(v => {
+                    let parsedMeta = v.field.metadata;
+                    if (parsedMeta && typeof parsedMeta === 'string') {
+                        try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
+                    }
+                    return {
+                        label: v.field.label,
+                        value: v.value,
+                        fieldType: v.field.type,
+                        metadata: parsedMeta || {},
+                        formName: v.field.form ? v.field.form.name : 'Etapa'
+                    };
+                }),
                 submittedValuesRaw,
                 requireConsecutive: state.submission.form ? state.submission.form.requireConsecutive : true,
                 historyStages

@@ -8,6 +8,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { CheckboxModule } from 'primeng/checkbox';
 import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { TagModule } from 'primeng/tag';
@@ -33,6 +34,7 @@ import { CustomerAutocompleteComponent } from '../../components/customer-autocom
     CheckboxModule,
     SelectModule,
     MultiSelectModule,
+    InputNumberModule,
     ToastModule,
     TooltipModule,
     TagModule,
@@ -135,6 +137,65 @@ export class RequestsBetaInboxComponent implements OnInit {
     if (val === undefined || val === null) return false;
     const s = String(val).trim();
     return s !== '' && s !== '[]' && s !== '""' && s !== 'null';
+  }
+
+  formatValue(val: any): string {
+    if (!val || val.value === undefined || val.value === null) return '';
+    const rawValue = String(val.value);
+    if (val.fieldType === 'number' || val.fieldType === 'decimal') {
+      const format = val.metadata?.numberFormat || 'none';
+      if (format === 'none') return rawValue;
+      const num = Number(rawValue);
+      if (isNaN(num)) return rawValue;
+      if (format === 'currency_cop') {
+        return new Intl.NumberFormat('es-CO', {
+          style: 'currency',
+          currency: 'COP',
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        }).format(num);
+      }
+      if (format === 'currency_usd') {
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(num);
+      }
+      if (format === 'thousands_dot') {
+        return new Intl.NumberFormat('de-DE', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        }).format(num);
+      }
+      if (format === 'thousands_comma') {
+        return new Intl.NumberFormat('en-US', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        }).format(num);
+      }
+    }
+    return rawValue;
+  }
+
+  toNumber(val: any): number | null {
+    if (val === undefined || val === null || String(val).trim() === '') return null;
+    const num = Number(val);
+    return isNaN(num) ? null : num;
+  }
+
+  setFormValue(key: string, val: any, type: 'initial' | 'stage' | 'parent') {
+    const stringVal = val !== null && val !== undefined ? String(val) : '';
+    if (type === 'initial') {
+      // requests-beta-inbox doesn't create requests, but has parent and stage values
+    } else if (type === 'stage') {
+      this.stageFormValues[key] = stringVal;
+      this.recalculateStageFormulas();
+    } else if (type === 'parent') {
+      this.stageFormValues[key] = stringVal;
+      this.recalculateParentFormulas();
+    }
   }
 
   openActionDialog(task: any) {
@@ -726,7 +787,7 @@ export class RequestsBetaInboxComponent implements OnInit {
       if (existing) return existing;
       const itemObj: Record<string, any> = { item: opt };
       subFields.forEach((sf: any) => {
-        itemObj[sf.name] = sf.type === 'number' ? 1 : '';
+        itemObj[sf.name] = (sf.type === 'number' || sf.type === 'decimal') ? 1 : '';
       });
       return itemObj;
     });

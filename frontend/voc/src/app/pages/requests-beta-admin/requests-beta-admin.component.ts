@@ -162,6 +162,18 @@ export class RequestsBetaAdminComponent implements OnInit {
   tempDependencyValue = signal<string>('');
   tempDependencySelectedOptions = signal<string[]>([]);
 
+  // Number formatting configuration state
+  showNumberConfigDialog = signal<boolean>(false);
+  selectedFieldForNumberConfig = signal<any | null>(null);
+  tempNumberFormat = 'none';
+  numberFormatOptions = [
+    { label: 'Ninguno / Sin formato', value: 'none' },
+    { label: 'Moneda / Divisa (COP) - $ 123.456', value: 'currency_cop' },
+    { label: 'Moneda / Divisa (USD) - $ 123,456', value: 'currency_usd' },
+    { label: 'Separador de miles (Punto) - 123.456', value: 'thousands_dot' },
+    { label: 'Separador de miles (Coma) - 123,456', value: 'thousands_comma' }
+  ];
+
   // Workflow editor state
   selectedWorkflowFormId = signal<number | null>(null);
   workflowStages = signal<WorkflowStageItem[]>([]);
@@ -171,7 +183,8 @@ export class RequestsBetaAdminComponent implements OnInit {
   fieldTypeOptions = [
     { label: 'Texto Corto', value: 'text' },
     { label: 'Párrafo / Textarea', value: 'textarea' },
-    { label: 'Número', value: 'number' },
+    { label: 'Número Entero', value: 'number' },
+    { label: 'Número Decimal', value: 'decimal' },
     { label: 'Fecha Simple', value: 'date' },
     { label: 'Fecha y Hora (24h)', value: 'datetime' },
     { label: 'Lista Desplegable / Listado', value: 'select' },
@@ -514,8 +527,8 @@ export class RequestsBetaAdminComponent implements OnInit {
   getAvailableFormulaFields(): any[] {
     const current = this.selectedFieldForFormulaConfig();
     if (!current) return [];
-    // Return all active fields in the form that are number fields and are not the current field itself
-    return this.formFields().filter(f => f.name !== current.name && f.isActive && f.type === 'number');
+    // Return all active fields in the form that are number or decimal fields and are not the current field itself
+    return this.formFields().filter(f => f.name !== current.name && f.isActive && (f.type === 'number' || f.type === 'decimal'));
   }
 
   insertFieldKeyToFormula(key: string) {
@@ -640,6 +653,28 @@ export class RequestsBetaAdminComponent implements OnInit {
       delete field.metadata.dependency;
     }
     this.showDependencyConfigDialog.set(false);
+  }
+
+  openNumberConfigDialog(field: any) {
+    this.selectedFieldForNumberConfig.set(field);
+    if (!field.metadata) field.metadata = {};
+    if (typeof field.metadata === 'string') {
+      try { field.metadata = JSON.parse(field.metadata); } catch(e){}
+    }
+    this.tempNumberFormat = field.metadata.numberFormat || 'none';
+    this.showNumberConfigDialog.set(true);
+  }
+
+  saveNumberConfig() {
+    const field = this.selectedFieldForNumberConfig();
+    if (field) {
+      if (!field.metadata) field.metadata = {};
+      if (typeof field.metadata === 'string') {
+        try { field.metadata = JSON.parse(field.metadata); } catch(e){}
+      }
+      field.metadata.numberFormat = this.tempNumberFormat;
+      this.showNumberConfigDialog.set(false);
+    }
   }
 
   confirmSoftDeleteField(field: FormFieldItem) {

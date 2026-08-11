@@ -27,6 +27,7 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { FormsModule } from '@angular/forms';
 import { ProductionRequest } from '../../models/common/production-request';
 import { ProductionDialogComponent } from '../production_2/production-dialog/production-dialog.component';
@@ -69,6 +70,7 @@ import { CustomerAutocompleteComponent } from '../../components/customer-autocom
     InputTextModule,
     SelectModule,
     MultiSelectModule,
+    InputNumberModule,
     FormsModule,
     CustomerAutocompleteComponent
   ],
@@ -1298,6 +1300,68 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     return s !== '' && s !== '[]' && s !== '""' && s !== 'null';
   }
 
+  formatValue(val: any): string {
+    if (!val || val.value === undefined || val.value === null) return '';
+    const rawValue = String(val.value);
+    if (val.fieldType === 'number' || val.fieldType === 'decimal') {
+      const format = val.metadata?.numberFormat || 'none';
+      if (format === 'none') return rawValue;
+      const num = Number(rawValue);
+      if (isNaN(num)) return rawValue;
+      if (format === 'currency_cop') {
+        return new Intl.NumberFormat('es-CO', {
+          style: 'currency',
+          currency: 'COP',
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        }).format(num);
+      }
+      if (format === 'currency_usd') {
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(num);
+      }
+      if (format === 'thousands_dot') {
+        return new Intl.NumberFormat('de-DE', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        }).format(num);
+      }
+      if (format === 'thousands_comma') {
+        return new Intl.NumberFormat('en-US', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        }).format(num);
+      }
+    }
+    return rawValue;
+  }
+
+  toNumber(val: any): number | null {
+    if (val === undefined || val === null || String(val).trim() === '') return null;
+    const num = Number(val);
+    return isNaN(num) ? null : num;
+  }
+
+  setFormValue(key: string, val: any, type: 'initial' | 'stage' | 'parent') {
+    const stringVal = val !== null && val !== undefined ? String(val) : '';
+    if (type === 'initial') {
+      const values = this.initialFormValues();
+      values[key] = stringVal;
+      this.initialFormValues.set({ ...values });
+      this.recalculateInitialFormulas();
+    } else if (type === 'stage') {
+      this.stageFormValues[key] = stringVal;
+      this.recalculateStageFormulas();
+    } else if (type === 'parent') {
+      this.stageFormValues[key] = stringVal;
+      this.recalculateParentFormulas();
+    }
+  }
+
   openActionDialog(task: any) {
     console.log('Task selected in dashboard inbox:', task);
     this.selectedTask.set(task);
@@ -1933,7 +1997,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       if (existing) return existing;
       const itemObj: Record<string, any> = { item: opt };
       subFields.forEach((sf: any) => {
-        itemObj[sf.name] = sf.type === 'number' ? 1 : '';
+        itemObj[sf.name] = (sf.type === 'number' || sf.type === 'decimal') ? 1 : '';
       });
       return itemObj;
     });
