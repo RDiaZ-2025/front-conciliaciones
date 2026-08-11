@@ -626,7 +626,7 @@ export class ProductionService {
 
         const completedStates = await stateRepo.find({
             where: statesQuery,
-            relations: ['stage', 'actionedByUser', 'assignedUser', 'stage.formToFill'],
+            relations: ['stage', 'actionedByUser', 'assignedUser', 'stage.formToFill', 'stage.formToFill.fields'],
             order: { createdAt: 'ASC' }
         });
 
@@ -650,18 +650,48 @@ export class ProductionService {
                  actionedAt: cState.updatedAt,
                  status: cState.status === 'Pending' ? 'Approved' : cState.status,
                  notes: cState.notes,
-                 values: stageVals.map(v => {
-                     let parsedMeta = v.field.metadata;
-                     if (parsedMeta && typeof parsedMeta === 'string') {
-                         try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
+                 values: (() => {
+                     if (cState.stage?.formToFill && cState.stage.formToFill.fields) {
+                         const sortedFields = cState.stage.formToFill.fields.sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0));
+                         return sortedFields.map((field: any) => {
+                             let parsedMeta = field.metadata;
+                             if (parsedMeta && typeof parsedMeta === 'string') {
+                                 try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
+                             }
+                             if (field.type === 'section_header') {
+                                 return {
+                                     label: field.label,
+                                     value: '',
+                                     fieldType: 'section_header',
+                                     metadata: parsedMeta || {}
+                                 };
+                             }
+                             const valObj = stageVals.find(sv => sv.fieldId === field.id);
+                             if (valObj) {
+                                 return {
+                                     label: field.label,
+                                     value: valObj.value,
+                                     fieldType: field.type,
+                                     metadata: parsedMeta || {}
+                                 };
+                             }
+                             return null;
+                         }).filter(Boolean);
+                     } else {
+                         return stageVals.map(v => {
+                             let parsedMeta = v.field.metadata;
+                             if (parsedMeta && typeof parsedMeta === 'string') {
+                                 try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
+                             }
+                             return {
+                                 label: v.field.label,
+                                 value: v.value,
+                                 fieldType: v.field.type,
+                                 metadata: parsedMeta || {}
+                             };
+                         });
                      }
-                     return {
-                         label: v.field.label,
-                         value: v.value,
-                         fieldType: v.field.type,
-                         metadata: parsedMeta || {}
-                     };
-                 })
+                 })()
              };
          });
 
@@ -1261,10 +1291,9 @@ export class ProductionService {
             } else {
                 statesQuery.status = In(['Approved', 'Rejected']);
             }
-
             const completedStates = await stateRepo.find({
                 where: statesQuery,
-                relations: ['stage', 'actionedByUser', 'assignedUser', 'stage.formToFill'],
+                relations: ['stage', 'actionedByUser', 'assignedUser', 'stage.formToFill', 'stage.formToFill.fields'],
                 order: { createdAt: 'ASC' }
             });
 
@@ -1288,18 +1317,48 @@ export class ProductionService {
                     actionedAt: cState.updatedAt,
                     status: cState.status === 'Pending' ? 'Approved' : cState.status,
                     notes: cState.notes,
-                    values: stageVals.map(v => {
-                        let parsedMeta = v.field.metadata;
-                        if (parsedMeta && typeof parsedMeta === 'string') {
-                            try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
-                        }
-                        return {
-                            label: v.field.label,
-                            value: v.value,
-                            fieldType: v.field.type,
-                            metadata: parsedMeta || {}
-                        };
-                    })
+                    values: (() => {
+                      if (cState.stage?.formToFill && cState.stage.formToFill.fields) {
+                          const sortedFields = cState.stage.formToFill.fields.sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0));
+                          return sortedFields.map((field: any) => {
+                              let parsedMeta = field.metadata;
+                              if (parsedMeta && typeof parsedMeta === 'string') {
+                                  try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
+                              }
+                              if (field.type === 'section_header') {
+                                  return {
+                                      label: field.label,
+                                      value: '',
+                                      fieldType: 'section_header',
+                                      metadata: parsedMeta || {}
+                                  };
+                              }
+                              const valObj = stageVals.find(sv => sv.fieldId === field.id);
+                              if (valObj) {
+                                  return {
+                                      label: field.label,
+                                      value: valObj.value,
+                                      fieldType: field.type,
+                                      metadata: parsedMeta || {}
+                                  };
+                              }
+                              return null;
+                          }).filter(Boolean);
+                      } else {
+                          return stageVals.map(v => {
+                              let parsedMeta = v.field.metadata;
+                              if (parsedMeta && typeof parsedMeta === 'string') {
+                                  try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
+                              }
+                              return {
+                                  label: v.field.label,
+                                  value: v.value,
+                                  fieldType: v.field.type,
+                                  metadata: parsedMeta || {}
+                              };
+                          });
+                      }
+                  })()
                 };
             });
 

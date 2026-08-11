@@ -1254,18 +1254,53 @@
             <div class="flex flex-column gap-3">
                 <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">Datos de la Solicitud</span>
                 <div class="grid row-gap-3">
-                    <div *ngFor="let val of selectedDetails().values" class="col-12 md:col-6 flex flex-column gap-1">
-                        <span class="text-xs text-500 font-medium">{{ val.label }}</span>
-                        <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
-                            <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                <p-button [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)">
-                                    <lucide-icon name="download"></lucide-icon>
-                                </p-button>
+                    <ng-container *ngFor="let val of selectedDetails().values">
+                        <!-- Section Header -->
+                        <div *ngIf="val.fieldType === 'section_header'" class="col-12 mt-3 mb-1">
+                            <div class="bg-red-600 text-white font-bold text-center py-2 px-3 border-round text-sm uppercase tracking-wider shadow-1">
+                                {{ val.label }}
                             </div>
                         </div>
-                        <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value)">{{ val.value || 'N/A' }}</span>
-                    </div>
+
+                        <!-- Regular Field Value -->
+                        <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" class="col-12 md:col-6 flex flex-column gap-1">
+                            <span class="text-xs text-500 font-medium">{{ val.label }}</span>
+                            <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
+                                <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
+                                    <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                    <p-button [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)">
+                                        <lucide-icon name="download"></lucide-icon>
+                                    </p-button>
+                                </div>
+                            </div>
+
+                            <!-- Dynamic List read-only view -->
+                            <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full text-xs">
+                                <table class="w-full text-left border-collapse">
+                                    <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
+                                        <tr>
+                                            <th class="p-2 pl-3">Producto / Servicio</th>
+                                            <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" class="p-2 text-center" style="width: 8rem;">
+                                                {{ formatLabel(col) }}
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr *ngFor="let itemRow of parseDynamicList(val.value)" class="border-bottom-1 surface-border hover:bg-50">
+                                            <td class="p-2 pl-3 font-semibold text-900 align-middle">
+                                                {{ itemRow.item || itemRow.product }}
+                                            </td>
+                                            <td *ngFor="let col of getDynamicListKeys(itemRow)" class="p-2 text-center align-middle font-bold text-900">
+                                                {{ itemRow[col] }}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ formatValue(val) }}</span>
+                        </div>
+                    </ng-container>
                 </div>
                 <div class="text-xs text-500 mt-2">
                     Creado por: <strong>{{ selectedDetails().requesterName }}</strong> ({{ selectedDetails().requesterEmail }}) el {{ selectedDetails().createdAt | date:'dd/MM/yyyy HH:mm' }}
@@ -1288,18 +1323,53 @@
                         
                         <!-- Values (if any) -->
                         <div class="grid mt-1" *ngIf="hStage.values && hStage.values.length > 0">
-                            <div *ngFor="let val of hStage.values" class="col-12 md:col-6 flex flex-column gap-1">
-                                <span class="text-xs text-500 font-medium">{{ val.label }}</span>
-                                <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
-                                    <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                        <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                        <p-button [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)">
-                                            <lucide-icon name="download"></lucide-icon>
-                                        </p-button>
+                            <ng-container *ngFor="let val of hStage.values">
+                                <!-- Section Header -->
+                                <div *ngIf="val.fieldType === 'section_header'" class="col-12 mt-3 mb-1">
+                                    <div class="bg-red-600 text-white font-bold text-center py-2 px-3 border-round text-sm uppercase tracking-wider shadow-1">
+                                        {{ val.label }}
                                     </div>
                                 </div>
-                                <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value)">{{ val.value || 'N/A' }}</span>
-                            </div>
+
+                                <!-- Regular Field Value -->
+                                <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" class="col-12 md:col-6 flex flex-column gap-1">
+                                    <span class="text-xs text-500 font-medium">{{ val.label }}</span>
+                                    <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
+                                        <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
+                                            <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                            <p-button [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)">
+                                                <lucide-icon name="download"></lucide-icon>
+                                            </p-button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Dynamic List read-only view -->
+                                    <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full text-xs">
+                                        <table class="w-full text-left border-collapse">
+                                            <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
+                                                <tr>
+                                                    <th class="p-2 pl-3">Producto / Servicio</th>
+                                                    <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" class="p-2 text-center" style="width: 8rem;">
+                                                        {{ formatLabel(col) }}
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr *ngFor="let itemRow of parseDynamicList(val.value)" class="border-bottom-1 surface-border hover:bg-50">
+                                                    <td class="p-2 pl-3 font-semibold text-900 align-middle">
+                                                        {{ itemRow.item || itemRow.product }}
+                                                    </td>
+                                                    <td *ngFor="let col of getDynamicListKeys(itemRow)" class="p-2 text-center align-middle font-bold text-900">
+                                                        {{ itemRow[col] }}
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ formatValue(val) }}</span>
+                                </div>
+                            </ng-container>
                         </div>
 
                         <!-- Notes/Comments -->
