@@ -38,6 +38,9 @@ export class DynamicForm {
   @Column({ name: 'Role', type: 'nvarchar', length: 255, nullable: true })
   role!: string | null;
 
+  @Column({ name: 'Metadata', type: 'nvarchar', length: 'max', nullable: true })
+  metadata!: string | null;
+
   @OneToMany(() => DynamicFormField, (field) => field.form)
   fields!: DynamicFormField[];
 

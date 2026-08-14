@@ -423,16 +423,20 @@
                     
                     <div class="flex flex-column gap-2" style="max-height: 250px; overflow-y: auto;">
                         <div *ngFor="let item of requestTypes()"
-                            class="flex align-items-center p-3 border-round border-1 surface-border hover:surface-100 transition-colors gap-3 cursor-pointer"
-                            (click)="item.selected = !item.selected">
+                            class="flex align-items-center p-3 border-round border-1 surface-border hover:surface-100 transition-colors gap-3"
+                            [class.opacity-50]="!isAreaEnabled(item)"
+                            [class.cursor-pointer]="isAreaEnabled(item)"
+                            [class.cursor-not-allowed]="!isAreaEnabled(item)"
+                            (click)="isAreaEnabled(item) ? (item.selected = !item.selected) : null">
                             <p-checkbox [(ngModel)]="item.selected" [binary]="true" [inputId]="'type-' + item.id"
+                                [disabled]="!isAreaEnabled(item)"
                                 (click)="$event.stopPropagation()"></p-checkbox>
                             <div class="flex align-items-center justify-content-center border-round surface-100"
                                 style="width: 2.8rem; height: 2.8rem;">
                                 <lucide-icon [name]="getFormIcon(item)" [class]="getFormIconColor(item)" style="width: 1.6rem; height: 1.6rem;"></lucide-icon>
                             </div>
                             <div class="flex flex-column flex-1">
-                                <label [for]="'type-' + item.id" class="font-semibold text-900 cursor-pointer mb-1">{{ item.name }}</label>
+                                <label [for]="'type-' + item.id" [class.cursor-pointer]="isAreaEnabled(item)" [class.cursor-not-allowed]="!isAreaEnabled(item)" class="font-semibold text-900 mb-1">{{ item.name }}</label>
                                 <span class="text-xs text-600 font-medium">{{ item.responsible }} / {{ item.role }}</span>
                             </div>
                         </div>

@@ -30,3 +30,8 @@ html, body {
 .lucide-spin {
    animation: spin 1s linear infinite;
 }
+
+.custom-admin-dialog {
+    width: 750px !important;
+    max-width: 95vw !important;
+}

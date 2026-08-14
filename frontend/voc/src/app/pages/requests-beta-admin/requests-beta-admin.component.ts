@@ -21,6 +21,7 @@ import { ProductionService } from '../../services/production.service';
 import { UserService, User } from '../../services/user.service';
 import { TeamService } from '../../services/team.service';
 import { AuthService } from '../../services/auth.service';
+import { forkJoin } from 'rxjs';
 
 interface FormFieldItem {
   id?: number;
@@ -101,6 +102,19 @@ export class RequestsBetaAdminComponent implements OnInit {
   // Dialog states for Form metadata
   showFormDialog = signal<boolean>(false);
   isNewForm = signal<boolean>(false);
+  formMetadataText = '';
+  initialFormsFields = signal<any[]>([]);
+  conditionsList = signal<any[]>([]);
+  
+  operatorOptions = [
+    { label: 'Contiene', value: 'contains' },
+    { label: 'Igual (=)', value: 'eq' },
+    { label: 'Mayor (>)', value: 'gt' },
+    { label: 'Menor (<)', value: 'lt' },
+    { label: 'Mayor o Igual (>=)', value: 'gte' },
+    { label: 'Menor o Igual (<=)', value: 'lte' }
+  ];
+
   selectedForm = signal<any>({
     id: null,
     name: '',
@@ -213,6 +227,7 @@ export class RequestsBetaAdminComponent implements OnInit {
   ngOnInit() {
     this.loadForms();
     this.loadUsersAndTeams();
+    this.loadInitialFormsFields();
   }
 
   loadForms() {
@@ -238,8 +253,55 @@ export class RequestsBetaAdminComponent implements OnInit {
     });
   }
 
+  loadInitialFormsFields() {
+    this.productionService.getInitialForm().subscribe({
+      next: (forms: any[]) => {
+        const formsList = Array.isArray(forms) ? forms : (forms ? [forms] : []);
+        if (formsList.length > 0) {
+          const fieldsObservables = formsList.map(form => 
+            this.productionService.getDynamicFormFields(form.id)
+          );
+          forkJoin(fieldsObservables).subscribe({
+            next: (allFieldsArray: any[][]) => {
+              const list: any[] = [];
+              formsList.forEach((form, idx) => {
+                const fields = allFieldsArray[idx] || [];
+                fields.forEach((f: any) => {
+                  if (f.type !== 'section_header') {
+                    list.push({
+                      key: `${form.id}_${f.name}`,
+                      label: `[${form.name}] ${f.label} (${f.type})`,
+                      formId: form.id,
+                      fieldName: f.name,
+                      formName: form.name
+                    });
+                  }
+                });
+              });
+              this.initialFormsFields.set(list);
+            }
+          });
+        }
+      }
+    });
+  }
+
+  addCondition() {
+    const list = this.conditionsList();
+    list.push({ fieldKey: '', operator: 'contains', value: '' });
+    this.conditionsList.set([...list]);
+  }
+
+  removeCondition(index: number) {
+    const list = this.conditionsList();
+    list.splice(index, 1);
+    this.conditionsList.set([...list]);
+  }
+
   openCreateFormDialog() {
     this.isNewForm.set(true);
+    this.formMetadataText = '';
+    this.conditionsList.set([]);
     this.selectedForm.set({
       id: null,
       name: '',
@@ -259,6 +321,25 @@ export class RequestsBetaAdminComponent implements OnInit {
   openEditFormDialog(form: any) {
     this.isNewForm.set(false);
     this.selectedForm.set({ ...form });
+    this.formMetadataText = form.metadata ? (typeof form.metadata === 'object' ? JSON.stringify(form.metadata, null, 2) : form.metadata) : '';
+    
+    const conds: any[] = [];
+    if (form.metadata) {
+      try {
+        const meta = typeof form.metadata === 'string' ? JSON.parse(form.metadata) : form.metadata;
+        if (meta.enableConditions && Array.isArray(meta.enableConditions)) {
+          for (const cond of meta.enableConditions) {
+            conds.push({
+              fieldKey: cond.fieldKey || (cond.fieldKeys && cond.fieldKeys.length > 0 ? cond.fieldKeys[0] : ''),
+              operator: cond.operator || 'contains',
+              value: cond.value || ''
+            });
+          }
+        }
+      } catch (e) {}
+    }
+    this.conditionsList.set(conds);
+    
     this.showFormDialog.set(true);
   }
 
@@ -280,6 +361,20 @@ export class RequestsBetaAdminComponent implements OnInit {
     if (!data.name || !data.name.trim()) {
       this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'El nombre es obligatorio.' });
       return;
+    }
+
+    const conds = this.conditionsList().filter(c => c.fieldKey);
+    if (conds.length > 0) {
+      const metaObj = {
+        enableConditions: conds.map(c => ({
+          fieldKeys: [c.fieldKey],
+          operator: c.operator,
+          value: c.value
+        }))
+      };
+      data.metadata = JSON.stringify(metaObj);
+    } else {
+      data.metadata = null;
     }
 
     if (this.isNewForm()) {

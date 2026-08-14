@@ -99,9 +99,19 @@ export class ProductionService {
 
     async getRequestTypes() {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
-        return await AppDataSource.getRepository(DynamicForm).find({
+        const types = await AppDataSource.getRepository(DynamicForm).find({
             where: { isEntryForm: true, isActive: true, isInitialForm: false },
             order: { id: 'ASC' }
+        });
+        return types.map(t => {
+            let parsedMeta = t.metadata;
+            if (parsedMeta && typeof parsedMeta === 'string') {
+                try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
+            }
+            return {
+                ...t,
+                metadata: parsedMeta || {}
+            };
         });
     }
 
@@ -1032,7 +1042,8 @@ export class ProductionService {
             role: data.role,
             icon: data.icon,
             requireConsecutive: data.requireConsecutive ?? true,
-            displayOrder: data.displayOrder ?? 0
+            displayOrder: data.displayOrder ?? 0,
+            metadata: data.metadata
         });
         return await repo.save(form);
     }
@@ -1056,6 +1067,7 @@ export class ProductionService {
         if (data.icon !== undefined) form.icon = data.icon;
         if (data.requireConsecutive !== undefined) form.requireConsecutive = data.requireConsecutive;
         if (data.displayOrder !== undefined) form.displayOrder = data.displayOrder;
+        if (data.metadata !== undefined) form.metadata = data.metadata;
 
         return await repo.save(form);
     }

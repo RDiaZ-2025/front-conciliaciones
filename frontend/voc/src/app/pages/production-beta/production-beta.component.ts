@@ -1834,6 +1834,19 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     if (changed) {
       this.initialFormValues.set({ ...values });
     }
+
+    // Validate requestTypes selected options against enabling conditions
+    const types = this.requestTypes();
+    let typesChanged = false;
+    for (const t of types) {
+      if (t.selected && !this.isAreaEnabled(t)) {
+        t.selected = false;
+        typesChanged = true;
+      }
+    }
+    if (typesChanged) {
+      this.requestTypes.set([...types]);
+    }
   }
 
   recalculateStageFormulas() {
@@ -2088,5 +2101,73 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
   formatLabel(key: string): string {
     return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  isAreaEnabled(item: any): boolean {
+    if (!item.metadata || !item.metadata.enableConditions || !Array.isArray(item.metadata.enableConditions)) {
+      return true;
+    }
+
+    const values = this.initialFormValues();
+    const removeAccents = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    
+    // Check all conditions (AND logic)
+    for (const cond of item.metadata.enableConditions) {
+      let val: any = undefined;
+      const keys = cond.fieldKeys || (cond.fieldKey ? [cond.fieldKey] : []);
+      for (const key of keys) {
+        if (values[key] !== undefined && values[key] !== null && values[key] !== '') {
+          val = values[key];
+          break;
+        }
+      }
+
+      if (val === undefined || val === null || val === '') {
+        return false;
+      }
+
+      const op = cond.operator;
+      const condVal = cond.value;
+
+      if (op === 'contains') {
+        const strVal = removeAccents(String(val)).toLowerCase();
+        const strCond = removeAccents(String(condVal)).toLowerCase();
+        if (!strVal.includes(strCond)) {
+          return false;
+        }
+      } else if (op === 'eq') {
+        const strVal = removeAccents(String(val)).toLowerCase().trim();
+        const strCond = removeAccents(String(condVal)).toLowerCase().trim();
+        if (strVal !== strCond) {
+          return false;
+        }
+      } else if (op === 'gt') {
+        const numVal = Number(String(val).replace(/[^0-9.-]/g, ''));
+        const numCond = Number(condVal);
+        if (isNaN(numVal) || numVal <= numCond) {
+          return false;
+        }
+      } else if (op === 'lt') {
+        const numVal = Number(String(val).replace(/[^0-9.-]/g, ''));
+        const numCond = Number(condVal);
+        if (isNaN(numVal) || numVal >= numCond) {
+          return false;
+        }
+      } else if (op === 'gte') {
+        const numVal = Number(String(val).replace(/[^0-9.-]/g, ''));
+        const numCond = Number(condVal);
+        if (isNaN(numVal) || numVal < numCond) {
+          return false;
+        }
+      } else if (op === 'lte') {
+        const numVal = Number(String(val).replace(/[^0-9.-]/g, ''));
+        const numCond = Number(condVal);
+        if (isNaN(numVal) || numVal > numCond) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 }
