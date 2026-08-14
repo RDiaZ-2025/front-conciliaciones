@@ -1233,7 +1233,8 @@ export class ProductionService {
                         formIdToFill: s.formIdToFill || null,
                         rejectionTargetType: s.rejectionTargetType || 'previous_sender',
                         rejectionTargetUserId: s.rejectionTargetUserId || null,
-                        rejectionTargetTeamId: s.rejectionTargetTeamId || null
+                        rejectionTargetTeamId: s.rejectionTargetTeamId || null,
+                        requireCommentOnApprove: !!s.requireCommentOnApprove
                     });
                 } else {
                     stageEntity.isDeleted = false; // Reactivate if it was soft-deleted
@@ -1247,6 +1248,7 @@ export class ProductionService {
                     if (s.rejectionTargetType !== undefined) stageEntity.rejectionTargetType = s.rejectionTargetType;
                     if (s.rejectionTargetUserId !== undefined) stageEntity.rejectionTargetUserId = s.rejectionTargetUserId;
                     if (s.rejectionTargetTeamId !== undefined) stageEntity.rejectionTargetTeamId = s.rejectionTargetTeamId;
+                    if (s.requireCommentOnApprove !== undefined) stageEntity.requireCommentOnApprove = s.requireCommentOnApprove;
                 }
 
                 savedStages.push(await stageRepo.save(stageEntity));
@@ -1501,6 +1503,7 @@ export class ProductionService {
                 }),
                 submittedValuesRaw,
                 requireConsecutive: state.submission.form ? state.submission.form.requireConsecutive : true,
+                requireCommentOnApprove: state.stage ? !!state.stage.requireCommentOnApprove : false,
                 historyStages
             });
         }

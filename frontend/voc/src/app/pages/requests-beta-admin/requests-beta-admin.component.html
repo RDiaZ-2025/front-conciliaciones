@@ -211,6 +211,11 @@
                                     <label class="font-semibold text-sm">Equipo de Retorno *</label>
                                     <p-select [options]="teams()" [(ngModel)]="stage.rejectionTargetTeamId" optionLabel="name" optionValue="id" placeholder="Seleccione equipo..." class="w-full"></p-select>
                                 </div>
+
+                                <div class="col-12 md:col-4 flex align-items-center gap-2 mt-4 pt-1">
+                                    <p-checkbox [(ngModel)]="stage.requireCommentOnApprove" [binary]="true" [id]="'req-comm-' + i"></p-checkbox>
+                                    <label [for]="'req-comm-' + i" class="font-semibold text-sm cursor-pointer">Requerir comentario al aprobar</label>
+                                </div>
                             </div>
                         </div>
 

@@ -50,6 +50,7 @@ interface WorkflowStageItem {
   rejectionTargetType: 'previous_sender' | 'specific_user' | 'team_random';
   rejectionTargetUserId: number | null;
   rejectionTargetTeamId: number | null;
+  requireCommentOnApprove?: boolean;
 }
 
 @Component({
@@ -921,7 +922,8 @@ export class RequestsBetaAdminComponent implements OnInit {
         formIdToFill: null,
         rejectionTargetType: 'previous_sender',
         rejectionTargetUserId: null,
-        rejectionTargetTeamId: null
+        rejectionTargetTeamId: null,
+        requireCommentOnApprove: true
       }
     ]);
   }

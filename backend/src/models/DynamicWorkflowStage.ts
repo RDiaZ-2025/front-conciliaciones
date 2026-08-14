@@ -44,6 +44,9 @@ export class DynamicWorkflowStage {
   @Column({ name: 'RejectionTargetTeamId', type: 'int', nullable: true })
   rejectionTargetTeamId!: number | null;
 
+  @Column({ name: 'RequireCommentOnApprove', type: 'bit', default: false })
+  requireCommentOnApprove!: boolean;
+
   @ManyToOne(() => DynamicForm, (form) => form.stages)
   @JoinColumn({ name: 'FormId' })
   form!: DynamicForm;

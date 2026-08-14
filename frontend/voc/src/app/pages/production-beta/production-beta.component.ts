@@ -1486,6 +1486,11 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (action === 'approve' && task?.requireCommentOnApprove && (!notes || !notes.trim())) {
+      this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'Debe ingresar un comentario para aprobar esta etapa.' });
+      return;
+    }
+
     if (action === 'approve') {
       if (task.formIdToFill || isCorr) {
         const fields = this.stageFormFields();
