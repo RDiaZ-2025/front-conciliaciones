@@ -43,7 +43,7 @@ interface WorkflowStageItem {
   name: string;
   description: string;
   stepOrder: number;
-  assigneeType: 'specific_user' | 'requester' | 'requester_boss' | 'team';
+  assigneeType: 'specific_user' | 'requester' | 'requester_boss' | 'team' | 'multiple_users';
   assigneeUserId: number | null;
   assigneeTeamId: number | null;
   formIdToFill: number | null;
@@ -51,6 +51,9 @@ interface WorkflowStageItem {
   rejectionTargetUserId: number | null;
   rejectionTargetTeamId: number | null;
   requireCommentOnApprove?: boolean;
+  assigneeUserIds?: { userId: number; formId: number | null }[];
+  selectedUserIds?: number[];
+  customForms?: { [userId: number]: number | null };
 }
 
 @Component({
@@ -216,7 +219,8 @@ export class RequestsBetaAdminComponent implements OnInit {
     { label: 'Usuario Específico', value: 'specific_user' },
     { label: 'Creador de la Solicitud', value: 'requester' },
     { label: 'Jefe Directo del Solicitante', value: 'requester_boss' },
-    { label: 'Equipo / Rol', value: 'team' }
+    { label: 'Equipo / Rol', value: 'team' },
+    { label: 'Usuarios Múltiples', value: 'multiple_users' }
   ];
 
   rejectionTypeOptions = [
@@ -886,19 +890,44 @@ export class RequestsBetaAdminComponent implements OnInit {
     this.loadingStages.set(true);
     this.productionService.adminGetStages(formId).subscribe({
       next: (data) => {
-        this.workflowStages.set(data.map(s => ({
-          id: s.id,
-          name: s.name,
-          description: s.description || '',
-          stepOrder: s.stepOrder,
-          assigneeType: s.assigneeType,
-          assigneeUserId: s.assigneeUserId,
-          assigneeTeamId: s.assigneeTeamId,
-          formIdToFill: s.formIdToFill,
-          rejectionTargetType: s.rejectionTargetType || 'previous_sender',
-          rejectionTargetUserId: s.rejectionTargetUserId,
-          rejectionTargetTeamId: s.rejectionTargetTeamId
-        })));
+        this.workflowStages.set(data.map(s => {
+          const selectedUserIds: number[] = [];
+          const customForms: { [userId: number]: number | null } = {};
+          if (s.assigneeUserIds) {
+            try {
+              const parsed = typeof s.assigneeUserIds === 'string' 
+                ? JSON.parse(s.assigneeUserIds) 
+                : s.assigneeUserIds;
+              if (Array.isArray(parsed)) {
+                parsed.forEach((item: any) => {
+                  if (typeof item === 'object' && item !== null) {
+                    selectedUserIds.push(item.userId);
+                    customForms[item.userId] = item.formId || null;
+                  } else {
+                    selectedUserIds.push(item);
+                    customForms[item] = null;
+                  }
+                });
+              }
+            } catch(e) {}
+          }
+          return {
+            id: s.id,
+            name: s.name,
+            description: s.description || '',
+            stepOrder: s.stepOrder,
+            assigneeType: s.assigneeType,
+            assigneeUserId: s.assigneeUserId,
+            assigneeTeamId: s.assigneeTeamId,
+            formIdToFill: s.formIdToFill,
+            rejectionTargetType: s.rejectionTargetType || 'previous_sender',
+            rejectionTargetUserId: s.rejectionTargetUserId,
+            rejectionTargetTeamId: s.rejectionTargetTeamId,
+            requireCommentOnApprove: !!s.requireCommentOnApprove,
+            selectedUserIds,
+            customForms
+          };
+        }));
         this.loadingStages.set(false);
       },
       error: () => {
@@ -906,6 +935,11 @@ export class RequestsBetaAdminComponent implements OnInit {
         this.loadingStages.set(false);
       }
     });
+  }
+
+  getUserName(userId: number): string {
+    const u = this.users().find(user => user.id === userId);
+    return u ? u.name : `Usuario #${userId}`;
   }
 
   addStage() {
@@ -923,7 +957,9 @@ export class RequestsBetaAdminComponent implements OnInit {
         rejectionTargetType: 'previous_sender',
         rejectionTargetUserId: null,
         rejectionTargetTeamId: null,
-        requireCommentOnApprove: true
+        requireCommentOnApprove: true,
+        selectedUserIds: [],
+        customForms: {}
       }
     ]);
   }
@@ -973,6 +1009,10 @@ export class RequestsBetaAdminComponent implements OnInit {
         this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere un aprobador específico.` });
         return;
       }
+      if (s.assigneeType === 'multiple_users' && (!s.selectedUserIds || s.selectedUserIds.length === 0)) {
+        this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere seleccionar al menos un aprobador en Usuarios Múltiples.` });
+        return;
+      }
       if (s.assigneeType === 'team' && !s.assigneeTeamId) {
         this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere asociar un equipo aprobador.` });
         return;
@@ -987,7 +1027,33 @@ export class RequestsBetaAdminComponent implements OnInit {
       }
     }
 
-    this.productionService.adminSaveStages(formId, stages).subscribe({
+    // Convert selectedUserIds and customForms to the expected assigneeUserIds JSON-serializable structure
+    const payload = stages.map(s => {
+      let assigneeUserIdsObj: any = null;
+      if (s.assigneeType === 'multiple_users' && s.selectedUserIds) {
+        assigneeUserIdsObj = s.selectedUserIds.map((uid: number) => ({
+          userId: uid,
+          formId: s.customForms ? s.customForms[uid] || null : null
+        }));
+      }
+      return {
+        id: s.id,
+        name: s.name,
+        description: s.description,
+        stepOrder: s.stepOrder,
+        assigneeType: s.assigneeType,
+        assigneeUserId: s.assigneeUserId,
+        assigneeTeamId: s.assigneeTeamId,
+        formIdToFill: s.formIdToFill,
+        rejectionTargetType: s.rejectionTargetType,
+        rejectionTargetUserId: s.rejectionTargetUserId,
+        rejectionTargetTeamId: s.rejectionTargetTeamId,
+        requireCommentOnApprove: !!s.requireCommentOnApprove,
+        assigneeUserIds: assigneeUserIdsObj
+      };
+    });
+
+    this.productionService.adminSaveStages(formId, payload as any).subscribe({
       next: () => {
         this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Flujo de trabajo guardado exitosamente.' });
         this.loadWorkflowStages(formId);

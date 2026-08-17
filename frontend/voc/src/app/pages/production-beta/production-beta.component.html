@@ -597,7 +597,8 @@
                                 <span>{{ hStage.stageName }}</span>
                                 <span class="text-500 font-normal" *ngIf="hStage.formName && hStage.formName !== hStage.stageName">({{ hStage.formName }})</span>
                             </span>
-                            <p-tag [severity]="hStage.status === 'Approved' ? 'success' : 'danger'" [value]="hStage.status === 'Approved' ? 'Aprobado' : 'Rechazado'"></p-tag>
+                            <p-tag [severity]="hStage.status === 'Approved' ? 'success' : (hStage.status === 'Rejected' ? 'danger' : 'warn')" 
+                                   [value]="hStage.status === 'Approved' ? 'Aprobado' : (hStage.status === 'Rejected' ? 'Rechazado' : 'Pendiente')"></p-tag>
                         </div>
                         
                         <!-- Values (if any) -->
@@ -659,7 +660,9 @@
 
                         <!-- Simplified Footer -->
                         <div class="text-xs text-500 mt-2">
-                            {{ hStage.status === 'Approved' ? 'Aprobado' : 'Rechazado' }} por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}
+                            <span *ngIf="hStage.status === 'Approved'">Aprobado por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                            <span *ngIf="hStage.status === 'Rejected'">Rechazado por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                            <span *ngIf="hStage.status !== 'Approved' && hStage.status !== 'Rejected'">Asignado a (en espera): <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }})</span>
                         </div>
                     </div>
                 </div>
@@ -1322,7 +1325,8 @@
                                 <span>{{ hStage.stageName }}</span>
                                 <span class="text-500 font-normal" *ngIf="hStage.formName && hStage.formName !== hStage.stageName">({{ hStage.formName }})</span>
                             </span>
-                            <p-tag [severity]="hStage.status === 'Approved' ? 'success' : 'danger'" [value]="hStage.status === 'Approved' ? 'Aprobado' : 'Rechazado'"></p-tag>
+                            <p-tag [severity]="hStage.status === 'Approved' ? 'success' : (hStage.status === 'Rejected' ? 'danger' : 'warn')" 
+                                   [value]="hStage.status === 'Approved' ? 'Aprobado' : (hStage.status === 'Rejected' ? 'Rechazado' : 'Pendiente')"></p-tag>
                         </div>
                         
                         <!-- Values (if any) -->
@@ -1384,7 +1388,9 @@
 
                         <!-- Simplified Footer -->
                         <div class="text-xs text-500 mt-2">
-                            {{ hStage.status === 'Approved' ? 'Aprobado' : 'Rechazado' }} por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}
+                            <span *ngIf="hStage.status === 'Approved'">Aprobado por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                            <span *ngIf="hStage.status === 'Rejected'">Rechazado por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                            <span *ngIf="hStage.status !== 'Approved' && hStage.status !== 'Rejected'">Asignado a (en espera): <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }})</span>
                         </div>
                     </div>
                 </div>

@@ -47,6 +47,9 @@ export class DynamicWorkflowStage {
   @Column({ name: 'RequireCommentOnApprove', type: 'bit', default: false })
   requireCommentOnApprove!: boolean;
 
+  @Column({ name: 'AssigneeUserIds', type: 'nvarchar', length: 'max', nullable: true })
+  assigneeUserIds!: string | null;
+
   @ManyToOne(() => DynamicForm, (form) => form.stages)
   @JoinColumn({ name: 'FormId' })
   form!: DynamicForm;

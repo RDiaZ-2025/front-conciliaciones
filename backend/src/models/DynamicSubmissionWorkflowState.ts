@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { DynamicFormSubmission } from './DynamicFormSubmission';
 import { DynamicWorkflowStage } from './DynamicWorkflowStage';
 import { User } from './User';
+import { DynamicForm } from './DynamicForm';
 
 @Entity('DynamicSubmissionWorkflowState')
 export class DynamicSubmissionWorkflowState {
@@ -26,6 +27,9 @@ export class DynamicSubmissionWorkflowState {
   @Column({ name: 'Notes', type: 'nvarchar', length: 'max', nullable: true })
   notes!: string | null;
 
+  @Column({ name: 'CustomFormIdToFill', type: 'int', nullable: true })
+  customFormIdToFill!: number | null;
+
   @CreateDateColumn({ name: 'CreatedAt', type: 'datetime' })
   createdAt!: Date;
 
@@ -47,4 +51,8 @@ export class DynamicSubmissionWorkflowState {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'ActionedByUserId' })
   actionedByUser!: User | null;
+
+  @ManyToOne(() => DynamicForm)
+  @JoinColumn({ name: 'CustomFormIdToFill' })
+  customFormToFill!: DynamicForm | null;
 }
