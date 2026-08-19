@@ -1,0 +1,37 @@
+:host {
+    display: block;
+    width: 100%;
+}
+
+.chart-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+svg {
+    display: block;
+    margin: 0 auto;
+}
+
+/* SVG Utility Classes */
+.fill-blue-500 { fill: var(--p-blue-500); }
+.fill-blue-600 { fill: var(--p-blue-600); }
+.fill-green-500 { fill: var(--p-green-500); }
+.fill-green-600 { fill: var(--p-green-600); }
+.fill-red-500 { fill: var(--p-red-500); }
+
+.stroke-white { stroke: #ffffff; }
+.stroke-red-500 { stroke: var(--p-red-500); }
+.stroke-300 { stroke: var(--p-surface-300); }
+.stroke-200 { stroke: var(--p-surface-200); }
+
+.fill-text-secondary { fill: var(--p-text-muted-color); }
+
+/* Hover effects */
+rect.fill-blue-500:hover { fill: var(--p-blue-600); }
+rect.fill-green-500:hover { fill: var(--p-green-600); }
+
+/* Custom scrollbar for table if needed */
+::ng-deep .p-datatable-wrapper {
+    scrollbar-width: thin;
+}

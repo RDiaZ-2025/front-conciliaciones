@@ -33,6 +33,12 @@
             ],
             "styles": [
               "voc/src/styles.scss"
+            ],
+            "allowedCommonJsDependencies": [
+              "jszip",
+              "file-saver",
+              "exceljs",
+              "events"
             ]
           },
           "configurations": {
@@ -46,13 +52,13 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "2MB",
-                  "maximumError": "4MB"
+                  "maximumWarning": "3MB",
+                  "maximumError": "5MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "12kB",
-                  "maximumError": "16kB"
+                  "maximumWarning": "20kB",
+                  "maximumError": "32kB"
                 }
               ],
               "outputHashing": "all"

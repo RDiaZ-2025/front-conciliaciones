@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { authenticateToken, requirePermission } from '../middleware/auth';
-import { SystemModulesController } from '../controllers/systemModules.controller';
-import { NocDashboardController } from '../controllers/nocDashboard.controller';
-import { NocIngresosController } from '../controllers/nocIngresos.controller';
-import { NocPresupuestoController } from '../controllers/nocPresupuesto.controller';
-import { NocAgentController } from '../controllers/nocAgent.controller';
+import { SystemModulesController } from '../controllers/system_modules.controller';
+import { NocDashboardController } from '../controllers/noc_dashboard.controller';
+import { NocIngresosController } from '../controllers/noc_ingresos.controller';
+import { NocPresupuestoController } from '../controllers/noc_presupuesto.controller';
+import { NocAgentController } from '../controllers/noc_agent.controller';
+import { NocNewsSchedulerController } from '../controllers/noc_news_scheduler.controller';
 
 const router = Router();
 const systemModulesController = new SystemModulesController();
@@ -12,6 +13,7 @@ const nocDashboardController = new NocDashboardController();
 const nocIngresosController = new NocIngresosController();
 const nocPresupuestoController = new NocPresupuestoController();
 const nocAgentController = new NocAgentController();
+const nocNewsSchedulerController = new NocNewsSchedulerController();
 
 // System Modules
 router.get('/system-modules', authenticateToken, systemModulesController.getSystemModules);
@@ -40,4 +42,20 @@ router.post('/portal-presupuesto/importar', authenticateToken, requirePermission
 router.post('/agent/chat', authenticateToken, nocAgentController.agentChat);
 router.get('/agent/health', nocAgentController.agentHealth);
 
+// News Scheduler (Support both /noc/news-scheduler and /news-scheduler)
+router.get(['/news-scheduler', '/noc/news-scheduler'], authenticateToken, (req, res) => nocNewsSchedulerController.getSchedules(req, res));
+router.get(['/news-scheduler/:id', '/noc/news-scheduler/:id'], authenticateToken, (req, res) => nocNewsSchedulerController.getScheduleById(req, res));
+router.post(['/news-scheduler', '/noc/news-scheduler'], authenticateToken, (req, res) => nocNewsSchedulerController.createSchedule(req, res));
+router.put(['/news-scheduler/:id', '/noc/news-scheduler/:id'], authenticateToken, (req, res) => nocNewsSchedulerController.updateSchedule(req, res));
+router.patch(['/news-scheduler/:id/toggle', '/noc/news-scheduler/:id/toggle'], authenticateToken, (req, res) => nocNewsSchedulerController.toggleActive(req, res));
+router.post(['/news-scheduler/:id/record-execution', '/noc/news-scheduler/:id/record-execution'], authenticateToken, (req, res) => nocNewsSchedulerController.recordExecution(req, res));
+router.delete(['/news-scheduler/:id', '/noc/news-scheduler/:id'], authenticateToken, (req, res) => nocNewsSchedulerController.deleteSchedule(req, res));
+
+// Borradores / Drafts
+router.post(['/news-scheduler/draft', '/noc/news-scheduler/draft'], (req, res) => nocNewsSchedulerController.saveDraft(req, res)); // PUBLIC
+router.get(['/news-scheduler/:id/drafts', '/noc/news-scheduler/:id/drafts'], authenticateToken, (req, res) => nocNewsSchedulerController.getDrafts(req, res));
+router.post(['/news-scheduler/drafts/preview', '/noc/news-scheduler/drafts/preview'], authenticateToken, (req, res) => nocNewsSchedulerController.previewDraft(req, res));
+router.post(['/news-scheduler/drafts/:id/publish', '/noc/news-scheduler/drafts/:id/publish'], authenticateToken, (req, res) => nocNewsSchedulerController.publishDraft(req, res));
+
 export default router;
+

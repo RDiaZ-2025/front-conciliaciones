@@ -13,6 +13,7 @@ export const config: DatabaseConfig = {
     enableArithAbort: true,
     requestTimeout: 30000,
     connectionTimeout: 15000,
+    useUTC: true,
   },
   pool: {
     max: 10,

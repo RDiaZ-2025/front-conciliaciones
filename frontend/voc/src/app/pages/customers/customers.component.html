@@ -1,0 +1,195 @@
+<div class="p-4 flex flex-column gap-4">
+    <!-- Header -->
+    <app-page-header title="Administración de Clientes" description="Gestión del maestro de clientes, creación individual e importación masiva por Excel/CSV."></app-page-header>
+
+    <!-- Content Card -->
+    <p-card styleClass="shadow-2 border-round-xl">
+        <!-- Actions Toolbar -->
+        <div class="flex flex-column md:flex-row justify-content-between align-items-center gap-3 mb-4">
+            <!-- Search -->
+            <!-- Search -->
+            <div class="flex gap-2 align-items-center w-full md:max-w-25rem">
+                <input type="text" pInputText [(ngModel)]="searchQuery" (keyup.enter)="onSearch()" placeholder="Buscar por nombre, NIT..." class="w-full border-round-lg" />
+                <p-button severity="primary" (onClick)="onSearch()" styleClass="border-round-lg">
+                    <lucide-icon name="search" class="mr-2" style="width: 1rem; height: 1rem;"></lucide-icon>
+                    Buscar
+                </p-button>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex gap-2 w-full md:w-auto justify-content-end">
+                <p-button [outlined]="true" severity="help" (onClick)="openBulkUpload()" styleClass="border-round-lg">
+                    <lucide-icon name="upload" class="mr-2" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+                    Carga Masiva (Excel/CSV)
+                </p-button>
+                <p-button severity="primary" (onClick)="openNew()" styleClass="border-round-lg">
+                    <lucide-icon name="plus" class="mr-2" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+                    Nuevo Cliente
+                </p-button>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <p-table #dt [value]="customers()" [lazy]="true" (onLazyLoad)="onLazyLoad($event)" [paginator]="true" 
+                 [rows]="pageSize()" [totalRecords]="totalRecords()" [loading]="loading()"
+                 [rowsPerPageOptions]="[10, 20, 50]" styleClass="p-datatable-striped" responsiveLayout="scroll">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width: 15%">Tipo Doc.</th>
+                    <th style="width: 20%">Documento</th>
+                    <th style="width: 25%">Razón Social</th>
+                    <th style="width: 25%">Correo Electrónico</th>
+                    <th style="width: 15%">Celular</th>
+                    <th style="width: 10%" class="text-center">Acciones</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-customer>
+                <tr>
+                    <td>
+                        <span class="font-semibold text-700">{{ customer.documentType }}</span>
+                    </td>
+                    <td>{{ customer.documentNumber }}</td>
+                    <td>
+                        <span class="font-bold text-900">{{ customer.businessName || '—' }}</span>
+                    </td>
+                    <td>
+                        <a href="mailto:{{ customer.email }}" class="text-blue-600 no-underline hover:underline">{{ customer.email }}</a>
+                    </td>
+                    <td>{{ customer.phoneNumber || '—' }}</td>
+                    <td class="text-center">
+                        <div class="flex justify-content-center gap-1">
+                            <p-button [text]="true" severity="secondary" size="small" [rounded]="true" (onClick)="openEdit(customer)" pTooltip="Editar Cliente">
+                                <lucide-icon name="edit" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+                            </p-button>
+                            <p-button [text]="true" severity="danger" size="small" [rounded]="true" (onClick)="deleteCustomer(customer)" pTooltip="Eliminar Cliente">
+                                <lucide-icon name="trash" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+                            </p-button>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-500">
+                        <lucide-icon name="users" class="mx-auto mb-2 opacity-40" style="width: 3rem; height: 3rem;"></lucide-icon>
+                        <div>No se encontraron clientes registrados.</div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </p-card>
+</div>
+
+<!-- Modal: Crear / Editar Cliente -->
+<p-dialog [header]="isEditMode() ? 'Editar Cliente' : 'Nuevo Cliente'" [(visible)]="showEditDialog" 
+          [modal]="true" [style]="{width: '500px'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
+    <div class="flex flex-column gap-3 py-2 px-3">
+        <div class="grid">
+            <div class="col-12 md:col-6 flex flex-column gap-1">
+                <label for="docType" class="font-semibold text-900 text-sm">Tipo de Documento:</label>
+                <p-select id="docType" [options]="documentTypes" [(ngModel)]="currentCustomer().documentType" 
+                          optionLabel="label" optionValue="value" placeholder="Seleccionar..." appendTo="body"></p-select>
+            </div>
+            <div class="col-12 md:col-6 flex flex-column gap-1">
+                <label for="docNumber" class="font-semibold text-900 text-sm">Número de Documento:</label>
+                <input id="docNumber" type="text" pInputText [(ngModel)]="currentCustomer().documentNumber" placeholder="Ej: 900.123.456-1" />
+            </div>
+        </div>
+
+        <div class="flex flex-column gap-1">
+            <label for="businessName" class="font-semibold text-900 text-sm">Razón Social / Nombre Completo:</label>
+            <input id="businessName" type="text" pInputText [(ngModel)]="currentCustomer().businessName" placeholder="Ej: Claro Media SAS" />
+        </div>
+
+        <div class="flex flex-column gap-1">
+            <label for="email" class="font-semibold text-900 text-sm">Correo Electrónico:</label>
+            <input id="email" type="email" pInputText [(ngModel)]="currentCustomer().email" placeholder="Ej: contacto@empresa.com" />
+        </div>
+
+        <div class="flex flex-column gap-1">
+            <label for="phoneNumber" class="font-semibold text-900 text-sm">Número Celular / Teléfono:</label>
+            <input id="phoneNumber" type="text" pInputText [(ngModel)]="currentCustomer().phoneNumber" placeholder="Ej: 3001234567" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <div class="flex justify-content-end gap-2 px-3 pb-3">
+            <p-button [text]="true" severity="secondary" (onClick)="showEditDialog.set(false)">Cancelar</p-button>
+            <p-button severity="primary" (onClick)="saveCustomer()">
+                <lucide-icon name="save" class="mr-2" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+                Guardar Cliente
+            </p-button>
+        </div>
+    </ng-template>
+</p-dialog>
+
+<!-- Modal: Carga Masiva (Excel/CSV) -->
+<p-dialog header="Carga Masiva de Clientes" [(visible)]="showBulkUploadDialog" 
+          [modal]="true" [style]="{width: '600px'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
+    <div class="flex flex-column gap-3 py-2 px-3">
+        <span class="text-600 text-sm">
+            Sube un archivo de Excel (`.xlsx`) o CSV para importar clientes de forma masiva. Si el número de identificación ya existe en el sistema, los datos se actualizarán de forma automática.
+        </span>
+
+        <!-- Drop area -->
+        <div class="flex flex-column align-items-center justify-content-center border-dashed border-2 border-300 p-4 border-round-lg bg-50 cursor-pointer text-center relative hover:bg-100 transition-colors">
+            <input type="file" (change)="onFileSelected($event)" accept=".xlsx,.csv" class="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" />
+            <lucide-icon name="file-spreadsheet" class="text-primary opacity-60 mb-2" style="width: 3.5rem; height: 3.5rem;"></lucide-icon>
+            <span class="font-bold text-900 mb-1" *ngIf="!selectedFile">Haz clic para seleccionar o arrastra el archivo aquí</span>
+            <span class="font-bold text-900 text-primary mb-1" *ngIf="selectedFile">{{ selectedFile.name }}</span>
+            <span class="text-500 text-xs">Formatos aceptados: .xlsx, .csv (Máx. 10MB)</span>
+        </div>
+
+        <!-- Links -->
+        <div class="flex justify-content-between align-items-center mt-1">
+            <p-button [text]="true" severity="help" size="small" (onClick)="downloadTemplate()">
+                <lucide-icon name="download" class="mr-2" style="width: 1rem; height: 1rem;"></lucide-icon>
+                Descargar Plantilla CSV de Ejemplo
+            </p-button>
+        </div>
+
+        <!-- Upload Results -->
+        <div *ngIf="uploadResults()" class="p-3 border-round-lg mt-2" 
+             [class.bg-green-50]="!uploadResults().validationFailed && uploadResults().errors.length === 0" 
+             [class.bg-red-50]="uploadResults().validationFailed"
+             [class.bg-yellow-50]="!uploadResults().validationFailed && uploadResults().errors.length > 0">
+            
+            <div *ngIf="uploadResults().validationFailed" class="flex align-items-center gap-2 mb-3 text-red-800 font-bold text-sm">
+                <lucide-icon name="alert-triangle" class="text-red-600" style="width: 1.2rem; height: 1.2rem;"></lucide-icon>
+                <span>¡Errores de Validación Encontrados! Ningún dato fue guardado.</span>
+            </div>
+
+            <strong class="block mb-2 text-900" *ngIf="!uploadResults().validationFailed" [class.text-green-800]="uploadResults().errors.length === 0" [class.text-yellow-800]="uploadResults().errors.length > 0">
+                Resultado de la Carga:
+            </strong>
+            <ul class="m-0 pl-3 text-xs leading-normal" *ngIf="!uploadResults().validationFailed">
+                <li>Clientes procesados: <strong>{{ uploadResults().processed }}</strong></li>
+                <li class="text-green-700">Creados: <strong>{{ uploadResults().created }}</strong></li>
+                <li class="text-blue-700">Actualizados: <strong>{{ uploadResults().updated }}</strong></li>
+                <li class="text-red-700" *ngIf="uploadResults().errors.length > 0">
+                    Filas con error: <strong>{{ uploadResults().errors.length }}</strong>
+                </li>
+            </ul>
+
+            <!-- Detailed errors -->
+            <div *ngIf="uploadResults().errors.length > 0" class="mt-3">
+                <span class="font-semibold text-xs text-red-700 block mb-1">Detalle de errores detectados:</span>
+                <div class="max-h-8rem overflow-y-auto border-1 border-red-200 border-round p-2 bg-white flex flex-column gap-1">
+                    <div *ngFor="let err of uploadResults().errors" class="text-xs text-red-600">
+                        Fila {{ err.row }}: {{ err.error }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <div class="flex justify-content-end gap-2 px-3 pb-3">
+            <p-button [text]="true" severity="secondary" (onClick)="showBulkUploadDialog.set(false)" [disabled]="uploading()">Cerrar</p-button>
+            <p-button severity="primary" (onClick)="processBulkUpload()" [loading]="uploading()" [disabled]="!selectedFile">
+                <lucide-icon name="upload" class="mr-2" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+                Procesar Archivo
+            </p-button>
+        </div>
+    </ng-template>
+</p-dialog>
+<p-toast></p-toast>
+<p-confirmDialog [style]="{width: '400px'}"></p-confirmDialog>

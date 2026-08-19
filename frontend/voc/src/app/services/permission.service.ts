@@ -1,3 +1,4 @@
+import { BaseApiService } from './base-api.service';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -18,8 +19,7 @@ export interface PermissionApiResponse {
 @Injectable({
   providedIn: 'root'
 })
-export class PermissionService {
-  private http = inject(HttpClient);
+export class PermissionService extends BaseApiService {
   private baseUrl = `${environment.apiUrl}/permissions`;
 
   getAllPermissions(): Observable<PermissionApiResponse> {

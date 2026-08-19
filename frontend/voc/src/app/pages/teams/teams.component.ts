@@ -1,0 +1,102 @@
+import { LucideIconComponent } from '../../components/lucide-icon/lucide-icon.component';
+import { Component, inject, signal, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TableModule } from 'primeng/table';
+import { ButtonModule } from 'primeng/button';
+import { ToastModule } from 'primeng/toast';
+import { TooltipModule } from 'primeng/tooltip';
+import { TagModule } from 'primeng/tag';
+import { BadgeModule } from 'primeng/badge';
+import { MessageService, ConfirmationService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { PageHeaderComponent } from '../../components/page-header/page-header.component';
+import { TeamDialogComponent } from './team-dialog/team-dialog.component';
+import { TeamService } from '../../services/team.service';
+import { Team } from '../../models/common/team';
+
+@Component({
+  selector: 'app-teams',
+  standalone: true,
+  imports: [
+    LucideIconComponent,
+    CommonModule,
+    TableModule,
+    ButtonModule,
+    ToastModule,
+    TooltipModule,
+    TagModule,
+    BadgeModule,
+    ConfirmDialogModule,
+    PageHeaderComponent,
+    TeamDialogComponent
+  ],
+  providers: [MessageService, ConfirmationService],
+  templateUrl: './teams.component.html',
+  styleUrl: './teams.component.scss'
+})
+export class TeamsComponent implements OnInit {
+  private teamService = inject(TeamService);
+  private messageService = inject(MessageService);
+  private confirmationService = inject(ConfirmationService);
+
+  teams = signal<Team[]>([]);
+  loading = signal<boolean>(false);
+  dialogVisible = signal<boolean>(false);
+  editingTeam = signal<Team | null>(null);
+
+  ngOnInit() {
+    this.loadTeams();
+  }
+
+  loadTeams() {
+    this.loading.set(true);
+    this.teamService.getTeams().subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.teams.set(response.data);
+        }
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar equipos' });
+        this.loading.set(false);
+      }
+    });
+  }
+
+  openNew() {
+    this.editingTeam.set(null);
+    this.dialogVisible.set(true);
+  }
+
+  editTeam(team: Team) {
+    this.editingTeam.set(team);
+    this.dialogVisible.set(true);
+  }
+
+  deleteTeam(team: Team) {
+    this.confirmationService.confirm({
+      message: '¿Está seguro de eliminar este equipo?',
+      header: 'Confirmar',
+      icon: 'alert-triangle',
+      accept: () => {
+        this.loading.set(true);
+        this.teamService.deleteTeam(team.id).subscribe({
+          next: () => {
+            this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Equipo eliminado' });
+            this.loadTeams();
+          },
+          error: (err) => {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Error al eliminar equipo' });
+            this.loading.set(false);
+          }
+        });
+      }
+    });
+  }
+
+  onSave() {
+    this.dialogVisible.set(false);
+    this.loadTeams();
+  }
+}

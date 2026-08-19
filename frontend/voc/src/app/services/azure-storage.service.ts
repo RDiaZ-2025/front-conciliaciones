@@ -1,3 +1,4 @@
+import { BaseApiService } from './base-api.service';
 import { Injectable, inject } from '@angular/core';
 import { BlobServiceClient, ContainerClient } from '@azure/storage-blob';
 import { ShareServiceClient, ShareClient, ShareDirectoryClient } from '@azure/storage-file-share';
@@ -40,8 +41,7 @@ interface SasTokenResponse {
 @Injectable({
   providedIn: 'root'
 })
-export class AzureStorageService {
-  private http = inject(HttpClient);
+export class AzureStorageService extends BaseApiService {
 
   // Cache for container sessions
   private sessions = new Map<string, {
@@ -52,7 +52,9 @@ export class AzureStorageService {
     serviceType: 'blob' | 'file';
   }>();
 
-  constructor() { }
+  constructor() {
+    super();
+  }
 
   private async getClient(containerName: string = 'private'): Promise<ContainerClient | ShareClient> {
     const session = this.sessions.get(containerName);
@@ -139,16 +141,26 @@ export class AzureStorageService {
       const blobName = `${options.folderPath}/${fileName}`;
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
+      // Sanitize metadata to avoid fetch TypeError in headers due to non-ASCII characters
+      const sanitizedMetadata: Record<string, string> = {
+        originalName: this.toAscii(file.name),
+        uploadDate: new Date().toISOString()
+      };
+
+      if (options.metadata) {
+        for (const [key, value] of Object.entries(options.metadata)) {
+          if (value !== undefined && value !== null) {
+            sanitizedMetadata[key] = this.toAscii(String(value));
+          }
+        }
+      }
+
       // Upload with progress tracking
       const uploadOptions = {
         blobHTTPHeaders: {
           blobContentType: file.type,
         },
-        metadata: {
-          originalName: file.name,
-          uploadDate: new Date().toISOString(),
-          ...options.metadata,
-        },
+        metadata: sanitizedMetadata,
         onProgress: options.onProgress ? (ev: any) => {
           const progress = (ev.loadedBytes / file.size) * 100;
           options.onProgress!(progress);
@@ -585,6 +597,13 @@ export class AzureStorageService {
       .replace(/[<>:"/\\|?*]/g, '_')
       .replace(/\s+/g, '_')
       .toLowerCase();
+  }
+
+  private toAscii(str: string): string {
+    return str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove accents
+      .replace(/[^\x00-\x7F]/g, '_'); // Replace any other non-ASCII character with underscore
   }
 
   /**

@@ -1,0 +1,13 @@
+:host {
+    display: block;
+}
+
+.p-card-body {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.p-card-content {
+    flex-grow: 1;
+}

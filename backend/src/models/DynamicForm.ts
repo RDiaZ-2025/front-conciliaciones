@@ -1,0 +1,60 @@
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
+import { DynamicFormField } from './DynamicFormField';
+import { DynamicFormSubmission } from './DynamicFormSubmission';
+import { DynamicWorkflowStage } from './DynamicWorkflowStage';
+import { DynamicWorkflow } from './DynamicWorkflow';
+
+@Entity('DynamicForms')
+export class DynamicForm {
+  @PrimaryGeneratedColumn({ name: 'Id' })
+  id!: number;
+
+  @Column({ name: 'WorkflowId', type: 'int', nullable: true })
+  workflowId!: number | null;
+
+  @Column({ name: 'Name', type: 'nvarchar', length: 255, nullable: false })
+  name!: string;
+
+  @Column({ name: 'Description', type: 'nvarchar', length: 500, nullable: true })
+  description!: string | null;
+
+  @Column({ name: 'IsEntryForm', type: 'bit', default: false })
+  isEntryForm!: boolean;
+
+  @Column({ name: 'IsInitialForm', type: 'bit', default: false })
+  isInitialForm!: boolean;
+
+  @Column({ name: 'IsActive', type: 'bit', default: true })
+  isActive!: boolean;
+
+  @Column({ name: 'DisplayOrder', type: 'int', default: 0 })
+  displayOrder!: number;
+
+  @Column({ name: 'RequireConsecutive', type: 'bit', default: true })
+  requireConsecutive!: boolean;
+
+  @Column({ name: 'Responsible', type: 'nvarchar', length: 255, nullable: true })
+  responsible!: string | null;
+
+  @Column({ name: 'Icon', type: 'nvarchar', length: 255, nullable: true })
+  icon!: string | null;
+
+  @Column({ name: 'Role', type: 'nvarchar', length: 255, nullable: true })
+  role!: string | null;
+
+  @Column({ name: 'Metadata', type: 'nvarchar', length: 'max', nullable: true })
+  metadata!: string | null;
+
+  @ManyToOne(() => DynamicWorkflow)
+  @JoinColumn({ name: 'WorkflowId' })
+  workflow!: DynamicWorkflow | null;
+
+  @OneToMany(() => DynamicFormField, (field) => field.form)
+  fields!: DynamicFormField[];
+
+  @OneToMany(() => DynamicFormSubmission, (submission) => submission.form)
+  submissions!: DynamicFormSubmission[];
+
+  @OneToMany(() => DynamicWorkflowStage, (stage) => stage.form)
+  stages!: DynamicWorkflowStage[];
+}

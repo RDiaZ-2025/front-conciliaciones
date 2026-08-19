@@ -1,3 +1,4 @@
+import { BaseApiService } from './base-api.service';
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -24,14 +25,14 @@ export interface LoginResponse {
 @Injectable({
   providedIn: 'root'
 })
-export class AuthService {
-  private http = inject(HttpClient);
+export class AuthService extends BaseApiService {
   private router = inject(Router);
   private apiUrl = `${environment.apiUrl}/auth`;
 
   currentUser = signal<User | null>(null);
 
   constructor() {
+    super();
     this.initializeAuth();
   }
 

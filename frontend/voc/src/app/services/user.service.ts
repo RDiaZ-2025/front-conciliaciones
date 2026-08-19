@@ -1,3 +1,4 @@
+import { BaseApiService } from './base-api.service';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -58,8 +59,7 @@ export interface AccessHistoryRecord {
 @Injectable({
   providedIn: 'root',
 })
-export class UserService {
-  private http = inject(HttpClient);
+export class UserService extends BaseApiService {
   private apiUrl = `${environment.apiUrl}/users`;
 
   getAllUsers(): Observable<User[]> {

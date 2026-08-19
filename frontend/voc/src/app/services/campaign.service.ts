@@ -1,3 +1,4 @@
+import { BaseApiService } from './base-api.service';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -22,8 +23,7 @@ export interface Campaign {
 @Injectable({
   providedIn: 'root'
 })
-export class CampaignService {
-  private http = inject(HttpClient);
+export class CampaignService extends BaseApiService {
   private apiUrl = `${environment.apiUrl}/campaigns`;
 
   getCampaigns(): Observable<{ success: boolean; data: Campaign[] }> {

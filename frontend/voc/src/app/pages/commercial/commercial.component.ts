@@ -1,3 +1,5 @@
+import { LucideIconComponent } from '../../components/lucide-icon/lucide-icon.component';
+import { CachedImagePipe } from '../../pipes/cached-image.pipe';
 
 import { Component, OnInit, signal, inject, computed, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -13,8 +15,8 @@ import { InputIconModule } from 'primeng/inputicon';
 import { TooltipModule } from 'primeng/tooltip';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { AzureStorageService } from '../../services/azure-storage.service';
-import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
-import { FilePreviewComponent } from '../../components/file-preview/file-preview';
+import { PageHeaderComponent } from '../../components/page-header/page-header.component';
+import { FilePreviewComponent } from '../../components/file-preview/file-preview.component';
 
 interface FileItem {
   id: string;
@@ -30,6 +32,8 @@ interface FileItem {
   selector: 'app-commercial',
   standalone: true,
   imports: [
+    LucideIconComponent,
+    CachedImagePipe,
     CommonModule,
     FormsModule,
     TableModule,
@@ -83,7 +87,7 @@ export class CommercialComponent implements OnInit {
     return currentFiles.filter(f => f.name.toLowerCase().includes(term));
   });
 
-  homeItem: MenuItem = { icon: 'pi pi-home', command: () => this.navigateToRoot() };
+  homeItem: MenuItem = { icon: 'home', command: () => this.navigateToRoot() };
 
   ngOnInit() {
     this.updateBreadcrumb();
@@ -378,14 +382,29 @@ export class CommercialComponent implements OnInit {
     const type = file.type.toLowerCase();
 
     if (name.endsWith('.mp4') || name.endsWith('.mov') || name.endsWith('.avi') || type.includes('video')) {
-      return 'pi pi-video text-orange-500';
+      return 'video';
     }
-    if (type.includes('pdf') || name.endsWith('.pdf')) return 'pi pi-file-pdf text-red-500';
-    if (type.includes('excel') || type.includes('sheet') || name.endsWith('.xlsx') || name.endsWith('.xls')) return 'pi pi-file-excel text-green-500';
-    if (type.includes('word') || type.includes('document') || name.endsWith('.docx') || name.endsWith('.doc')) return 'pi pi-file-word text-blue-500';
-    if (type.includes('image') || name.endsWith('.jpg') || name.endsWith('.png') || name.endsWith('.jpeg')) return 'pi pi-image text-purple-500';
-    if (type.includes('presentation') || name.endsWith('.pptx') || name.endsWith('.ppt')) return 'pi pi-file text-orange-500';
-    return 'pi pi-file text-gray-500';
+    if (type.includes('pdf') || name.endsWith('.pdf')) return 'file-text';
+    if (type.includes('excel') || type.includes('sheet') || name.endsWith('.xlsx') || name.endsWith('.xls')) return 'file-spreadsheet';
+    if (type.includes('word') || type.includes('document') || name.endsWith('.docx') || name.endsWith('.doc')) return 'file-text';
+    if (type.includes('image') || name.endsWith('.jpg') || name.endsWith('.png') || name.endsWith('.jpeg')) return 'image';
+    if (type.includes('presentation') || name.endsWith('.pptx') || name.endsWith('.ppt')) return 'presentation';
+    return 'file';
+  }
+
+  getFileColorClass(file: FileItem): string {
+    const name = file.name.toLowerCase();
+    const type = file.type.toLowerCase();
+
+    if (name.endsWith('.mp4') || name.endsWith('.mov') || name.endsWith('.avi') || type.includes('video')) {
+      return 'text-orange-500';
+    }
+    if (type.includes('pdf') || name.endsWith('.pdf')) return 'text-red-500';
+    if (type.includes('excel') || type.includes('sheet') || name.endsWith('.xlsx') || name.endsWith('.xls')) return 'text-green-500';
+    if (type.includes('word') || type.includes('document') || name.endsWith('.docx') || name.endsWith('.doc')) return 'text-blue-500';
+    if (type.includes('image') || name.endsWith('.jpg') || name.endsWith('.png') || name.endsWith('.jpeg')) return 'text-yellow-500';
+    if (type.includes('presentation') || name.endsWith('.pptx') || name.endsWith('.ppt')) return 'text-orange-500';
+    return 'text-gray-500';
   }
 
   formatSize(bytes: number): string {

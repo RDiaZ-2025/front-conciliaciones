@@ -1,14 +1,23 @@
+import { BaseApiService } from './base-api.service';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { ProductionRequest, Objective, Gender, AgeRange, SocioeconomicLevel, FormatType, RightsDuration, Product, ProductionRequestHistory, Status } from '../pages/production/production.models';
+import { ProductionRequest } from '../models/common/production-request';
+import { Objective } from '../models/common/objective';
+import { Gender } from '../models/common/gender';
+import { AgeRange } from '../models/common/age-range';
+import { SocioeconomicLevel } from '../models/common/socioeconomic-level';
+import { FormatType } from '../models/common/format-type';
+import { RightsDuration } from '../models/common/rights-duration';
+import { Product } from '../models/common/product';
+import { ProductionRequestHistory } from '../models/common/production-request-history';
+import { Status } from '../models/common/status';
 
 @Injectable({
   providedIn: 'root'
 })
-export class ProductionService {
-  private http = inject(HttpClient);
+export class ProductionService extends BaseApiService {
   private apiUrl = `${environment.apiUrl}/production`; // Updated to match likely route mount point
   private objectiveUrl = `${environment.apiUrl}/objectives`;
   private audienceUrl = `${environment.apiUrl}/audience`;
@@ -114,7 +123,96 @@ export class ProductionService {
     return this.http.get<{ id: string; label: string }[]>(`${this.apiUrl}/workflow-stages`);
   }
 
+  getRequestTypes(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/request-types`);
+  }
+
+  getInitialForm(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/initial-form`);
+  }
+
   getStatuses(): Observable<Status[]> {
     return this.http.get<Status[]>(this.statusUrl);
+  }
+
+  getDynamicFormFields(formId: number, includeInactive: boolean = false): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/forms/${formId}/fields`, {
+      params: { includeInactive: String(includeInactive) }
+    });
+  }
+
+  submitDynamicForm(formId: number, values: any, targetFormIds?: number[], submissions?: any[], targetTeamIds?: number[], targetTeams?: Array<{ teamId: number; assignmentMode?: string }>): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/submissions`, { formId, values, targetFormIds, submissions, targetTeamIds, targetTeams });
+  }
+
+  getDynamicSubmissions(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/submissions`);
+  }
+
+  adminGetForms(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/admin/forms`);
+  }
+
+  adminCreateForm(data: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/admin/forms`, data);
+  }
+
+  adminUpdateForm(id: number, data: any): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/admin/forms/${id}`, data);
+  }
+
+  adminDeleteForm(id: number, physicalDelete: boolean = false): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/admin/forms/${id}`, {
+      params: { physicalDelete: String(physicalDelete) }
+    });
+  }
+
+  adminSaveFields(formId: number, fields: any[]): Observable<any[]> {
+    return this.http.post<any[]>(`${this.apiUrl}/admin/forms/${formId}/fields`, fields);
+  }
+
+  adminGetStages(formId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/admin/forms/${formId}/stages`);
+  }
+
+  adminSaveStages(formId: number, stages: any[]): Observable<any[]> {
+    return this.http.post<any[]>(`${this.apiUrl}/admin/forms/${formId}/stages`, stages);
+  }
+
+  // --- Independent Workflows ---
+  adminGetWorkflows(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/admin/workflows`);
+  }
+
+  adminCreateWorkflow(data: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/admin/workflows`, data);
+  }
+
+  adminUpdateWorkflow(id: number, data: any): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/admin/workflows/${id}`, data);
+  }
+
+  adminDeleteWorkflow(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/admin/workflows/${id}`);
+  }
+
+  adminGetWorkflowStages(workflowId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/admin/workflows/${workflowId}/stages`);
+  }
+
+  adminSaveWorkflowStages(workflowId: number, stages: any[]): Observable<any[]> {
+    return this.http.post<any[]>(`${this.apiUrl}/admin/workflows/${workflowId}/stages`, stages);
+  }
+
+  getSubmissionDetails(submissionId: number): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/submissions/${submissionId}`);
+  }
+
+  getPendingApprovals(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/approvals/pending`);
+  }
+
+  actionApproval(stateId: number, action: 'approve' | 'reject', notes: string, formValues?: any, consecutive?: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/approvals/${stateId}/action`, { action, notes, formValues, consecutive });
   }
 }

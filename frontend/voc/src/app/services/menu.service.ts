@@ -1,3 +1,4 @@
+import { BaseApiService } from './base-api.service';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -11,6 +12,7 @@ export interface MenuItem {
   parentId?: number;
   displayOrder: number;
   isActive: boolean;
+  project: string;
   children?: MenuItem[];
   permissionName?: string;
   permissionId?: number;
@@ -25,16 +27,16 @@ export interface MenuApiResponse {
 @Injectable({
   providedIn: 'root'
 })
-export class MenuService {
-  private http = inject(HttpClient);
+export class MenuService extends BaseApiService {
   private baseUrl = `${environment.apiUrl}/menus`;
 
-  getAllMenuItems(): Observable<MenuApiResponse> {
-    return this.http.get<MenuApiResponse>(this.baseUrl);
+  getAllMenuItems(project?: string): Observable<MenuApiResponse> {
+    const url = project ? `${this.baseUrl}?project=${project}` : this.baseUrl;
+    return this.http.get<MenuApiResponse>(url);
   }
 
-  getMenuItemsByPermissions(permissions: string[]): Observable<MenuApiResponse> {
-    return this.http.post<MenuApiResponse>(`${this.baseUrl}/by-permissions`, { permissions });
+  getMenuItemsByPermissions(permissions: string[], project?: string): Observable<MenuApiResponse> {
+    return this.http.post<MenuApiResponse>(`${this.baseUrl}/by-permissions`, { permissions, project });
   }
 
   createMenuItem(menuItem: Partial<MenuItem>): Observable<{ success: boolean; data: { id: number }; message?: string }> {

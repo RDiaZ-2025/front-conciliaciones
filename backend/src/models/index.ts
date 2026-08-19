@@ -21,7 +21,18 @@ export * from './Entity';
 export * from './Presupuesto';
 export * from './IngresoPortal';
 export * from './IngresoRedes';
-export * from './PrecioDolar';
+export * from './NocNewsScheduler';
+export * from './NocNewsDraft';
+export * from './ProductionRequestType';
+export * from './DynamicWorkflow';
+export * from './DynamicForm';
+export * from './DynamicFormField';
+export * from './DynamicFormSubmission';
+export * from './DynamicFormFieldValue';
+export * from './DynamicWorkflowStage';
+export * from './DynamicSubmissionWorkflowState';
+export * from './Customer';
+
 
 export { MenuItem } from './MenuItem';
 export { UserActionLog } from './UserActionLog';
@@ -61,6 +72,18 @@ import { Presupuesto } from './Presupuesto';
 import { IngresoPortal } from './IngresoPortal';
 import { IngresoRedes } from './IngresoRedes';
 import { PrecioDolar } from './PrecioDolar';
+import { NocNewsScheduler } from './NocNewsScheduler';
+import { NocNewsDraft } from './NocNewsDraft';
+import { ProductionRequestType } from './ProductionRequestType';
+import { DynamicWorkflow } from './DynamicWorkflow';
+import { DynamicForm } from './DynamicForm';
+import { DynamicFormField } from './DynamicFormField';
+import { DynamicFormSubmission } from './DynamicFormSubmission';
+import { DynamicFormFieldValue } from './DynamicFormFieldValue';
+import { DynamicWorkflowStage } from './DynamicWorkflowStage';
+import { DynamicSubmissionWorkflowState } from './DynamicSubmissionWorkflowState';
+import { Customer } from './Customer';
+
 
 export const entities = [
   User,
@@ -93,7 +116,18 @@ export const entities = [
   Presupuesto,
   IngresoPortal,
   IngresoRedes,
-  PrecioDolar
+  PrecioDolar,
+  NocNewsScheduler,
+  NocNewsDraft,
+  ProductionRequestType,
+  DynamicWorkflow,
+  DynamicForm,
+  DynamicFormField,
+  DynamicFormSubmission,
+  DynamicFormFieldValue,
+  DynamicWorkflowStage,
+  DynamicSubmissionWorkflowState,
+  Customer
 ];
 
 export const ModelCategories = {

@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../components/lucide-icon/lucide-icon.component';
 
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -10,15 +11,17 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { PageHeaderComponent } from '../../components/shared/page-header/page-header';
+import { PageHeaderComponent } from '../../components/page-header/page-header.component';
 import { PermissionDialogComponent } from './permission-dialog/permission-dialog.component';
 import { PermissionService } from '../../services/permission.service';
-import { Permission, PermissionFormData } from './permissions.models';
+import { Permission } from '../../models/common/permission';
+import { PermissionFormData } from '../../models/common/permission-form-data';
 
 @Component({
   selector: 'app-permissions',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CommonModule,
     TableModule,
     ButtonModule,
@@ -83,7 +86,7 @@ export class PermissionsComponent implements OnInit {
     this.confirmationService.confirm({
       message: '¿Está seguro de eliminar este permiso?',
       header: 'Confirmar',
-      icon: 'pi pi-exclamation-triangle',
+      icon: 'alert-triangle',
       accept: () => {
         this.loading.set(true);
         this.permissionService.deletePermission(permission.id).subscribe({

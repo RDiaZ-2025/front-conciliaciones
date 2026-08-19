@@ -1,17 +1,18 @@
 import { AppDataSource } from '../config/typeorm.config';
 import { Team } from '../models/Team';
 import { User } from '../models/User';
-import { In } from 'typeorm';
+import { In, Not } from 'typeorm';
 
 export class TeamService {
   private teamRepository = AppDataSource.getRepository(Team);
   private userRepository = AppDataSource.getRepository(User);
 
   /**
-   * Get all teams
+   * Get all teams with leader and default workflow
    */
   async getAllTeams(): Promise<Team[]> {
     return await this.teamRepository.find({
+      relations: ['leader', 'defaultWorkflow', 'users'],
       order: {
         name: 'ASC'
       }
@@ -19,20 +20,33 @@ export class TeamService {
   }
 
   /**
-   * Get team by ID
+   * Get team by ID with relations
    */
   async getTeamById(id: number): Promise<Team | null> {
     return await this.teamRepository.findOne({
-      where: { id }
+      where: { id },
+      relations: ['leader', 'defaultWorkflow', 'users']
     });
   }
 
   /**
-   * Create new team
+   * Create new team and sync bossId if leader is provided
    */
   async createTeam(data: Partial<Team>): Promise<Team> {
-    const team = this.teamRepository.create(data);
-    return await this.teamRepository.save(team);
+    const team = this.teamRepository.create({
+      name: data.name,
+      description: data.description,
+      leaderId: data.leaderId || null,
+      defaultWorkflowId: data.defaultWorkflowId || null,
+      metadata: data.metadata !== undefined ? data.metadata : null
+    });
+    const savedTeam = await this.teamRepository.save(team);
+
+    if (savedTeam.leaderId) {
+      await this.syncTeamMembersBoss(savedTeam.id, savedTeam.leaderId);
+    }
+
+    return await this.getTeamById(savedTeam.id) || savedTeam;
   }
 
   /**
@@ -45,35 +59,57 @@ export class TeamService {
   }
 
   /**
-   * Update team
+   * Update team and sync bossId if leader changed
    */
   async updateTeam(id: number, data: Partial<Team>): Promise<Team | null> {
-    const team = await this.getTeamById(id);
+    const team = await this.teamRepository.findOne({ where: { id } });
     if (!team) return null;
 
-    Object.assign(team, data);
-    return await this.teamRepository.save(team);
+    const previousLeaderId = team.leaderId;
+    const newLeaderId = data.leaderId !== undefined ? (data.leaderId || null) : team.leaderId;
+
+    if (data.name !== undefined) team.name = data.name;
+    if (data.description !== undefined) team.description = data.description;
+    if (data.leaderId !== undefined) team.leaderId = data.leaderId || null;
+    if (data.defaultWorkflowId !== undefined) team.defaultWorkflowId = data.defaultWorkflowId || null;
+    if (data.metadata !== undefined) team.metadata = data.metadata || null;
+
+    await this.teamRepository.save(team);
+
+    // If leader changed or is set, synchronize team members' bossId
+    if (newLeaderId && newLeaderId !== previousLeaderId) {
+      await this.syncTeamMembersBoss(id, newLeaderId);
+    }
+
+    return await this.getTeamById(id);
+  }
+
+  /**
+   * Helper to set bossId of all team members to the team's leader
+   */
+  private async syncTeamMembersBoss(teamId: number, leaderId: number): Promise<void> {
+    // Set bossId = leaderId for all members of this team except the leader himself
+    await this.userRepository.update(
+      { teamId, id: Not(leaderId) },
+      { bossId: leaderId }
+    );
   }
 
   /**
    * Delete team
    */
   async deleteTeam(id: number): Promise<boolean> {
+    // Unassign users from this team first
+    await this.userRepository.update({ teamId: id }, { teamId: null });
     const result = await this.teamRepository.delete(id);
     return (result.affected ?? 0) > 0;
   }
 
   /**
    * Update users in a team
-   * Sets the teamId for the specified users to this team.
-   * Note: This implementation assumes we want to ADD/UPDATE these users to this team.
-   * If the intention is to make the team contain ONLY these users, we need to handle removals too.
-   * Given "One User -> One Team", if a user is moved to this team, they are automatically removed from their old team.
-   * Users previously in this team but NOT in userIds will REMAIN in this team unless explicitly moved elsewhere or set to null.
-   * However, usually "update users in a team" implies "these are the users of the team".
-   * So we should probably set teamId=null for users currently in the team who are not in the new list.
    */
   async updateTeamUsers(teamId: number, userIds: number[]): Promise<void> {
+    const team = await this.teamRepository.findOne({ where: { id: teamId } });
     const queryRunner = AppDataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -81,9 +117,8 @@ export class TeamService {
     try {
       const userRepo = queryRunner.manager.getRepository(User);
 
-      // 1. Remove users who are currently in this team but not in the new list
-      // If userIds is empty, remove all users from this team
       if (userIds.length > 0) {
+        // 1. Remove users no longer in this team
         await userRepo
           .createQueryBuilder()
           .update(User)
@@ -97,6 +132,17 @@ export class TeamService {
           { id: In(userIds) },
           { teamId: teamId }
         );
+
+        // 3. If the team has a leader, automatically set bossId for non-leader members
+        if (team && team.leaderId) {
+          const nonLeaderIds = userIds.filter(uid => uid !== team.leaderId);
+          if (nonLeaderIds.length > 0) {
+            await userRepo.update(
+              { id: In(nonLeaderIds) },
+              { bossId: team.leaderId }
+            );
+          }
+        }
       } else {
         // Remove all users from this team
         await userRepo.update(

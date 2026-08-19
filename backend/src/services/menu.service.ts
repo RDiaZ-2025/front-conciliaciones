@@ -11,6 +11,7 @@ export interface MenuItemResponse {
   isActive: boolean;
   permissionName?: string;
   permissionId?: number;
+  project: string;
   children?: MenuItemResponse[];
 }
 
@@ -64,15 +65,20 @@ export class MenuService {
     });
   }
 
-  async getAllMenuItems(): Promise<MenuItemResponse[]> {
+  async getAllMenuItems(project?: string): Promise<MenuItemResponse[]> {
     if (!AppDataSource.isInitialized) {
       throw new Error('Base de datos no disponible');
     }
 
     const menuItemRepository = AppDataSource.getRepository(MenuItem);
 
+    const whereClause: any = { isActive: true };
+    if (project) {
+      whereClause.project = project;
+    }
+
     const menuItems = await menuItemRepository.find({
-      where: { isActive: true },
+      where: whereClause,
       order: { displayOrder: 'ASC' },
       relations: ['permission']
     });
@@ -86,21 +92,27 @@ export class MenuService {
       displayOrder: item.displayOrder,
       isActive: item.isActive,
       permissionName: item.permission?.name,
-      permissionId: item.permissionId || undefined
+      permissionId: item.permissionId || undefined,
+      project: item.project
     }));
 
     return this.buildMenuHierarchy(menuItemsResponse);
   }
 
-  async getMenuItemsByPermissions(permissions: string[]): Promise<MenuItemResponse[]> {
+  async getMenuItemsByPermissions(permissions: string[], project?: string): Promise<MenuItemResponse[]> {
     if (!AppDataSource.isInitialized) {
       throw new Error('Base de datos no disponible');
     }
 
     const menuItemRepository = AppDataSource.getRepository(MenuItem);
 
+    const whereClause: any = { isActive: true };
+    if (project) {
+      whereClause.project = project;
+    }
+
     const menuItems = await menuItemRepository.find({
-      where: { isActive: true },
+      where: whereClause,
       order: { displayOrder: 'ASC' },
       relations: ['permission']
     });
@@ -113,7 +125,9 @@ export class MenuService {
       parentId: item.parentId || undefined,
       displayOrder: item.displayOrder,
       isActive: item.isActive,
-      permissionName: item.permission?.name
+      permissionName: item.permission?.name,
+      permissionId: item.permissionId || undefined,
+      project: item.project
     }));
 
     const hierarchicalMenus = this.buildMenuHierarchy(menuItemsResponse);
@@ -136,6 +150,7 @@ export class MenuService {
     newMenuItem.displayOrder = data.displayOrder || 0;
     newMenuItem.isActive = true;
     newMenuItem.permissionId = data.permissionId || null;
+    newMenuItem.project = data.project || 'voc';
 
     return await menuItemRepository.save(newMenuItem);
   }
@@ -164,7 +179,8 @@ export class MenuService {
         parentId: data.parentId,
         displayOrder: data.displayOrder,
         isActive: data.isActive,
-        permissionId: data.permissionId || null
+        permissionId: data.permissionId || null,
+        project: data.project
       }
     );
 

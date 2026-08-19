@@ -8,8 +8,8 @@ export const environment = {
   chatAgentId: 'drWvQYWbVmoG8rRTxseV',
   chatChannelId: 'qhCHY9wOovZfquv2g8e8',
   chatApiKey: 'qhCHY9wOovZfquv2g8e8',
-  chatGetConversationsUrl: 'https://apiqa.azemblia.ai/Agents/contact-conversations',
-  chatGetMessagesUrl: 'https://apiqa.azemblia.ai/Agents/conversation-messages',
-  chatDownloadFileUrl: 'https://apiqa.azemblia.ai/Files/download',
-  chatSendMessageUrl: 'https://n8n.srv865978.hstgr.cloud/webhook/azemblia-receive-message/web'
+  chatGetConversationsUrl: 'https://api.azemblia.ai/Agents/contact-conversations',
+  chatGetMessagesUrl: 'https://api.azemblia.ai/Agents/conversation-messages',
+  chatDownloadFileUrl: 'https://api.azemblia.ai/Files/download',
+  chatSendMessageUrl: 'https://api.azemblia.ai/WebChat/message'
 };

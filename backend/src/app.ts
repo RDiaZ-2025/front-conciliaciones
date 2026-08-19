@@ -14,7 +14,7 @@ import productionRoutes from './routes/production.routes';
 import teamRoutes from './routes/team.routes';
 import menuRoutes from './routes/menu.routes';
 import permissionRoutes from './routes/permission.routes';
-import cover15MinuteRoutes from './routes/cover15Minute.routes';
+import cover15MinuteRoutes from './routes/cover_15_minute.routes';
 import storageRoutes from './routes/storage.routes';
 import notificationRoutes from './routes/notification.routes';
 import objectiveRoutes from './routes/objective.routes';
@@ -22,6 +22,7 @@ import audienceRoutes from './routes/audience.routes';
 import statusRoutes from './routes/status.routes';
 import campaignRoutes from './routes/campaign.routes';
 import nocRoutes from './routes/noc.routes';
+import customerRoutes from './routes/customer.routes';
 
 import { actionLogger, skipLogging } from './middleware/actionLogger';
 
@@ -41,22 +42,27 @@ const corsOptions = {
   optionsSuccessStatus: 200
 };
 
-// Configuración de Rate Limiting (temporalmente deshabilitado)
-// const limiter = rateLimit({
-//   windowMs: 15 * 60 * 1000, // 15 minutos
-//   max: 100, // límite de requests por ventana
-//   message: 'Demasiadas solicitudes desde esta IP, intenta de nuevo más tarde.'
-// });
+// Configuración de Rate Limiting
+const limiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
+  message: {
+    success: false,
+    message: 'Demasiadas solicitudes desde esta IP, intenta de nuevo más tarde.'
+  }
+});
 
 // Middlewares globales
 app.use(helmet()); // Seguridad
 app.use(cors(corsOptions)); // CORS
 app.use(compression()); // Compresión
 app.use(morgan('combined')); // Logging
-// app.use(limiter); // Rate limiting (temporalmente deshabilitado)
+if (process.env.NODE_ENV === 'production') {
+  app.use(limiter); // Rate limiting solo en producción
+}
 app.use(cookieParser()); // Cookies
-app.use(express.json({ limit: '256mb' })); // JSON parser
-app.use(express.urlencoded({ extended: true, limit: '256mb' })); // URL encoded
+app.use(express.json({ limit: '10mb' })); // JSON parser
+app.use(express.urlencoded({ extended: true, limit: '10mb' })); // URL encoded
 
 // Middleware de logging de acciones de usuario
 app.use(actionLogger);
@@ -97,6 +103,7 @@ app.use('/api/audience', audienceRoutes);
 app.use('/api/statuses', statusRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api', nocRoutes);
+app.use('/api/customers', customerRoutes);
 
 // Ruta 404
 app.use('*', (req, res) => {

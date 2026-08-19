@@ -20,6 +20,17 @@ export class ProductionController {
         const stages = await productionService.getWorkflowStages();
         return res.json(stages);
     });
+
+    getRequestTypes = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+        const requestTypes = await productionService.getRequestTypes();
+        return res.json(requestTypes);
+    });
+
+    getInitialForm = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+        const form = await productionService.getInitialForm();
+        if (!form) return res.status(404).json({ message: 'Formulario inicial no encontrado' });
+        return res.json(form);
+    });
 }
 
 export const getAllProductionRequests = asyncHandler(async (req: Request, res: Response): Promise<Response | void> => {
@@ -68,3 +79,130 @@ export const updateStepCampaign = asyncHandler(async (req: Request, res: Respons
 export const updateStepAudience = updateProductionRequestPartial;
 export const updateStepProduction = updateProductionRequestPartial;
 export const updateMaterialData = updateProductionRequestPartial;
+
+export const getFormFields = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const includeInactive = req.query.includeInactive === 'true';
+    const fields = await productionService.getFormFields(parseInt(id), includeInactive);
+    return res.json(fields);
+});
+
+export const createSubmission = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { formId, values, targetFormIds, submissions, targetTeamIds, targetTeams } = req.body;
+    const requesterUserId = req.user?.userId;
+    if (!requesterUserId) return res.status(401).json({ message: 'Usuario no autenticado' });
+    const submission = await productionService.createSubmission(
+        formId ? parseInt(formId) : 0, 
+        requesterUserId, 
+        values, 
+        targetFormIds, 
+        submissions,
+        targetTeamIds,
+        targetTeams
+    );
+    return res.status(201).json(submission);
+});
+
+export const getSubmissions = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const requesterUserId = req.user?.userId;
+    if (!requesterUserId) return res.status(401).json({ message: 'Usuario no autenticado' });
+    const submissions = await productionService.getSubmissions(requesterUserId);
+    return res.json(submissions);
+});
+
+export const getSubmissionDetails = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { submissionId } = req.params;
+    const result = await productionService.getSubmissionDetails(parseInt(submissionId));
+    return res.json(result);
+});
+
+export const adminGetForms = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const forms = await productionService.adminGetForms();
+    return res.json(forms);
+});
+
+export const adminCreateForm = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const form = await productionService.adminCreateForm(req.body);
+    return res.status(201).json(form);
+});
+
+export const adminUpdateForm = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const form = await productionService.adminUpdateForm(parseInt(id), req.body);
+    return res.json(form);
+});
+
+export const adminDeleteForm = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const physicalDelete = req.query.physicalDelete === 'true';
+    const form = await productionService.adminDeleteForm(parseInt(id), physicalDelete);
+    return res.json(form);
+});
+
+export const adminSaveFields = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const fields = await productionService.adminSaveFields(parseInt(id), req.body);
+    return res.json(fields);
+});
+
+export const adminGetStages = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const stages = await productionService.adminGetStages(parseInt(id));
+    return res.json(stages);
+});
+
+export const adminSaveStages = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const stages = await productionService.adminSaveStages(parseInt(id), req.body);
+    return res.json(stages);
+});
+
+export const adminGetWorkflows = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const workflows = await productionService.adminGetWorkflows();
+    return res.json(workflows);
+});
+
+export const adminCreateWorkflow = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const workflow = await productionService.adminCreateWorkflow(req.body);
+    return res.status(201).json(workflow);
+});
+
+export const adminUpdateWorkflow = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const workflow = await productionService.adminUpdateWorkflow(parseInt(id), req.body);
+    return res.json(workflow);
+});
+
+export const adminDeleteWorkflow = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const workflow = await productionService.adminDeleteWorkflow(parseInt(id));
+    return res.json(workflow);
+});
+
+export const adminGetWorkflowStages = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const stages = await productionService.adminGetWorkflowStages(parseInt(id));
+    return res.json(stages);
+});
+
+export const adminSaveWorkflowStages = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const stages = await productionService.adminSaveWorkflowStages(parseInt(id), req.body);
+    return res.json(stages);
+});
+
+export const getPendingApprovals = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ message: 'Usuario no autenticado' });
+    const approvals = await productionService.getPendingApprovals(userId);
+    return res.json(approvals);
+});
+
+export const actionApproval = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { stateId } = req.params;
+    const { action, notes, formValues, consecutive } = req.body;
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ message: 'Usuario no autenticado' });
+    const result = await productionService.actionApproval(parseInt(stateId), userId, action, notes, formValues, consecutive);
+    return res.json(result);
+});

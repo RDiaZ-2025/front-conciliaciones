@@ -1,3 +1,4 @@
+import { LucideIconComponent } from '../../../components/lucide-icon/lucide-icon.component';
 import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -6,12 +7,14 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { FloatLabelModule } from 'primeng/floatlabel';
-import { Permission, PermissionFormData } from '../permissions.models';
+import { Permission } from '../../../models/common/permission';
+import { PermissionFormData } from '../../../models/common/permission-form-data';
 
 @Component({
   selector: 'app-permission-dialog',
   standalone: true,
   imports: [
+    LucideIconComponent,
     CommonModule,
     ReactiveFormsModule,
     DialogModule,
