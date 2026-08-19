@@ -9,25 +9,40 @@
 </p-confirmDialog>
 
 <div class="flex flex-column gap-4 p-4">
-  <app-page-header title="Gestión de Equipos" subtitle="Administra los equipos y sus miembros" icon="users">
+  <app-page-header title="Gestión de Equipos" subtitle="Administra los equipos, líderes, condiciones y miembros" icon="users">
     <p-button (onClick)="openNew()"><lucide-icon name="plus" class="mr-2"></lucide-icon>Nuevo Equipo</p-button>
   </app-page-header>
 
   <div class="card">
-    <p-table [value]="teams()" [loading]="loading()" [paginator]="true" [rows]="10" styleClass="p-datatable-sm">
+    <p-table [value]="teams()" [loading]="loading()" [paginator]="true" [rows]="10" styleClass="p-datatable-sm" responsiveLayout="scroll">
       <ng-template pTemplate="header">
         <tr>
-          <th>Nombre</th>
+          <th>Nombre del Equipo</th>
+          <th>Líder de Equipo</th>
           <th>Descripción</th>
-          <th style="width: 10rem">Acciones</th>
+          <th class="text-center">Miembros</th>
+          <th style="width: 10rem" class="text-center">Acciones</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-team>
         <tr>
-          <td>{{ team.name }}</td>
-          <td>{{ team.description }}</td>
+          <td class="font-bold text-900">{{ team.name }}</td>
           <td>
-            <div class="flex gap-2">
+            <div *ngIf="team.leader" class="flex align-items-center gap-2">
+              <lucide-icon name="user-check" class="text-primary text-sm"></lucide-icon>
+              <div class="flex flex-column">
+                <span class="font-semibold text-sm">{{ team.leader.name }}</span>
+                <span class="text-xs text-500">{{ team.leader.email }}</span>
+              </div>
+            </div>
+            <span *ngIf="!team.leader" class="text-xs text-400 italic">Sin líder asignado</span>
+          </td>
+          <td>{{ team.description || 'Sin descripción' }}</td>
+          <td class="text-center">
+            <p-badge [value]="(team.users?.length || 0).toString()" severity="secondary"></p-badge>
+          </td>
+          <td class="text-center">
+            <div class="flex justify-content-center gap-2">
               <p-button (onClick)="editTeam(team)" [rounded]="true" [text]="true" severity="info" pTooltip="Editar"><lucide-icon name="pencil"></lucide-icon></p-button>
               <p-button (onClick)="deleteTeam(team)" [rounded]="true" [text]="true" severity="danger" pTooltip="Eliminar"><lucide-icon name="trash-2"></lucide-icon></p-button>
             </div>
@@ -36,7 +51,7 @@
       </ng-template>
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="3" class="text-center p-4">No hay equipos registrados</td>
+          <td colspan="5" class="text-center p-4">No hay equipos registrados</td>
         </tr>
       </ng-template>
     </p-table>

@@ -141,8 +141,8 @@ export class ProductionService extends BaseApiService {
     });
   }
 
-  submitDynamicForm(formId: number, values: any, targetFormIds?: number[], submissions?: any[]): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/submissions`, { formId, values, targetFormIds, submissions });
+  submitDynamicForm(formId: number, values: any, targetFormIds?: number[], submissions?: any[], targetTeamIds?: number[], targetTeams?: Array<{ teamId: number; assignmentMode?: string }>): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/submissions`, { formId, values, targetFormIds, submissions, targetTeamIds, targetTeams });
   }
 
   getDynamicSubmissions(): Observable<any[]> {
@@ -177,6 +177,31 @@ export class ProductionService extends BaseApiService {
 
   adminSaveStages(formId: number, stages: any[]): Observable<any[]> {
     return this.http.post<any[]>(`${this.apiUrl}/admin/forms/${formId}/stages`, stages);
+  }
+
+  // --- Independent Workflows ---
+  adminGetWorkflows(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/admin/workflows`);
+  }
+
+  adminCreateWorkflow(data: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/admin/workflows`, data);
+  }
+
+  adminUpdateWorkflow(id: number, data: any): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/admin/workflows/${id}`, data);
+  }
+
+  adminDeleteWorkflow(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/admin/workflows/${id}`);
+  }
+
+  adminGetWorkflowStages(workflowId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/admin/workflows/${workflowId}/stages`);
+  }
+
+  adminSaveWorkflowStages(workflowId: number, stages: any[]): Observable<any[]> {
+    return this.http.post<any[]>(`${this.apiUrl}/admin/workflows/${workflowId}/stages`, stages);
   }
 
   getSubmissionDetails(submissionId: number): Observable<any> {

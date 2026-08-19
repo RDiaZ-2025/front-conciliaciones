@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { ProductionController, getAllProductionRequests, getProductionRequestById, createProductionRequest, updateProductionRequest, getProducts, moveProductionRequest, updateStepGeneral, updateStepCustomer, updateStepCampaign, updateStepAudience, updateStepProduction, updateMaterialData, getFormFields, createSubmission, getSubmissions, adminGetForms, adminCreateForm, adminUpdateForm, adminDeleteForm, adminSaveFields, adminGetStages, adminSaveStages, getPendingApprovals, actionApproval, getSubmissionDetails } from '../controllers/production.controller';
+import { ProductionController, getAllProductionRequests, getProductionRequestById, createProductionRequest, updateProductionRequest, getProducts, moveProductionRequest, updateStepGeneral, updateStepCustomer, updateStepCampaign, updateStepAudience, updateStepProduction, updateMaterialData, getFormFields, createSubmission, getSubmissions, adminGetForms, adminCreateForm, adminUpdateForm, adminDeleteForm, adminSaveFields, adminGetStages, adminSaveStages, adminGetWorkflows, adminCreateWorkflow, adminUpdateWorkflow, adminDeleteWorkflow, adminGetWorkflowStages, adminSaveWorkflowStages, getPendingApprovals, actionApproval, getSubmissionDetails } from '../controllers/production.controller';
 import { addMaterialRegister, getMaterialRegisters } from '../controllers/material_register.controller';
 import { RequestsReportController } from '../controllers/requests_report.controller';
 import { getProductionRequestHistory } from '../controllers/production_request_history.controller';
@@ -25,7 +25,7 @@ router.post('/submissions', createSubmission);
 router.get('/submissions', getSubmissions);
 router.get('/submissions/:submissionId', getSubmissionDetails);
 
-// Admin Forms & Workflows
+// Admin Forms (Library)
 router.get('/admin/forms', adminGetForms);
 router.post('/admin/forms', adminCreateForm);
 router.put('/admin/forms/:id', adminUpdateForm);
@@ -33,6 +33,14 @@ router.delete('/admin/forms/:id', adminDeleteForm);
 router.post('/admin/forms/:id/fields', adminSaveFields);
 router.get('/admin/forms/:id/stages', adminGetStages);
 router.post('/admin/forms/:id/stages', adminSaveStages);
+
+// Admin Workflows (Independent)
+router.get('/admin/workflows', adminGetWorkflows);
+router.post('/admin/workflows', adminCreateWorkflow);
+router.put('/admin/workflows/:id', adminUpdateWorkflow);
+router.delete('/admin/workflows/:id', adminDeleteWorkflow);
+router.get('/admin/workflows/:id/stages', adminGetWorkflowStages);
+router.post('/admin/workflows/:id/stages', adminSaveWorkflowStages);
 
 // Approvals Inbox
 router.get('/approvals/pending', getPendingApprovals);

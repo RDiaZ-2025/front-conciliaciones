@@ -85,12 +85,17 @@
                 <span>Historial y Seguimiento de Solicitudes</span>
             </h3>
 
-            <div *ngIf="sortedAllSubmissions().length === 0" class="text-center p-5 border-round surface-card border-1 surface-border">
-                <lucide-icon name="archive" class="text-4xl text-400 mb-2"></lucide-icon>
-                <p class="text-600 m-0">No hay solicitudes registradas.</p>
+            <div *ngIf="loading()" class="flex justify-content-center p-5">
+                <p-progressSpinner></p-progressSpinner>
             </div>
 
-            <div *ngIf="sortedAllSubmissions().length > 0" class="grid">
+            <div *ngIf="!loading()" class="w-full">
+                <div *ngIf="sortedAllSubmissions().length === 0" class="text-center p-5 border-round surface-card border-1 surface-border">
+                    <lucide-icon name="archive" class="text-4xl text-400 mb-2"></lucide-icon>
+                    <p class="text-600 m-0">No hay solicitudes registradas.</p>
+                </div>
+
+                <div *ngIf="sortedAllSubmissions().length > 0" class="grid">
                 <div *ngFor="let sub of sortedAllSubmissions()" class="col-12 md:col-6 lg:col-4 xl:col-3">
                     <p-card [style]="{ height: '100%', display: 'flex', flexDirection: 'column' }"
                         styleClass="flex flex-column h-full shadow-2 hover:shadow-6 transition-duration-200 border-round-xl">
@@ -140,6 +145,7 @@
                     </p-card>
                 </div>
             </div>
+            </div>
         </div>
     </div>
 
@@ -175,8 +181,32 @@
             </div>
 
             <div *ngIf="!loadingRequestTypes()" class="flex flex-column gap-4">
-                <!-- Stacked list of all active Initial Forms -->
-                <div *ngFor="let form of initialForms()" class="flex flex-column gap-3 p-3 border-round border-1 surface-border surface-card">
+                <!-- 1. Selector de Formulario de Solicitud Inicial -->
+                <div class="flex flex-column gap-2 p-3 border-round-xl border-1 surface-border surface-card">
+                    <label for="initialFormSelect" class="font-bold text-sm text-900 flex align-items-center gap-2">
+                        <lucide-icon name="file-text" class="text-primary" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+                        <span>1. Formulario de Solicitud Inicial *</span>
+                    </label>
+                    <p-select id="initialFormSelect" [options]="initialForms()" [(ngModel)]="selectedInitialFormId"
+                              optionLabel="name" optionValue="id" optionDisabled="disabled"
+                              placeholder="Seleccione el formulario inicial a diligenciar..."
+                              class="w-full" styleClass="w-full" [appendTo]="'body'">
+                        <ng-template let-item pTemplate="item">
+                            <div class="flex align-items-center justify-content-between w-full py-1"
+                                 [pTooltip]="!item.workflowId ? 'Este formulario no tiene un flujo de trabajo asociado y no puede ser seleccionado.' : undefined"
+                                 [tooltipDisabled]="!!item.workflowId"
+                                 tooltipPosition="right">
+                                <span [class.text-400]="!item.workflowId" [class.font-semibold]="!!item.workflowId">{{ item.name }}</span>
+                                <span *ngIf="!item.workflowId" class="text-xs text-orange-700 bg-orange-50 border-1 border-orange-200 px-2 py-0.5 border-round font-medium ml-2 flex align-items-center gap-1">
+                                    <i class="pi pi-exclamation-triangle text-xs"></i> Sin flujo asociado
+                                </span>
+                            </div>
+                        </ng-template>
+                    </p-select>
+                </div>
+
+                <!-- 2. Campos del Formulario Inicial Seleccionado -->
+                <div *ngIf="selectedInitialForm() as form" class="flex flex-column gap-3 p-3 border-round-xl border-1 surface-border surface-card">
                     <span class="text-900 font-bold text-lg border-bottom-1 pb-2 surface-border">{{ form.name }}</span>
                     <ng-container *ngFor="let field of form.fields">
                     <div *ngIf="isFieldVisible(field, form.fields, initialFormValues(), form.id)" class="flex flex-column gap-1" [class.col-12]="field.type === 'section_header'">
@@ -245,7 +275,7 @@
 
                                 <!-- None / Standard -->
                                 <input *ngIf="!field.metadata?.numberFormat || field.metadata?.numberFormat === 'none'"
-                                       type="number" step="1" pInputText [id]="'initial-' + form.id + '-' + field.name"
+                                       type="number" step="0.01" pInputText [id]="'initial-' + form.id + '-' + field.name"
                                        [(ngModel)]="initialFormValues()[form.id + '_' + field.name]" (ngModelChange)="recalculateInitialFormulas()"
                                        [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" class="w-full" />
                             </ng-container>
@@ -297,21 +327,25 @@
 
                             <!-- Select type -->
                             <p-select *ngSwitchCase="'select'" [options]="field.metadata?.options || []"
-                                      [(ngModel)]="initialFormValues()[form.id + '_' + field.name]" (ngModelChange)="recalculateInitialFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
-                                      [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-select>
+                                [id]="'initial-' + form.id + '-' + field.name"
+                                [(ngModel)]="initialFormValues()[form.id + '_' + field.name]"
+                                (ngModelChange)="recalculateInitialFormulas()"
+                                [placeholder]="field.placeholder || 'Seleccione una opción'"
+                                [disabled]="field.isReadOnly" class="w-full" styleClass="w-full" [appendTo]="'body'"></p-select>
 
-                            <!-- Multiselect type -->
+                            <!-- MultiSelect type -->
                             <p-multiSelect *ngSwitchCase="'multiselect'" [options]="field.metadata?.options || []"
-                                      [ngModel]="multiselectSelected[form.id + '_' + field.name]"
-                                      (onChange)="onMultiselectSelectionChange(form.id + '_' + field.name, $event.value, 'initial')"
-                                      [placeholder]="field.placeholder || 'Seleccione opciones...'"
-                                      [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-multiSelect>
+                                [id]="'initial-' + form.id + '-' + field.name"
+                                [ngModel]="multiselectSelected[form.id + '_' + field.name]"
+                                (onChange)="onMultiselectSelectionChange(form.id + '_' + field.name, $event.value, 'initial')"
+                                [placeholder]="field.placeholder || 'Seleccione opciones'"
+                                [disabled]="field.isReadOnly" class="w-full" styleClass="w-full" [appendTo]="'body'"></p-multiSelect>
 
-                            <!-- Customer Autocomplete type -->
+                            <!-- Customer select -->
                             <app-customer-autocomplete *ngSwitchCase="'customer'"
-                                                      [(value)]="initialFormValues()[form.id + '_' + field.name]"
-                                                      [disabled]="field.isReadOnly"
-                                                      [placeholder]="field.placeholder || ''">
+                                [(value)]="initialFormValues()[form.id + '_' + field.name]"
+                                [disabled]="field.isReadOnly"
+                                [placeholder]="field.placeholder || 'Seleccione un cliente'">
                             </app-customer-autocomplete>
 
                             <!-- Dynamic List type -->
@@ -416,28 +450,56 @@
                     </ng-container>
                 </div>
 
-                <!-- Selección de Áreas (Tipos de Solicitud) -->
-                <div class="flex flex-column gap-3">
-                    <span class="text-900 font-bold text-lg border-bottom-1 pb-2 surface-border">Selección de Áreas Destinatarias</span>
-                    <span class="text-600 font-medium text-sm mb-1">Selecciona la o las áreas que deben procesar y completar el requerimiento:</span>
-                    
-                    <div class="flex flex-column gap-2" style="max-height: 250px; overflow-y: auto;">
-                        <div *ngFor="let item of requestTypes()"
-                            class="flex align-items-center p-3 border-round border-1 surface-border hover:surface-100 transition-colors gap-3"
-                            [class.opacity-50]="!isAreaEnabled(item)"
-                            [class.cursor-pointer]="isAreaEnabled(item)"
-                            [class.cursor-not-allowed]="!isAreaEnabled(item)"
-                            (click)="isAreaEnabled(item) ? (item.selected = !item.selected) : null">
-                            <p-checkbox [(ngModel)]="item.selected" [binary]="true" [inputId]="'type-' + item.id"
-                                [disabled]="!isAreaEnabled(item)"
-                                (click)="$event.stopPropagation()"></p-checkbox>
-                            <div class="flex align-items-center justify-content-center border-round surface-100"
-                                style="width: 2.8rem; height: 2.8rem;">
-                                <lucide-icon [name]="getFormIcon(item)" [class]="getFormIconColor(item)" style="width: 1.6rem; height: 1.6rem;"></lucide-icon>
-                            </div>
-                            <div class="flex flex-column flex-1">
-                                <label [for]="'type-' + item.id" [class.cursor-pointer]="isAreaEnabled(item)" [class.cursor-not-allowed]="!isAreaEnabled(item)" class="font-semibold text-900 mb-1">{{ item.name }}</label>
-                                <span class="text-xs text-600 font-medium">{{ item.responsible }} / {{ item.role }}</span>
+                <!-- 3. Selección de Equipos / Áreas Destinatarias -->
+                <div class="flex flex-column gap-3 p-3 border-round-xl border-1 surface-border surface-card">
+                    <div class="flex flex-column gap-1 border-bottom-1 pb-2 surface-border">
+                        <span class="text-900 font-bold text-base flex align-items-center gap-2">
+                            <lucide-icon name="users" class="text-primary" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+                            <span>2. Equipos / Áreas Destinatarias *</span>
+                        </span>
+                        <span class="text-600 font-medium text-xs">Selecciona el o los equipos que deben procesar esta solicitud (la primera etapa llegará al líder del equipo):</span>
+                    </div>
+
+                    <div class="grid mt-1">
+                        <div *ngFor="let team of teams()" class="col-12 md:col-6">
+                            <div class="flex align-items-center p-3 border-round-lg border-1 surface-border hover:surface-100 transition-colors gap-3 h-full"
+                                [class.surface-100]="team.selected"
+                                [class.border-primary]="team.selected"
+                                [class.opacity-50]="!isTeamEnabled(team)"
+                                [class.cursor-not-allowed]="!isTeamEnabled(team)"
+                                [class.cursor-pointer]="isTeamEnabled(team)"
+                                [pTooltip]="getTeamDisabledReason(team)"
+                                [tooltipDisabled]="isTeamEnabled(team)"
+                                tooltipPosition="top"
+                                (click)="isTeamEnabled(team) ? (team.selected = !team.selected) : null">
+                                <p-checkbox [(ngModel)]="team.selected" [binary]="true" [inputId]="'team-' + team.id"
+                                    [disabled]="!isTeamEnabled(team)"
+                                    (click)="$event.stopPropagation()"></p-checkbox>
+                                <div class="flex flex-column flex-1">
+                                    <div class="flex align-items-center justify-content-between gap-2 flex-wrap">
+                                        <label [for]="'team-' + team.id" [class.cursor-pointer]="isTeamEnabled(team)" [class.cursor-not-allowed]="!isTeamEnabled(team)" class="font-bold text-sm text-900 mb-0">{{ team.name }}</label>
+                                        
+                                        <!-- Botón Interactivo para Ciclar el Modo de Asignación de la Etapa 1 -->
+                                        <button type="button"
+                                                *ngIf="isTeamEnabled(team)"
+                                                (click)="cycleTeamAssignmentMode(team, $event)"
+                                                [pTooltip]="getTeamAssignmentBadge(team).tooltip"
+                                                tooltipPosition="left"
+                                                class="border-round-lg border-1 px-2 py-1 text-xs font-semibold flex align-items-center gap-1 cursor-pointer transition-all shadow-none"
+                                                [ngClass]="[getTeamAssignmentBadge(team).bgClass, getTeamAssignmentBadge(team).textClass, getTeamAssignmentBadge(team).borderClass]"
+                                                style="outline: none;">
+                                            <lucide-icon [name]="getTeamAssignmentBadge(team).icon" style="width: 0.9rem; height: 0.9rem;"></lucide-icon>
+                                            <span>{{ getTeamAssignmentBadge(team).label }}</span>
+                                            <i class="pi pi-refresh text-xs opacity-60 ml-1"></i>
+                                        </button>
+                                    </div>
+
+                                    <div class="mt-1 flex flex-wrap gap-1 align-items-center" *ngIf="!isTeamConditionMet(team)">
+                                        <span class="text-xs text-orange-700 bg-orange-50 border-1 border-orange-200 px-2 py-1 border-round font-semibold flex align-items-center gap-1">
+                                            <i class="pi pi-ban text-xs"></i> No cumple condiciones
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -478,9 +540,9 @@
                 <div *ngFor="let group of parentFormGroups()" class="flex flex-column gap-2 mb-2 p-3 border-round border-1 surface-border surface-card">
                     <span class="text-primary font-bold text-sm border-bottom-1 pb-1 surface-border uppercase">{{ group.formName }}</span>
                     <div class="grid row-gap-3 mt-1">
-                        <ng-container *ngFor="let val of group.values">
+                        <ng-container *ngFor="let val of group.values; let i = index">
                             <!-- Section Header -->
-                            <div *ngIf="val.fieldType === 'section_header'" class="col-12 mt-3 mb-1">
+                            <div *ngIf="val.fieldType === 'section_header' && isSectionHeaderVisible(group.values, i)" class="col-12 mt-3 mb-1">
                                 <div class="bg-red-600 text-white font-bold text-center py-2 px-3 border-round text-sm uppercase tracking-wider shadow-1">
                                     {{ val.label }}
                                 </div>
@@ -529,13 +591,13 @@
                 </div>
             </div>
 
-            <!-- Section 1: Original Form Data (Only if not correction) -->
-            <div class="flex flex-column gap-3" *ngIf="!isCorrection(selectedTask()) && selectedTask()?.values && selectedTask()?.values?.length > 0">
+            <!-- Section 1: Original Form Data (Only if not correction and no parent form groups) -->
+            <div class="flex flex-column gap-3" *ngIf="!isCorrection(selectedTask()) && (!parentFormGroups() || parentFormGroups().length === 0) && selectedTask()?.values && selectedTask()?.values?.length > 0">
                 <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">Datos de la Solicitud</span>
                 <div class="grid row-gap-3">
-                    <ng-container *ngFor="let val of selectedTask()?.values">
+                    <ng-container *ngFor="let val of selectedTask()?.values; let i = index">
                         <!-- Section Header -->
-                        <div *ngIf="val.fieldType === 'section_header'" class="col-12 mt-3 mb-1">
+                        <div *ngIf="val.fieldType === 'section_header' && isSectionHeaderVisible(selectedTask()?.values, i)" class="col-12 mt-3 mb-1">
                             <div class="bg-red-600 text-white font-bold text-center py-2 px-3 border-round text-sm uppercase tracking-wider shadow-1">
                                 {{ val.label }}
                             </div>
@@ -603,9 +665,9 @@
                         
                         <!-- Values (if any) -->
                         <div class="grid mt-1" *ngIf="hStage.values && hStage.values.length > 0">
-                            <ng-container *ngFor="let val of hStage.values">
+                            <ng-container *ngFor="let val of hStage.values; let i = index">
                                 <!-- Section Header -->
-                                <div *ngIf="val.fieldType === 'section_header'" class="col-12 mt-3 mb-1">
+                                <div *ngIf="val.fieldType === 'section_header' && isSectionHeaderVisible(hStage.values, i)" class="col-12 mt-3 mb-1">
                                     <div class="bg-red-600 text-white font-bold text-center py-2 px-3 border-round text-sm uppercase tracking-wider shadow-1">
                                         {{ val.label }}
                                     </div>
@@ -671,7 +733,7 @@
             <!-- Section 2: Conditional approval form to fill or correction editor -->
             <div class="flex flex-column gap-3 mt-2" *ngIf="selectedTask().formIdToFill || isCorrection(selectedTask())">
                 <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">
-                    {{ isCorrection(selectedTask()) ? 'Modificar Datos de la Solicitud' : 'Formulario Requerido en esta Etapa: ' + selectedTask().formToFill?.name }}
+                    {{ isCorrection(selectedTask()) ? 'Modificar Datos de la Solicitud' : (selectedTask().formIdToFill === -1 ? 'Formularios Requeridos en esta Etapa' : 'Formulario Requerido en esta Etapa: ' + selectedTask().formToFill?.name) }}
                 </span>
                 
                 <div *ngIf="loadingStageFields()" class="flex justify-content-center p-3">
@@ -920,7 +982,7 @@
                     </ng-container>
 
                     <!-- Case B: Normal stage form to fill or fallback correction -->
-                    <ng-container *ngIf="!(isCorrection(selectedTask()) && selectedTask()?.parentForms && selectedTask()?.parentForms?.length > 0)">
+                    <ng-container *ngIf="!(isCorrection(selectedTask()) && selectedTask()?.parentForms && selectedTask()?.parentForms?.length > 0) && selectedTask().formIdToFill !== -1">
                         <ng-container *ngFor="let field of stageFormFields()">
                         <div *ngIf="isFieldVisible(field, stageFormFields(), stageFormValues)" class="flex flex-column gap-1" [class.col-12]="field.type === 'section_header'">
                             <label [for]="'stage-field-' + field.name" class="font-medium text-900" *ngIf="field.type !== 'section_header'">
@@ -1155,9 +1217,235 @@
                         </div>
                         </ng-container>
                     </ng-container>
+
+                    <!-- Case C: Multi-forms Selection Mode (formIdToFill === -1) -->
+                    <ng-container *ngIf="selectedTask().formIdToFill === -1">
+                        <div class="surface-card p-4 border-round shadow-1 border-1 surface-border mb-3 bg-blue-50 border-blue-200">
+                            <div class="flex align-items-center gap-2 mb-3">
+                                <i class="pi pi-check-square text-primary font-bold text-xl"></i>
+                                <div>
+                                    <span class="font-bold text-base text-900 block">Formularios Disponibles para Diligenciar</span>
+                                    <span class="text-xs text-600">Selecciona los formularios que deseas diligenciar en esta etapa:</span>
+                                </div>
+                            </div>
+                            
+                            <div class="grid m-0 gap-2">
+                                <div *ngFor="let mForm of selectedTask().availableMultiForms" 
+                                     class="col-12 md:col-6 p-2 bg-white border-round border-1 surface-border flex align-items-center gap-3 cursor-pointer hover:surface-100 transition-duration-150"
+                                     (click)="toggleMultiFormSelection(mForm.formId)">
+                                    <p-checkbox [binary]="true" [ngModel]="isMultiFormSelected(mForm.formId)" (click)="$event.stopPropagation()" (onChange)="toggleMultiFormSelection(mForm.formId)"></p-checkbox>
+                                    <div class="flex flex-column">
+                                        <span class="font-bold text-sm text-900">{{ mForm.formName }}</span>
+                                        <span class="text-xs text-500" *ngIf="mForm.description">{{ mForm.description }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Render form fields for each selected multi-form -->
+                        <div *ngFor="let mForm of getSelectedMultiForms()" class="flex flex-column gap-3 border-round border-1 surface-border p-4 surface-card mb-3 shadow-1">
+                            <div class="flex align-items-center justify-content-between border-bottom-1 surface-border pb-2">
+                                <div class="flex align-items-center gap-2">
+                                    <i class="pi pi-file-edit text-primary font-bold text-lg"></i>
+                                    <span class="text-primary font-bold text-base uppercase">{{ mForm.formName }}</span>
+                                </div>
+                                <p-button icon="pi pi-times" severity="secondary" [text]="true" size="small" (onClick)="toggleMultiFormSelection(mForm.formId)" pTooltip="Quitar este formulario"></p-button>
+                            </div>
+
+                            <ng-container *ngFor="let field of mForm.fields; let fIdx = index">
+                                <div *ngIf="isFieldVisible(field, mForm.fields, stageFormValues, mForm.formId)" 
+                                     class="flex flex-column gap-1" 
+                                     [class.col-12]="field.type === 'section_header'">
+                                    
+                                    <label [for]="'pb-mf-field-' + mForm.formId + '-' + field.name" class="font-medium text-900" *ngIf="field.type !== 'section_header'">
+                                        {{ field.label }} <span class="text-red-500" *ngIf="field.isRequired">*</span>
+                                    </label>
+                                    <span class="text-xs text-500 mb-1" *ngIf="field.description && field.type !== 'section_header'">{{ field.description }}</span>
+
+                                    <ng-container [ngSwitch]="field.type">
+                                        <input *ngSwitchCase="'date'" type="date" pInputText [id]="'pb-mf-field-' + mForm.formId + '-' + field.name" [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
+                                        
+                                        <input *ngSwitchCase="'datetime'" type="datetime-local" pInputText [id]="'pb-mf-field-' + mForm.formId + '-' + field.name" [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
+
+                                        <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'pb-mf-field-' + mForm.formId + '-' + field.name" [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
+
+                                        <!-- Number type -->
+                                        <ng-container *ngSwitchCase="'number'">
+                                            <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_cop'"
+                                                           mode="currency" currency="COP" locale="es-CO" [useGrouping]="true"
+                                                           [id]="'pb-mf-field-' + mForm.formId + '-' + field.name"
+                                                           [ngModel]="toNumber(stageFormValues[mForm.formId + '_' + field.name])"
+                                                           (ngModelChange)="setFormValue(mForm.formId + '_' + field.name, $event, 'parent')"
+                                                           [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                           [minFractionDigits]="0" [maxFractionDigits]="0"
+                                                           styleClass="w-full" class="w-full"></p-inputNumber>
+                                            
+                                            <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
+                                                           mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
+                                                           [id]="'pb-mf-field-' + mForm.formId + '-' + field.name"
+                                                           [ngModel]="toNumber(stageFormValues[mForm.formId + '_' + field.name])"
+                                                           (ngModelChange)="setFormValue(mForm.formId + '_' + field.name, $event, 'parent')"
+                                                           [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                           [minFractionDigits]="0" [maxFractionDigits]="0"
+                                                           styleClass="w-full" class="w-full"></p-inputNumber>
+
+                                            <p-inputNumber *ngIf="field.metadata?.numberFormat === 'thousands_dot'"
+                                                           [useGrouping]="true" locale="de-DE"
+                                                           [id]="'pb-mf-field-' + mForm.formId + '-' + field.name"
+                                                           [ngModel]="toNumber(stageFormValues[mForm.formId + '_' + field.name])"
+                                                           (ngModelChange)="setFormValue(mForm.formId + '_' + field.name, $event, 'parent')"
+                                                           [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                           [minFractionDigits]="0" [maxFractionDigits]="0"
+                                                           styleClass="w-full" class="w-full"></p-inputNumber>
+
+                                            <p-inputNumber *ngIf="field.metadata?.numberFormat === 'thousands_comma'"
+                                                           [useGrouping]="true" locale="en-US"
+                                                           [id]="'pb-mf-field-' + mForm.formId + '-' + field.name"
+                                                           [ngModel]="toNumber(stageFormValues[mForm.formId + '_' + field.name])"
+                                                           (ngModelChange)="setFormValue(mForm.formId + '_' + field.name, $event, 'parent')"
+                                                           [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                           [minFractionDigits]="0" [maxFractionDigits]="0"
+                                                           styleClass="w-full" class="w-full"></p-inputNumber>
+
+                                            <input *ngIf="!field.metadata?.numberFormat || field.metadata?.numberFormat === 'none'"
+                                                   type="number" step="1" pInputText [id]="'pb-mf-field-' + mForm.formId + '-' + field.name"
+                                                   [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()"
+                                                   [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" class="w-full" />
+                                        </ng-container>
+
+                                        <!-- Decimal type -->
+                                        <ng-container *ngSwitchCase="'decimal'">
+                                            <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_cop'"
+                                                           mode="currency" currency="COP" locale="es-CO" [useGrouping]="true"
+                                                           [id]="'pb-mf-field-' + mForm.formId + '-' + field.name"
+                                                           [ngModel]="toNumber(stageFormValues[mForm.formId + '_' + field.name])"
+                                                           (ngModelChange)="setFormValue(mForm.formId + '_' + field.name, $event, 'parent')"
+                                                           [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                           styleClass="w-full" class="w-full"></p-inputNumber>
+                                            
+                                            <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
+                                                           mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
+                                                           [id]="'pb-mf-field-' + mForm.formId + '-' + field.name"
+                                                           [ngModel]="toNumber(stageFormValues[mForm.formId + '_' + field.name])"
+                                                           (ngModelChange)="setFormValue(mForm.formId + '_' + field.name, $event, 'parent')"
+                                                           [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                           styleClass="w-full" class="w-full"></p-inputNumber>
+
+                                            <p-inputNumber *ngIf="field.metadata?.numberFormat === 'thousands_dot'"
+                                                           [useGrouping]="true" locale="de-DE"
+                                                           [id]="'pb-mf-field-' + mForm.formId + '-' + field.name"
+                                                           [ngModel]="toNumber(stageFormValues[mForm.formId + '_' + field.name])"
+                                                           (ngModelChange)="setFormValue(mForm.formId + '_' + field.name, $event, 'parent')"
+                                                           [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                           styleClass="w-full" class="w-full"></p-inputNumber>
+
+                                            <p-inputNumber *ngIf="field.metadata?.numberFormat === 'thousands_comma'"
+                                                           [useGrouping]="true" locale="en-US"
+                                                           [id]="'pb-mf-field-' + mForm.formId + '-' + field.name"
+                                                           [ngModel]="toNumber(stageFormValues[mForm.formId + '_' + field.name])"
+                                                           (ngModelChange)="setFormValue(mForm.formId + '_' + field.name, $event, 'parent')"
+                                                           [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
+                                                           styleClass="w-full" class="w-full"></p-inputNumber>
+
+                                            <input *ngIf="!field.metadata?.numberFormat || field.metadata?.numberFormat === 'none'"
+                                                   type="number" step="any" pInputText [id]="'pb-mf-field-' + mForm.formId + '-' + field.name"
+                                                   [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()"
+                                                   [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" class="w-full" />
+                                        </ng-container>
+                                        
+                                        <p-select *ngSwitchCase="'select'" [options]="field.metadata?.options || []"
+                                                  [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
+                                                  [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-select>
+
+                                        <!-- Multiselect type -->
+                                        <p-multiSelect *ngSwitchCase="'multiselect'" [options]="field.metadata?.options || []"
+                                                       [ngModel]="multiselectSelected[mForm.formId + '_' + field.name]"
+                                                       (onChange)="onMultiselectSelectionChange(mForm.formId + '_' + field.name, $event.value, 'stage')"
+                                                       [placeholder]="field.placeholder || 'Seleccione opciones...'"
+                                                       [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-multiSelect>
+
+                                        <!-- Customer Autocomplete type -->
+                                        <app-customer-autocomplete *ngSwitchCase="'customer'"
+                                                                   [(value)]="stageFormValues[mForm.formId + '_' + field.name]"
+                                                                   [disabled]="field.isReadOnly"
+                                                                   [placeholder]="field.placeholder || ''">
+                                        </app-customer-autocomplete>
+
+                                        <!-- Dynamic List type -->
+                                        <div *ngSwitchCase="'dynamic_list'" class="flex flex-column gap-3 w-full">
+                                            <p-multiSelect *ngIf="!field.isReadOnly"
+                                                      [options]="field.metadata?.options || []"
+                                                      [ngModel]="dynamicListSelected[mForm.formId + '_' + field.name]"
+                                                      (onChange)="onDynamicListSelectionChange(mForm.formId + '_' + field.name, $event.value, field, 'stage')"
+                                                      [placeholder]="field.placeholder || 'Seleccione productos / ítems...'"
+                                                      [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-multiSelect>
+
+                                            <div class="border-round border-1 surface-border bg-white overflow-hidden w-full" *ngIf="(dynamicListRows[mForm.formId + '_' + field.name] || []).length > 0">
+                                                <table class="w-full text-sm text-left border-collapse">
+                                                    <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
+                                                        <tr>
+                                                            <th class="p-2 pl-3">Producto / Servicio</th>
+                                                            <th *ngFor="let sf of (field.metadata?.subFields || [{ label: 'Cantidad' }])" class="p-2 text-center" style="width: 12rem;">
+                                                                {{ sf.label }}
+                                                            </th>
+                                                            <th class="p-2 text-center" style="width: 3rem;" *ngIf="!field.isReadOnly"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr *ngFor="let itemRow of (dynamicListRows[mForm.formId + '_' + field.name] || []); let rIdx = index" class="border-bottom-1 surface-border hover:bg-50">
+                                                            <td class="p-2 pl-3 font-semibold text-900 align-middle">
+                                                                {{ itemRow.item }}
+                                                            </td>
+                                                            <td *ngFor="let sf of (field.metadata?.subFields || [{ name: 'quantity', type: 'number' }])" class="p-2 text-center align-middle">
+                                                                <input *ngIf="!field.isReadOnly"
+                                                                       [type]="(sf.type === 'number' || sf.type === 'decimal') ? 'number' : 'text'"
+                                                                       [attr.step]="sf.type === 'decimal' ? 'any' : (sf.type === 'number' ? '1' : null)"
+                                                                       pInputText
+                                                                       [ngModel]="itemRow[sf.name]"
+                                                                       (ngModelChange)="updateDynamicListItemValue(mForm.formId + '_' + field.name, rIdx, sf.name, $event, 'stage')"
+                                                                       min="1"
+                                                                       class="w-full text-center p-inputtext-sm font-bold" />
+                                                                <span *ngIf="field.isReadOnly" class="font-bold text-900">{{ itemRow[sf.name] }}</span>
+                                                            </td>
+                                                            <td class="p-2 text-center align-middle" *ngIf="!field.isReadOnly">
+                                                                <p-button [text]="true" severity="danger" size="small" (onClick)="removeDynamicListItem(mForm.formId + '_' + field.name, rIdx, 'stage')">
+                                                                    <lucide-icon name="trash"></lucide-icon>
+                                                                </p-button>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+
+                                        <input *ngSwitchCase="'text'" type="text" pInputText [id]="'pb-mf-field-' + mForm.formId + '-' + field.name" [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" />
+
+                                        <!-- File upload -->
+                                        <div *ngSwitchCase="'file'" class="flex flex-column gap-2 mt-1">
+                                            <input type="file" [id]="'pb-mf-file-input-' + mForm.formId + '-' + field.name" (change)="onParentFileSelected($event, mForm.formId, field)" [multiple]="(field.metadata?.maxFileCount || 1) > 1" class="hidden" [disabled]="field.isReadOnly" #pbMfFileInput />
+                                            <div class="flex align-items-center gap-2">
+                                                <p-button label="Seleccionar archivo(s)" icon="pi pi-upload" size="small" [outlined]="true" [disabled]="field.isReadOnly" (onClick)="pbMfFileInput.click()"></p-button>
+                                                <span class="text-xs text-500">Máx {{ field.metadata?.maxFileSize || 10 }}MB</span>
+                                                <div *ngIf="getStageSelectedFiles(mForm.formId + '_' + field.name).length > 0" class="flex flex-column gap-1">
+                                                    <div *ngFor="let f of getStageSelectedFiles(mForm.formId + '_' + field.name); let fIdx = index" class="flex justify-content-between align-items-center bg-white p-2 border-round border-1 surface-border shadow-1">
+                                                        <div class="flex align-items-center gap-2 text-sm text-800">
+                                                            <i class="pi pi-file text-primary"></i>
+                                                            <span>{{ f.name }}</span>
+                                                            <span class="text-xs text-500">({{ (f.size / 1024 / 1024) | number:'1.2-2' }} MB)</span>
+                                                        </div>
+                                                        <p-button icon="pi pi-times" severity="danger" [text]="true" size="small" (onClick)="removeStageSelectedFile(mForm.formId + '_' + field.name, fIdx)"></p-button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </ng-container>
+                                </div>
+                            </ng-container>
+                        </div>
+                    </ng-container>
                 </div>
             </div>
- 
+                                    
               <!-- Section 3: Comments (Only if not correction) -->
             <div class="flex flex-column gap-2 mt-2" *ngIf="!isCorrection(selectedTask())">
                 <label for="comments" class="font-bold text-sm text-900">Comentarios / Observaciones</label>
@@ -1224,9 +1512,15 @@
     </p-dialog>
 
     <!-- Modal 5: Detalles de Solicitud del Historial -->
-    <p-dialog [header]="'Detalle de la Solicitud: ' + (selectedDetails()?.formName || '')" [(visible)]="showDetailsDialog" 
+    <p-dialog [header]="'Detalle de la Solicitud' + (selectedDetails()?.formName ? ': ' + selectedDetails().formName : '')" [(visible)]="showDetailsDialog" 
               [modal]="true" [style]="{width: '650px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
-        <div class="flex flex-column gap-4 px-4 py-2" *ngIf="selectedDetails()">
+        <!-- Spinner mientras carga la información -->
+        <div *ngIf="loadingDetails()" class="flex flex-column align-items-center justify-content-center p-5 gap-3">
+            <p-progressSpinner></p-progressSpinner>
+            <span class="text-600 font-medium">Cargando detalles de la solicitud...</span>
+        </div>
+
+        <div class="flex flex-column gap-4 px-4 py-2" *ngIf="!loadingDetails() && selectedDetails()">
             
             <!-- Metadata summary grid -->
             <div class="grid row-gap-2 surface-50 p-3 border-round border-1 surface-border">
@@ -1257,13 +1551,70 @@
                 </div>
             </div>
 
-            <!-- Original Form Data -->
-            <div class="flex flex-column gap-3">
+            <!-- Section 0: Datos del Requerimiento Inicial (Stacked initial forms values) -->
+            <div class="flex flex-column gap-3" *ngIf="detailsParentFormGroups() && detailsParentFormGroups().length > 0">
+                <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">Datos del Requerimiento Inicial</span>
+                <div *ngFor="let group of detailsParentFormGroups()" class="flex flex-column gap-2 mb-2 p-3 border-round border-1 surface-border surface-card">
+                    <span class="text-primary font-bold text-sm border-bottom-1 pb-1 surface-border uppercase">{{ group.formName }}</span>
+                    <div class="grid row-gap-3 mt-1">
+                        <ng-container *ngFor="let val of group.values; let i = index">
+                            <!-- Section Header -->
+                            <div *ngIf="val.fieldType === 'section_header' && isSectionHeaderVisible(group.values, i)" class="col-12 mt-3 mb-1">
+                                <div class="bg-red-600 text-white font-bold text-center py-2 px-3 border-round text-sm uppercase tracking-wider shadow-1">
+                                    {{ val.label }}
+                                </div>
+                            </div>
+
+                            <!-- Regular Field Value -->
+                            <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" class="col-12 md:col-6 flex flex-column gap-1">
+                                <span class="text-xs text-500 font-medium">{{ val.label }}</span>
+                                <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
+                                    <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
+                                        <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                        <p-button [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)">
+                                            <lucide-icon name="download"></lucide-icon>
+                                        </p-button>
+                                    </div>
+                                </div>
+
+                                <!-- Dynamic List read-only view -->
+                                <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full text-xs">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
+                                            <tr>
+                                                <th class="p-2 pl-3">Producto / Servicio</th>
+                                                <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" class="p-2 text-center" style="width: 8rem;">
+                                                    {{ formatLabel(col) }}
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr *ngFor="let itemRow of parseDynamicList(val.value)" class="border-bottom-1 surface-border hover:bg-50">
+                                                <td class="p-2 pl-3 font-semibold text-900 align-middle">
+                                                    {{ itemRow.item || itemRow.product }}
+                                                </td>
+                                                <td *ngFor="let col of getDynamicListKeys(itemRow)" class="p-2 text-center align-middle font-bold text-900">
+                                                    {{ itemRow[col] }}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ formatValue(val) }}</span>
+                            </div>
+                        </ng-container>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Original Form Data (if direct values exist and no parent values) -->
+            <div class="flex flex-column gap-3" *ngIf="(!selectedDetails().parentValues || selectedDetails().parentValues.length === 0) && selectedDetails().values && selectedDetails().values.length > 0">
                 <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">Datos de la Solicitud</span>
                 <div class="grid row-gap-3">
-                    <ng-container *ngFor="let val of selectedDetails().values">
+                    <ng-container *ngFor="let val of selectedDetails().values; let i = index">
                         <!-- Section Header -->
-                        <div *ngIf="val.fieldType === 'section_header'" class="col-12 mt-3 mb-1">
+                        <div *ngIf="val.fieldType === 'section_header' && isSectionHeaderVisible(selectedDetails().values, i)" class="col-12 mt-3 mb-1">
                             <div class="bg-red-600 text-white font-bold text-center py-2 px-3 border-round text-sm uppercase tracking-wider shadow-1">
                                 {{ val.label }}
                             </div>
@@ -1309,9 +1660,11 @@
                         </div>
                     </ng-container>
                 </div>
-                <div class="text-xs text-500 mt-2">
-                    Creado por: <strong>{{ selectedDetails().requesterName }}</strong> ({{ selectedDetails().requesterEmail }}) el {{ selectedDetails().createdAt | date:'dd/MM/yyyy HH:mm' }}
-                </div>
+            </div>
+
+            <!-- Creator info -->
+            <div class="text-xs text-500 mt-1">
+                Creado por: <strong>{{ selectedDetails().requesterName }}</strong> ({{ selectedDetails().requesterEmail }}) el {{ selectedDetails().createdAt | date:'dd/MM/yyyy HH:mm' }}
             </div>
 
             <!-- Intermediate Stage values -->
@@ -1331,9 +1684,9 @@
                         
                         <!-- Values (if any) -->
                         <div class="grid mt-1" *ngIf="hStage.values && hStage.values.length > 0">
-                            <ng-container *ngFor="let val of hStage.values">
+                            <ng-container *ngFor="let val of hStage.values; let i = index">
                                 <!-- Section Header -->
-                                <div *ngIf="val.fieldType === 'section_header'" class="col-12 mt-3 mb-1">
+                                <div *ngIf="val.fieldType === 'section_header' && isSectionHeaderVisible(hStage.values, i)" class="col-12 mt-3 mb-1">
                                     <div class="bg-red-600 text-white font-bold text-center py-2 px-3 border-round text-sm uppercase tracking-wider shadow-1">
                                         {{ val.label }}
                                     </div>

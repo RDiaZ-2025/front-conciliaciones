@@ -5,6 +5,8 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
+import { TagModule } from 'primeng/tag';
+import { BadgeModule } from 'primeng/badge';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { PageHeaderComponent } from '../../components/page-header/page-header.component';
@@ -22,6 +24,8 @@ import { Team } from '../../models/common/team';
     ButtonModule,
     ToastModule,
     TooltipModule,
+    TagModule,
+    BadgeModule,
     ConfirmDialogModule,
     PageHeaderComponent,
     TeamDialogComponent

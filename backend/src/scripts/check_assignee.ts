@@ -21,9 +21,9 @@ async function checkAssignee() {
     for (const s of stages) {
         if (s.assigneeType === 'specific_user' && s.assigneeUserId) {
             const u = await userRepo.findOne({ where: { id: s.assigneeUserId } });
-            console.log(`Form: ${s.form.name}, Stage: ${s.name}, AssigneeUserId: ${s.assigneeUserId}, Existe: ${!!u} (${u?.name || 'N/A'})`);
+            console.log(`Form: ${s.form?.name || 'N/A'}, Stage: ${s.name}, AssigneeUserId: ${s.assigneeUserId}, Existe: ${!!u} (${u?.name || 'N/A'})`);
         } else {
-            console.log(`Form: ${s.form.name}, Stage: ${s.name}, AssigneeType: ${s.assigneeType}`);
+            console.log(`Form: ${s.form?.name || 'N/A'}, Stage: ${s.name}, AssigneeType: ${s.assigneeType}`);
         }
     }
     

@@ -1,12 +1,16 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { DynamicFormField } from './DynamicFormField';
 import { DynamicFormSubmission } from './DynamicFormSubmission';
 import { DynamicWorkflowStage } from './DynamicWorkflowStage';
+import { DynamicWorkflow } from './DynamicWorkflow';
 
 @Entity('DynamicForms')
 export class DynamicForm {
   @PrimaryGeneratedColumn({ name: 'Id' })
   id!: number;
+
+  @Column({ name: 'WorkflowId', type: 'int', nullable: true })
+  workflowId!: number | null;
 
   @Column({ name: 'Name', type: 'nvarchar', length: 255, nullable: false })
   name!: string;
@@ -40,6 +44,10 @@ export class DynamicForm {
 
   @Column({ name: 'Metadata', type: 'nvarchar', length: 'max', nullable: true })
   metadata!: string | null;
+
+  @ManyToOne(() => DynamicWorkflow)
+  @JoinColumn({ name: 'WorkflowId' })
+  workflow!: DynamicWorkflow | null;
 
   @OneToMany(() => DynamicFormField, (field) => field.form)
   fields!: DynamicFormField[];

@@ -64,6 +64,14 @@ export class RequestsBetaInboxComponent implements OnInit {
   parentFormGroups = signal<any[]>([]);
   comments = signal<string>('');
 
+  // Submissions History States
+  submissions = signal<any[]>([]);
+  loadingSubmissions = signal<boolean>(false);
+  showDetailsDialog = signal<boolean>(false);
+  loadingDetails = signal<boolean>(false);
+  selectedDetails = signal<any>(null);
+  detailsParentFormGroups = signal<any[]>([]);
+
   // Additional form to fill at this stage
   stageFormFields = signal<any[]>([]);
   stageFormValues: Record<string, string> = {};
@@ -73,6 +81,20 @@ export class RequestsBetaInboxComponent implements OnInit {
 
   ngOnInit() {
     this.loadPendingTasks();
+    this.loadSubmissions();
+  }
+
+  loadSubmissions() {
+    this.loadingSubmissions.set(true);
+    this.productionService.getDynamicSubmissions().subscribe({
+      next: (data: any[]) => {
+        this.submissions.set(data);
+        this.loadingSubmissions.set(false);
+      },
+      error: () => {
+        this.loadingSubmissions.set(false);
+      }
+    });
   }
 
   loadPendingTasks() {
@@ -137,6 +159,20 @@ export class RequestsBetaInboxComponent implements OnInit {
     if (val === undefined || val === null) return false;
     const s = String(val).trim();
     return s !== '' && s !== '[]' && s !== '""' && s !== 'null';
+  }
+
+  isSectionHeaderVisible(values: any[], currentIndex: number): boolean {
+    if (!values || currentIndex < 0 || currentIndex >= values.length) return false;
+    for (let i = currentIndex + 1; i < values.length; i++) {
+      const nextVal = values[i];
+      if (nextVal.fieldType === 'section_header') {
+        return false;
+      }
+      if (this.hasValue(nextVal.value)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   formatValue(val: any): string {
@@ -271,6 +307,30 @@ export class RequestsBetaInboxComponent implements OnInit {
           }
         });
       }
+    } else if (task.formIdToFill === -1) {
+      this.loadingStageFields.set(false);
+      this.stageFormFields.set([]);
+      this.selectedMultiFormIds.set([]);
+      const initialValues: Record<string, string> = {};
+      if (task.availableMultiForms && task.availableMultiForms.length > 0) {
+        task.availableMultiForms.forEach((frm: any) => {
+          (frm.fields || []).forEach((f: any) => {
+            const key = frm.formId + '_' + f.name;
+            if (f.defaultValueExpression) {
+              initialValues[key] = this.evaluateDefaultValueExpression(f);
+            } else {
+              initialValues[key] = '';
+            }
+            if (f.type === 'dynamic_list') {
+              this.initDynamicListField(key, initialValues[key]);
+            }
+            if (f.type === 'multiselect') {
+              this.initMultiselectField(key, initialValues[key]);
+            }
+          });
+        });
+      }
+      this.stageFormValues = initialValues;
     } else if (task.formIdToFill) {
       this.loadingStageFields.set(true);
       this.productionService.getDynamicFormFields(task.formIdToFill).subscribe({
@@ -312,6 +372,27 @@ export class RequestsBetaInboxComponent implements OnInit {
     }
   }
 
+  selectedMultiFormIds = signal<number[]>([]);
+
+  isMultiFormSelected(formId: number): boolean {
+    return this.selectedMultiFormIds().includes(formId);
+  }
+
+  toggleMultiFormSelection(formId: number) {
+    const current = this.selectedMultiFormIds();
+    if (current.includes(formId)) {
+      this.selectedMultiFormIds.set(current.filter(id => id !== formId));
+    } else {
+      this.selectedMultiFormIds.set([...current, formId]);
+    }
+  }
+
+  getSelectedMultiForms(): any[] {
+    const task = this.selectedTask();
+    if (!task || !task.availableMultiForms) return [];
+    return task.availableMultiForms.filter((f: any) => this.selectedMultiFormIds().includes(f.formId));
+  }
+
   processAction(action: 'approve' | 'reject') {
     const task = this.selectedTask();
     const notes = this.comments();
@@ -323,10 +404,50 @@ export class RequestsBetaInboxComponent implements OnInit {
     }
 
     // Validate fields if approving
-    if (action === 'approve' && (task.formIdToFill || isCorr)) {
+    if (action === 'approve' && task.formIdToFill === -1) {
+      if (this.selectedMultiFormIds().length === 0) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Validación',
+          detail: 'Debe seleccionar al menos un formulario para diligenciar en esta etapa.'
+        });
+        return;
+      }
+      const selectedForms = this.getSelectedMultiForms();
+      for (const frm of selectedForms) {
+        for (const field of frm.fields) {
+          if (field.isRequired && field.type !== 'section_header' && this.isFieldVisible(field, frm.fields, this.stageFormValues, frm.formId)) {
+            const key = frm.formId + '_' + field.name;
+            if (field.type === 'file') {
+              const files = this.getSelectedFiles(key);
+              const val = this.stageFormValues[key];
+              const hasUploaded = this.getUploadedFiles(val).length > 0;
+              if (files.length === 0 && !hasUploaded) {
+                this.messageService.add({
+                  severity: 'error',
+                  summary: 'Validación',
+                  detail: `En "${frm.formName}", el campo "${field.label}" requiere cargar al menos un archivo.`
+                });
+                return;
+              }
+            } else {
+              const val = this.stageFormValues[key];
+              if (val === undefined || val === null || String(val).trim() === '') {
+                this.messageService.add({
+                  severity: 'error',
+                  summary: 'Validación',
+                  detail: `En "${frm.formName}", el campo "${field.label}" es requerido.`
+                });
+                return;
+              }
+            }
+          }
+        }
+      }
+    } else if (action === 'approve' && (task.formIdToFill || isCorr)) {
       const fields = this.stageFormFields();
       for (const field of fields) {
-        if (field.isRequired && field.type !== 'section_header') {
+        if (field.isRequired && field.type !== 'section_header' && this.isFieldVisible(field, fields, this.stageFormValues)) {
           if (field.type === 'file') {
             const files = this.getSelectedFiles(field.name);
             const val = this.stageFormValues[field.name];
@@ -537,6 +658,33 @@ export class RequestsBetaInboxComponent implements OnInit {
               }
             }
             this.stageFormValues[fileKey] = JSON.stringify(uploadResults);
+          }
+        }
+      }
+    }
+
+    // 1.8. Upload files from multi forms if any
+    if (task.formIdToFill === -1 && this.getSelectedMultiForms().length > 0) {
+      for (const mForm of this.getSelectedMultiForms()) {
+        for (const field of mForm.fields) {
+          if (field.type === 'file') {
+            const fileKey = mForm.formId + '_' + field.name;
+            const filesToUpload = this.tempFiles[fileKey] || [];
+            if (filesToUpload.length > 0) {
+              const uploadResults = [];
+              for (const file of filesToUpload) {
+                const folderPath = `dynamic-submissions/task_${task.stateId}/${field.name}`;
+                const res = await this.azureService.uploadFile(file, { containerName: 'private', folderPath });
+                if (res.success) {
+                  uploadResults.push({ name: file.name, url: res.url });
+                } else {
+                  this.messageService.add({ severity: 'error', summary: 'Error de carga', detail: `No se pudo subir el archivo: ${file.name}. ${res.error}` });
+                  this.loadingAction.set(false);
+                  return;
+                }
+              }
+              this.stageFormValues[fileKey] = JSON.stringify(uploadResults);
+            }
           }
         }
       }
@@ -869,5 +1017,90 @@ export class RequestsBetaInboxComponent implements OnInit {
 
   formatLabel(key: string): string {
     return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  viewSubmissionDetails(submissionId: number) {
+    this.selectedDetails.set(null);
+    this.detailsParentFormGroups.set([]);
+    this.loadingDetails.set(true);
+    this.showDetailsDialog.set(true);
+
+    this.productionService.getSubmissionDetails(submissionId).subscribe({
+      next: (data) => {
+        this.selectedDetails.set(data);
+        if (data && data.parentValues && data.parentValues.length > 0) {
+          const groupsMap = new Map<string, any[]>();
+          (data.parentValues || []).forEach((v: any) => {
+            const formName = v.formName || 'Inicial';
+            if (!groupsMap.has(formName)) {
+              groupsMap.set(formName, []);
+            }
+            groupsMap.get(formName)!.push(v);
+          });
+          const groups = Array.from(groupsMap.entries()).map(([formName, values]) => ({
+            formName,
+            values
+          }));
+          this.detailsParentFormGroups.set(groups);
+        } else {
+          this.detailsParentFormGroups.set([]);
+        }
+        this.loadingDetails.set(false);
+      },
+      error: () => {
+        this.loadingDetails.set(false);
+        this.showDetailsDialog.set(false);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los detalles de la solicitud.' });
+      }
+    });
+  }
+
+  getStageUploadedFiles(val: any): { name: string; url?: string; isNew?: boolean }[] {
+    if (!val) return [];
+    try {
+      if (typeof val === 'string' && val.startsWith('[')) {
+        return JSON.parse(val);
+      }
+      if (typeof val === 'string') {
+        const parts = val.split(',');
+        return parts.map(p => ({ name: p.trim() }));
+      }
+    } catch {
+      return [{ name: String(val) }];
+    }
+    return [];
+  }
+
+  downloadStageFormFile(file: any) {
+    if (file && file.url) {
+      window.open(file.url, '_blank');
+    }
+  }
+
+  getStatusSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
+    switch (status) {
+      case 'Completed': return 'success';
+      case 'In Progress': return 'info';
+      case 'Pending': return 'warn';
+      case 'Pending Consecutive': return 'warn';
+      case 'Rejected': return 'danger';
+      default: return 'secondary';
+    }
+  }
+
+  getFormIcon(sub: any): string {
+    return 'file-text';
+  }
+
+  getFormIconColor(sub: any): string {
+    return 'text-primary';
+  }
+
+  getDisplayInitialValues(item: any): any[] {
+    if (!item) return [];
+    if (item.parentValues && item.parentValues.length > 0) {
+      return item.parentValues;
+    }
+    return item.values || [];
   }
 }

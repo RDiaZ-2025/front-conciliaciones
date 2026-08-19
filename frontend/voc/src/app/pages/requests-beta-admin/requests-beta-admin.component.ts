@@ -8,6 +8,7 @@ import { DialogModule } from 'primeng/dialog';
 import { SelectModule } from 'primeng/select';
 import { CheckboxModule } from 'primeng/checkbox';
 import { InputTextModule } from 'primeng/inputtext';
+import { TextareaModule } from 'primeng/textarea';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TagModule } from 'primeng/tag';
@@ -38,12 +39,21 @@ interface FormFieldItem {
   metadata: any;
 }
 
+interface MultiFormOptionConfig {
+  sourceFormId: number | null;
+  targetType?: 'subflow' | 'user' | 'team_random' | 'team_leader';
+  targetSubflowFormId?: number | null;
+  assignedUserId: number | null;
+  assignedTeamId: number | null;
+  targetFormIdToFill: number | null;
+}
+
 interface WorkflowStageItem {
   id?: number;
   name: string;
   description: string;
   stepOrder: number;
-  assigneeType: 'specific_user' | 'requester' | 'requester_boss' | 'team' | 'multiple_users';
+  assigneeType: 'specific_user' | 'requester' | 'requester_boss' | 'team' | 'team_random' | 'team_workload' | 'team_leader' | 'subflow' | 'multiple_users' | 'previous_stage_actioner' | 'previous_stage_team_random';
   assigneeUserId: number | null;
   assigneeTeamId: number | null;
   formIdToFill: number | null;
@@ -51,9 +61,11 @@ interface WorkflowStageItem {
   rejectionTargetUserId: number | null;
   rejectionTargetTeamId: number | null;
   requireCommentOnApprove?: boolean;
+  excludeTeamLeader?: boolean;
   assigneeUserIds?: { userId: number; formId: number | null }[];
   selectedUserIds?: number[];
   customForms?: { [userId: number]: number | null };
+  multiFormsConfig?: MultiFormOptionConfig[];
 }
 
 @Component({
@@ -70,6 +82,7 @@ interface WorkflowStageItem {
     MultiSelectModule,
     CheckboxModule,
     InputTextModule,
+    TextareaModule,
     ToastModule,
     ConfirmDialogModule,
     TagModule,
@@ -95,9 +108,9 @@ export class RequestsBetaAdminComponent implements OnInit {
   // States
   activeTab = signal<string>('forms');
   forms = signal<any[]>([]);
-  entryForms = computed(() => this.forms().filter(f => f.isEntryForm));
-  internalForms = computed(() => this.forms().filter(f => !f.isEntryForm));
-  loadingForms = signal<boolean>(false);
+  activeForms = computed(() => this.forms().filter(f => f.isActive !== false));
+  entryForms = computed(() => this.activeForms().filter(f => f.isEntryForm));
+  internalForms = computed(() => this.activeForms().filter(f => !f.isEntryForm));
   
   // Users & Teams
   users = signal<User[]>([]);
@@ -192,10 +205,35 @@ export class RequestsBetaAdminComponent implements OnInit {
     { label: 'Separador de miles (Coma) - 123,456', value: 'thousands_comma' }
   ];
 
-  // Workflow editor state
-  selectedWorkflowFormId = signal<number | null>(null);
+  // Workflows state
+  workflows = signal<any[]>([]);
+  activeWorkflows = computed(() => this.workflows().filter(w => w.isActive !== false));
+  selectedWorkflowId = signal<number | null>(null);
+  showWorkflowDialog = signal<boolean>(false);
+  isNewWorkflow = signal<boolean>(false);
+  selectedWorkflow = signal<{ id: number | null; name: string; description: string; requireConsecutive?: boolean }>({ id: null, name: '', description: '', requireConsecutive: true });
   workflowStages = signal<WorkflowStageItem[]>([]);
   loadingStages = signal<boolean>(false);
+
+  availableSubflows = computed(() => {
+    return this.activeWorkflows().map(w => ({
+      id: w.id,
+      name: `🚀 ${w.name}`
+    }));
+  });
+
+  formToFillOptions = computed(() => [
+    { id: -1, name: '📋 Múltiples Formularios Preconfigurados' },
+    ...this.activeForms()
+  ]);
+
+  getWorkflowName(workflowId: number | null): string {
+    if (!workflowId) return 'Sin flujo asignado';
+    const wf = this.workflows().find(w => w.id === workflowId);
+    return wf ? wf.name : `Flujo #${workflowId}`;
+  }
+
+  loadingForms = signal<boolean>(false);
 
   // Field type options
   fieldTypeOptions = [
@@ -217,10 +255,23 @@ export class RequestsBetaAdminComponent implements OnInit {
   // Assignee & Rejection Type options
   assigneeTypeOptions = [
     { label: 'Usuario Específico', value: 'specific_user' },
+    { label: '👔 Líder de Equipo', value: 'team_leader' },
+    { label: 'Equipo / Rol (Al Azar)', value: 'team_random' },
+    { label: 'Equipo / Rol (Menor Carga)', value: 'team_workload' },
+    { label: 'Equipo / Rol (Todos en Paralelo)', value: 'team' },
+    { label: '🎲 Al Azar del Equipo del Aprobador Anterior', value: 'previous_stage_team_random' },
+    { label: 'Aprobador de Etapa Anterior', value: 'previous_stage_actioner' },
+    { label: '🚀 Invocar Flujo de Trabajo (Sub-Flujo)', value: 'subflow' },
     { label: 'Creador de la Solicitud', value: 'requester' },
     { label: 'Jefe Directo del Solicitante', value: 'requester_boss' },
-    { label: 'Equipo / Rol', value: 'team' },
     { label: 'Usuarios Múltiples', value: 'multiple_users' }
+  ];
+
+  targetTypeOptions = [
+    { label: '🚀 Flujo de Trabajo (Sub-Flujo)', value: 'subflow' },
+    { label: '👤 Usuario Específico', value: 'user' },
+    { label: '👔 Líder de Equipo', value: 'team_leader' },
+    { label: '👥 Miembro de Equipo (Al Azar)', value: 'team_random' }
   ];
 
   rejectionTypeOptions = [
@@ -233,6 +284,7 @@ export class RequestsBetaAdminComponent implements OnInit {
     this.loadForms();
     this.loadUsersAndTeams();
     this.loadInitialFormsFields();
+    this.loadWorkflows();
   }
 
   loadForms() {
@@ -311,8 +363,8 @@ export class RequestsBetaAdminComponent implements OnInit {
       id: null,
       name: '',
       description: '',
-      isEntryForm: true,
       isInitialForm: false,
+      workflowId: null,
       isActive: true,
       responsible: '',
       role: '',
@@ -327,24 +379,6 @@ export class RequestsBetaAdminComponent implements OnInit {
     this.isNewForm.set(false);
     this.selectedForm.set({ ...form });
     this.formMetadataText = form.metadata ? (typeof form.metadata === 'object' ? JSON.stringify(form.metadata, null, 2) : form.metadata) : '';
-    
-    const conds: any[] = [];
-    if (form.metadata) {
-      try {
-        const meta = typeof form.metadata === 'string' ? JSON.parse(form.metadata) : form.metadata;
-        if (meta.enableConditions && Array.isArray(meta.enableConditions)) {
-          for (const cond of meta.enableConditions) {
-            conds.push({
-              fieldKey: cond.fieldKey || (cond.fieldKeys && cond.fieldKeys.length > 0 ? cond.fieldKeys[0] : ''),
-              operator: cond.operator || 'contains',
-              value: cond.value || ''
-            });
-          }
-        }
-      } catch (e) {}
-    }
-    this.conditionsList.set(conds);
-    
     this.showFormDialog.set(true);
   }
 
@@ -366,20 +400,6 @@ export class RequestsBetaAdminComponent implements OnInit {
     if (!data.name || !data.name.trim()) {
       this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'El nombre es obligatorio.' });
       return;
-    }
-
-    const conds = this.conditionsList().filter(c => c.fieldKey);
-    if (conds.length > 0) {
-      const metaObj = {
-        enableConditions: conds.map(c => ({
-          fieldKeys: [c.fieldKey],
-          operator: c.operator,
-          value: c.value
-        }))
-      };
-      data.metadata = JSON.stringify(metaObj);
-    } else {
-      data.metadata = null;
     }
 
     if (this.isNewForm()) {
@@ -876,38 +896,168 @@ export class RequestsBetaAdminComponent implements OnInit {
     });
   }
 
-  // --- Workflow Configurator ---
-  onWorkflowFormChange(event: any) {
-    const formId = event.value;
-    if (!formId) {
+  // --- Workflow Configurator (Independent Workflows) ---
+  loadWorkflows() {
+    this.productionService.adminGetWorkflows().subscribe({
+      next: (data) => {
+        this.workflows.set(data);
+        if (data.length > 0 && !this.selectedWorkflowId()) {
+          this.selectedWorkflowId.set(data[0].id);
+          this.loadWorkflowStages(data[0].id);
+        }
+      },
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los flujos de trabajo.' });
+      }
+    });
+  }
+
+  onWorkflowChange(event: any) {
+    const workflowId = event.value;
+    this.selectedWorkflowId.set(workflowId);
+    if (!workflowId) {
       this.workflowStages.set([]);
       return;
     }
-    this.loadWorkflowStages(formId);
+    this.loadWorkflowStages(workflowId);
   }
 
-  loadWorkflowStages(formId: number) {
+  openNewWorkflowDialog() {
+    this.isNewWorkflow.set(true);
+    this.selectedWorkflow.set({ id: null, name: '', description: '', requireConsecutive: true });
+    this.showWorkflowDialog.set(true);
+  }
+
+  openEditWorkflowDialog() {
+    const wf = this.workflows().find(w => w.id === this.selectedWorkflowId());
+    if (!wf) return;
+    this.isNewWorkflow.set(false);
+    this.selectedWorkflow.set({
+      id: wf.id,
+      name: wf.name,
+      description: wf.description || '',
+      requireConsecutive: wf.requireConsecutive !== false
+    });
+    this.showWorkflowDialog.set(true);
+  }
+
+  saveWorkflowMetadata() {
+    const data = this.selectedWorkflow();
+    if (!data.name.trim()) {
+      this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'El nombre del flujo es obligatorio.' });
+      return;
+    }
+    if (this.isNewWorkflow()) {
+      this.productionService.adminCreateWorkflow(data).subscribe({
+        next: (created) => {
+          this.messageService.add({ severity: 'success', summary: 'Creado', detail: 'Flujo de trabajo creado exitosamente.' });
+          this.showWorkflowDialog.set(false);
+          this.loadWorkflows();
+          this.selectedWorkflowId.set(created.id);
+          this.loadWorkflowStages(created.id);
+        },
+        error: () => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo crear el flujo de trabajo.' });
+        }
+      });
+    } else {
+      if (!data.id) return;
+      this.productionService.adminUpdateWorkflow(data.id, data).subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Flujo de trabajo actualizado.' });
+          this.showWorkflowDialog.set(false);
+          this.loadWorkflows();
+        },
+        error: () => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar el flujo de trabajo.' });
+        }
+      });
+    }
+  }
+
+  deleteCurrentWorkflow() {
+    const wfId = this.selectedWorkflowId();
+    if (!wfId) return;
+    const wf = this.workflows().find(w => w.id === wfId);
+    this.confirmationService.confirm({
+      message: `¿Estás seguro de eliminar el flujo "${wf?.name || ''}"?`,
+      header: 'Confirmar Eliminación',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí, Eliminar',
+      rejectLabel: 'Cancelar',
+      accept: () => {
+        this.productionService.adminDeleteWorkflow(wfId).subscribe({
+          next: () => {
+            this.messageService.add({ severity: 'success', summary: 'Eliminado', detail: 'Flujo de trabajo eliminado.' });
+            this.selectedWorkflowId.set(null);
+            this.workflowStages.set([]);
+            this.loadWorkflows();
+          },
+          error: () => {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar el flujo.' });
+          }
+        });
+      }
+    });
+  }
+
+  loadWorkflowStages(workflowId: number) {
     this.loadingStages.set(true);
-    this.productionService.adminGetStages(formId).subscribe({
+    this.productionService.adminGetWorkflowStages(workflowId).subscribe({
       next: (data) => {
         this.workflowStages.set(data.map(s => {
-          const selectedUserIds: number[] = [];
-          const customForms: { [userId: number]: number | null } = {};
+          let selectedUserIds: number[] = [];
+          let customForms: Record<number, number | null> = {};
+          let multiFormsConfig: MultiFormOptionConfig[] = [];
           if (s.assigneeUserIds) {
             try {
               const parsed = typeof s.assigneeUserIds === 'string' 
                 ? JSON.parse(s.assigneeUserIds) 
                 : s.assigneeUserIds;
               if (Array.isArray(parsed)) {
-                parsed.forEach((item: any) => {
-                  if (typeof item === 'object' && item !== null) {
-                    selectedUserIds.push(item.userId);
-                    customForms[item.userId] = item.formId || null;
-                  } else {
-                    selectedUserIds.push(item);
-                    customForms[item] = null;
-                  }
-                });
+                if (parsed.length > 0 && (parsed[0].sourceFormId !== undefined || parsed[0].targetFormIdToFill !== undefined || parsed[0].targetSubflowFormId !== undefined || parsed[0].targetSubflowWorkflowId !== undefined)) {
+                  multiFormsConfig = parsed.map((opt: any) => {
+                    let targetType: 'subflow' | 'user' | 'team_random' | 'team_leader' = opt.targetType || (opt.targetSubflowWorkflowId || opt.targetSubflowFormId ? 'subflow' : (opt.assignedTeamId ? 'team_random' : 'user'));
+                    return {
+                      sourceFormId: opt.sourceFormId || null,
+                      targetType: targetType,
+                      targetSubflowFormId: opt.targetSubflowWorkflowId || opt.targetSubflowFormId || null,
+                      assignedUserId: opt.assignedUserId || null,
+                      assignedTeamId: opt.assignedTeamId || null,
+                      targetFormIdToFill: opt.targetFormIdToFill || null
+                    };
+                  });
+                } else {
+                  parsed.forEach((item: any) => {
+                    if (typeof item === 'object' && item !== null) {
+                      selectedUserIds.push(item.userId);
+                      customForms[item.userId] = item.formId || null;
+                    } else {
+                      selectedUserIds.push(item);
+                      customForms[item] = null;
+                    }
+                  });
+                }
+              } else if (typeof parsed === 'object' && parsed !== null) {
+                if (parsed.multiFormsConfig) {
+                  multiFormsConfig = parsed.multiFormsConfig.map((opt: any) => {
+                    let targetType: 'subflow' | 'user' | 'team_random' | 'team_leader' = opt.targetType || (opt.targetSubflowWorkflowId || opt.targetSubflowFormId ? 'subflow' : (opt.assignedTeamId ? 'team_random' : 'user'));
+                    return {
+                      sourceFormId: opt.sourceFormId || null,
+                      targetType: targetType,
+                      targetSubflowFormId: opt.targetSubflowWorkflowId || opt.targetSubflowFormId || null,
+                      assignedUserId: opt.assignedUserId || null,
+                      assignedTeamId: opt.assignedTeamId || null,
+                      targetFormIdToFill: opt.targetFormIdToFill || null
+                    };
+                  });
+                }
+                if (parsed.selectedUserIds) {
+                  selectedUserIds = parsed.selectedUserIds;
+                }
+                if (parsed.customForms) {
+                  customForms = parsed.customForms;
+                }
               }
             } catch(e) {}
           }
@@ -924,8 +1074,10 @@ export class RequestsBetaAdminComponent implements OnInit {
             rejectionTargetUserId: s.rejectionTargetUserId,
             rejectionTargetTeamId: s.rejectionTargetTeamId,
             requireCommentOnApprove: !!s.requireCommentOnApprove,
+            excludeTeamLeader: !!s.excludeTeamLeader,
             selectedUserIds,
-            customForms
+            customForms,
+            multiFormsConfig
           };
         }));
         this.loadingStages.set(false);
@@ -958,10 +1110,32 @@ export class RequestsBetaAdminComponent implements OnInit {
         rejectionTargetUserId: null,
         rejectionTargetTeamId: null,
         requireCommentOnApprove: true,
+        excludeTeamLeader: false,
         selectedUserIds: [],
-        customForms: {}
+        customForms: {},
+        multiFormsConfig: []
       }
     ]);
+  }
+
+  addMultiFormOption(stage: WorkflowStageItem) {
+    if (!stage.multiFormsConfig) {
+      stage.multiFormsConfig = [];
+    }
+    stage.multiFormsConfig.push({
+      sourceFormId: null,
+      targetType: 'subflow',
+      targetSubflowFormId: null,
+      assignedUserId: null,
+      assignedTeamId: null,
+      targetFormIdToFill: null
+    });
+  }
+
+  removeMultiFormOption(stage: WorkflowStageItem, index: number) {
+    if (stage.multiFormsConfig) {
+      stage.multiFormsConfig.splice(index, 1);
+    }
   }
 
   removeStage(index: number) {
@@ -994,8 +1168,8 @@ export class RequestsBetaAdminComponent implements OnInit {
   }
 
   saveWorkflow() {
-    const formId = this.selectedWorkflowFormId();
-    if (!formId) return;
+    const workflowId = this.selectedWorkflowId();
+    if (!workflowId) return;
 
     const stages = this.workflowStages();
 
@@ -1013,9 +1187,38 @@ export class RequestsBetaAdminComponent implements OnInit {
         this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere seleccionar al menos un aprobador en Usuarios Múltiples.` });
         return;
       }
-      if (s.assigneeType === 'team' && !s.assigneeTeamId) {
+      if ((s.assigneeType === 'team' || s.assigneeType === 'team_random' || s.assigneeType === 'team_workload' || s.assigneeType === 'team_leader') && !s.assigneeTeamId) {
         this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere asociar un equipo aprobador.` });
         return;
+      }
+      if (s.assigneeType === 'subflow' && !s.formIdToFill) {
+        this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere seleccionar el flujo de trabajo a invocar.` });
+        return;
+      }
+      if (s.formIdToFill === -1) {
+        if (!s.multiFormsConfig || s.multiFormsConfig.length === 0) {
+          this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" está configurada con múltiples formularios pero no tiene ninguna opción agregada.` });
+          return;
+        }
+        for (let idx = 0; idx < s.multiFormsConfig.length; idx++) {
+          const opt = s.multiFormsConfig[idx];
+          if (!opt.sourceFormId) {
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${idx + 1} de formularios múltiples debe tener seleccionado el formulario inicial.` });
+            return;
+          }
+          if (opt.targetType === 'subflow' && !opt.targetSubflowFormId) {
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${idx + 1} debe seleccionar el sub-flujo a disparar.` });
+            return;
+          }
+          if (opt.targetType === 'user' && !opt.assignedUserId) {
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${idx + 1} debe seleccionar el usuario destinatario.` });
+            return;
+          }
+          if ((opt.targetType === 'team_random' || opt.targetType === 'team_leader') && !opt.assignedTeamId) {
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${idx + 1} debe seleccionar el equipo destinatario.` });
+            return;
+          }
+        }
       }
       if (s.rejectionTargetType === 'specific_user' && !s.rejectionTargetUserId) {
         this.messageService.add({ severity: 'error', summary: 'Validación', detail: `El rechazo de la etapa "${s.name}" requiere un usuario específico de retorno.` });
@@ -1027,10 +1230,14 @@ export class RequestsBetaAdminComponent implements OnInit {
       }
     }
 
-    // Convert selectedUserIds and customForms to the expected assigneeUserIds JSON-serializable structure
+    // Convert selectedUserIds and customForms or multiFormsConfig to the expected assigneeUserIds JSON-serializable structure
     const payload = stages.map(s => {
       let assigneeUserIdsObj: any = null;
-      if (s.assigneeType === 'multiple_users' && s.selectedUserIds) {
+      if (s.formIdToFill === -1) {
+        assigneeUserIdsObj = {
+          multiFormsConfig: s.multiFormsConfig || []
+        };
+      } else if (s.assigneeType === 'multiple_users' && s.selectedUserIds) {
         assigneeUserIdsObj = s.selectedUserIds.map((uid: number) => ({
           userId: uid,
           formId: s.customForms ? s.customForms[uid] || null : null
@@ -1049,14 +1256,15 @@ export class RequestsBetaAdminComponent implements OnInit {
         rejectionTargetUserId: s.rejectionTargetUserId,
         rejectionTargetTeamId: s.rejectionTargetTeamId,
         requireCommentOnApprove: !!s.requireCommentOnApprove,
+        excludeTeamLeader: !!s.excludeTeamLeader,
         assigneeUserIds: assigneeUserIdsObj
       };
     });
 
-    this.productionService.adminSaveStages(formId, payload as any).subscribe({
+    this.productionService.adminSaveWorkflowStages(workflowId, payload as any).subscribe({
       next: () => {
         this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Flujo de trabajo guardado exitosamente.' });
-        this.loadWorkflowStages(formId);
+        this.loadWorkflowStages(workflowId);
       },
       error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar el flujo de trabajo.' })
     });

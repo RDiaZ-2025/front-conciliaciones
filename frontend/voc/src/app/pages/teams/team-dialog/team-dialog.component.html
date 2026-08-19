@@ -1,6 +1,6 @@
 <p-dialog 
   [(visible)]="visible" 
-  [style]="{width: '900px', maxWidth: '95vw'}" 
+  [style]="{width: '840px', maxWidth: '95vw'}" 
   [header]="team ? 'Editar Equipo' : 'Nuevo Equipo'" 
   [modal]="true" 
   styleClass="p-fluid"
@@ -9,22 +9,108 @@
   (onHide)="cancel()">
 
   <ng-template pTemplate="content">
-    <form [formGroup]="form" class="flex flex-column gap-4 mt-3">
-      <div class="field grid">
-        <label for="name" class="col-12 mb-2 md:col-2 md:mb-0 font-bold">Nombre</label>
-        <div class="col-12 md:col-10">
-          <input pInputText id="name" formControlName="name" autofocus class="w-full" placeholder="Ingrese el nombre del equipo" />
-          <small class="p-error block mt-1" *ngIf="form.get('name')?.invalid && form.get('name')?.touched">
-            El nombre es requerido
-          </small>
+    <form [formGroup]="form" class="flex flex-column gap-3 mt-2">
+      <div class="flex flex-column gap-1">
+        <label for="name" class="font-bold text-sm text-900">Nombre del Equipo *</label>
+        <input pInputText id="name" formControlName="name" autofocus class="w-full" placeholder="Ej: Data, Producción, Estrategia..." />
+        <small class="p-error block" *ngIf="form.get('name')?.invalid && form.get('name')?.touched">
+          El nombre es requerido
+        </small>
+      </div>
+
+      <div class="flex flex-column gap-1">
+        <label for="leaderId" class="font-bold text-sm text-900 flex align-items-center gap-2">
+          <lucide-icon name="user-check" class="text-primary" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+          <span>Líder de Equipo</span>
+        </label>
+        <p-select [options]="users()" formControlName="leaderId" optionLabel="name" optionValue="id" 
+                  [filter]="true" filterBy="name,email" placeholder="Seleccionar Líder de Equipo..." 
+                  [showClear]="true" class="w-full" [appendTo]="'body'">
+          <ng-template let-user pTemplate="item">
+            <div class="flex flex-column">
+              <span class="font-semibold text-sm">{{ user.name }}</span>
+              <span class="text-xs text-500">{{ user.email }}</span>
+            </div>
+          </ng-template>
+        </p-select>
+        <span class="text-xs text-500 bg-blue-50 text-blue-800 p-2 border-round border-1 border-blue-200">
+          <i class="pi pi-info-circle mr-1"></i>
+          Al asignar este líder, todos los miembros del equipo tendrán a este usuario como su jefe directo automáticamente.
+        </span>
+      </div>
+
+      <!-- Condiciones de Habilitación / Envío -->
+      <div class="flex flex-column gap-2 p-3 border-round-xl border-1 surface-border bg-50">
+        <div class="flex align-items-center justify-content-between">
+          <div class="flex flex-column">
+            <span class="font-bold text-sm text-900 flex align-items-center gap-2">
+              <lucide-icon name="sliders" class="text-primary" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+              <span>Condiciones para Habilitar Envío a este Equipo</span>
+            </span>
+            <span class="text-xs text-600 mt-1">
+              Configure qué respuestas del formulario inicial deben cumplirse para permitir enviar solicitudes a este equipo.
+            </span>
+          </div>
+          <p-button size="small" [outlined]="true" (onClick)="addCondition()">
+            <lucide-icon name="plus" class="mr-1"></lucide-icon>Agregar Regla
+          </p-button>
+        </div>
+
+        <div class="flex flex-column gap-2 mt-2" *ngIf="conditionsList().length > 0">
+          <div *ngFor="let cond of conditionsList(); let idx = index" class="flex align-items-center gap-2 p-2 bg-white border-round border-1 surface-border shadow-1">
+            <!-- 1. Campo -->
+            <div class="flex-1" style="min-width: 220px;">
+              <p-select [options]="availableFields()" [(ngModel)]="cond.fieldKey" [ngModelOptions]="{standalone: true}"
+                        (onChange)="onFieldChange(cond)"
+                        optionLabel="label" optionValue="fieldKey" placeholder="Seleccionar Campo..." [filter]="true" filterBy="label"
+                        class="w-full" styleClass="w-full" [appendTo]="'body'"></p-select>
+            </div>
+
+            <!-- 2. Operador -->
+            <div style="width: 160px;">
+              <p-select [options]="operatorOptions" [(ngModel)]="cond.operator" [ngModelOptions]="{standalone: true}"
+                        optionLabel="label" optionValue="value" class="w-full" styleClass="w-full" [appendTo]="'body'"></p-select>
+            </div>
+
+            <!-- 3. Valor esperado (Multiselect si tiene opciones predefinidas, o InputText con alto contraste) -->
+            <div class="flex-1" style="min-width: 200px;" *ngIf="cond.operator !== 'is_not_empty' && cond.operator !== 'is_empty'">
+              <p-multiSelect *ngIf="hasFieldOptions(cond.fieldKey)"
+                             [options]="getFieldOptions(cond.fieldKey)"
+                             [(ngModel)]="cond.selectedValues"
+                             [ngModelOptions]="{standalone: true}"
+                             (ngModelChange)="onMultiValuesChange(cond, $event)"
+                             optionLabel="label" optionValue="value"
+                             placeholder="Seleccione opciones..."
+                             class="w-full" styleClass="w-full" [appendTo]="'body'"
+                             [filter]="true" filterBy="label"></p-multiSelect>
+
+              <input *ngIf="!hasFieldOptions(cond.fieldKey)"
+                     pInputText
+                     type="text"
+                     [(ngModel)]="cond.value"
+                     [ngModelOptions]="{standalone: true}"
+                     placeholder="Escriba el valor esperado..."
+                     class="w-full condition-input"
+                     style="color: #0f172a !important; background: #ffffff !important; opacity: 1 !important; border: 1px solid #cbd5e1 !important; padding: 0.5rem 0.75rem !important;" />
+            </div>
+
+            <!-- 4. Botón Eliminar -->
+            <div>
+              <p-button [text]="true" severity="danger" (onClick)="removeCondition(idx)" pTooltip="Eliminar Regla">
+                <lucide-icon name="trash-2"></lucide-icon>
+              </p-button>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="conditionsList().length === 0" class="text-xs text-500 italic p-2 text-center">
+          Sin condiciones configuradas (este equipo siempre estará disponible para selección).
         </div>
       </div>
       
-      <div class="field grid">
-        <label for="description" class="col-12 mb-2 md:col-2 md:mb-0 font-bold">Descripción</label>
-        <div class="col-12 md:col-10">
-          <textarea pInputTextarea id="description" formControlName="description" rows="3" class="w-full" placeholder="Ingrese una descripción (opcional)"></textarea>
-        </div>
+      <div class="flex flex-column gap-1">
+        <label for="description" class="font-bold text-sm text-900">Descripción (Opcional)</label>
+        <textarea pInputTextarea id="description" formControlName="description" rows="2" class="w-full" placeholder="Ingrese una descripción del equipo..."></textarea>
       </div>
     </form>
   </ng-template>

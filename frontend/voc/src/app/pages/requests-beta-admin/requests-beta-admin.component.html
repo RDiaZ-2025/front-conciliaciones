@@ -50,8 +50,15 @@
                                 <p-tag value="Solicitud Inicial" severity="info"></p-tag>
                                 <span class="text-xs text-500 font-semibold">Orden: {{ form.displayOrder ?? 0 }}</span>
                             </div>
-                            <p-tag *ngIf="!form.isInitialForm" [value]="form.isEntryForm ? 'Área / Entrada' : 'Interno'" 
-                                   [severity]="form.isEntryForm ? 'success' : 'warn'"></p-tag>
+                            <div *ngIf="!form.isInitialForm" class="flex flex-column align-items-center gap-1">
+                                <p-tag value="Formulario" severity="secondary"></p-tag>
+                            </div>
+                            <span *ngIf="form.workflowId" class="text-xs text-primary font-semibold block mt-1">
+                                <i class="pi pi-sitemap text-xs mr-1"></i>{{ getWorkflowName(form.workflowId) }}
+                            </span>
+                            <span *ngIf="form.isInitialForm && !form.workflowId" class="text-xs text-orange-700 bg-orange-50 border-1 border-orange-200 px-2 py-0.5 border-round font-semibold block mt-1" pTooltip="Este formulario de Solicitud Inicial no tiene un flujo de trabajo asociado y aparecerá deshabilitado para los usuarios">
+                                <i class="pi pi-exclamation-triangle mr-1 text-xs"></i>Sin flujo asociado
+                            </span>
                         </td>
                         <td class="text-center" [class.opacity-60]="!form.isActive" [class.surface-100]="!form.isActive">
                             <p-tag [value]="form.isActive ? 'Activo' : 'Inactivo'" 
@@ -98,19 +105,26 @@
         <!-- TAB 2: WORKFLOWS -->
         <div *ngIf="activeTab() === 'workflows'">
             <div class="flex flex-column gap-4">
-                <div class="flex align-items-center gap-3">
-                    <label for="wfFormSelect" class="font-semibold text-900">Seleccionar Formulario:</label>
-                    <p-select id="wfFormSelect" [options]="entryForms()" [(ngModel)]="selectedWorkflowFormId" 
-                                optionLabel="name" optionValue="id" placeholder="Seleccione un formulario..."
-                                (onChange)="onWorkflowFormChange($event)" styleClass="w-20rem"></p-select>
+                <div class="flex align-items-center justify-content-between gap-3 flex-wrap bg-white p-3 border-round-xl border-1 surface-border shadow-1">
+                    <div class="flex align-items-center gap-3 flex-wrap">
+                        <label for="wfSelect" class="font-bold text-900">Flujo de Trabajo:</label>
+                        <p-select id="wfSelect" [options]="workflows()" [(ngModel)]="selectedWorkflowId" 
+                                  optionLabel="name" optionValue="id" placeholder="Seleccione un Flujo de Trabajo..."
+                                  (onChange)="onWorkflowChange($event)" styleClass="w-22rem"></p-select>
+                        <p-button label="Editar Flujo" icon="pi pi-pencil" [outlined]="true" size="small"
+                                  *ngIf="selectedWorkflowId()" (onClick)="openEditWorkflowDialog()"></p-button>
+                        <p-button label="Eliminar Flujo" icon="pi pi-trash" severity="danger" [outlined]="true" size="small"
+                                  *ngIf="selectedWorkflowId()" (onClick)="deleteCurrentWorkflow()"></p-button>
+                    </div>
+                    <p-button label="Nuevo Flujo de Trabajo" icon="pi pi-plus" severity="primary" (onClick)="openNewWorkflowDialog()"></p-button>
                 </div>
 
-                <div *ngIf="!selectedWorkflowFormId()" class="text-center p-5 text-500 border-round border-1 surface-border surface-card">
-                    <lucide-icon name="info" class="text-4xl mb-3 block text-400"></lucide-icon>
-                    Seleccione un formulario de la lista para diseñar su flujo de aprobación secuencial.
+                <div *ngIf="!selectedWorkflowId()" class="text-center p-5 text-500 border-round border-1 surface-border surface-card">
+                    <lucide-icon name="git-branch" class="text-4xl mb-3 block text-400"></lucide-icon>
+                    Seleccione un Flujo de Trabajo existente o cree uno nuevo para diseñar sus etapas y asignar responsables y formularios.
                 </div>
 
-                <div *ngIf="selectedWorkflowFormId()" class="flex flex-column gap-3">
+                <div *ngIf="selectedWorkflowId()" class="flex flex-column gap-3">
                     <div class="flex justify-content-between align-items-center">
                         <h3 class="text-xl font-bold m-0 text-900">Diseño del Flujo Secuencial</h3>
                         <p-button [outlined]="true" (onClick)="addStage()">
@@ -167,6 +181,21 @@
                                     <input pInputText [disabled]="true" [value]="currentUser()?.name || 'Creador de la Solicitud'" class="w-full font-semibold bg-gray-100" />
                                 </div>
 
+                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'requester_boss'">
+                                    <label class="font-semibold text-sm">Usuario Aprobador *</label>
+                                    <input pInputText [disabled]="true" value="👔 Jefe Directo del Solicitante" class="w-full font-semibold bg-gray-100" />
+                                </div>
+
+                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'previous_stage_actioner'">
+                                    <label class="font-semibold text-sm">Usuario Aprobador *</label>
+                                    <input pInputText [disabled]="true" value="👤 Aprobador de la Etapa Anterior" class="w-full font-semibold bg-gray-100" />
+                                </div>
+
+                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'previous_stage_team_random'">
+                                    <label class="font-semibold text-sm">Usuario Aprobador *</label>
+                                    <input pInputText [disabled]="true" value="🎲 Al Azar del Equipo del Aprobador Anterior" class="w-full font-semibold bg-gray-100" />
+                                </div>
+
                                 <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'specific_user'">
                                     <label class="font-semibold text-sm">Usuario Aprobador *</label>
                                     <p-select [options]="users()" [(ngModel)]="stage.assigneeUserId" optionLabel="name" optionValue="id" placeholder="Seleccione usuario..." filter="true" class="w-full">
@@ -198,21 +227,90 @@
                                             <div class="col-12 md:col-6 flex align-items-center justify-content-between gap-3 bg-white p-2 border-round border-1 surface-border mb-2" *ngIf="stage.customForms">
                                                 <span class="font-semibold text-sm text-800"><lucide-icon name="user" class="mr-2" style="width: 1rem; height: 1rem;"></lucide-icon>{{ getUserName(userId) }}</span>
                                                 <div style="width: 18rem;">
-                                                    <p-select [options]="internalForms()" [(ngModel)]="stage.customForms[userId]" optionLabel="name" optionValue="id" [showClear]="true" placeholder="Heredar formulario general" class="w-full"></p-select>
+                                                    <p-select [options]="activeForms()" [(ngModel)]="stage.customForms[userId]" optionLabel="name" optionValue="id" [showClear]="true" placeholder="Heredar formulario general" class="w-full"></p-select>
                                                 </div>
                                             </div>
                                         </ng-container>
                                     </div>
                                 </div>
 
-                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'team'">
+                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'team' || stage.assigneeType === 'team_random' || stage.assigneeType === 'team_workload' || stage.assigneeType === 'team_leader'">
                                     <label class="font-semibold text-sm">Equipo Aprobador *</label>
                                     <p-select [options]="teams()" [(ngModel)]="stage.assigneeTeamId" optionLabel="name" optionValue="id" placeholder="Seleccione equipo..." class="w-full"></p-select>
                                 </div>
 
-                                <div class="col-12 md:col-4 flex flex-column gap-2">
+                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'subflow'">
+                                    <label class="font-semibold text-sm">Flujo a Invocar (Sub-Flujo) *</label>
+                                    <p-select [options]="availableSubflows()" [(ngModel)]="stage.formIdToFill" optionLabel="name" optionValue="id" placeholder="Seleccione sub-flujo..." class="w-full"></p-select>
+                                </div>
+
+                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType !== 'subflow'">
                                     <label class="font-semibold text-sm">Formulario a Rellenar (Opcional)</label>
-                                    <p-select [options]="internalForms()" [(ngModel)]="stage.formIdToFill" optionLabel="name" optionValue="id" [showClear]="true" placeholder="Ninguno (Decisión simple)" class="w-full"></p-select>
+                                    <p-select [options]="formToFillOptions()" [(ngModel)]="stage.formIdToFill" optionLabel="name" optionValue="id" [showClear]="true" placeholder="Ninguno (Decisión simple)" class="w-full"></p-select>
+                                </div>
+
+                                <!-- Panel de Configuración de Múltiples Formularios -->
+                                <div class="col-12 flex flex-column gap-2 mt-2 bg-blue-50 border-1 border-blue-200 border-round p-3" *ngIf="stage.formIdToFill === -1">
+                                    <div class="flex justify-content-between align-items-center mb-2">
+                                        <div class="flex flex-column gap-1">
+                                            <div class="flex align-items-center gap-2">
+                                                <i class="pi pi-list text-primary font-bold"></i>
+                                                <span class="font-bold text-sm text-900">Múltiples Formularios Preconfigurados para esta Etapa</span>
+                                            </div>
+                                            <span class="text-xs text-600">Configura qué formulario llena este aprobador y qué Flujo de Trabajo (Sub-Flujo) o Destinatario se dispara automáticamente.</span>
+                                        </div>
+                                        <p-button label="Agregar Opción" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="addMultiFormOption(stage)"></p-button>
+                                    </div>
+
+                                    <div *ngIf="!stage.multiFormsConfig || stage.multiFormsConfig.length === 0" class="text-center p-3 text-500 text-xs italic bg-white border-round border-1 surface-border">
+                                        No hay formularios configurados. Haz clic en "Agregar Opción" para añadir una.
+                                    </div>
+
+                                    <div class="flex flex-column gap-2" *ngIf="stage.multiFormsConfig && stage.multiFormsConfig.length > 0">
+                                        <div *ngFor="let opt of stage.multiFormsConfig; let optIdx = index" class="grid align-items-center bg-white p-3 border-round border-1 surface-border shadow-1 m-0">
+                                            <!-- 1. Formulario inicial -->
+                                            <div [ngClass]="opt.targetType === 'subflow' || !opt.targetType ? 'col-12 md:col-4' : 'col-12 md:col-3'" class="flex flex-column gap-1">
+                                                <label class="text-xs font-bold text-700">1. Formulario que llena *</label>
+                                                <p-select [options]="activeForms()" [(ngModel)]="opt.sourceFormId" optionLabel="name" optionValue="id" placeholder="Seleccione formulario..." class="w-full"></p-select>
+                                            </div>
+                                            <!-- 2. Tipo de Destino -->
+                                            <div [ngClass]="opt.targetType === 'subflow' || !opt.targetType ? 'col-12 md:col-3' : 'col-12 md:col-3'" class="flex flex-column gap-1">
+                                                <label class="text-xs font-bold text-700">2. Tipo de Destino / Ejecución *</label>
+                                                <p-select [options]="targetTypeOptions" [(ngModel)]="opt.targetType" optionLabel="label" optionValue="value" class="w-full"></p-select>
+                                            </div>
+                                            <!-- 3. Flujo / Usuario / Equipo según el tipo -->
+                                            <div class="col-12 md:col-4 flex flex-column gap-1" *ngIf="opt.targetType === 'subflow' || !opt.targetType">
+                                                <label class="text-xs font-bold text-700">3. Flujo a Disparar (Sub-Flujo) *</label>
+                                                <p-select [options]="availableSubflows()" [(ngModel)]="opt.targetSubflowFormId" optionLabel="name" optionValue="id" placeholder="Seleccione sub-flujo..." class="w-full"></p-select>
+                                            </div>
+                                            <div class="col-12 md:col-3 flex flex-column gap-1" *ngIf="opt.targetType === 'user'">
+                                                <label class="text-xs font-bold text-700">3. Usuario Destinatario *</label>
+                                                <p-select [options]="users()" [(ngModel)]="opt.assignedUserId" optionLabel="name" optionValue="id" placeholder="Seleccione usuario..." filter="true" class="w-full">
+                                                    <ng-template let-user pTemplate="item">
+                                                        <div class="flex flex-column gap-1">
+                                                            <span class="font-semibold text-sm">{{ user.name }}</span>
+                                                            <span class="text-xs text-500">{{ user.teamName || 'Sin equipo' }} | {{ user.email }}</span>
+                                                        </div>
+                                                    </ng-template>
+                                                </p-select>
+                                            </div>
+                                            <div class="col-12 md:col-3 flex flex-column gap-1" *ngIf="opt.targetType === 'team_random' || opt.targetType === 'team_leader'">
+                                                <label class="text-xs font-bold text-700">{{ opt.targetType === 'team_leader' ? '3. Equipo (Líder) *' : '3. Equipo Destinatario (Al Azar) *' }}</label>
+                                                <p-select [options]="teams()" [(ngModel)]="opt.assignedTeamId" optionLabel="name" optionValue="id" placeholder="Seleccione equipo..." class="w-full"></p-select>
+                                            </div>
+                                            <!-- 4. Formulario de respuesta (opcional si es usuario/equipo) -->
+                                            <div class="col-12 md:col-2 flex flex-column gap-1" *ngIf="opt.targetType !== 'subflow' && opt.targetType">
+                                                <label class="text-xs font-bold text-700">4. Formulario respuesta</label>
+                                                <p-select [options]="activeForms()" [(ngModel)]="opt.targetFormIdToFill" optionLabel="name" optionValue="id" placeholder="Ninguno" [showClear]="true" class="w-full"></p-select>
+                                            </div>
+                                            <!-- Botón eliminar -->
+                                            <div class="col-12 md:col-1 flex justify-content-center align-items-center pt-3">
+                                                <p-button severity="danger" [text]="true" size="small" (onClick)="removeMultiFormOption(stage, optIdx)" pTooltip="Eliminar opción" tooltipPosition="top">
+                                                    <lucide-icon name="trash-2" class="text-red-500"></lucide-icon>
+                                                </p-button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <!-- Regla de Rechazo -->
@@ -241,6 +339,11 @@
                                 <div class="col-12 md:col-4 flex align-items-center gap-2 mt-4 pt-1">
                                     <p-checkbox [(ngModel)]="stage.requireCommentOnApprove" [binary]="true" [id]="'req-comm-' + i"></p-checkbox>
                                     <label [for]="'req-comm-' + i" class="font-semibold text-sm cursor-pointer">Requerir comentario al aprobar</label>
+                                </div>
+
+                                <div class="col-12 md:col-4 flex align-items-center gap-2 mt-4 pt-1" *ngIf="stage.assigneeType === 'team_random' || stage.assigneeType === 'previous_stage_team_random' || stage.assigneeType === 'team_workload'">
+                                    <p-checkbox [(ngModel)]="stage.excludeTeamLeader" [binary]="true" [id]="'excl-lead-' + i"></p-checkbox>
+                                    <label [for]="'excl-lead-' + i" class="font-semibold text-sm cursor-pointer text-700">Excluir al Líder del Equipo al asignar</label>
                                 </div>
                             </div>
                         </div>
@@ -311,73 +414,34 @@
             </div>
 
             <div class="flex align-items-center gap-3 mt-2">
-                <p-checkbox [(ngModel)]="selectedForm().isEntryForm" [binary]="true" id="isEntryForm"></p-checkbox>
-                <label for="isEntryForm" class="font-medium cursor-pointer">Mostrar en menú inicial de "Nueva Solicitud" (Área Destinataria)</label>
-            </div>
-
-            <div class="flex align-items-center gap-3 mt-2">
                 <p-checkbox [(ngModel)]="selectedForm().isInitialForm" [binary]="true" id="isInitialForm"></p-checkbox>
                 <label for="isInitialForm" class="font-medium cursor-pointer">Definir como "Solicitud Inicial" principal</label>
+            </div>
+
+            <!-- Flujo de Trabajo Asociado -->
+            <div class="flex flex-column gap-1 mt-2 bg-blue-50 p-3 border-round border-1 border-blue-200">
+                <label for="formWorkflowId" class="font-semibold text-sm text-900 flex align-items-center gap-2">
+                    <i class="pi pi-sitemap text-primary font-bold"></i>
+                    <span>Flujo de Trabajo Asociado</span>
+                </label>
+                <p-select [options]="activeWorkflows()" [(ngModel)]="selectedForm().workflowId" 
+                          optionLabel="name" optionValue="id" 
+                          placeholder="Seleccionar el flujo de trabajo que iniciará al radicar este formulario..." 
+                          [showClear]="true" class="w-full"></p-select>
+                <span class="text-xs text-600">Este es el Flujo de Trabajo (secuencia de etapas) que comenzará automáticamente cuando se radique una solicitud con este formulario.</span>
             </div>
 
             <!-- Display Order for Initial Forms -->
             <div class="flex flex-column gap-1" *ngIf="selectedForm().isInitialForm">
                 <label for="formDisplayOrder" class="font-semibold text-sm">Orden de Visualización</label>
                 <input type="number" pInputText id="formDisplayOrder" [(ngModel)]="selectedForm().displayOrder" placeholder="Ej: 1, 2, 3..." min="0" />
-                <span class="text-xs text-500">Determina el orden en que aparecerá este formulario en la secuencia de Solicitudes Iniciales.</span>
+                <span class="text-xs text-500">Determina el orden en que aparecerá este formulario en el selector de Solicitudes Iniciales.</span>
             </div>
 
-            <div class="flex align-items-center gap-3 mt-2">
-                <p-checkbox [(ngModel)]="selectedForm().requireConsecutive" [binary]="true" id="requireConsecutive"></p-checkbox>
-                <label for="requireConsecutive" class="font-medium cursor-pointer">Solicitar número de consecutivo al finalizar el flujo</label>
-            </div>
-
-            <div class="flex align-items-center gap-3" *ngIf="!isNewForm()">
+            <div class="flex align-items-center gap-3 mt-2" *ngIf="!isNewForm()">
                 <p-checkbox [(ngModel)]="selectedForm().isActive" [binary]="true" id="isActiveForm"></p-checkbox>
                 <label for="isActiveForm" class="font-medium cursor-pointer">Plantilla Activa</label>
             </div>
-
-            <!-- Conditions for Entry Forms -->
-             <div class="flex flex-column gap-2 mt-3 p-3 border-round border-1 surface-border bg-gray-50" *ngIf="selectedForm().isEntryForm && !selectedForm().isInitialForm">
-                 <span class="font-bold text-sm text-900 border-bottom-1 surface-border pb-1 block">Condiciones de Habilitación</span>
-                 <span class="text-xs text-600 mb-2">Configure las reglas bajo las cuales esta área estará activa en la selección inicial.</span>
-
-                 <div class="flex flex-column gap-2">
-                     <div *ngFor="let cond of conditionsList(); let cIdx = index" 
-                          class="flex flex-wrap align-items-center justify-content-center gap-2 bg-white p-2 border-round border-1 surface-border">
-                          <!-- Campo Selector -->
-                          <div class="flex-1" style="min-width: 250px;">
-                              <p-select [options]="initialFormsFields()" [(ngModel)]="cond.fieldKey" 
-                                        optionLabel="label" optionValue="key" placeholder="Seleccione Campo..."
-                                        styleClass="w-full" [filter]="true" filterBy="label" [appendTo]="'body'"></p-select>
-                          </div>
-
-                          <!-- Operador Selector -->
-                          <div style="width: 130px; min-width: 130px;">
-                              <p-select [options]="operatorOptions" [(ngModel)]="cond.operator" 
-                                        optionLabel="label" optionValue="value" placeholder="Operación..."
-                                        styleClass="w-full" [appendTo]="'body'"></p-select>
-                          </div>
-
-                          <!-- Valor Input -->
-                          <div class="flex-1" style="min-width: 120px;">
-                              <input type="text" pInputText [(ngModel)]="cond.value" placeholder="Valor..." class="w-full" />
-                          </div>
-
-                          <!-- Botón Eliminar -->
-                          <div class="flex-shrink-0">
-                              <p-button [text]="true" [rounded]="true" severity="danger" (onClick)="removeCondition(cIdx)" pTooltip="Eliminar Condición">
-                                  <lucide-icon name="trash" class="w-4 h-4"></lucide-icon>
-                              </p-button>
-                          </div>
-                      </div>
-
-                     <!-- Botón Agregar -->
-                     <p-button [outlined]="true" severity="primary" (onClick)="addCondition()" class="align-self-start mt-1">
-                         <lucide-icon name="plus" class="mr-2 w-4 h-4"></lucide-icon>Agregar Condición
-                     </p-button>
-                 </div>
-             </div>
         </div>
         <ng-template pTemplate="footer">
             <p-button [text]="true" severity="secondary" (onClick)="showFormDialog.set(false)">
@@ -939,6 +1003,36 @@
                     Cancelar
                 </p-button>
                 <p-button severity="primary" size="small" (onClick)="saveNumberConfig()">
+                    <lucide-icon name="save" class="mr-2"></lucide-icon>
+                    Guardar
+                </p-button>
+            </div>
+        </ng-template>
+    </p-dialog>
+
+    <!-- Dialog: Crear / Editar Flujo de Trabajo -->
+    <p-dialog [header]="isNewWorkflow() ? 'Nuevo Flujo de Trabajo' : 'Editar Flujo de Trabajo'" [(visible)]="showWorkflowDialog" 
+              [modal]="true" [style]="{width: '500px'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
+        <div class="flex flex-column gap-3 py-2 px-3">
+            <div class="flex flex-column gap-1">
+                <label for="wf-name" class="font-semibold text-900 text-sm">Nombre del Flujo *</label>
+                <input id="wf-name" pInputText [(ngModel)]="selectedWorkflow().name" placeholder="Ej: Flujo de Tráfico Calificado" class="w-full" />
+            </div>
+            <div class="flex flex-column gap-1">
+                <label for="wf-desc" class="font-semibold text-900 text-sm">Descripción del Flujo</label>
+                <textarea id="wf-desc" pTextarea [(ngModel)]="selectedWorkflow().description" rows="3" placeholder="Describe el propósito y las etapas de este flujo..." class="w-full"></textarea>
+            </div>
+            <div class="flex align-items-center gap-3 mt-1">
+                <p-checkbox [(ngModel)]="selectedWorkflow().requireConsecutive" [binary]="true" id="wf-requireConsecutive"></p-checkbox>
+                <label for="wf-requireConsecutive" class="font-medium cursor-pointer text-sm">Solicitar número de consecutivo al finalizar el flujo</label>
+            </div>
+        </div>
+        <ng-template pTemplate="footer">
+            <div class="flex justify-content-end gap-2 px-3 pb-3">
+                <p-button [text]="true" severity="secondary" size="small" (onClick)="showWorkflowDialog.set(false)">
+                    Cancelar
+                </p-button>
+                <p-button severity="primary" size="small" (onClick)="saveWorkflowMetadata()">
                     <lucide-icon name="save" class="mr-2"></lucide-icon>
                     Guardar
                 </p-button>

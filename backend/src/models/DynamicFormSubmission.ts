@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { DynamicForm } from './DynamicForm';
+import { DynamicWorkflow } from './DynamicWorkflow';
 import { User } from './User';
 import { DynamicWorkflowStage } from './DynamicWorkflowStage';
 import { DynamicFormFieldValue } from './DynamicFormFieldValue';
@@ -12,6 +13,9 @@ export class DynamicFormSubmission {
 
   @Column({ name: 'FormId', type: 'int', nullable: false })
   formId!: number;
+
+  @Column({ name: 'WorkflowId', type: 'int', nullable: true })
+  workflowId!: number | null;
 
   @Column({ name: 'RequesterUserId', type: 'int', nullable: false })
   requesterUserId!: number;
@@ -34,6 +38,10 @@ export class DynamicFormSubmission {
   @ManyToOne(() => DynamicForm, (form) => form.submissions)
   @JoinColumn({ name: 'FormId' })
   form!: DynamicForm;
+
+  @ManyToOne(() => DynamicWorkflow)
+  @JoinColumn({ name: 'WorkflowId' })
+  workflow!: DynamicWorkflow | null;
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'RequesterUserId' })

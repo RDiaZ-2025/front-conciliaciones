@@ -56,7 +56,9 @@ app.use(helmet()); // Seguridad
 app.use(cors(corsOptions)); // CORS
 app.use(compression()); // Compresión
 app.use(morgan('combined')); // Logging
-app.use(limiter); // Rate limiting
+if (process.env.NODE_ENV === 'production') {
+  app.use(limiter); // Rate limiting solo en producción
+}
 app.use(cookieParser()); // Cookies
 app.use(express.json({ limit: '10mb' })); // JSON parser
 app.use(express.urlencoded({ extended: true, limit: '10mb' })); // URL encoded

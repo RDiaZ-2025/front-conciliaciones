@@ -11,7 +11,7 @@ export const getAllTeams = asyncHandler(async (req: Request, res: Response): Pro
 });
 
 export const createTeam = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const { name, description } = req.body;
+  const { name, description, leaderId, defaultWorkflowId, metadata } = req.body;
 
   if (!name) {
     res.status(400).json({
@@ -23,7 +23,10 @@ export const createTeam = asyncHandler(async (req: Request, res: Response): Prom
 
   const newTeam = await teamService.createTeam({
     name,
-    description
+    description,
+    leaderId: leaderId ? Number(leaderId) : null,
+    defaultWorkflowId: defaultWorkflowId ? Number(defaultWorkflowId) : null,
+    metadata: metadata !== undefined ? (typeof metadata === 'string' ? metadata : JSON.stringify(metadata)) : null
   });
 
   res.status(201).json({
@@ -54,7 +57,7 @@ export const getUsersByTeam = asyncHandler(async (req: Request, res: Response): 
 
 export const updateTeam = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { name, description } = req.body;
+  const { name, description, leaderId, defaultWorkflowId, metadata } = req.body;
 
   if (!name) {
     res.status(400).json({
@@ -64,7 +67,13 @@ export const updateTeam = asyncHandler(async (req: Request, res: Response): Prom
     return;
   }
 
-  const updatedTeam = await teamService.updateTeam(parseInt(id), { name, description });
+  const updatedTeam = await teamService.updateTeam(parseInt(id), {
+    name,
+    description,
+    leaderId: leaderId !== undefined ? (leaderId ? Number(leaderId) : null) : undefined,
+    defaultWorkflowId: defaultWorkflowId !== undefined ? (defaultWorkflowId ? Number(defaultWorkflowId) : null) : undefined,
+    metadata: metadata !== undefined ? (typeof metadata === 'string' ? metadata : JSON.stringify(metadata)) : undefined
+  });
 
   if (!updatedTeam) {
     res.status(404).json({

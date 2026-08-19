@@ -23,6 +23,7 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { PageHeaderComponent } from '../../components/page-header/page-header.component';
 import { ProductionService } from '../../services/production.service';
 import { AuthService } from '../../services/auth.service';
+import { TeamService } from '../../services/team.service';
 import { CheckboxModule } from 'primeng/checkbox';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
@@ -80,6 +81,7 @@ import { CustomerAutocompleteComponent } from '../../components/customer-autocom
 })
 export class ProductionBetaComponent implements OnInit, OnDestroy {
   productionService = inject(ProductionService);
+  teamService = inject(TeamService);
   dialogService = inject(CoreDialogService);
   confirmationService = inject(ConfirmationService);
   messageService = inject(MessageService);
@@ -128,6 +130,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   // Historical View state
   showHistorical = signal<boolean>(false);
   showDetailsDialog = signal<boolean>(false);
+  loadingDetails = signal<boolean>(false);
   selectedDetails = signal<any>(null);
 
   workflowStages: { id: string; label: string }[] = [];
@@ -166,12 +169,14 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   requestTypes = signal<any[]>([]);
   selectedRequestTypes = signal<any[]>([]);
   parentFormGroups = signal<any[]>([]);
+  detailsParentFormGroups = signal<any[]>([]);
   showFormDialog = signal<boolean>(false);
   currentFormIndex = signal<number>(0);
   currentFormFields = signal<any[]>([]);
-  initialForm = signal<any>(null);
   initialForms = signal<any[]>([]);
-  selectedInitialForm = signal<any>(null);
+  selectedInitialFormId = signal<number | null>(null);
+  selectedInitialForm = computed(() => this.initialForms().find(f => f.id === this.selectedInitialFormId()) || null);
+  teams = signal<any[]>([]);
   initialFormFields = signal<any[]>([]);
   initialFormValues = signal<Record<string, string>>({});
   formValues: Record<string, string> = {};
@@ -409,11 +414,20 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.initialForms.set([]);
     this.initialFormValues.set({});
     this.dynamicListRows = {};
+    this.selectedInitialFormId.set(null);
 
     this.productionService.getInitialForm().subscribe({
       next: (forms: any[]) => {
-        const formsList = Array.isArray(forms) ? forms : (forms ? [forms] : []);
+        const formsList = (Array.isArray(forms) ? forms : (forms ? [forms] : [])).map(f => ({
+          ...f,
+          disabled: !f.workflowId
+        }));
         this.initialForms.set(formsList);
+        const usableForms = formsList.filter(f => f.workflowId);
+        if (usableForms.length === 1) {
+          this.selectedInitialFormId.set(usableForms[0].id);
+        }
+
         if (formsList.length > 0) {
           const fieldsObservables = formsList.map(form => 
             this.productionService.getDynamicFormFields(form.id)
@@ -467,112 +481,135 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     });
 
-    this.productionService.getRequestTypes().subscribe({
-      next: (types) => {
-        this.requestTypes.set((types || []).map(t => ({ ...t, selected: false })));
-        this.selectedRequestTypes.set([]);
+    this.teamService.getTeams().subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.teams.set((res.data || []).map((t: any) => {
+            let defaultMode: 'leader' | 'random' | 'workflow' = 'leader';
+            if (!t.leaderId && (!t.users || t.users.length === 0)) {
+              defaultMode = 'workflow';
+            } else if (!t.leaderId && t.users && t.users.length > 0) {
+              defaultMode = 'random';
+            }
+            return {
+              ...t,
+              selected: false,
+              assignmentMode: defaultMode
+            };
+          }));
+        }
         this.showTypeSelectionDialog.set(true);
       },
       error: (err) => {
-        console.error('Error loading request types:', err);
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los tipos de solicitud.' });
+        console.error('Error loading teams:', err);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los equipos.' });
+        this.showTypeSelectionDialog.set(true);
       }
     });
   }
 
   async submitInitialRequest() {
-    const forms = this.initialForms();
-    if (!forms || forms.length === 0) {
-      this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'No hay formularios iniciales configurados.' });
+    const formId = this.selectedInitialFormId();
+    if (!formId) {
+      this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'Debe seleccionar un Formulario de Solicitud Inicial.' });
+      return;
+    }
+    const form = this.initialForms().find(f => f.id === formId);
+    if (!form) return;
+
+    if (!form.workflowId) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Formulario Sin Flujo',
+        detail: 'Este formulario no tiene un flujo de trabajo asociado y no puede ser enviado.'
+      });
       return;
     }
 
-    // Validate fields for all initial forms
+    // Validate fields for selected initial form
     const values = this.initialFormValues();
-    for (const form of forms) {
-      for (const field of form.fields) {
-        if (field.isRequired && field.type !== 'section_header') {
-          if (field.type === 'file') {
-            const files = this.getInitialSelectedFiles(form.id, field.name);
-            if (files.length === 0) {
-              this.messageService.add({ 
-                severity: 'error', 
-                summary: 'Error de Validación', 
-                detail: `El campo "${field.label}" en el formulario "${form.name}" requiere cargar al menos un archivo.` 
-              });
-              return;
-            }
-          } else {
-            const val = values[form.id + '_' + field.name];
-            if (val === undefined || val === null || String(val).trim() === '') {
-              this.messageService.add({ 
-                severity: 'error', 
-                summary: 'Error de Validación', 
-                detail: `El campo "${field.label}" en el formulario "${form.name}" es obligatorio.` 
-              });
-              return;
-            }
+    for (const field of (form.fields || [])) {
+      if (field.isRequired && field.type !== 'section_header' && this.isFieldVisible(field, form.fields, values, form.id)) {
+        if (field.type === 'file') {
+          const files = this.getInitialSelectedFiles(form.id, field.name);
+          if (files.length === 0) {
+            this.messageService.add({ 
+              severity: 'error', 
+              summary: 'Error de Validación', 
+              detail: `El campo "${field.label}" requiere cargar al menos un archivo.` 
+            });
+            return;
+          }
+        } else {
+          const val = values[form.id + '_' + field.name];
+          if (val === undefined || val === null || String(val).trim() === '') {
+            this.messageService.add({ 
+              severity: 'error', 
+              summary: 'Error de Validación', 
+              detail: `El campo "${field.label}" es obligatorio.` 
+            });
+            return;
           }
         }
       }
     }
 
-    // Validate areas selected
-    const selectedAreas = this.requestTypes().filter(t => t.selected);
-    if (selectedAreas.length === 0) {
+    // Validate teams selected
+    const selectedTeams = this.teams().filter(t => t.selected);
+    if (selectedTeams.length === 0) {
       this.messageService.add({ 
         severity: 'warn', 
         summary: 'Atención', 
-        detail: 'Debe seleccionar al menos un área o tipo de solicitud.' 
+        detail: 'Debe seleccionar al menos un Equipo / Área destinataria para procesar la solicitud.' 
       });
       return;
     }
 
     this.loadingRequestTypes.set(true);
 
-    // Upload files for initial forms if any
-    for (const form of forms) {
-      for (const field of form.fields) {
-        if (field.type === 'file') {
-          const fileKey = form.id + '_' + field.name;
-          const filesToUpload = this.tempFiles[fileKey] || [];
-          if (filesToUpload.length > 0) {
-            const uploadResults = [];
-            for (const file of filesToUpload) {
-              const folderPath = `initial-submissions/form_${form.id}/${field.name}`;
-              const res = await this.azureService.uploadFile(file, { containerName: 'private', folderPath });
-              if (res.success) {
-                uploadResults.push({ name: file.name, url: res.url });
-              } else {
-                this.messageService.add({ severity: 'error', summary: 'Error de carga', detail: `No se pudo subir el archivo: ${file.name}. ${res.error}` });
-                this.loadingRequestTypes.set(false);
-                return;
-              }
+    // Upload files for initial form if any
+    for (const field of (form.fields || [])) {
+      if (field.type === 'file') {
+        const fileKey = form.id + '_' + field.name;
+        const filesToUpload = this.tempFiles[fileKey] || [];
+        if (filesToUpload.length > 0) {
+          const uploadResults = [];
+          for (const file of filesToUpload) {
+            const folderPath = `initial-submissions/form_${form.id}/${field.name}`;
+            const res = await this.azureService.uploadFile(file, { containerName: 'private', folderPath });
+            if (res.success) {
+              uploadResults.push({ name: file.name, url: res.url });
+            } else {
+              this.messageService.add({ severity: 'error', summary: 'Error de carga', detail: `No se pudo subir el archivo: ${file.name}. ${res.error}` });
+              this.loadingRequestTypes.set(false);
+              return;
             }
-            values[fileKey] = JSON.stringify(uploadResults);
           }
+          values[fileKey] = JSON.stringify(uploadResults);
         }
       }
     }
 
-    const targetFormIds = selectedAreas.map(a => a.id);
+    const targetTeams = selectedTeams.map(t => ({
+      teamId: t.id,
+      assignmentMode: t.assignmentMode || 'leader'
+    }));
+    const targetTeamIds = selectedTeams.map(t => t.id);
 
     // Build the submissions array payload
-    const submissions = forms.map(form => {
-      const formValues: Record<string, string> = {};
-      form.fields.forEach((f: any) => {
-        formValues[f.name] = values[form.id + '_' + f.name];
-      });
-      return { formId: form.id, values: formValues };
+    const formValues: Record<string, string> = {};
+    (form.fields || []).forEach((f: any) => {
+      formValues[f.name] = values[form.id + '_' + f.name];
     });
+    const submissions = [{ formId: form.id, values: formValues }];
 
-    this.productionService.submitDynamicForm(0, {}, targetFormIds, submissions).subscribe({
+    this.productionService.submitDynamicForm(form.id, formValues, undefined, submissions, targetTeamIds, targetTeams).subscribe({
       next: () => {
         this.showTypeSelectionDialog.set(false);
         this.messageService.add({ 
           severity: 'success', 
           summary: 'Éxito', 
-          detail: 'Solicitud enviada exitosamente.' 
+          detail: 'Solicitud enviada exitosamente a los equipos seleccionados.' 
         });
         this.tempFiles = {}; // Clear temp files
         this.loadRequests(); // Reload list
@@ -654,7 +691,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   continueFormFlow() {
     const fields = this.currentFormFields();
     for (const field of fields) {
-      if (field.isRequired && field.type !== 'section_header') {
+      if (field.isRequired && field.type !== 'section_header' && this.isFieldVisible(field, fields, this.formValues)) {
         if (field.type === 'file') {
           const files = this.getSelectedFiles(field.name);
           const val = this.formValues[field.name];
@@ -1300,6 +1337,20 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     return s !== '' && s !== '[]' && s !== '""' && s !== 'null';
   }
 
+  isSectionHeaderVisible(values: any[], currentIndex: number): boolean {
+    if (!values || currentIndex < 0 || currentIndex >= values.length) return false;
+    for (let i = currentIndex + 1; i < values.length; i++) {
+      const nextVal = values[i];
+      if (nextVal.fieldType === 'section_header') {
+        return false;
+      }
+      if (this.hasValue(nextVal.value)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   formatValue(val: any): string {
     if (!val || val.value === undefined || val.value === null) return '';
     const rawValue = String(val.value);
@@ -1435,6 +1486,30 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           }
         });
       }
+    } else if (task.formIdToFill === -1) {
+      this.loadingStageFields.set(false);
+      this.stageFormFields.set([]);
+      this.selectedMultiFormIds.set([]);
+      const initialValues: Record<string, string> = {};
+      if (task.availableMultiForms && task.availableMultiForms.length > 0) {
+        task.availableMultiForms.forEach((frm: any) => {
+          (frm.fields || []).forEach((f: any) => {
+            const key = frm.formId + '_' + f.name;
+            if (f.defaultValueExpression) {
+              initialValues[key] = this.evaluateDefaultValueExpression(f);
+            } else {
+              initialValues[key] = '';
+            }
+            if (f.type === 'dynamic_list') {
+              this.initDynamicListField(key, initialValues[key]);
+            }
+            if (f.type === 'multiselect') {
+              this.initMultiselectField(key, initialValues[key]);
+            }
+          });
+        });
+      }
+      this.stageFormValues = initialValues;
     } else if (task.formIdToFill) {
       this.loadingStageFields.set(true);
       this.productionService.getDynamicFormFields(task.formIdToFill).subscribe({
@@ -1476,6 +1551,27 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }
   }
 
+  selectedMultiFormIds = signal<number[]>([]);
+
+  isMultiFormSelected(formId: number): boolean {
+    return this.selectedMultiFormIds().includes(formId);
+  }
+
+  toggleMultiFormSelection(formId: number) {
+    const current = this.selectedMultiFormIds();
+    if (current.includes(formId)) {
+      this.selectedMultiFormIds.set(current.filter(id => id !== formId));
+    } else {
+      this.selectedMultiFormIds.set([...current, formId]);
+    }
+  }
+
+  getSelectedMultiForms(): any[] {
+    const task = this.selectedTask();
+    if (!task || !task.availableMultiForms) return [];
+    return task.availableMultiForms.filter((f: any) => this.selectedMultiFormIds().includes(f.formId));
+  }
+
   processAction(action: 'approve' | 'reject') {
     const task = this.selectedTask();
     const notes = this.comments();
@@ -1492,10 +1588,50 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }
 
     if (action === 'approve') {
-      if (task.formIdToFill || isCorr) {
+      if (task.formIdToFill === -1) {
+        if (this.selectedMultiFormIds().length === 0) {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Validación',
+            detail: 'Debe seleccionar al menos un formulario para diligenciar en esta etapa.'
+          });
+          return;
+        }
+        const selectedForms = this.getSelectedMultiForms();
+        for (const frm of selectedForms) {
+          for (const field of frm.fields) {
+            if (field.isRequired && field.type !== 'section_header' && this.isFieldVisible(field, frm.fields, this.stageFormValues, frm.formId)) {
+              const key = frm.formId + '_' + field.name;
+              if (field.type === 'file') {
+                const files = this.getStageSelectedFiles(key);
+                const val = this.stageFormValues[key];
+                const hasUploaded = this.getStageUploadedFiles(val).length > 0;
+                if (files.length === 0 && !hasUploaded) {
+                  this.messageService.add({
+                    severity: 'error',
+                    summary: 'Validación',
+                    detail: `En "${frm.formName}", el campo "${field.label}" requiere cargar al menos un archivo.`
+                  });
+                  return;
+                }
+              } else {
+                const val = this.stageFormValues[key];
+                if (val === undefined || val === null || String(val).trim() === '') {
+                  this.messageService.add({
+                    severity: 'error',
+                    summary: 'Validación',
+                    detail: `En "${frm.formName}", el campo "${field.label}" es requerido.`
+                  });
+                  return;
+                }
+              }
+            }
+          }
+        }
+      } else if (task.formIdToFill || isCorr) {
         const fields = this.stageFormFields();
         for (const field of fields) {
-          if (field.isRequired && field.type !== 'section_header') {
+          if (field.isRequired && field.type !== 'section_header' && this.isFieldVisible(field, fields, this.stageFormValues)) {
             if (field.type === 'file') {
               const files = this.getStageSelectedFiles(field.name);
               const val = this.stageFormValues[field.name];
@@ -1706,6 +1842,33 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     }
 
+    // 1.8. Upload files from multi forms if any
+    if (task.formIdToFill === -1 && this.getSelectedMultiForms().length > 0) {
+      for (const mForm of this.getSelectedMultiForms()) {
+        for (const field of mForm.fields) {
+          if (field.type === 'file') {
+            const fileKey = mForm.formId + '_' + field.name;
+            const filesToUpload = this.stageTempFiles[fileKey] || [];
+            if (filesToUpload.length > 0) {
+              const uploadResults = [];
+              for (const file of filesToUpload) {
+                const folderPath = `dynamic-submissions/task_${task.stateId}/${field.name}`;
+                const res = await this.azureService.uploadFile(file, { containerName: 'private', folderPath });
+                if (res.success) {
+                  uploadResults.push({ name: file.name, url: res.url });
+                } else {
+                  this.messageService.add({ severity: 'error', summary: 'Error de carga', detail: `No se pudo subir el archivo: ${file.name}. ${res.error}` });
+                  this.loadingAction.set(false);
+                  return;
+                }
+              }
+              this.stageFormValues[fileKey] = JSON.stringify(uploadResults);
+            }
+          }
+        }
+      }
+    }
+
     this.productionService.actionApproval(task.stateId, action, notes, action === 'approve' ? this.stageFormValues : undefined).subscribe({
       next: (res) => {
         this.stageTempFiles = {};
@@ -1768,12 +1931,36 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   }
 
   viewSubmissionDetails(submissionId: number) {
+    this.selectedDetails.set(null);
+    this.detailsParentFormGroups.set([]);
+    this.loadingDetails.set(true);
+    this.showDetailsDialog.set(true);
+
     this.productionService.getSubmissionDetails(submissionId).subscribe({
       next: (data) => {
         this.selectedDetails.set(data);
-        this.showDetailsDialog.set(true);
+        if (data && data.parentValues && data.parentValues.length > 0) {
+          const groupsMap = new Map<string, any[]>();
+          (data.parentValues || []).forEach((v: any) => {
+            const formName = v.formName || 'Inicial';
+            if (!groupsMap.has(formName)) {
+              groupsMap.set(formName, []);
+            }
+            groupsMap.get(formName)!.push(v);
+          });
+          const groups = Array.from(groupsMap.entries()).map(([formName, values]) => ({
+            formName,
+            values
+          }));
+          this.detailsParentFormGroups.set(groups);
+        } else {
+          this.detailsParentFormGroups.set([]);
+        }
+        this.loadingDetails.set(false);
       },
       error: () => {
+        this.loadingDetails.set(false);
+        this.showDetailsDialog.set(false);
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los detalles de la solicitud.' });
       }
     });
@@ -1840,17 +2027,17 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       this.initialFormValues.set({ ...values });
     }
 
-    // Validate requestTypes selected options against enabling conditions
-    const types = this.requestTypes();
-    let typesChanged = false;
-    for (const t of types) {
-      if (t.selected && !this.isAreaEnabled(t)) {
+    // Validate teams selected options against enabling conditions
+    const currentTeams = this.teams();
+    let teamsChanged = false;
+    for (const t of currentTeams) {
+      if (t.selected && !this.isTeamEnabled(t)) {
         t.selected = false;
-        typesChanged = true;
+        teamsChanged = true;
       }
     }
-    if (typesChanged) {
-      this.requestTypes.set([...types]);
+    if (teamsChanged) {
+      this.teams.set([...currentTeams]);
     }
   }
 
@@ -2109,7 +2296,98 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   }
 
   isAreaEnabled(item: any): boolean {
-    if (!item.metadata || !item.metadata.enableConditions || !Array.isArray(item.metadata.enableConditions)) {
+    return this.isTeamEnabled(item);
+  }
+
+  hasTeamMembers(team: any): boolean {
+    if (!team) return false;
+    if (team.leaderId || team.leader) return true;
+    if (Array.isArray(team.users) && team.users.length > 0) return true;
+    return false;
+  }
+
+  cycleTeamAssignmentMode(team: any, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+    const currentMode = team.assignmentMode || 'leader';
+    let nextMode: 'leader' | 'random' | 'workflow' = 'leader';
+    if (currentMode === 'leader') {
+      nextMode = 'random';
+    } else if (currentMode === 'random') {
+      nextMode = 'workflow';
+    } else {
+      nextMode = 'leader';
+    }
+    team.assignmentMode = nextMode;
+  }
+
+  getTeamAssignmentBadge(team: any): { label: string; icon: string; severity: 'info' | 'success' | 'warn' | 'danger' | 'secondary' | 'contrast'; tooltip: string; bgClass: string; textClass: string; borderClass: string } {
+    const mode = team.assignmentMode || 'leader';
+    if (mode === 'leader') {
+      if (team.leader) {
+        return {
+          label: `Líder: ${team.leader.name}`,
+          icon: 'user-check',
+          severity: 'info',
+          tooltip: `Asignar a Líder: La etapa 1 se asignará a ${team.leader.name}. Haz clic para alternar modo.`,
+          bgClass: 'bg-blue-50',
+          textClass: 'text-blue-700',
+          borderClass: 'border-blue-200'
+        };
+      } else {
+        return {
+          label: 'Líder (Sin asignar)',
+          icon: 'user-check',
+          severity: 'warn',
+          tooltip: 'Asignar a Líder: Este equipo no tiene líder asignado (se intentará miembro aleatorio o flujo). Haz clic para alternar modo.',
+          bgClass: 'bg-amber-50',
+          textClass: 'text-amber-800',
+          borderClass: 'border-amber-200'
+        };
+      }
+    } else if (mode === 'random') {
+      const count = team.users?.length || 0;
+      return {
+        label: `Aleatorio (${count} miembros)`,
+        icon: 'shuffle',
+        severity: 'success',
+        tooltip: `Asignación Aleatoria: La etapa 1 se asignará al azar entre los ${count} miembros del equipo. Haz clic para alternar modo.`,
+        bgClass: 'bg-purple-50',
+        textClass: 'text-purple-700',
+        borderClass: 'border-purple-200'
+      };
+    } else {
+      return {
+        label: 'Según Flujo (Etapa 1)',
+        icon: 'git-branch',
+        severity: 'warn',
+        tooltip: 'Asignación según Flujo: La etapa 1 se asignará según la regla configurada en la Etapa 1 del Flujo de Trabajo. Haz clic para alternar modo.',
+        bgClass: 'bg-orange-50',
+        textClass: 'text-orange-800',
+        borderClass: 'border-orange-200'
+      };
+    }
+  }
+
+  getTeamDisabledReason(team: any): string | undefined {
+    if (!this.isTeamConditionMet(team)) {
+      return 'No cumple con las condiciones configuradas en el formulario inicial.';
+    }
+    return undefined;
+  }
+
+  isTeamEnabled(team: any): boolean {
+    return this.isTeamConditionMet(team);
+  }
+
+  isTeamConditionMet(item: any): boolean {
+    if (!item) return false;
+    let meta = item.metadata;
+    if (meta && typeof meta === 'string') {
+      try { meta = JSON.parse(meta); } catch(e) {}
+    }
+    if (!meta || !meta.enableConditions || !Array.isArray(meta.enableConditions) || meta.enableConditions.length === 0) {
       return true;
     }
 
@@ -2117,7 +2395,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     const removeAccents = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     
     // Check all conditions (AND logic)
-    for (const cond of item.metadata.enableConditions) {
+    for (const cond of meta.enableConditions) {
       let val: any = undefined;
       const keys = cond.fieldKeys || (cond.fieldKey ? [cond.fieldKey] : []);
       for (const key of keys) {
@@ -2125,25 +2403,89 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           val = values[key];
           break;
         }
+        // Also check with selected initial form prefix
+        const formId = this.selectedInitialFormId();
+        if (formId && values[`${formId}_${key}`] !== undefined && values[`${formId}_${key}`] !== null && values[`${formId}_${key}`] !== '') {
+          val = values[`${formId}_${key}`];
+          break;
+        }
+        // Check cleanKey without form prefix
+        const cleanKey = key.includes('_') ? key.split('_').slice(1).join('_') : key;
+        if (formId && values[`${formId}_${cleanKey}`] !== undefined && values[`${formId}_${cleanKey}`] !== null && values[`${formId}_${cleanKey}`] !== '') {
+          val = values[`${formId}_${cleanKey}`];
+          break;
+        }
+      }
+
+      const op = cond.operator || 'contains';
+      const condVal = cond.value;
+
+      if (op === 'is_empty') {
+        if (val !== undefined && val !== null && String(val).trim() !== '' && String(val) !== '[]') {
+          return false;
+        }
+        continue;
+      }
+
+      if (op === 'is_not_empty') {
+        if (val === undefined || val === null || String(val).trim() === '' || String(val) === '[]') {
+          return false;
+        }
+        continue;
       }
 
       if (val === undefined || val === null || val === '') {
         return false;
       }
 
-      const op = cond.operator;
-      const condVal = cond.value;
+      // Extract cond values array
+      let condValuesArray: string[] = [];
+      if (Array.isArray(condVal)) {
+        condValuesArray = condVal.map(v => removeAccents(String(v)).toLowerCase().trim());
+      } else if (typeof condVal === 'string' && condVal.startsWith('[') && condVal.endsWith(']')) {
+        try {
+          const parsed = JSON.parse(condVal);
+          condValuesArray = Array.isArray(parsed) ? parsed.map(v => removeAccents(String(v)).toLowerCase().trim()) : [removeAccents(String(condVal)).toLowerCase().trim()];
+        } catch(e) {
+          condValuesArray = [removeAccents(String(condVal)).toLowerCase().trim()];
+        }
+      } else if (condVal !== undefined && condVal !== null) {
+        condValuesArray = [removeAccents(String(condVal)).toLowerCase().trim()];
+      }
+
+      // Extract user values array
+      let userValuesArray: string[] = [];
+      if (Array.isArray(val)) {
+        userValuesArray = val.map(v => typeof v === 'object' && v !== null ? (v.item || v.product || v.name || JSON.stringify(v)) : String(v));
+      } else if (typeof val === 'string' && val.startsWith('[') && val.endsWith(']')) {
+        try {
+          const parsed = JSON.parse(val);
+          if (Array.isArray(parsed)) {
+            userValuesArray = parsed.map(v => typeof v === 'object' && v !== null ? (v.item || v.product || v.name || JSON.stringify(v)) : String(v));
+          } else {
+            userValuesArray = [val];
+          }
+        } catch(e) {
+          userValuesArray = [val];
+        }
+      } else {
+        userValuesArray = [String(val)];
+      }
+      userValuesArray = userValuesArray.map(v => removeAccents(String(v)).toLowerCase().trim());
 
       if (op === 'contains') {
-        const strVal = removeAccents(String(val)).toLowerCase();
-        const strCond = removeAccents(String(condVal)).toLowerCase();
-        if (!strVal.includes(strCond)) {
+        const matches = condValuesArray.some(cv => userValuesArray.some(uv => uv.includes(cv)));
+        if (!matches) {
           return false;
         }
       } else if (op === 'eq') {
-        const strVal = removeAccents(String(val)).toLowerCase().trim();
-        const strCond = removeAccents(String(condVal)).toLowerCase().trim();
-        if (strVal !== strCond) {
+        const matches = condValuesArray.some(cv => userValuesArray.includes(cv));
+        if (!matches) {
+          return false;
+        }
+      } else if (op === 'neq') {
+        const matches = condValuesArray.some(cv => userValuesArray.includes(cv));
+        if (matches) {
           return false;
         }
       } else if (op === 'gt') {
@@ -2174,5 +2516,13 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }
 
     return true;
+  }
+
+  getDisplayInitialValues(item: any): any[] {
+    if (!item) return [];
+    if (item.parentValues && item.parentValues.length > 0) {
+      return item.parentValues;
+    }
+    return item.values || [];
   }
 }

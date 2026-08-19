@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { DynamicForm } from './DynamicForm';
+import { DynamicWorkflow } from './DynamicWorkflow';
 import { User } from './User';
 import { Team } from './Team';
 
@@ -8,8 +9,11 @@ export class DynamicWorkflowStage {
   @PrimaryGeneratedColumn({ name: 'Id' })
   id!: number;
 
-  @Column({ name: 'FormId', type: 'int', nullable: false })
-  formId!: number;
+  @Column({ name: 'WorkflowId', type: 'int', nullable: true })
+  workflowId!: number | null;
+
+  @Column({ name: 'FormId', type: 'int', nullable: true })
+  formId!: number | null;
 
   @Column({ name: 'IsDeleted', type: 'bit', default: false })
   isDeleted!: boolean;
@@ -24,7 +28,7 @@ export class DynamicWorkflowStage {
   stepOrder!: number;
 
   @Column({ name: 'AssigneeType', type: 'nvarchar', length: 50, nullable: false })
-  assigneeType!: string; // 'specific_user', 'team', 'requester_boss', 'dynamic_responsible'
+  assigneeType!: string; // 'specific_user', 'team', 'team_random', 'team_workload', 'team_leader', 'subflow', 'requester_boss', 'requester', 'previous_stage_actioner', 'previous_stage_team_random', 'multiple_users'
 
   @Column({ name: 'AssigneeUserId', type: 'int', nullable: true })
   assigneeUserId!: number | null;
@@ -47,12 +51,19 @@ export class DynamicWorkflowStage {
   @Column({ name: 'RequireCommentOnApprove', type: 'bit', default: false })
   requireCommentOnApprove!: boolean;
 
+  @Column({ name: 'ExcludeTeamLeader', type: 'bit', default: false, nullable: true })
+  excludeTeamLeader!: boolean;
+
   @Column({ name: 'AssigneeUserIds', type: 'nvarchar', length: 'max', nullable: true })
   assigneeUserIds!: string | null;
 
+  @ManyToOne(() => DynamicWorkflow, (workflow) => workflow.stages)
+  @JoinColumn({ name: 'WorkflowId' })
+  workflow!: DynamicWorkflow | null;
+
   @ManyToOne(() => DynamicForm, (form) => form.stages)
   @JoinColumn({ name: 'FormId' })
-  form!: DynamicForm;
+  form!: DynamicForm | null;
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'AssigneeUserId' })

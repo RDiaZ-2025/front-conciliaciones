@@ -88,7 +88,7 @@ export const getFormFields = asyncHandler(async (req: Request, res: Response): P
 });
 
 export const createSubmission = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
-    const { formId, values, targetFormIds, submissions } = req.body;
+    const { formId, values, targetFormIds, submissions, targetTeamIds, targetTeams } = req.body;
     const requesterUserId = req.user?.userId;
     if (!requesterUserId) return res.status(401).json({ message: 'Usuario no autenticado' });
     const submission = await productionService.createSubmission(
@@ -96,7 +96,9 @@ export const createSubmission = asyncHandler(async (req: Request, res: Response)
         requesterUserId, 
         values, 
         targetFormIds, 
-        submissions
+        submissions,
+        targetTeamIds,
+        targetTeams
     );
     return res.status(201).json(submission);
 });
@@ -152,6 +154,40 @@ export const adminGetStages = asyncHandler(async (req: Request, res: Response): 
 export const adminSaveStages = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
     const { id } = req.params;
     const stages = await productionService.adminSaveStages(parseInt(id), req.body);
+    return res.json(stages);
+});
+
+export const adminGetWorkflows = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const workflows = await productionService.adminGetWorkflows();
+    return res.json(workflows);
+});
+
+export const adminCreateWorkflow = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const workflow = await productionService.adminCreateWorkflow(req.body);
+    return res.status(201).json(workflow);
+});
+
+export const adminUpdateWorkflow = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const workflow = await productionService.adminUpdateWorkflow(parseInt(id), req.body);
+    return res.json(workflow);
+});
+
+export const adminDeleteWorkflow = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const workflow = await productionService.adminDeleteWorkflow(parseInt(id));
+    return res.json(workflow);
+});
+
+export const adminGetWorkflowStages = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const stages = await productionService.adminGetWorkflowStages(parseInt(id));
+    return res.json(stages);
+});
+
+export const adminSaveWorkflowStages = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const stages = await productionService.adminSaveWorkflowStages(parseInt(id), req.body);
     return res.json(stages);
 });
 
