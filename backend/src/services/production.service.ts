@@ -628,35 +628,25 @@ export class ProductionService {
             order: { createdAt: 'DESC' }
         });
 
-        // Exclude only pure initial entry dummy containers that had no workflow and only spawned child teams
-        const stateCounts = await stateRepo.createQueryBuilder("state")
-            .select("state.submissionId", "subId")
-            .addSelect("COUNT(state.id)", "cnt")
-            .where("state.submissionId IN (:...ids)", { ids: Array.from(allTreeIds) })
-            .groupBy("state.submissionId")
-            .getRawMany();
-        const subIdsWithStates = new Set<number>(stateCounts.map(r => Number(r.subId)));
+        const subMap = new Map<number, DynamicFormSubmission>();
+        submissions.forEach(s => subMap.set(s.id, s));
 
-        submissions = submissions.filter(s => {
-            // Keep if it has workflow states, or has an active workflow/stage, or has no children
-            const hasStates = subIdsWithStates.has(s.id);
-            const hasWorkflow = !!(s.workflowId || s.currentStageId);
-            return hasStates || hasWorkflow || s.parentSubmissionId !== null;
+        // Filter out:
+        // 1. Initial entry multi-team containers (parentSubmissionId === null && !workflowId)
+        // 2. Internal subflow child submissions (parentSubmissionId !== null where parent has workflow/stages)
+        const mainSubmissions = submissions.filter(sub => {
+            const isEntryContainer = sub.parentSubmissionId === null && !sub.workflowId;
+            let isInternalSubflow = false;
+            if (sub.parentSubmissionId) {
+                const parent = subMap.get(sub.parentSubmissionId);
+                if (parent && (parent.workflowId !== null || parent.currentStageId !== null)) {
+                    isInternalSubflow = true;
+                }
+            }
+            return !isEntryContainer && !isInternalSubflow;
         });
 
-        // Deduplicate submissions by group/tree so each main branch request appears once
-        const seenDisplayKeys = new Set<string>();
-        const distinctSubmissions: DynamicFormSubmission[] = [];
-        for (const sub of submissions) {
-            // If this is a child subflow with a parent, prioritize the parent submission card if the parent has states
-            const key = `${sub.id}`;
-            if (!seenDisplayKeys.has(key)) {
-                seenDisplayKeys.add(key);
-                distinctSubmissions.push(sub);
-            }
-        }
-
-        const results = await Promise.all(distinctSubmissions.map(async (sub) => {
+        const results = await Promise.all(mainSubmissions.map(async (sub) => {
             let assigneeName = 'N/A';
             let assigneeEmail: string | undefined = undefined;
             let displayStageName = sub.currentStage ? sub.currentStage.name : (sub.status === 'Completed' ? 'Completado' : sub.status);
@@ -1603,11 +1593,14 @@ export class ProductionService {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const stateRepo = AppDataSource.getRepository(DynamicSubmissionWorkflowState);
 
-        const states = await stateRepo.find({
+        let states = await stateRepo.find({
             where: { assignedUserId: userId, status: 'Pending' },
             relations: ['submission', 'submission.form', 'stage', 'stage.formToFill', 'submission.requesterUser'],
             order: { createdAt: 'DESC' }
         });
+
+        // Ensure we only return approvals for submissions that are actively In Progress
+        states = states.filter(s => s.submission && s.submission.status === 'In Progress');
 
         // For each pending approval, fetch the values of the submission
         const valRepo = AppDataSource.getRepository(DynamicFormFieldValue);
