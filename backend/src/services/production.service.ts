@@ -661,29 +661,34 @@ export class ProductionService {
             return !isEntryContainer && !isInternalSubflow;
         });
 
-        const results = await Promise.all(mainSubmissions.map(async (sub) => {
+        const mainSubIds = mainSubmissions.map(s => s.id);
+        const allActiveStates = mainSubIds.length > 0 ? await stateRepo.find({
+            where: { submissionId: In(mainSubIds), status: 'Pending' },
+            relations: ['assignedUser', 'stage', 'stage.workflow']
+        }) : [];
+
+        const allChildSubs = mainSubIds.length > 0 ? await subRepo.find({
+            where: { parentSubmissionId: In(mainSubIds), status: Not('Completed') }
+        }) : [];
+
+        const allChildSubIds = allChildSubs.map(cs => cs.id);
+        const allChildActiveStates = allChildSubIds.length > 0 ? await stateRepo.find({
+            where: { submissionId: In(allChildSubIds), status: 'Pending' },
+            relations: ['assignedUser']
+        }) : [];
+
+        const results = mainSubmissions.map((sub) => {
             let assigneeName = 'N/A';
             let assigneeEmail: string | undefined = undefined;
             let displayStageName = sub.currentStage ? sub.currentStage.name : (sub.status === 'Completed' ? 'Completado' : sub.status);
 
-            // Fetch any currently pending states for this submission (generic for root stages and all subflows)
-            const activeStates = await stateRepo.find({
-                where: { submissionId: sub.id, status: 'Pending' },
-                relations: ['assignedUser', 'stage', 'stage.workflow']
-            });
-
+            const activeStates = allActiveStates.filter(s => s.submissionId === sub.id);
             let users = activeStates.map(s => s.assignedUser).filter(Boolean);
 
             if (users.length === 0) {
-                const childSubs = await subRepo.find({
-                    where: { parentSubmissionId: sub.id, status: Not('Completed') }
-                });
-                const childSubIds = childSubs.map(cs => cs.id);
+                const childSubIds = allChildSubs.filter(cs => cs.parentSubmissionId === sub.id).map(cs => cs.id);
                 if (childSubIds.length > 0) {
-                    const childActiveStates = await stateRepo.find({
-                        where: { submissionId: In(childSubIds), status: 'Pending' },
-                        relations: ['assignedUser']
-                    });
+                    const childActiveStates = allChildActiveStates.filter(s => childSubIds.includes(s.submissionId));
                     users = childActiveStates.map(s => s.assignedUser).filter(Boolean);
                 }
             }
@@ -713,7 +718,7 @@ export class ProductionService {
                 consecutive: sub.consecutive,
                 icon: sub.form ? sub.form.icon : undefined
             };
-        }));
+        });
 
         return results;
     }
@@ -2180,26 +2185,30 @@ export class ProductionService {
                             const fields = await manager.getRepository(DynamicFormField).find({
                                 where: { formId: pSub.formId }
                             });
+                            const existingVals = await valRepo.find({
+                                where: { submissionId: pSub.id }
+                            });
+                            const valsToSave: DynamicFormFieldValue[] = [];
                             for (const field of fields) {
                                 const valStr = formValues[pSub.formId + '_' + field.name] !== undefined 
                                     ? formValues[pSub.formId + '_' + field.name] 
                                     : formValues[field.name];
                                 if (valStr !== undefined && valStr !== null) {
-                                    let valRecord = await valRepo.findOne({
-                                        where: { submissionId: pSub.id, fieldId: field.id }
-                                    });
+                                    let valRecord = existingVals.find(v => v.fieldId === field.id);
                                     if (valRecord) {
                                         valRecord.value = String(valStr);
-                                        await valRepo.save(valRecord);
+                                        valsToSave.push(valRecord);
                                     } else {
-                                        valRecord = valRepo.create({
+                                        valsToSave.push(valRepo.create({
                                             submissionId: pSub.id,
                                             fieldId: field.id,
                                             value: String(valStr)
-                                        });
-                                        await valRepo.save(valRecord);
+                                        }));
                                     }
                                 }
+                            }
+                            if (valsToSave.length > 0) {
+                                await valRepo.save(valsToSave);
                             }
                         }
                     } else {
@@ -2207,24 +2216,28 @@ export class ProductionService {
                         const fields = await manager.getRepository(DynamicFormField).find({
                             where: { formId: submission.formId }
                         });
+                        const existingVals = await valRepo.find({
+                            where: { submissionId: submission.id }
+                        });
+                        const valsToSave: DynamicFormFieldValue[] = [];
                         for (const field of fields) {
                             const valStr = formValues[field.name];
                             if (valStr !== undefined && valStr !== null) {
-                                let valRecord = await valRepo.findOne({
-                                    where: { submissionId: submission.id, fieldId: field.id }
-                                });
+                                let valRecord = existingVals.find(v => v.fieldId === field.id);
                                 if (valRecord) {
                                     valRecord.value = String(valStr);
-                                    await valRepo.save(valRecord);
+                                    valsToSave.push(valRecord);
                                 } else {
-                                    valRecord = valRepo.create({
+                                    valsToSave.push(valRepo.create({
                                         submissionId: submission.id,
                                         fieldId: field.id,
                                         value: String(valStr)
-                                    });
-                                    await valRepo.save(valRecord);
+                                    }));
                                 }
                             }
+                        }
+                        if (valsToSave.length > 0) {
+                            await valRepo.save(valsToSave);
                         }
                     }
                 }
