@@ -12,8 +12,8 @@ export class DynamicWorkflow {
   @Column({ name: 'Description', type: 'nvarchar', length: 500, nullable: true })
   description!: string | null;
 
-  @Column({ name: 'RequireConsecutive', type: 'bit', default: true })
-  requireConsecutive!: boolean;
+  @Column({ name: 'RequireConsecutive', type: 'bit', nullable: true, default: false })
+  requireConsecutive?: boolean;
 
   @Column({ name: 'IsActive', type: 'bit', default: true })
   isActive!: boolean;

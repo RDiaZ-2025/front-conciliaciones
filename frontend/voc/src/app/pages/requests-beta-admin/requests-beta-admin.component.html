@@ -418,17 +418,61 @@
                 <label for="isInitialForm" class="font-medium cursor-pointer">Definir como "Solicitud Inicial" principal</label>
             </div>
 
-            <!-- Flujo de Trabajo Asociado -->
+            <!-- Flujo de Trabajo Asociado (General) -->
             <div class="flex flex-column gap-1 mt-2 bg-blue-50 p-3 border-round border-1 border-blue-200">
                 <label for="formWorkflowId" class="font-semibold text-sm text-900 flex align-items-center gap-2">
                     <i class="pi pi-sitemap text-primary font-bold"></i>
-                    <span>Flujo de Trabajo Asociado</span>
+                    <span>Flujo de Trabajo General por Defecto</span>
                 </label>
                 <p-select [options]="activeWorkflows()" [(ngModel)]="selectedForm().workflowId" 
                           optionLabel="name" optionValue="id" 
-                          placeholder="Seleccionar el flujo de trabajo que iniciará al radicar este formulario..." 
+                          placeholder="Seleccionar el flujo de trabajo que iniciará por defecto..." 
                           [showClear]="true" class="w-full"></p-select>
-                <span class="text-xs text-600">Este es el Flujo de Trabajo (secuencia de etapas) que comenzará automáticamente cuando se radique una solicitud con este formulario.</span>
+                <span class="text-xs text-600">Este flujo se ejecutará por defecto para cualquier equipo que no tenga un flujo específico configurado abajo.</span>
+            </div>
+
+            <!-- Matriz de Flujos de Trabajo por Equipo de Destino (Solo para Solicitudes Iniciales) -->
+            <div class="flex flex-column gap-2 mt-2 bg-blue-50 p-3 border-round border-1 border-blue-200" *ngIf="selectedForm().isInitialForm">
+                <div class="flex flex-column gap-1 border-bottom-1 surface-border pb-2">
+                    <label class="font-semibold text-sm text-900 flex align-items-center gap-2">
+                        <lucide-icon name="users" class="text-primary" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+                        <span>Flujos de Trabajo por Equipo de Destino</span>
+                    </label>
+                    <span class="text-xs text-600">
+                        Define qué Flujo de Trabajo ejecutará cada Área/Equipo cuando sea seleccionada al radicar este formulario inicial. Si no se define uno específico para un equipo, ejecutará el Flujo General seleccionado arriba.
+                    </span>
+                </div>
+
+                <div class="flex flex-column gap-2 mt-1 max-h-18rem overflow-y-auto pr-1">
+                    <div *ngFor="let team of teams()" class="flex align-items-center justify-content-between p-2 bg-white border-round border-1 surface-border shadow-1 gap-3">
+                        <div class="flex align-items-center gap-2 flex-1 min-w-10rem">
+                            <lucide-icon name="users" class="text-500" style="width: 1rem; height: 1rem;"></lucide-icon>
+                            <div class="flex flex-column">
+                                <span class="font-bold text-sm text-900">{{ team.name }}</span>
+                                <span class="text-xs text-500" *ngIf="team.leaderName">Líder: {{ team.leaderName }}</span>
+                            </div>
+                        </div>
+                        <div style="width: 280px;">
+                            <p-select [options]="activeWorkflows()" 
+                                      [ngModel]="getTeamWorkflow(team.id)"
+                                      (ngModelChange)="setTeamWorkflow(team.id, $event)"
+                                      optionLabel="name" optionValue="id" 
+                                      placeholder="Usar flujo general..." 
+                                      [showClear]="true" [filter]="true" filterBy="name"
+                                      class="w-full" styleClass="w-full text-xs" [appendTo]="'body'">
+                                <ng-template let-wf pTemplate="item">
+                                    <div class="flex align-items-center gap-2">
+                                        <i class="pi pi-sitemap text-primary text-xs"></i>
+                                        <span class="text-xs font-semibold">{{ wf.name }}</span>
+                                    </div>
+                                </ng-template>
+                            </p-select>
+                        </div>
+                    </div>
+                    <div *ngIf="teams().length === 0" class="text-xs text-500 italic text-center p-2">
+                        No hay equipos registrados.
+                    </div>
+                </div>
             </div>
 
             <!-- Display Order for Initial Forms -->
@@ -1021,10 +1065,6 @@
             <div class="flex flex-column gap-1">
                 <label for="wf-desc" class="font-semibold text-900 text-sm">Descripción del Flujo</label>
                 <textarea id="wf-desc" pTextarea [(ngModel)]="selectedWorkflow().description" rows="3" placeholder="Describe el propósito y las etapas de este flujo..." class="w-full"></textarea>
-            </div>
-            <div class="flex align-items-center gap-3 mt-1">
-                <p-checkbox [(ngModel)]="selectedWorkflow().requireConsecutive" [binary]="true" id="wf-requireConsecutive"></p-checkbox>
-                <label for="wf-requireConsecutive" class="font-medium cursor-pointer text-sm">Solicitar número de consecutivo al finalizar el flujo</label>
             </div>
         </div>
         <ng-template pTemplate="footer">

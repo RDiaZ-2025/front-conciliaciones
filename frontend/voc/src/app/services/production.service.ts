@@ -141,8 +141,24 @@ export class ProductionService extends BaseApiService {
     });
   }
 
-  submitDynamicForm(formId: number, values: any, targetFormIds?: number[], submissions?: any[], targetTeamIds?: number[], targetTeams?: Array<{ teamId: number; assignmentMode?: string }>): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/submissions`, { formId, values, targetFormIds, submissions, targetTeamIds, targetTeams });
+  submitDynamicForm(
+    formId: number, 
+    values: any, 
+    targetFormIds?: number[], 
+    submissions?: any[], 
+    targetTeamIds?: number[], 
+    targetTeams?: Array<{ teamId: number; assignmentMode?: string }>,
+    closingConfig?: { formId?: number | null; workflowId?: number | null }
+  ): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/submissions`, { 
+      formId, 
+      values, 
+      targetFormIds, 
+      submissions, 
+      targetTeamIds, 
+      targetTeams,
+      closingConfig
+    });
   }
 
   getDynamicSubmissions(): Observable<any[]> {

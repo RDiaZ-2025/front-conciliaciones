@@ -88,7 +88,7 @@ export const getFormFields = asyncHandler(async (req: Request, res: Response): P
 });
 
 export const createSubmission = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
-    const { formId, values, targetFormIds, submissions, targetTeamIds, targetTeams } = req.body;
+    const { formId, values, targetFormIds, submissions, targetTeamIds, targetTeams, closingConfig } = req.body;
     const requesterUserId = req.user?.userId;
     if (!requesterUserId) return res.status(401).json({ message: 'Usuario no autenticado' });
     const submission = await productionService.createSubmission(
@@ -98,7 +98,8 @@ export const createSubmission = asyncHandler(async (req: Request, res: Response)
         targetFormIds, 
         submissions,
         targetTeamIds,
-        targetTeams
+        targetTeams,
+        closingConfig
     );
     return res.status(201).json(submission);
 });

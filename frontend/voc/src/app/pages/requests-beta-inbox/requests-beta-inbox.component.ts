@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -66,6 +66,27 @@ export class RequestsBetaInboxComponent implements OnInit {
 
   // Submissions History States
   submissions = signal<any[]>([]);
+  filteredSubmissions = computed(() => {
+    const pendingSubmissionIds = new Set<number>();
+    (this.pendingTasks() || []).forEach(t => {
+      if (t.submissionId) pendingSubmissionIds.add(t.submissionId);
+      if (t.parentSubmissionId) pendingSubmissionIds.add(t.parentSubmissionId);
+    });
+
+    const all = (this.submissions() || []).filter(s => {
+      if (pendingSubmissionIds.has(s.id)) return false;
+      if (s.parentSubmissionId && pendingSubmissionIds.has(s.parentSubmissionId)) return false;
+      return true;
+    });
+
+    return all.sort((a, b) => {
+      const aActive = a.status !== 'Completed' && a.status !== 'Approved';
+      const bActive = b.status !== 'Completed' && b.status !== 'Approved';
+      if (aActive && !bActive) return -1;
+      if (!aActive && bActive) return 1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  });
   loadingSubmissions = signal<boolean>(false);
   showDetailsDialog = signal<boolean>(false);
   loadingDetails = signal<boolean>(false);
@@ -76,8 +97,6 @@ export class RequestsBetaInboxComponent implements OnInit {
   stageFormFields = signal<any[]>([]);
   stageFormValues: Record<string, string> = {};
   loadingStageFields = signal<boolean>(false);
-  showConsecutiveDialog = signal<boolean>(false);
-  consecutiveValue = '';
 
   ngOnInit() {
     this.loadPendingTasks();
@@ -698,53 +717,14 @@ export class RequestsBetaInboxComponent implements OnInit {
         this.loadPendingTasks();
         this.loadingAction.set(false);
 
-        if (action === 'approve' && res && res.status === 'Pending Consecutive') {
-          this.messageService.add({
-            severity: 'info',
-            summary: 'Aprobación Registrada',
-            detail: 'La solicitud ha sido aprobada. Ahora ingrese el consecutivo para completarla.'
-          });
-          this.consecutiveValue = '';
-          this.showConsecutiveDialog.set(true);
-        } else {
-          this.messageService.add({ 
-            severity: 'success', 
-            summary: 'Éxito', 
-            detail: action === 'approve' ? (this.isCorrection(task) ? 'Corrección enviada con éxito.' : 'Solicitud aprobada con éxito.') : 'Solicitud rechazada/devuelta.' 
-          });
-        }
+        this.messageService.add({ 
+          severity: 'success', 
+          summary: 'Éxito', 
+          detail: action === 'approve' ? (this.isCorrection(task) ? 'Corrección enviada con éxito.' : 'Solicitud aprobada con éxito.') : 'Solicitud rechazada/devuelta.' 
+        });
       },
       error: () => {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Ocurrió un error al procesar la acción.' });
-        this.loadingAction.set(false);
-      }
-    });
-  }
-
-  openConsecutiveDialogDirectly(task: any) {
-    this.selectedTask.set(task);
-    this.consecutiveValue = '';
-    this.showConsecutiveDialog.set(true);
-  }
-
-  submitConsecutiveOnly() {
-    const task = this.selectedTask();
-    const val = this.consecutiveValue;
-    if (!val || !val.trim()) {
-      this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'Debe ingresar el número de consecutivo.' });
-      return;
-    }
-
-    this.loadingAction.set(true);
-    this.productionService.actionApproval(task.stateId, 'approve', 'Consecutivo ingresado', undefined, val).subscribe({
-      next: () => {
-        this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Consecutivo guardado y flujo completado.' });
-        this.showConsecutiveDialog.set(false);
-        this.loadPendingTasks();
-        this.loadingAction.set(false);
-      },
-      error: () => {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar el consecutivo.' });
         this.loadingAction.set(false);
       }
     });
@@ -1082,7 +1062,6 @@ export class RequestsBetaInboxComponent implements OnInit {
       case 'Completed': return 'success';
       case 'In Progress': return 'info';
       case 'Pending': return 'warn';
-      case 'Pending Consecutive': return 'warn';
       case 'Rejected': return 'danger';
       default: return 'secondary';
     }

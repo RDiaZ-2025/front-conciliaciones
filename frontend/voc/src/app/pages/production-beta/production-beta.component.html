@@ -39,8 +39,7 @@
                                     [pTooltip]="task.formName">
                                     <lucide-icon [name]="getFormIcon(task)" [class]="getFormIconColor(task) + ' mr-2'"></lucide-icon>{{ task.formName }}
                                 </h3>
-                                <p-tag severity="warn" value="Pendiente Consecutivo" *ngIf="task.submissionStatus === 'Pending Consecutive'"></p-tag>
-                                <p-tag severity="info" [value]="task.stageName" *ngIf="task.submissionStatus !== 'Pending Consecutive'"></p-tag>
+                                <p-tag severity="info" [value]="task.stageName"></p-tag>
                             </div>
                         </ng-template>
 
@@ -63,11 +62,7 @@
 
                         <ng-template pTemplate="footer">
                             <div class="flex justify-content-end border-top-1 surface-border pt-3">
-                                <p-button severity="warn" size="small" (onClick)="openConsecutiveDialogDirectly(task)" *ngIf="task.submissionStatus === 'Pending Consecutive'">
-                                    <lucide-icon name="hash" class="mr-2"></lucide-icon>
-                                    Ingresar Consecutivo
-                                </p-button>
-                                <p-button size="small" (onClick)="openActionDialog(task)" *ngIf="task.submissionStatus !== 'Pending Consecutive'">
+                                <p-button size="small" (onClick)="openActionDialog(task)">
                                     <lucide-icon name="search" class="mr-2"></lucide-icon>
                                     Revisar y Decidir
                                 </p-button>
@@ -500,6 +495,48 @@
                                         </span>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Paso 3: Cierre de la Solicitud (Para el Creador) -->
+                <div class="flex flex-column gap-3 p-3 border-round-xl border-1 surface-border surface-card">
+                    <div class="flex flex-column gap-1 border-bottom-1 pb-2 surface-border">
+                        <span class="text-900 font-bold text-base flex align-items-center gap-2">
+                            <lucide-icon name="check-circle" class="text-primary" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+                            <span>3. Cierre de la Solicitud (Para el Creador)</span>
+                        </span>
+                        <span class="text-600 font-medium text-xs">Define si deseas que el creador de la solicitud complete un formulario o ejecute un flujo adicional para el cierre definitivo de la solicitud:</span>
+                    </div>
+
+                    <div class="flex flex-column gap-3 mt-1">
+                        <div class="flex align-items-center gap-3">
+                            <p-checkbox [(ngModel)]="requireClosingStep" [binary]="true" id="requireClosingStep"></p-checkbox>
+                            <label for="requireClosingStep" class="font-semibold text-sm cursor-pointer text-900">
+                                Requerir etapa/formulario de cierre al solicitante
+                            </label>
+                        </div>
+
+                        <div *ngIf="requireClosingStep()" class="grid mt-1 bg-50 p-3 border-round-lg border-1 surface-border">
+                            <div class="col-12 md:col-6 flex flex-column gap-1">
+                                <label class="font-semibold text-xs text-700">Tipo de Cierre *</label>
+                                <p-select [options]="closingTypeOptions" [(ngModel)]="selectedClosingType"
+                                          optionLabel="label" optionValue="value" class="w-full" styleClass="w-full text-xs" [appendTo]="'body'"></p-select>
+                            </div>
+
+                            <div class="col-12 md:col-6 flex flex-column gap-1" *ngIf="selectedClosingType() === 'form'">
+                                <label class="font-semibold text-xs text-700">Formulario que debe diligenciar el creador *</label>
+                                <p-select [options]="availableClosingForms()" [(ngModel)]="selectedClosingFormId"
+                                          optionLabel="name" optionValue="id" placeholder="Seleccione formulario de cierre..."
+                                          [filter]="true" filterBy="name" class="w-full" styleClass="w-full text-xs" [appendTo]="'body'"></p-select>
+                            </div>
+
+                            <div class="col-12 md:col-6 flex flex-column gap-1" *ngIf="selectedClosingType() === 'workflow'">
+                                <label class="font-semibold text-xs text-700">Flujo adicional que ejecutará el creador *</label>
+                                <p-select [options]="availableClosingWorkflows()" [(ngModel)]="selectedClosingWorkflowId"
+                                          optionLabel="name" optionValue="id" placeholder="Seleccione flujo de cierre..."
+                                          [filter]="true" filterBy="name" class="w-full" styleClass="w-full text-xs" [appendTo]="'body'"></p-select>
                             </div>
                         </div>
                     </div>
@@ -1483,34 +1520,6 @@
         </ng-template>
     </p-dialog>
  
-    <!-- Modal 4: Solicitar Consecutivo -->
-    <p-dialog header="Ingresar Consecutivo" [(visible)]="showConsecutiveDialog" 
-              [modal]="true" [style]="{width: '450px'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
-        <div class="flex flex-column gap-3 p-3" *ngIf="selectedTask()">
-            <div class="p-3 bg-blue-50 text-blue-700 border-round border-1 border-blue-200 text-sm">
-                <lucide-icon name="info" class="mr-2" style="width: 1.1rem; height: 1.1rem; display: inline-block; vertical-align: middle;"></lucide-icon>
-                <span>El flujo de la solicitud <strong>{{ selectedTask().formName }}</strong> ha finalizado. Por favor, asigne el número de consecutivo correspondiente para completarlo.</span>
-            </div>
-            
-            <div class="flex flex-column gap-1">
-                <label for="consec-field" class="font-bold text-sm text-900">Número de Consecutivo <span class="text-red-500">*</span></label>
-                <input id="consec-field" type="text" pInputText [(ngModel)]="consecutiveValue" placeholder="Ej: CL-2026-001" />
-            </div>
-        </div>
-        <ng-template pTemplate="footer">
-            <div class="flex justify-content-end gap-2 px-3 pb-3">
-                <p-button [text]="true" severity="secondary" (onClick)="showConsecutiveDialog.set(false)">
-                    <lucide-icon name="x" class="mr-2"></lucide-icon>
-                    Cancelar
-                </p-button>
-                <p-button severity="success" (onClick)="submitConsecutiveOnly()" [loading]="loadingAction()">
-                    <lucide-icon name="save" class="mr-2"></lucide-icon>
-                    Guardar Consecutivo
-                </p-button>
-            </div>
-        </ng-template>
-    </p-dialog>
-
     <!-- Modal 5: Detalles de Solicitud del Historial -->
     <p-dialog [header]="'Detalle de la Solicitud' + (selectedDetails()?.formName ? ': ' + selectedDetails().formName : '')" [(visible)]="showDetailsDialog" 
               [modal]="true" [style]="{width: '650px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">

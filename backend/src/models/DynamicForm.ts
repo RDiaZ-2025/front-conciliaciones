@@ -30,8 +30,8 @@ export class DynamicForm {
   @Column({ name: 'DisplayOrder', type: 'int', default: 0 })
   displayOrder!: number;
 
-  @Column({ name: 'RequireConsecutive', type: 'bit', default: true })
-  requireConsecutive!: boolean;
+  @Column({ name: 'RequireConsecutive', type: 'bit', nullable: true, default: false })
+  requireConsecutive?: boolean;
 
   @Column({ name: 'Responsible', type: 'nvarchar', length: 255, nullable: true })
   responsible!: string | null;

@@ -92,7 +92,17 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   requests = signal<ProductionRequest[]>([]);
   dynamicSubmissions = signal<any[]>([]);
   sortedAllSubmissions = computed(() => {
-    const all = [...this.dynamicSubmissions()];
+    const pendingSubmissionIds = new Set<number>();
+    (this.pendingTasks() || []).forEach(t => {
+      if (t.submissionId) pendingSubmissionIds.add(t.submissionId);
+      if (t.parentSubmissionId) pendingSubmissionIds.add(t.parentSubmissionId);
+    });
+
+    const all = this.dynamicSubmissions().filter(s => {
+      if (pendingSubmissionIds.has(s.id)) return false;
+      if (s.parentSubmissionId && pendingSubmissionIds.has(s.parentSubmissionId)) return false;
+      return true;
+    });
     return all.sort((a, b) => {
       const aActive = a.status !== 'Completed' && a.status !== 'Approved';
       const bActive = b.status !== 'Completed' && b.status !== 'Approved';
@@ -113,8 +123,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   stageFormValues: Record<string, string> = {};
   loadingStageFields = signal<boolean>(false);
   stageTempFiles: Record<string, File[]> = {};
-  showConsecutiveDialog = signal<boolean>(false);
-  consecutiveValue = '';
 
   loading = signal<boolean>(true);
   loading$ = toObservable(this.loading);
@@ -182,6 +190,18 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   formValues: Record<string, string> = {};
   isProcessingMove = signal<boolean>(false);
   currentRequestProcessing: ProductionRequest | null = null;
+
+  // Step 3: Closing Step for Requester
+  requireClosingStep = signal<boolean>(false);
+  selectedClosingType = signal<'form' | 'workflow'>('form');
+  selectedClosingFormId = signal<number | null>(null);
+  selectedClosingWorkflowId = signal<number | null>(null);
+  availableClosingForms = signal<any[]>([]);
+  availableClosingWorkflows = signal<any[]>([]);
+  closingTypeOptions = [
+    { label: 'Formulario Específico (Decisión / Reporte)', value: 'form' },
+    { label: 'Flujo de Trabajo Adicional (Secuencia de Etapas)', value: 'workflow' }
+  ];
 
   ngOnInit() {
     this.loadRequests();
@@ -481,6 +501,26 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     });
 
+    // Load forms and workflows for Step 3 (Closing step)
+    this.requireClosingStep.set(false);
+    this.selectedClosingType.set('form');
+    this.selectedClosingFormId.set(null);
+    this.selectedClosingWorkflowId.set(null);
+
+    this.productionService.adminGetForms().subscribe({
+      next: (forms) => {
+        this.availableClosingForms.set((forms || []).filter(f => f.isActive !== false));
+      },
+      error: () => {}
+    });
+
+    this.productionService.adminGetWorkflows().subscribe({
+      next: (wfs) => {
+        this.availableClosingWorkflows.set((wfs || []).filter(w => w.isActive !== false));
+      },
+      error: () => {}
+    });
+
     this.teamService.getTeams().subscribe({
       next: (res) => {
         if (res.success) {
@@ -565,6 +605,26 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Validate Step 3: Closing Step
+    if (this.requireClosingStep()) {
+      if (this.selectedClosingType() === 'form' && !this.selectedClosingFormId()) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Paso 3 Incompleto',
+          detail: 'Debe seleccionar el formulario que completará el creador para el cierre de la solicitud.'
+        });
+        return;
+      }
+      if (this.selectedClosingType() === 'workflow' && !this.selectedClosingWorkflowId()) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Paso 3 Incompleto',
+          detail: 'Debe seleccionar el flujo adicional que ejecutará el creador para el cierre de la solicitud.'
+        });
+        return;
+      }
+    }
+
     this.loadingRequestTypes.set(true);
 
     // Upload files for initial form if any
@@ -596,6 +656,11 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }));
     const targetTeamIds = selectedTeams.map(t => t.id);
 
+    const closingConfig = this.requireClosingStep() ? {
+      formId: this.selectedClosingType() === 'form' ? this.selectedClosingFormId() : null,
+      workflowId: this.selectedClosingType() === 'workflow' ? this.selectedClosingWorkflowId() : null
+    } : null;
+
     // Build the submissions array payload
     const formValues: Record<string, string> = {};
     (form.fields || []).forEach((f: any) => {
@@ -603,7 +668,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     });
     const submissions = [{ formId: form.id, values: formValues }];
 
-    this.productionService.submitDynamicForm(form.id, formValues, undefined, submissions, targetTeamIds, targetTeams).subscribe({
+    this.productionService.submitDynamicForm(form.id, formValues, undefined, submissions, targetTeamIds, targetTeams, closingConfig || undefined).subscribe({
       next: () => {
         this.showTypeSelectionDialog.set(false);
         this.messageService.add({ 
@@ -1877,54 +1942,14 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         this.loadRequests();
         this.loadingAction.set(false);
 
-        if (action === 'approve' && res && res.status === 'Pending Consecutive') {
-          this.messageService.add({
-            severity: 'info',
-            summary: 'Aprobación Registrada',
-            detail: 'La solicitud ha sido aprobada. Ahora ingrese el consecutivo para completarla.'
-          });
-          this.consecutiveValue = '';
-          this.showConsecutiveDialog.set(true);
-        } else {
-          this.messageService.add({ 
-            severity: 'success', 
-            summary: 'Éxito', 
-            detail: action === 'approve' ? (this.isCorrection(task) ? 'Corrección enviada con éxito.' : 'Solicitud aprobada con éxito.') : 'Solicitud rechazada/devuelta.' 
-          });
-        }
+        this.messageService.add({ 
+          severity: 'success', 
+          summary: 'Éxito', 
+          detail: action === 'approve' ? (this.isCorrection(task) ? 'Corrección enviada con éxito.' : 'Solicitud aprobada con éxito.') : 'Solicitud rechazada/devuelta.' 
+        });
       },
       error: () => {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Ocurrió un error al procesar la acción.' });
-        this.loadingAction.set(false);
-      }
-    });
-  }
-
-  openConsecutiveDialogDirectly(task: any) {
-    this.selectedTask.set(task);
-    this.consecutiveValue = '';
-    this.showConsecutiveDialog.set(true);
-  }
-
-  submitConsecutiveOnly() {
-    const task = this.selectedTask();
-    const val = this.consecutiveValue;
-    if (!val || !val.trim()) {
-      this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'Debe ingresar el número de consecutivo.' });
-      return;
-    }
-
-    this.loadingAction.set(true);
-    this.productionService.actionApproval(task.stateId, 'approve', 'Consecutivo ingresado', undefined, val).subscribe({
-      next: () => {
-        this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Consecutivo guardado y flujo completado.' });
-        this.showConsecutiveDialog.set(false);
-        this.loadRequests();
-        this.loadPendingTasks();
-        this.loadingAction.set(false);
-      },
-      error: () => {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar el consecutivo.' });
         this.loadingAction.set(false);
       }
     });

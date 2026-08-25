@@ -140,9 +140,24 @@ export class RequestsBetaAdminComponent implements OnInit {
     isActive: true,
     responsible: '',
     role: '',
-    icon: 'tag',
-    requireConsecutive: true
+    icon: 'tag'
   });
+
+  formTeamWorkflows = signal<{ [teamId: number]: number | null }>({});
+
+  getTeamWorkflow(teamId: number): number | null {
+    return this.formTeamWorkflows()[teamId] ?? null;
+  }
+
+  setTeamWorkflow(teamId: number, workflowId: number | null) {
+    const current = { ...this.formTeamWorkflows() };
+    if (workflowId) {
+      current[teamId] = workflowId;
+    } else {
+      delete current[teamId];
+    }
+    this.formTeamWorkflows.set(current);
+  }
 
   iconOptions = [
     { label: 'Documento / Editar', value: 'edit' },
@@ -211,7 +226,7 @@ export class RequestsBetaAdminComponent implements OnInit {
   selectedWorkflowId = signal<number | null>(null);
   showWorkflowDialog = signal<boolean>(false);
   isNewWorkflow = signal<boolean>(false);
-  selectedWorkflow = signal<{ id: number | null; name: string; description: string; requireConsecutive?: boolean }>({ id: null, name: '', description: '', requireConsecutive: true });
+  selectedWorkflow = signal<{ id: number | null; name: string; description: string }>({ id: null, name: '', description: '' });
   workflowStages = signal<WorkflowStageItem[]>([]);
   loadingStages = signal<boolean>(false);
 
@@ -359,6 +374,7 @@ export class RequestsBetaAdminComponent implements OnInit {
     this.isNewForm.set(true);
     this.formMetadataText = '';
     this.conditionsList.set([]);
+    this.formTeamWorkflows.set({});
     this.selectedForm.set({
       id: null,
       name: '',
@@ -369,7 +385,6 @@ export class RequestsBetaAdminComponent implements OnInit {
       responsible: '',
       role: '',
       icon: 'tag',
-      requireConsecutive: true,
       displayOrder: 0
     });
     this.showFormDialog.set(true);
@@ -379,6 +394,17 @@ export class RequestsBetaAdminComponent implements OnInit {
     this.isNewForm.set(false);
     this.selectedForm.set({ ...form });
     this.formMetadataText = form.metadata ? (typeof form.metadata === 'object' ? JSON.stringify(form.metadata, null, 2) : form.metadata) : '';
+    
+    let teamWfs: { [teamId: number]: number | null } = {};
+    if (form.metadata) {
+      try {
+        const meta = typeof form.metadata === 'object' ? form.metadata : JSON.parse(form.metadata);
+        if (meta && meta.teamWorkflows && typeof meta.teamWorkflows === 'object') {
+          teamWfs = { ...meta.teamWorkflows };
+        }
+      } catch (e) {}
+    }
+    this.formTeamWorkflows.set(teamWfs);
     this.showFormDialog.set(true);
   }
 
@@ -396,11 +422,22 @@ export class RequestsBetaAdminComponent implements OnInit {
   }
 
   saveForm() {
-    const data = this.selectedForm();
+    const data = { ...this.selectedForm() };
     if (!data.name || !data.name.trim()) {
       this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'El nombre es obligatorio.' });
       return;
     }
+
+    let meta: any = {};
+    if (data.metadata) {
+      try {
+        meta = typeof data.metadata === 'object' ? { ...data.metadata } : JSON.parse(data.metadata);
+      } catch(e) {
+        meta = {};
+      }
+    }
+    meta.teamWorkflows = this.formTeamWorkflows();
+    data.metadata = JSON.stringify(meta);
 
     if (this.isNewForm()) {
       this.productionService.adminCreateForm(data).subscribe({
@@ -924,7 +961,7 @@ export class RequestsBetaAdminComponent implements OnInit {
 
   openNewWorkflowDialog() {
     this.isNewWorkflow.set(true);
-    this.selectedWorkflow.set({ id: null, name: '', description: '', requireConsecutive: true });
+    this.selectedWorkflow.set({ id: null, name: '', description: '' });
     this.showWorkflowDialog.set(true);
   }
 
@@ -935,8 +972,7 @@ export class RequestsBetaAdminComponent implements OnInit {
     this.selectedWorkflow.set({
       id: wf.id,
       name: wf.name,
-      description: wf.description || '',
-      requireConsecutive: wf.requireConsecutive !== false
+      description: wf.description || ''
     });
     this.showWorkflowDialog.set(true);
   }
