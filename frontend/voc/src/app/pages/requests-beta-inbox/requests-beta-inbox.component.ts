@@ -399,11 +399,31 @@ export class RequestsBetaInboxComponent implements OnInit {
     return this.selectedMultiFormIds().includes(formId);
   }
 
+  isMultiFormDisabled(formId: number): boolean {
+    const task = this.selectedTask();
+    if (!task) return false;
+    const max = task.maxSelectedForms;
+    if (!max || max <= 0) return false;
+    const isSelected = this.isMultiFormSelected(formId);
+    if (isSelected) return false;
+    return this.selectedMultiFormIds().length >= max;
+  }
+
   toggleMultiFormSelection(formId: number) {
     const current = this.selectedMultiFormIds();
     if (current.includes(formId)) {
       this.selectedMultiFormIds.set(current.filter(id => id !== formId));
     } else {
+      const task = this.selectedTask();
+      const max = task?.maxSelectedForms;
+      if (max && max > 0 && current.length >= max) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Límite de selección',
+          detail: `Solo puedes seleccionar un máximo de ${max} opción(es) en esta etapa.`
+        });
+        return;
+      }
       this.selectedMultiFormIds.set([...current, formId]);
     }
   }

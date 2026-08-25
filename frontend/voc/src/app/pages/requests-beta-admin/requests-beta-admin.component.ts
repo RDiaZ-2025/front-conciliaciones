@@ -66,6 +66,7 @@ interface WorkflowStageItem {
   selectedUserIds?: number[];
   customForms?: { [userId: number]: number | null };
   multiFormsConfig?: MultiFormOptionConfig[];
+  maxSelectedForms?: number | null;
 }
 
 @Component({
@@ -144,6 +145,15 @@ export class RequestsBetaAdminComponent implements OnInit {
   });
 
   formTeamWorkflows = signal<{ [teamId: number]: number | null }>({});
+  formRequireClosingStep = signal<boolean>(false);
+  formClosingType = signal<'form' | 'workflow'>('form');
+  formClosingFormId = signal<number | null>(null);
+  formClosingWorkflowId = signal<number | null>(null);
+
+  closingTypeOptions = [
+    { label: 'Formulario Dinámico', value: 'form' },
+    { label: 'Flujo de Trabajo Adicional', value: 'workflow' }
+  ];
 
   getTeamWorkflow(teamId: number): number | null {
     return this.formTeamWorkflows()[teamId] ?? null;
@@ -387,6 +397,11 @@ export class RequestsBetaAdminComponent implements OnInit {
       icon: 'tag',
       displayOrder: 0
     });
+    this.formTeamWorkflows.set({});
+    this.formRequireClosingStep.set(false);
+    this.formClosingType.set('form');
+    this.formClosingFormId.set(null);
+    this.formClosingWorkflowId.set(null);
     this.showFormDialog.set(true);
   }
 
@@ -396,15 +411,23 @@ export class RequestsBetaAdminComponent implements OnInit {
     this.formMetadataText = form.metadata ? (typeof form.metadata === 'object' ? JSON.stringify(form.metadata, null, 2) : form.metadata) : '';
     
     let teamWfs: { [teamId: number]: number | null } = {};
+    let closingCfg: any = null;
     if (form.metadata) {
       try {
         const meta = typeof form.metadata === 'object' ? form.metadata : JSON.parse(form.metadata);
         if (meta && meta.teamWorkflows && typeof meta.teamWorkflows === 'object') {
           teamWfs = { ...meta.teamWorkflows };
         }
+        if (meta && meta.closingConfig) {
+          closingCfg = meta.closingConfig;
+        }
       } catch (e) {}
     }
     this.formTeamWorkflows.set(teamWfs);
+    this.formRequireClosingStep.set(!!(closingCfg && closingCfg.requireClosingStep));
+    this.formClosingType.set(closingCfg?.closingType || 'form');
+    this.formClosingFormId.set(closingCfg?.closingFormId || closingCfg?.formId || null);
+    this.formClosingWorkflowId.set(closingCfg?.closingWorkflowId || closingCfg?.workflowId || null);
     this.showFormDialog.set(true);
   }
 
@@ -437,6 +460,12 @@ export class RequestsBetaAdminComponent implements OnInit {
       }
     }
     meta.teamWorkflows = this.formTeamWorkflows();
+    meta.closingConfig = {
+      requireClosingStep: this.formRequireClosingStep(),
+      closingType: this.formClosingType(),
+      closingFormId: this.formClosingType() === 'form' ? this.formClosingFormId() : null,
+      closingWorkflowId: this.formClosingType() === 'workflow' ? this.formClosingWorkflowId() : null
+    };
     data.metadata = JSON.stringify(meta);
 
     if (this.isNewForm()) {
@@ -1045,6 +1074,7 @@ export class RequestsBetaAdminComponent implements OnInit {
           let selectedUserIds: number[] = [];
           let customForms: Record<number, number | null> = {};
           let multiFormsConfig: MultiFormOptionConfig[] = [];
+          let maxSelectedForms: number | null = null;
           if (s.assigneeUserIds) {
             try {
               const parsed = typeof s.assigneeUserIds === 'string' 
@@ -1088,6 +1118,9 @@ export class RequestsBetaAdminComponent implements OnInit {
                     };
                   });
                 }
+                if (parsed.maxSelectedForms !== undefined) {
+                  maxSelectedForms = parsed.maxSelectedForms;
+                }
                 if (parsed.selectedUserIds) {
                   selectedUserIds = parsed.selectedUserIds;
                 }
@@ -1113,7 +1146,8 @@ export class RequestsBetaAdminComponent implements OnInit {
             excludeTeamLeader: !!s.excludeTeamLeader,
             selectedUserIds,
             customForms,
-            multiFormsConfig
+            multiFormsConfig,
+            maxSelectedForms
           };
         }));
         this.loadingStages.set(false);
@@ -1172,6 +1206,20 @@ export class RequestsBetaAdminComponent implements OnInit {
     if (stage.multiFormsConfig) {
       stage.multiFormsConfig.splice(index, 1);
     }
+  }
+
+  getMaxSelectionOptions(stage: any): Array<{ label: string; value: number | null }> {
+    const count = (stage.multiFormsConfig || []).length;
+    const options: Array<{ label: string; value: number | null }> = [
+      { label: 'Sin límite (Todas las opciones)', value: null }
+    ];
+    for (let i = 1; i <= Math.max(count, 1); i++) {
+      options.push({
+        label: i === 1 ? 'Máximo 1 opción (Excluyente)' : `Máximo ${i} opciones`,
+        value: i
+      });
+    }
+    return options;
   }
 
   removeStage(index: number) {
@@ -1271,7 +1319,8 @@ export class RequestsBetaAdminComponent implements OnInit {
       let assigneeUserIdsObj: any = null;
       if (s.formIdToFill === -1) {
         assigneeUserIdsObj = {
-          multiFormsConfig: s.multiFormsConfig || []
+          multiFormsConfig: s.multiFormsConfig || [],
+          maxSelectedForms: s.maxSelectedForms || null
         };
       } else if (s.assigneeType === 'multiple_users' && s.selectedUserIds) {
         assigneeUserIdsObj = s.selectedUserIds.map((uid: number) => ({

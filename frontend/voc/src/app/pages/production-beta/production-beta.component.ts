@@ -203,6 +203,42 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     { label: 'Flujo de Trabajo Adicional (Secuencia de Etapas)', value: 'workflow' }
   ];
 
+  getInitialFormClosingInfo(): { requireClosingStep: boolean; closingType: 'form' | 'workflow'; targetName: string } {
+    const formId = this.selectedInitialFormId();
+    if (!formId) {
+      return { requireClosingStep: false, closingType: 'form', targetName: '' };
+    }
+    const form = this.initialForms().find(f => f.id === formId);
+    if (!form || !form.metadata) {
+      return { requireClosingStep: false, closingType: 'form', targetName: '' };
+    }
+    try {
+      const meta = typeof form.metadata === 'object' ? form.metadata : JSON.parse(form.metadata);
+      const cfg = meta.closingConfig;
+      if (!cfg || !cfg.requireClosingStep) {
+        return { requireClosingStep: false, closingType: 'form', targetName: '' };
+      }
+      const type = cfg.closingType || 'form';
+      let name = '';
+      if (type === 'form') {
+        const targetFormId = cfg.closingFormId || cfg.formId;
+        const f = this.availableClosingForms().find(x => x.id === targetFormId);
+        name = f ? f.name : (targetFormId ? `Formulario #${targetFormId}` : 'Formulario no especificado');
+      } else {
+        const targetWfId = cfg.closingWorkflowId || cfg.workflowId;
+        const wf = this.availableClosingWorkflows().find(x => x.id === targetWfId);
+        name = wf ? wf.name : (targetWfId ? `Flujo #${targetWfId}` : 'Flujo no especificado');
+      }
+      return {
+        requireClosingStep: true,
+        closingType: type,
+        targetName: name
+      };
+    } catch(e) {
+      return { requireClosingStep: false, closingType: 'form', targetName: '' };
+    }
+  }
+
   ngOnInit() {
     this.loadRequests();
     this.loadWorkflowStages();
@@ -605,26 +641,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Validate Step 3: Closing Step
-    if (this.requireClosingStep()) {
-      if (this.selectedClosingType() === 'form' && !this.selectedClosingFormId()) {
-        this.messageService.add({
-          severity: 'warn',
-          summary: 'Paso 3 Incompleto',
-          detail: 'Debe seleccionar el formulario que completará el creador para el cierre de la solicitud.'
-        });
-        return;
-      }
-      if (this.selectedClosingType() === 'workflow' && !this.selectedClosingWorkflowId()) {
-        this.messageService.add({
-          severity: 'warn',
-          summary: 'Paso 3 Incompleto',
-          detail: 'Debe seleccionar el flujo adicional que ejecutará el creador para el cierre de la solicitud.'
-        });
-        return;
-      }
-    }
-
     this.loadingRequestTypes.set(true);
 
     // Upload files for initial form if any
@@ -656,10 +672,18 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }));
     const targetTeamIds = selectedTeams.map(t => t.id);
 
-    const closingConfig = this.requireClosingStep() ? {
-      formId: this.selectedClosingType() === 'form' ? this.selectedClosingFormId() : null,
-      workflowId: this.selectedClosingType() === 'workflow' ? this.selectedClosingWorkflowId() : null
-    } : null;
+    let closingConfig: any = null;
+    if (form.metadata) {
+      try {
+        const meta = typeof form.metadata === 'object' ? form.metadata : JSON.parse(form.metadata);
+        if (meta && meta.closingConfig && meta.closingConfig.requireClosingStep) {
+          closingConfig = {
+            formId: meta.closingConfig.closingType === 'form' ? (meta.closingConfig.closingFormId || meta.closingConfig.formId) : null,
+            workflowId: meta.closingConfig.closingType === 'workflow' ? (meta.closingConfig.closingWorkflowId || meta.closingConfig.workflowId) : null
+          };
+        }
+      } catch(e) {}
+    }
 
     // Build the submissions array payload
     const formValues: Record<string, string> = {};
@@ -1624,11 +1648,31 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     return this.selectedMultiFormIds().includes(formId);
   }
 
+  isMultiFormDisabled(formId: number): boolean {
+    const task = this.selectedTask();
+    if (!task) return false;
+    const max = task.maxSelectedForms;
+    if (!max || max <= 0) return false;
+    const isSelected = this.isMultiFormSelected(formId);
+    if (isSelected) return false;
+    return this.selectedMultiFormIds().length >= max;
+  }
+
   toggleMultiFormSelection(formId: number) {
     const current = this.selectedMultiFormIds();
     if (current.includes(formId)) {
       this.selectedMultiFormIds.set(current.filter(id => id !== formId));
     } else {
+      const task = this.selectedTask();
+      const max = task?.maxSelectedForms;
+      if (max && max > 0 && current.length >= max) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Límite de selección',
+          detail: `Solo puedes seleccionar un máximo de ${max} opción(es) en esta etapa.`
+        });
+        return;
+      }
       this.selectedMultiFormIds.set([...current, formId]);
     }
   }

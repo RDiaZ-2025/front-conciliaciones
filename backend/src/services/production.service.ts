@@ -158,10 +158,28 @@ export class ProductionService {
             if (submissions && submissions.length > 0) {
                 // 1. Create root parent submission from first element
                 const rootEntry = submissions[0];
-                const hasClosing = !!(closingConfig && (closingConfig.formId || closingConfig.workflowId));
+                let rootFormMeta: any = {};
+                if (rootEntry.formId) {
+                    const rootForm = await transactionManager.getRepository(DynamicForm).findOne({ where: { id: rootEntry.formId } });
+                    if (rootForm?.metadata) {
+                        try {
+                            rootFormMeta = typeof rootForm.metadata === 'object' ? rootForm.metadata : JSON.parse(rootForm.metadata);
+                        } catch(e) {}
+                    }
+                }
+
+                let effectiveClosingConfig: any = closingConfig;
+                if (!effectiveClosingConfig && rootFormMeta.closingConfig) {
+                    effectiveClosingConfig = rootFormMeta.closingConfig;
+                }
+
+                const closingWfId = effectiveClosingConfig?.workflowId || effectiveClosingConfig?.closingWorkflowId || null;
+                const closingFormId = effectiveClosingConfig?.formId || effectiveClosingConfig?.closingFormId || null;
+                const hasClosing = !!(effectiveClosingConfig && (effectiveClosingConfig.requireClosingStep || closingWfId || closingFormId));
+
                 const rootSub = subRepo.create({
                     formId: rootEntry.formId,
-                    workflowId: (closingConfig && closingConfig.workflowId) ? closingConfig.workflowId : null,
+                    workflowId: closingWfId,
                     requesterUserId,
                     status: hasClosing ? 'In Progress' : 'Completed'
                 });
@@ -1850,6 +1868,7 @@ export class ProductionService {
                 } catch(e) {}
             }
 
+            const maxSelectedForms = (parsedAssigneeConfig && parsedAssigneeConfig.maxSelectedForms !== undefined) ? parsedAssigneeConfig.maxSelectedForms : null;
             const formIdToFill = isMultiForms ? -1 : (state.customFormIdToFill || state.stage.formIdToFill || null);
             const formToFill = state.customFormToFill || state.stage.formToFill || null;
             const stageName = state.stage.name;
@@ -1918,6 +1937,7 @@ export class ProductionService {
                 formIdToFill: formIdToFill,
                 formToFill: formToFill,
                 availableMultiForms,
+                maxSelectedForms,
                 isFinalStage,
                 icon: state.submission.form.icon,
                 values: values.filter(v => v && v.field && v.field.formId === state.submission.formId).map(v => {
@@ -2597,6 +2617,45 @@ export class ProductionService {
                                     parentSub.status = 'In Progress';
                                     await subRepo.save(parentSub);
                                     await this.createStageStates(manager, parentSub, parentNextStage);
+                                } else if (parentSub.status !== 'Completed' && !parentWfId) {
+                                    // Check if closing form is directly configured in metadata
+                                    let parentMeta: any = {};
+                                    if (parentSub.form?.metadata) {
+                                        try {
+                                            parentMeta = typeof parentSub.form.metadata === 'object' ? parentSub.form.metadata : JSON.parse(parentSub.form.metadata);
+                                        } catch(e) {}
+                                    }
+                                    const closingFormId = parentMeta?.closingConfig?.closingFormId || parentMeta?.closingConfig?.formId;
+                                    if (closingFormId) {
+                                        const closingState = stateRepo.create({
+                                            submissionId: parentSub.id,
+                                            stageId: null as any,
+                                            assignedUserId: parentSub.requesterUserId,
+                                            customFormIdToFill: closingFormId,
+                                            status: 'Pending'
+                                        });
+                                        await stateRepo.save(closingState);
+                                        try {
+                                            await notificationService.createNotification(
+                                                parentSub.requesterUserId,
+                                                'Cierre de Solicitud Requerido',
+                                                `Todas las áreas han finalizado. Por favor diligencia el formulario de cierre para "${parentSub.form?.name || 'Solicitud'}".`,
+                                                'info'
+                                            );
+                                        } catch (err) {}
+                                    } else {
+                                        parentSub.currentStageId = null;
+                                        parentSub.status = 'Completed';
+                                        await subRepo.save(parentSub);
+                                        try {
+                                            await notificationService.createNotification(
+                                                parentSub.requesterUserId,
+                                                'Solicitud Completada',
+                                                `Tu solicitud de "${parentSub.form?.name || 'Producción'}" ha sido completada y aprobada.`,
+                                                'success'
+                                            );
+                                        } catch (err) {}
+                                    }
                                 } else {
                                     // Parent submission also completed all stages!
                                     parentSub.currentStageId = null;

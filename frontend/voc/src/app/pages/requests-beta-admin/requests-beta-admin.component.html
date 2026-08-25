@@ -262,6 +262,20 @@
                                         <p-button label="Agregar Opción" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="addMultiFormOption(stage)"></p-button>
                                     </div>
 
+                                    <!-- Selector de Límite de Opciones -->
+                                    <div class="flex flex-wrap align-items-center gap-3 bg-white p-2 border-round border-1 surface-border mb-2" *ngIf="stage.multiFormsConfig && stage.multiFormsConfig.length > 0">
+                                        <label class="text-xs font-bold text-700 flex align-items-center gap-1">
+                                            <i class="pi pi-sliders-h text-primary"></i>
+                                            <span>Límite de Opciones Seleccionables por el Usuario:</span>
+                                        </label>
+                                        <div style="width: 260px;">
+                                            <p-select [options]="getMaxSelectionOptions(stage)" [(ngModel)]="stage.maxSelectedForms" optionLabel="label" optionValue="value" placeholder="Sin límite (Todas)" [showClear]="true" class="w-full" styleClass="w-full text-xs" [appendTo]="'body'"></p-select>
+                                        </div>
+                                        <span class="text-xs text-600 italic">
+                                            {{ stage.maxSelectedForms ? 'El aprobador podrá seleccionar máximo ' + stage.maxSelectedForms + ' opción(es).' : 'El aprobador podrá seleccionar múltiples opciones sin límite.' }}
+                                        </span>
+                                    </div>
+
                                     <div *ngIf="!stage.multiFormsConfig || stage.multiFormsConfig.length === 0" class="text-center p-3 text-500 text-xs italic bg-white border-round border-1 surface-border">
                                         No hay formularios configurados. Haz clic en "Agregar Opción" para añadir una.
                                     </div>
@@ -471,6 +485,50 @@
                     </div>
                     <div *ngIf="teams().length === 0" class="text-xs text-500 italic text-center p-2">
                         No hay equipos registrados.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuración de Cierre de la Solicitud (Solo para Solicitudes Iniciales) -->
+            <div class="flex flex-column gap-3 mt-2 bg-blue-50 p-3 border-round border-1 border-blue-200" *ngIf="selectedForm().isInitialForm">
+                <div class="flex flex-column gap-1 border-bottom-1 surface-border pb-2">
+                    <label class="font-semibold text-sm text-900 flex align-items-center gap-2">
+                        <lucide-icon name="check-circle" class="text-primary" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+                        <span>Configuración de Cierre de la Solicitud (Paso 3 para el Creador)</span>
+                    </label>
+                    <span class="text-xs text-600">
+                        Define si al finalizar y aprobarse todos los flujos de las áreas destinatarias, el creador de la solicitud deberá completar un formulario o ejecutar un flujo de cierre final.
+                    </span>
+                </div>
+
+                <div class="flex flex-column gap-3 mt-1">
+                    <div class="flex align-items-center gap-3">
+                        <p-checkbox [(ngModel)]="formRequireClosingStep" [binary]="true" id="formRequireClosingStep"></p-checkbox>
+                        <label for="formRequireClosingStep" class="font-semibold text-sm cursor-pointer text-900">
+                            Requerir etapa o flujo de cierre al solicitante tras finalizar todas las áreas
+                        </label>
+                    </div>
+
+                    <div *ngIf="formRequireClosingStep()" class="grid mt-1 bg-white p-3 border-round-lg border-1 surface-border">
+                        <div class="col-12 md:col-6 flex flex-column gap-1">
+                            <label class="font-semibold text-xs text-700">Tipo de Cierre *</label>
+                            <p-select [options]="closingTypeOptions" [(ngModel)]="formClosingType"
+                                      optionLabel="label" optionValue="value" class="w-full" styleClass="w-full text-xs" [appendTo]="'body'"></p-select>
+                        </div>
+
+                        <div class="col-12 md:col-6 flex flex-column gap-1" *ngIf="formClosingType() === 'form'">
+                            <label class="font-semibold text-xs text-700">Formulario que debe diligenciar el creador *</label>
+                            <p-select [options]="activeForms()" [(ngModel)]="formClosingFormId"
+                                      optionLabel="name" optionValue="id" placeholder="Seleccionar formulario de cierre..."
+                                      [filter]="true" filterBy="name" class="w-full" styleClass="w-full text-xs" [appendTo]="'body'"></p-select>
+                        </div>
+
+                        <div class="col-12 md:col-6 flex flex-column gap-1" *ngIf="formClosingType() === 'workflow'">
+                            <label class="font-semibold text-xs text-700">Flujo adicional que ejecutará el creador *</label>
+                            <p-select [options]="activeWorkflows()" [(ngModel)]="formClosingWorkflowId"
+                                      optionLabel="name" optionValue="id" placeholder="Seleccionar flujo de cierre..."
+                                      [filter]="true" filterBy="name" class="w-full" styleClass="w-full text-xs" [appendTo]="'body'"></p-select>
+                        </div>
                     </div>
                 </div>
             </div>
