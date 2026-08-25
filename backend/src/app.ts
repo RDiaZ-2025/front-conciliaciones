@@ -30,11 +30,16 @@ dotenv.config();
 
 const app = express();
 
+// Confiar en el primer proxy (Azure App Service / Reverse Proxy) para obtener la IP real del cliente
+app.set('trust proxy', 1);
+
 const corsOptions = {
   origin: [
     process.env.FRONTEND_URL || 'http://localhost:5173',
     'http://localhost:5173', // Desarrollo local
     'http://localhost:5174', // Puerto alternativo cuando 5173 está ocupado
+    'https://vocclaromedia.com', // Dominio de producción
+    'https://www.vocclaromedia.com', // Dominio de producción con www
     'https://blue-pebble-080603f0f.3.azurestaticapps.net', // Producción (URL anterior)
     'https://wonderful-coast-0c074260f.7.azurestaticapps.net' // Producción (URL actual)
   ],
@@ -44,8 +49,10 @@ const corsOptions = {
 
 // Configuración de Rate Limiting
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutos
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '1000'),     // 1000 peticiones por ventana
+  standardHeaders: true,
+  legacyHeaders: false,
   message: {
     success: false,
     message: 'Demasiadas solicitudes desde esta IP, intenta de nuevo más tarde.'

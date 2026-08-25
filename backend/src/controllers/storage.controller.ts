@@ -31,10 +31,16 @@ export class StorageController {
 
     if (containerName === 'autoconsumoshared') {
       const user = req.user;
-      if (!user || !user.permissions || !user.permissions.includes('view_commercial')) {
+      const hasCommercialAccess = user && user.permissions && (
+        user.permissions.includes('Repositorio Comercial') ||
+        user.permissions.includes('repositorioComercial') ||
+        user.permissions.includes('view_commercial') ||
+        user.permissions.includes('admin_panel')
+      );
+      if (!hasCommercialAccess) {
         return res.status(403).json({
           success: false,
-          message: 'Access denied: view_commercial permission required'
+          message: 'Access denied: Repositorio Comercial permission required'
         });
       }
 
@@ -114,8 +120,14 @@ export class StorageController {
 
   listCommercialFiles = asyncHandler(async (req: Request, res: Response) => {
     const user = req.user;
-    if (!user || !user.permissions || !user.permissions.includes('view_commercial')) {
-      return res.status(403).json({ success: false, message: 'Access denied: view_commercial permission required' });
+    const hasCommercialAccess = user && user.permissions && (
+      user.permissions.includes('Repositorio Comercial') ||
+      user.permissions.includes('repositorioComercial') ||
+      user.permissions.includes('view_commercial') ||
+      user.permissions.includes('admin_panel')
+    );
+    if (!hasCommercialAccess) {
+      return res.status(403).json({ success: false, message: 'Access denied: Repositorio Comercial permission required' });
     }
 
     const accountName = process.env.AZURE_AUTOCONSUMO_ACCOUNT_NAME || 'autoconsumofileserver';
@@ -154,8 +166,14 @@ export class StorageController {
 
   downloadCommercialFile = asyncHandler(async (req: Request, res: Response) => {
     const user = req.user;
-    if (!user || !user.permissions || !user.permissions.includes('view_commercial')) {
-      return res.status(403).json({ success: false, message: 'Access denied' });
+    const hasCommercialAccess = user && user.permissions && (
+      user.permissions.includes('Repositorio Comercial') ||
+      user.permissions.includes('repositorioComercial') ||
+      user.permissions.includes('view_commercial') ||
+      user.permissions.includes('admin_panel')
+    );
+    if (!hasCommercialAccess) {
+      return res.status(403).json({ success: false, message: 'Access denied: Repositorio Comercial permission required' });
     }
 
     const filePath = req.query.path as string;
