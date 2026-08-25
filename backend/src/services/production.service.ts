@@ -1600,8 +1600,8 @@ export class ProductionService {
             order: { createdAt: 'DESC' }
         });
 
-        // Ensure we only return approvals for submissions that are actively In Progress
-        states = states.filter(s => s.submission && s.submission.status === 'In Progress');
+        // Ensure we only return approvals for submissions that are actively In Progress or Rejected (for corrections)
+        states = states.filter(s => s.submission && (s.submission.status === 'In Progress' || s.submission.status === 'Rejected'));
 
         // For each pending approval, fetch the values of the submission
         const valRepo = AppDataSource.getRepository(DynamicFormFieldValue);
@@ -1651,7 +1651,12 @@ export class ProductionService {
                 relations: ['field', 'field.form']
             });
 
-            const historyStages = allStatesToInclude.map((cState) => {
+            const isCorrection = (state.submission.status === 'Rejected');
+            const statesForHistory = isCorrection 
+                ? allStatesToInclude.filter(cs => cs.id < state.id && cs.status === 'Approved')
+                : allStatesToInclude;
+
+            const historyStages = statesForHistory.map((cState) => {
                 const resolvedForm = cState.customFormToFill || cState.stage?.formToFill;
                 const resolvedFormId = cState.customFormIdToFill || cState.stage?.formIdToFill;
                 const stageVals = resolvedFormId 
@@ -1780,13 +1785,13 @@ export class ProductionService {
                 }
             }
 
-            const isCorrection = (state.submission.status === 'Rejected' && state.assignedUserId === state.submission.requesterUserId);
             const parentForms = [];
             if (isCorrection && parentSubmissions.length > 0) {
                 const fieldRepo = AppDataSource.getRepository(DynamicFormField);
                 for (const pSub of parentSubmissions) {
                     const fields = await fieldRepo.find({
-                        where: { formId: pSub.formId }
+                        where: { formId: pSub.formId },
+                        order: { displayOrder: 'ASC' }
                     });
                     const pSubVals = await valRepo.find({
                         where: { submissionId: pSub.id },
@@ -1809,6 +1814,9 @@ export class ProductionService {
                             options: f.options,
                             metadata: parsedMeta,
                             isReadOnly: f.isReadOnly,
+                            defaultValueExpression: f.defaultValueExpression,
+                            formulaExpression: f.formulaExpression,
+                            visibilityCondition: f.visibilityCondition,
                             value: valObj ? valObj.value : ''
                         };
                     });
@@ -2161,7 +2169,7 @@ export class ProductionService {
             const submission = currentState.submission;
             const stage = currentState.stage;
 
-            const isCorrection = (submission.status === 'Rejected' && currentState.assignedUserId === submission.requesterUserId);
+            const isCorrection = (submission.status === 'Rejected');
 
             if (isCorrection) {
                 // 1. Save / Update original form fields (which are parent forms)
@@ -2173,7 +2181,9 @@ export class ProductionService {
                                 where: { formId: pSub.formId }
                             });
                             for (const field of fields) {
-                                const valStr = formValues[field.name];
+                                const valStr = formValues[pSub.formId + '_' + field.name] !== undefined 
+                                    ? formValues[pSub.formId + '_' + field.name] 
+                                    : formValues[field.name];
                                 if (valStr !== undefined && valStr !== null) {
                                     let valRecord = await valRepo.findOne({
                                         where: { submissionId: pSub.id, fieldId: field.id }

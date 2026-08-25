@@ -18,7 +18,7 @@
                     <div class="flex justify-content-between align-items-start p-3 pb-0">
                         <h3 class="text-xl font-bold m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap flex-1 mr-2"
                             [pTooltip]="task.formName">{{ task.formName }}</h3>
-                        <p-tag severity="info" [value]="task.stageName"></p-tag>
+                        <p-tag [severity]="isCorrection(task) ? 'danger' : 'info'" [value]="isCorrection(task) ? 'Devuelta para Corrección' : task.stageName"></p-tag>
                     </div>
                 </ng-template>
 
@@ -41,9 +41,9 @@
 
                 <ng-template pTemplate="footer">
                     <div class="flex justify-content-end border-top-1 surface-border pt-3">
-                        <p-button size="small" (onClick)="openActionDialog(task)">
-                            <lucide-icon name="search" class="mr-2"></lucide-icon>
-                            Revisar y Decidir
+                        <p-button [severity]="isCorrection(task) ? 'danger' : 'primary'" size="small" (onClick)="openActionDialog(task)">
+                            <lucide-icon [name]="isCorrection(task) ? 'edit-3' : 'search'" class="mr-2"></lucide-icon>
+                            {{ isCorrection(task) ? 'Corregir Solicitud' : 'Revisar y Decidir' }}
                         </p-button>
                     </div>
                 </ng-template>
@@ -72,7 +72,7 @@
             </div>
 
             <!-- Section 0: Datos del Requerimiento Inicial (Stacked initial forms values) -->
-            <div class="flex flex-column gap-3" *ngIf="parentFormGroups() && parentFormGroups().length > 0">
+            <div class="flex flex-column gap-3" *ngIf="!isCorrection(selectedTask()) && parentFormGroups() && parentFormGroups().length > 0">
                 <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">Datos del Requerimiento Inicial</span>
                 <div *ngFor="let group of parentFormGroups()" class="flex flex-column gap-2 mb-2 p-3 border-round border-1 surface-border surface-card">
                     <span class="text-primary font-bold text-sm border-bottom-1 pb-1 surface-border uppercase">{{ group.formName }}</span>
@@ -989,10 +989,10 @@
                 </div>
             </div>
  
-            <!-- Section 3: Comments (Only if not correction) -->
-            <div class="flex flex-column gap-2 mt-2" *ngIf="!isCorrection(selectedTask())">
-                <label for="comments" class="font-bold text-sm text-900">Comentarios / Observaciones</label>
-                <textarea id="comments" class="w-full p-inputtext border-round" [(ngModel)]="comments" rows="3" placeholder="Escribe notas adicionales o la razón en caso de rechazo..." style="resize: vertical; font-family: inherit;"></textarea>
+            <!-- Section 3: Comments -->
+            <div class="flex flex-column gap-2 mt-2">
+                <label for="comments" class="font-bold text-sm text-900">{{ isCorrection(selectedTask()) ? 'Notas de la Corrección (Opcional)' : 'Comentarios / Observaciones' }}</label>
+                <textarea id="comments" class="w-full p-inputtext border-round" [(ngModel)]="comments" rows="2" [placeholder]="isCorrection(selectedTask()) ? 'Explica brevemente los cambios realizados...' : 'Escribe notas adicionales o la razón en caso de rechazo...'" style="resize: vertical; font-family: inherit;"></textarea>
             </div>
         </div>
  

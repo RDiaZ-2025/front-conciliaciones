@@ -132,7 +132,7 @@ export class RequestsBetaInboxComponent implements OnInit {
 
   isCorrection(task: any): boolean {
     if (!task) return false;
-    return task.submissionStatus === 'Rejected' && task.requesterUserId === this.authService.currentUser()?.id;
+    return task.submissionStatus === 'Rejected';
   }
 
   isPendingFormFill(task: any): boolean {
@@ -298,6 +298,7 @@ export class RequestsBetaInboxComponent implements OnInit {
         this.stageFormValues = initialValues;
         this.stageFormFields.set([]);
         this.loadingStageFields.set(false);
+        this.recalculateParentFormulas();
       } else {
         this.loadingStageFields.set(true);
         this.productionService.getDynamicFormFields(task.formId).subscribe({
@@ -307,7 +308,7 @@ export class RequestsBetaInboxComponent implements OnInit {
               if (f.metadata && typeof f.metadata === 'string') {
                 try { f.metadata = JSON.parse(f.metadata); } catch(e){}
               }
-              const val = task.submittedValuesRaw[f.name] || '';
+              const val = task.submittedValuesRaw ? (task.submittedValuesRaw[f.name] || '') : '';
               initialValues[f.name] = val;
               if (f.type === 'dynamic_list') {
                 this.initDynamicListField(f.name, val);
@@ -319,6 +320,7 @@ export class RequestsBetaInboxComponent implements OnInit {
             this.stageFormValues = initialValues;
             this.stageFormFields.set(fields);
             this.loadingStageFields.set(false);
+            this.recalculateStageFormulas();
           },
           error: () => {
             this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los campos del formulario original.' });
@@ -419,6 +421,11 @@ export class RequestsBetaInboxComponent implements OnInit {
 
     if (action === 'reject' && (!notes || !notes.trim())) {
       this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'Debe ingresar un comentario para justificar el rechazo.' });
+      return;
+    }
+
+    if (action === 'approve' && !isCorr && task?.requireCommentOnApprove && (!notes || !notes.trim())) {
+      this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'Debe ingresar un comentario para aprobar esta etapa.' });
       return;
     }
 
