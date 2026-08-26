@@ -3,35 +3,41 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 import { AppDataSource } from '../config/typeorm.config';
-import { DynamicFormSubmission } from '../models/DynamicFormSubmission';
+import { DynamicFormFieldValue } from '../models/DynamicFormFieldValue';
 import { DynamicSubmissionWorkflowState } from '../models/DynamicSubmissionWorkflowState';
+import { DynamicFormSubmission } from '../models/DynamicFormSubmission';
+import { ProductionRequestHistory } from '../models/ProductionRequestHistory';
+import { ProductionRequest } from '../models/ProductionRequest';
 
 async function run() {
     try {
         await AppDataSource.initialize();
-        
-        const subs = await AppDataSource.getRepository(DynamicFormSubmission).find({
-            relations: ['form', 'requesterUser'],
-            order: { id: 'DESC' },
-            take: 10
+        console.log('Database initialized.');
+
+        await AppDataSource.transaction(async (manager) => {
+            console.log('Deleting DynamicFormFieldValues...');
+            await manager.createQueryBuilder().delete().from(DynamicFormFieldValue).execute();
+
+            console.log('Deleting DynamicSubmissionWorkflowStates...');
+            await manager.createQueryBuilder().delete().from(DynamicSubmissionWorkflowState).execute();
+
+            console.log('Deleting DynamicFormSubmissions...');
+            await manager.createQueryBuilder().delete().from(DynamicFormSubmission).execute();
+
+            console.log('Deleting ProductionRequestHistories...');
+            await manager.createQueryBuilder().delete().from(ProductionRequestHistory).execute();
+
+            console.log('Deleting ProductionRequests...');
+            await manager.createQueryBuilder().delete().from(ProductionRequest).execute();
         });
 
-        console.log("=== RECENT SUBMISSIONS ===");
-        for (const s of subs) {
-            console.log(`Sub ID: ${s.id}, Form: ${s.form?.name}, Parent: ${s.parentSubmissionId}, Requester: ${s.requesterUser?.name}, Status: ${s.status}, CreatedAt: ${s.createdAt}`);
-            const states = await AppDataSource.getRepository(DynamicSubmissionWorkflowState).find({
-                where: { submissionId: s.id },
-                relations: ['stage', 'assignedUser', 'actionedByUser']
-            });
-            for (const st of states) {
-                console.log(`    -> State ID ${st.id}: Stage: ${st.stage?.name} (order: ${st.stage?.stepOrder}), assigned: ${st.assignedUser?.name} (${st.assignedUser?.email}), status: ${st.status}, actionedBy: ${st.actionedByUser?.name}, notes: ${st.notes}`);
-            }
-        }
-
+        console.log('All requests and submissions have been deleted successfully.');
         await AppDataSource.destroy();
-    } catch (e) {
-        console.error("Error:", e);
+    } catch (error) {
+        console.error('Error deleting requests:', error);
+        process.exit(1);
     }
 }
 
 run();
+

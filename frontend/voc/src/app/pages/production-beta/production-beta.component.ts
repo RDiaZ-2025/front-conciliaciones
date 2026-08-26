@@ -493,7 +493,8 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
             next: (allFieldsArray: any[][]) => {
               const vals: Record<string, string> = {};
               formsList.forEach((form, idx) => {
-                const fields = allFieldsArray[idx] || [];
+                const fields = (allFieldsArray[idx] || []).filter(f => f.isActive !== false);
+                form.fields = fields;
                 fields.forEach((f: any) => {
                   if (f.metadata) {
                     if (typeof f.metadata === 'string') {
@@ -1530,53 +1531,23 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
     const isCorr = this.isCorrection(task);
 
-    if (isCorr) {
-      if (task && task.parentForms && task.parentForms.length > 0) {
-        const initialValues: Record<string, string> = {};
-        task.parentForms.forEach((form: any) => {
-          form.fields.forEach((f: any) => {
-            initialValues[form.formId + '_' + f.name] = f.value || '';
-            if (f.type === 'dynamic_list') {
-              this.initDynamicListField(form.formId + '_' + f.name, f.value || '');
-            }
-            if (f.type === 'multiselect') {
-              this.initMultiselectField(form.formId + '_' + f.name, f.value || '');
-            }
-          });
-        });
-        this.stageFormValues = initialValues;
-        this.stageFormFields.set([]);
-        this.loadingStageFields.set(false);
-        this.recalculateParentFormulas();
-      } else {
-        this.loadingStageFields.set(true);
-        this.productionService.getDynamicFormFields(task.formId).subscribe({
-          next: (fields) => {
-            const initialValues: Record<string, string> = {};
-            fields.forEach(f => {
-              if (f.metadata && typeof f.metadata === 'string') {
-                try { f.metadata = JSON.parse(f.metadata); } catch(e){}
-              }
-              const val = task.submittedValuesRaw ? (task.submittedValuesRaw[f.name] || '') : '';
-              initialValues[f.name] = val;
-              if (f.type === 'dynamic_list') {
-                this.initDynamicListField(f.name, val);
-              }
-              if (f.type === 'multiselect') {
-                this.initMultiselectField(f.name, val);
-              }
-            });
-            this.stageFormValues = initialValues;
-            this.stageFormFields.set(fields);
-            this.loadingStageFields.set(false);
-            this.recalculateStageFormulas();
-          },
-          error: () => {
-            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los campos del formulario original.' });
-            this.loadingStageFields.set(false);
+    if (task && task.parentForms && task.parentForms.length > 0) {
+      const initialValues: Record<string, string> = {};
+      task.parentForms.forEach((form: any) => {
+        form.fields.forEach((f: any) => {
+          initialValues[form.formId + '_' + f.name] = f.value || '';
+          if (f.type === 'dynamic_list') {
+            this.initDynamicListField(form.formId + '_' + f.name, f.value || '');
+          }
+          if (f.type === 'multiselect') {
+            this.initMultiselectField(form.formId + '_' + f.name, f.value || '');
           }
         });
-      }
+      });
+      this.stageFormValues = initialValues;
+      this.stageFormFields.set([]);
+      this.loadingStageFields.set(false);
+      this.recalculateParentFormulas();
     } else if (task.formIdToFill === -1) {
       this.loadingStageFields.set(false);
       this.stageFormFields.set([]);
@@ -1586,7 +1557,10 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         task.availableMultiForms.forEach((frm: any) => {
           (frm.fields || []).forEach((f: any) => {
             const key = frm.formId + '_' + f.name;
-            if (f.defaultValueExpression) {
+            const prevVal = task.submittedValuesRaw ? (task.submittedValuesRaw[f.name] ?? '') : '';
+            if (prevVal !== '') {
+              initialValues[key] = prevVal;
+            } else if (f.defaultValueExpression) {
               initialValues[key] = this.evaluateDefaultValueExpression(f);
             } else {
               initialValues[key] = '';
@@ -1606,17 +1580,14 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       this.productionService.getDynamicFormFields(task.formIdToFill).subscribe({
         next: (fields) => {
           const initialValues: Record<string, string> = {};
-          const now = new Date();
-          const pad = (n: number) => n.toString().padStart(2, '0');
-          const formattedDate = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-          const userName = this.authService.currentUser()?.name || '';
-          const userEmail = this.authService.currentUser()?.email || '';
-
           fields.forEach(f => {
             if (f.metadata && typeof f.metadata === 'string') {
               try { f.metadata = JSON.parse(f.metadata); } catch(e){}
             }
-            if (f.defaultValueExpression) {
+            const prevVal = task.submittedValuesRaw ? (task.submittedValuesRaw[f.name] ?? '') : '';
+            if (prevVal !== '') {
+              initialValues[f.name] = prevVal;
+            } else if (f.defaultValueExpression) {
               initialValues[f.name] = this.evaluateDefaultValueExpression(f);
             } else {
               initialValues[f.name] = '';
@@ -1633,6 +1604,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           this.stageFormValues = initialValues;
           this.stageFormFields.set(fields);
           this.loadingStageFields.set(false);
+          this.recalculateStageFormulas();
         },
         error: () => {
           this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los campos requeridos para esta etapa.' });
@@ -1699,7 +1671,38 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }
 
     if (action === 'approve') {
-      if (task.formIdToFill === -1) {
+      if (task.parentForms && task.parentForms.length > 0) {
+        for (const frm of task.parentForms) {
+          for (const field of frm.fields) {
+            if (field.isRequired && field.type !== 'section_header' && this.isFieldVisible(field, frm.fields, this.stageFormValues, frm.formId)) {
+              const key = frm.formId + '_' + field.name;
+              if (field.type === 'file') {
+                const files = this.getStageSelectedFiles(key);
+                const val = this.stageFormValues[key];
+                const hasUploaded = this.getStageUploadedFiles(val).length > 0;
+                if (files.length === 0 && !hasUploaded) {
+                  this.messageService.add({
+                    severity: 'error',
+                    summary: 'Validación',
+                    detail: `En "${frm.formName}", el campo "${field.label}" requiere cargar al menos un archivo.`
+                  });
+                  return;
+                }
+              } else {
+                const val = this.stageFormValues[key];
+                if (val === undefined || val === null || String(val).trim() === '') {
+                  this.messageService.add({
+                    severity: 'error',
+                    summary: 'Validación',
+                    detail: `En "${frm.formName}", el campo "${field.label}" es requerido.`
+                  });
+                  return;
+                }
+              }
+            }
+          }
+        }
+      } else if (task.formIdToFill === -1) {
         if (this.selectedMultiFormIds().length === 0) {
           this.messageService.add({
             severity: 'error',
@@ -1739,7 +1742,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
             }
           }
         }
-      } else if (task.formIdToFill || isCorr) {
+      } else if (task.formIdToFill) {
         const fields = this.stageFormFields();
         for (const field of fields) {
           if (field.isRequired && field.type !== 'section_header' && this.isFieldVisible(field, fields, this.stageFormValues)) {
@@ -2200,6 +2203,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
   isFieldVisible(field: any, allFields: any[], formValues: Record<string, any>, formId?: number): boolean {
     if (!field) return false;
+    if (field.isActive === false) return false;
     
     const dependency = field.metadata?.dependency;
     if (!dependency || !dependency.fieldName) {

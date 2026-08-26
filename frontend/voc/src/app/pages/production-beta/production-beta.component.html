@@ -574,7 +574,7 @@
             </div>
 
             <!-- Section 0: Datos del Requerimiento Inicial (Stacked initial forms values) -->
-            <div class="flex flex-column gap-3" *ngIf="!isCorrection(selectedTask()) && parentFormGroups() && parentFormGroups().length > 0">
+            <div class="flex flex-column gap-3" *ngIf="parentFormGroups() && parentFormGroups().length > 0">
                 <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">Datos del Requerimiento Inicial</span>
                 <div *ngFor="let group of parentFormGroups()" class="flex flex-column gap-2 mb-2 p-3 border-round border-1 surface-border surface-card">
                     <span class="text-primary font-bold text-sm border-bottom-1 pb-1 surface-border uppercase">{{ group.formName }}</span>
@@ -630,8 +630,8 @@
                 </div>
             </div>
 
-            <!-- Section 1: Original Form Data (Only if not correction and no parent form groups) -->
-            <div class="flex flex-column gap-3" *ngIf="!isCorrection(selectedTask()) && (!parentFormGroups() || parentFormGroups().length === 0) && selectedTask()?.values && selectedTask()?.values?.length > 0">
+            <!-- Section 1: Original Form Data (Only if no parent form groups) -->
+            <div class="flex flex-column gap-3" *ngIf="(!parentFormGroups() || parentFormGroups().length === 0) && selectedTask()?.values && selectedTask()?.values?.length > 0">
                 <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">Datos de la Solicitud</span>
                 <div class="grid row-gap-3">
                     <ng-container *ngFor="let val of selectedTask()?.values; let i = index">
@@ -687,8 +687,8 @@
                 </div>
             </div>
 
-            <!-- Section 1.5: Datos y Archivos de Aprobaciones Anteriores (Only if not correction) -->
-            <div class="flex flex-column gap-3 mt-2" *ngIf="!isCorrection(selectedTask()) && selectedTask().historyStages && selectedTask().historyStages.length > 0">
+            <!-- Section 1.5: Datos y Archivos de Aprobaciones Anteriores -->
+            <div class="flex flex-column gap-3 mt-2" *ngIf="selectedTask().historyStages && selectedTask().historyStages.length > 0">
                 <div class="flex flex-column gap-3">
                     <div *ngFor="let hStage of selectedTask().historyStages" class="border-round border-1 surface-border p-3 surface-card flex flex-column gap-2">
                         <!-- Stage header -->
@@ -770,9 +770,9 @@
             </div>
 
             <!-- Section 2: Conditional approval form to fill or correction editor -->
-            <div class="flex flex-column gap-3 mt-2" *ngIf="selectedTask().formIdToFill || isCorrection(selectedTask())">
+            <div class="flex flex-column gap-3 mt-2" *ngIf="selectedTask().formIdToFill || (selectedTask()?.parentForms && selectedTask()?.parentForms?.length > 0)">
                 <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">
-                    {{ isCorrection(selectedTask()) ? 'Modificar Datos de la Solicitud' : (selectedTask().formIdToFill === -1 ? 'Formularios Requeridos en esta Etapa' : 'Formulario Requerido en esta Etapa: ' + selectedTask().formToFill?.name) }}
+                    {{ (selectedTask()?.parentForms && selectedTask()?.parentForms?.length > 0) ? 'Modificar Datos de la Solicitud Inicial' : (selectedTask().formIdToFill === -1 ? 'Formularios Requeridos en esta Etapa' : 'Formulario Requerido en esta Etapa: ' + selectedTask().formToFill?.name) }}
                 </span>
                 
                 <div *ngIf="loadingStageFields()" class="flex justify-content-center p-3">
@@ -781,7 +781,7 @@
 
                 <div *ngIf="!loadingStageFields()" class="flex flex-column gap-3">
                     <!-- Case A: Correction of parent/initial forms -->
-                    <ng-container *ngIf="isCorrection(selectedTask()) && selectedTask()?.parentForms && selectedTask()?.parentForms?.length > 0">
+                    <ng-container *ngIf="selectedTask()?.parentForms && selectedTask()?.parentForms?.length > 0">
                         <div *ngFor="let form of selectedTask().parentForms" class="flex flex-column gap-3 border-round border-1 surface-border p-3 surface-card mb-2">
                             <span class="text-primary font-bold text-sm border-bottom-1 pb-1 surface-border uppercase">{{ form.formName }}</span>
                             <ng-container *ngFor="let field of form.fields">
@@ -1021,7 +1021,7 @@
                     </ng-container>
 
                     <!-- Case B: Normal stage form to fill or fallback correction -->
-                    <ng-container *ngIf="!(isCorrection(selectedTask()) && selectedTask()?.parentForms && selectedTask()?.parentForms?.length > 0) && selectedTask().formIdToFill !== -1">
+                    <ng-container *ngIf="(!selectedTask()?.parentForms || selectedTask()?.parentForms?.length === 0) && selectedTask().formIdToFill !== -1">
                         <ng-container *ngFor="let field of stageFormFields()">
                         <div *ngIf="isFieldVisible(field, stageFormFields(), stageFormValues)" class="flex flex-column gap-1" [class.col-12]="field.type === 'section_header'">
                             <label [for]="'stage-field-' + field.name" class="font-medium text-900" *ngIf="field.type !== 'section_header'">
