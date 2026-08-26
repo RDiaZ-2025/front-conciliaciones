@@ -548,20 +548,47 @@ export class RequestsBetaAdminComponent implements OnInit {
 
     this.productionService.getDynamicFormFields(form.id, true).subscribe({
       next: (data) => {
-        this.formFields.set(data.map(f => ({
-          id: f.id,
-          name: f.name,
-          label: f.label,
-          description: f.description || '',
-          type: f.type,
-          placeholder: f.placeholder || '',
-          isRequired: !!f.isRequired,
-          isReadOnly: !!f.isReadOnly,
-          isActive: f.isActive !== false,
-          defaultValueExpression: f.defaultValueExpression || '',
-          displayOrder: f.displayOrder,
-          metadata: f.metadata ? (typeof f.metadata === 'string' ? JSON.parse(f.metadata) : f.metadata) : {}
-        })));
+        this.formFields.set(data.map(f => {
+          let meta = f.metadata ? (typeof f.metadata === 'string' ? JSON.parse(f.metadata) : f.metadata) : {};
+          if (meta.options && Array.isArray(meta.options)) {
+            meta.options = meta.options
+              .map((opt: any) => typeof opt === 'object' && opt !== null ? (opt.value ?? opt.label ?? '') : String(opt ?? ''))
+              .map((s: string) => s.trim())
+              .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+          }
+          if (meta.dependency) {
+            if (Array.isArray(meta.dependency.value)) {
+              meta.dependency.value = meta.dependency.value
+                .map((v: any) => typeof v === 'object' && v !== null ? (v.value ?? v.label ?? '') : String(v ?? ''))
+                .map((s: string) => s.trim())
+                .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+              if (meta.dependency.value.length === 1) meta.dependency.value = meta.dependency.value[0];
+              else if (meta.dependency.value.length === 0) meta.dependency.value = '';
+            } else if (typeof meta.dependency.value === 'string') {
+              const clean = meta.dependency.value
+                .split(',')
+                .map((s: string) => s.trim())
+                .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+              meta.dependency.value = clean.length > 1 ? clean : (clean[0] || '');
+            } else if (meta.dependency.value === null || meta.dependency.value === undefined) {
+              meta.dependency.value = '';
+            }
+          }
+          return {
+            id: f.id,
+            name: f.name,
+            label: f.label,
+            description: f.description || '',
+            type: f.type,
+            placeholder: f.placeholder || '',
+            isRequired: !!f.isRequired,
+            isReadOnly: !!f.isReadOnly,
+            isActive: f.isActive !== false,
+            defaultValueExpression: f.defaultValueExpression || '',
+            displayOrder: f.displayOrder,
+            metadata: meta
+          };
+        }));
       },
       error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los campos del formulario.' })
     });
@@ -606,7 +633,11 @@ export class RequestsBetaAdminComponent implements OnInit {
     if (!field.metadata.options) field.metadata.options = [];
 
     this.selectedFieldForSelectConfig.set(field);
-    const optsObj = field.metadata.options.map((opt: string) => ({ value: opt }));
+    const optsObj = (field.metadata.options || [])
+      .map((opt: any) => typeof opt === 'object' && opt !== null ? (opt.value ?? opt.label ?? '') : String(opt ?? ''))
+      .map((s: string) => s.trim())
+      .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined')
+      .map((opt: string) => ({ value: opt }));
     this.tempSelectOptions.set(optsObj);
     this.showSelectConfigDialog.set(true);
   }
@@ -626,8 +657,8 @@ export class RequestsBetaAdminComponent implements OnInit {
     const field = this.selectedFieldForSelectConfig();
     if (field) {
       const opts = this.tempSelectOptions()
-        .map(opt => opt.value.trim())
-        .filter(val => val.length > 0);
+        .map(opt => (typeof opt.value === 'string' ? opt.value : String(opt.value || '')).trim())
+        .filter(val => val.length > 0 && val !== 'null' && val !== '_null' && val !== 'undefined');
       field.metadata.options = opts;
     }
     this.showSelectConfigDialog.set(false);
@@ -749,9 +780,15 @@ export class RequestsBetaAdminComponent implements OnInit {
     const val = field.metadata.dependency.value;
     let arrVal: string[] = [];
     if (Array.isArray(val)) {
-      arrVal = val;
+      arrVal = val
+        .map((v: any) => typeof v === 'object' && v !== null ? (v.value ?? v.label ?? '') : String(v ?? ''))
+        .map((v: string) => v.trim())
+        .filter((v: string) => v && v !== 'null' && v !== '_null' && v !== 'undefined');
     } else if (val !== undefined && val !== null && val !== '') {
-      arrVal = [String(val)];
+      arrVal = String(val)
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s && s !== 'null' && s !== '_null' && s !== 'undefined');
     }
     this.tempDependencySelectedOptions.set(arrVal);
     this.tempDependencyValue.set(arrVal.join(', '));
@@ -777,7 +814,10 @@ export class RequestsBetaAdminComponent implements OnInit {
     }
     
     if (metadataObj && Array.isArray(metadataObj.options)) {
-      return metadataObj.options;
+      return metadataObj.options
+        .map((opt: any) => typeof opt === 'object' && opt !== null ? (opt.value ?? opt.label ?? '') : String(opt ?? ''))
+        .map((opt: string) => opt.trim())
+        .filter((opt: string) => opt && opt !== 'null' && opt !== '_null' && opt !== 'undefined');
     }
     return [];
   }
@@ -808,15 +848,19 @@ export class RequestsBetaAdminComponent implements OnInit {
            
         let val: any;
         if (hasOptions) {
-          const selected = this.tempDependencySelectedOptions();
-          val = selected.length === 1 ? selected[0] : selected;
+          const selected = this.tempDependencySelectedOptions()
+            .map((s: string) => s.trim())
+            .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+          val = selected.length === 1 ? selected[0] : (selected.length === 0 ? '' : selected);
         } else {
           const raw = this.tempDependencyValue().trim();
-          val = raw.split(',').map(s => s.trim()).filter(Boolean);
-          if (val.length === 1) {
-            val = val[0];
-          } else if (val.length === 0) {
-            val = raw;
+          const cleanList = raw.split(',').map(s => s.trim()).filter(s => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+          if (cleanList.length === 1) {
+            val = cleanList[0];
+          } else if (cleanList.length === 0) {
+            val = '';
+          } else {
+            val = cleanList;
           }
         }
         

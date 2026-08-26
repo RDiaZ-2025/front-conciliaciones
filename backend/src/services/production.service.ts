@@ -123,15 +123,58 @@ export class ProductionService {
         });
     }
 
+    private sanitizeFieldMetadata(meta: any): any {
+        if (!meta) return null;
+        let obj = meta;
+        if (typeof obj === 'string') {
+            try { obj = JSON.parse(obj); } catch(e) { return meta; }
+        }
+        if (typeof obj !== 'object' || obj === null) return obj;
+
+        if (Array.isArray(obj.options)) {
+            obj.options = obj.options
+                .map((opt: any) => typeof opt === 'object' && opt !== null ? (opt.value ?? opt.label ?? '') : String(opt ?? ''))
+                .map((s: string) => s.trim())
+                .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+        }
+
+        if (obj.dependency) {
+            if (Array.isArray(obj.dependency.value)) {
+                obj.dependency.value = obj.dependency.value
+                    .map((v: any) => typeof v === 'object' && v !== null ? (v.value ?? v.label ?? '') : String(v ?? ''))
+                    .map((s: string) => s.trim())
+                    .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+                if (obj.dependency.value.length === 1) obj.dependency.value = obj.dependency.value[0];
+                else if (obj.dependency.value.length === 0) obj.dependency.value = '';
+            } else if (typeof obj.dependency.value === 'string') {
+                const clean = obj.dependency.value
+                    .split(',')
+                    .map((s: string) => s.trim())
+                    .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+                obj.dependency.value = clean.length > 1 ? clean : (clean[0] || '');
+            } else if (obj.dependency.value === null || obj.dependency.value === undefined) {
+                obj.dependency.value = '';
+            }
+        }
+        return obj;
+    }
+
     async getFormFields(formId: number, includeInactive: boolean = false) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const whereClause: any = { formId };
         if (!includeInactive) {
             whereClause.isActive = true;
         }
-        return await AppDataSource.getRepository(DynamicFormField).find({
+        const fields = await AppDataSource.getRepository(DynamicFormField).find({
             where: whereClause,
             order: { displayOrder: 'ASC' }
+        });
+        return fields.map(f => {
+            if (f.metadata) {
+                const sanitized = this.sanitizeFieldMetadata(f.metadata);
+                f.metadata = typeof sanitized === 'object' ? JSON.stringify(sanitized) : sanitized;
+            }
+            return f;
         });
     }
 
@@ -1446,6 +1489,9 @@ export class ProductionService {
                 const f = fields[i];
                 let fieldEntity = existingFields.find(ef => ef.id === f.id);
 
+                const metaSanitized = f.metadata ? this.sanitizeFieldMetadata(f.metadata) : null;
+                const metaString = metaSanitized ? JSON.stringify(metaSanitized) : null;
+
                 if (!fieldEntity) {
                     fieldEntity = fieldRepo.create({
                         formId,
@@ -1459,7 +1505,7 @@ export class ProductionService {
                         isActive: f.isActive ?? true,
                         defaultValueExpression: f.defaultValueExpression,
                         displayOrder: f.displayOrder ?? (i + 1),
-                        metadata: f.metadata ? (typeof f.metadata === 'string' ? f.metadata : JSON.stringify(f.metadata)) : null
+                        metadata: metaString
                     });
                 } else {
                     if (f.name !== undefined) fieldEntity.name = f.name;
@@ -1472,7 +1518,7 @@ export class ProductionService {
                     if (f.isActive !== undefined) fieldEntity.isActive = f.isActive;
                     if (f.defaultValueExpression !== undefined) fieldEntity.defaultValueExpression = f.defaultValueExpression;
                     if (f.displayOrder !== undefined) fieldEntity.displayOrder = f.displayOrder;
-                    if (f.metadata !== undefined) fieldEntity.metadata = f.metadata ? (typeof f.metadata === 'string' ? f.metadata : JSON.stringify(f.metadata)) : null;
+                    if (f.metadata !== undefined) fieldEntity.metadata = metaString;
                 }
 
                 savedFields.push(await fieldRepo.save(fieldEntity));

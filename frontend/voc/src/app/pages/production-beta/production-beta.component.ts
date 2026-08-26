@@ -2233,13 +2233,15 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
 
       if (Array.isArray(requiredVal)) {
-        return requiredVal.some(val => selectedList.includes(val));
+        const cleanReq = requiredVal.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null' && v !== '_null');
+        return cleanReq.some(val => selectedList.includes(val));
       }
       return selectedList.includes(requiredVal);
     }
 
     if (Array.isArray(requiredVal)) {
-      return requiredVal.includes(String(parentValue));
+      const cleanReq = requiredVal.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null' && v !== '_null');
+      return cleanReq.includes(String(parentValue));
     }
     return String(parentValue) === String(requiredVal);
   }
