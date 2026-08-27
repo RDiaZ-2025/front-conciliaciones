@@ -673,12 +673,17 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }));
     const targetTeamIds = selectedTeams.map(t => t.id);
 
-    let closingConfig: any = null;
+    let closingConfig: any = {
+      requireClosingStep: false,
+      formId: null,
+      workflowId: null
+    };
     if (form.metadata) {
       try {
         const meta = typeof form.metadata === 'object' ? form.metadata : JSON.parse(form.metadata);
         if (meta && meta.closingConfig && meta.closingConfig.requireClosingStep) {
           closingConfig = {
+            requireClosingStep: true,
             formId: meta.closingConfig.closingType === 'form' ? (meta.closingConfig.closingFormId || meta.closingConfig.formId) : null,
             workflowId: meta.closingConfig.closingType === 'workflow' ? (meta.closingConfig.closingWorkflowId || meta.closingConfig.workflowId) : null
           };
@@ -693,7 +698,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     });
     const submissions = [{ formId: form.id, values: formValues }];
 
-    this.productionService.submitDynamicForm(form.id, formValues, undefined, submissions, targetTeamIds, targetTeams, closingConfig || undefined).subscribe({
+    this.productionService.submitDynamicForm(form.id, formValues, undefined, submissions, targetTeamIds, targetTeams, closingConfig).subscribe({
       next: () => {
         this.showTypeSelectionDialog.set(false);
         this.messageService.add({ 

@@ -216,9 +216,10 @@ export class ProductionService {
                     effectiveClosingConfig = rootFormMeta.closingConfig;
                 }
 
-                const closingWfId = effectiveClosingConfig?.workflowId || effectiveClosingConfig?.closingWorkflowId || null;
-                const closingFormId = effectiveClosingConfig?.formId || effectiveClosingConfig?.closingFormId || null;
-                const hasClosing = !!(effectiveClosingConfig && (effectiveClosingConfig.requireClosingStep || closingWfId || closingFormId));
+                const isClosingRequired = !!(effectiveClosingConfig && effectiveClosingConfig.requireClosingStep === true);
+                const closingWfId = isClosingRequired ? (effectiveClosingConfig?.closingWorkflowId || effectiveClosingConfig?.workflowId || null) : null;
+                const closingFormId = isClosingRequired ? (effectiveClosingConfig?.closingFormId || effectiveClosingConfig?.formId || null) : null;
+                const hasClosing = isClosingRequired && (!!closingWfId || !!closingFormId);
 
                 const rootSub = subRepo.create({
                     formId: rootEntry.formId,
@@ -2246,6 +2247,131 @@ export class ProductionService {
         }
     }
 
+    private async handleSubmissionCompletion(manager: any, submission: DynamicFormSubmission): Promise<void> {
+        const subRepo = manager.getRepository(DynamicFormSubmission);
+        const stageRepo = manager.getRepository(DynamicWorkflowStage);
+        const stateRepo = manager.getRepository(DynamicSubmissionWorkflowState);
+
+        submission.currentStageId = null;
+        submission.status = 'Completed';
+        await subRepo.save(submission);
+
+        if (!submission.parentSubmissionId) {
+            // Root submission without parent: check closingConfig on root form
+            let formEntity = submission.form;
+            if (!formEntity && submission.formId) {
+                formEntity = await manager.getRepository(DynamicForm).findOne({ where: { id: submission.formId } });
+            }
+
+            let rootMeta: any = {};
+            if (formEntity?.metadata) {
+                try {
+                    rootMeta = typeof formEntity.metadata === 'object' ? formEntity.metadata : JSON.parse(formEntity.metadata);
+                } catch(e) {}
+            }
+            const isClosingRequired = !!(rootMeta?.closingConfig && rootMeta.closingConfig.requireClosingStep === true);
+            const closingWfId = isClosingRequired ? (rootMeta?.closingConfig?.closingWorkflowId || rootMeta?.closingConfig?.workflowId || null) : null;
+            const closingFormId = isClosingRequired ? (rootMeta?.closingConfig?.closingFormId || rootMeta?.closingConfig?.formId || null) : null;
+
+            if (isClosingRequired && closingWfId) {
+                const firstClosingStage = await stageRepo.findOne({
+                    where: { workflowId: closingWfId, stepOrder: 1, isDeleted: false },
+                    order: { stepOrder: 'ASC' }
+                });
+                if (firstClosingStage) {
+                    submission.workflowId = closingWfId;
+                    submission.currentStageId = firstClosingStage.id;
+                    submission.status = 'In Progress';
+                    await subRepo.save(submission);
+                    await this.createStageStates(manager, submission, firstClosingStage);
+                    return;
+                }
+            } else if (isClosingRequired && closingFormId) {
+                submission.workflowId = null;
+                submission.currentStageId = null;
+                submission.status = 'In Progress';
+                await subRepo.save(submission);
+
+                const closingState = stateRepo.create({
+                    submissionId: submission.id,
+                    stageId: null as any,
+                    assignedUserId: submission.requesterUserId,
+                    customFormIdToFill: closingFormId,
+                    status: 'Pending'
+                });
+                await stateRepo.save(closingState);
+                try {
+                    await notificationService.createNotification(
+                        submission.requesterUserId,
+                        'Cierre de Solicitud Requerido',
+                        `Todas las áreas han finalizado. Por favor diligencia el formulario de cierre para "${formEntity?.name || 'Solicitud'}".`,
+                        'info'
+                    );
+                } catch (err) {}
+                return;
+            }
+
+            // NOT required or no closing stages:
+            submission.workflowId = null;
+            submission.currentStageId = null;
+            submission.status = 'Completed';
+            await subRepo.save(submission);
+
+            try {
+                await notificationService.createNotification(
+                    submission.requesterUserId,
+                    'Solicitud Completada',
+                    `Tu solicitud de "${formEntity?.name || 'Producción'}" ha sido completada y aprobada.`,
+                    'success'
+                );
+            } catch (err) {}
+            return;
+        }
+
+        // Child submission completed: check if all sibling child submissions of this parent have completed
+        const pendingSiblingsCount = await subRepo.count({
+            where: { parentSubmissionId: submission.parentSubmissionId, status: Not('Completed') }
+        });
+
+        if (pendingSiblingsCount > 0) {
+            // Still waiting for other sibling submissions to complete
+            return;
+        }
+
+        // All siblings finished! Load parent submission
+        const parentSub = await subRepo.findOne({
+            where: { id: submission.parentSubmissionId },
+            relations: ['form', 'currentStage']
+        });
+
+        if (!parentSub) return;
+
+        // Check if parentSub has a workflow and a next stage to advance to
+        const parentWfId = parentSub.workflowId || (parentSub.form ? parentSub.form.workflowId : null);
+        let parentNextStage = null;
+
+        if (parentWfId && parentSub.currentStage) {
+            parentNextStage = await stageRepo.createQueryBuilder("stage")
+                .where("(stage.workflowId = :wfId OR (stage.workflowId IS NULL AND stage.formId = :formId))", { wfId: parentWfId, formId: parentSub.formId })
+                .andWhere("stage.stepOrder > :stepOrder", { stepOrder: parentSub.currentStage.stepOrder })
+                .andWhere("stage.isDeleted = :isDeleted", { isDeleted: false })
+                .orderBy("stage.stepOrder", "ASC")
+                .getOne();
+        }
+
+        if (parentNextStage) {
+            // Parent has a next stage in its workflow (e.g. DATA advancing from Stage 4 to Stage 5!)
+            parentSub.currentStageId = parentNextStage.id;
+            parentSub.status = 'In Progress';
+            await subRepo.save(parentSub);
+            await this.createStageStates(manager, parentSub, parentNextStage);
+        } else {
+            // Parent has finished all its stages (e.g. DATA finished Stage 7, or parent is a multi-team container):
+            // Recursively complete parent!
+            await this.handleSubmissionCompletion(manager, parentSub);
+        }
+    }
+
     async actionApproval(stateId: number, userId: number, action: 'approve' | 'reject', notes: string, formValues?: Record<string, string>, consecutive?: string) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         return await AppDataSource.transaction(async (manager) => {
@@ -2639,118 +2765,7 @@ export class ProductionService {
                 }
 
                 if (!advanced) {
-                    if (submission.parentSubmissionId) {
-                        // Mark child subflow submission as Completed
-                        submission.currentStageId = null;
-                        submission.status = 'Completed';
-                        await subRepo.save(submission);
-
-                        // Check if all sibling child submissions of this parent have completed
-                        const pendingSiblingsCount = await subRepo.count({
-                            where: { parentSubmissionId: submission.parentSubmissionId, status: Not('Completed') }
-                        });
-
-                        if (pendingSiblingsCount === 0) {
-                            // Resume / advance the parent submission to its next stage!
-                            const parentSub = await subRepo.findOne({
-                                where: { id: submission.parentSubmissionId },
-                                relations: ['form', 'currentStage']
-                            });
-
-                            if (parentSub) {
-                                const parentWfId = parentSub.workflowId || (parentSub.form ? parentSub.form.workflowId : null);
-                                
-                                let parentNextStage = null;
-                                if (parentSub.currentStage) {
-                                    parentNextStage = await stageRepo.createQueryBuilder("stage")
-                                        .where("(stage.workflowId = :wfId OR (stage.workflowId IS NULL AND stage.formId = :formId))", { wfId: parentWfId, formId: parentSub.formId })
-                                        .andWhere("stage.stepOrder > :stepOrder", { stepOrder: parentSub.currentStage.stepOrder })
-                                        .andWhere("stage.isDeleted = :isDeleted", { isDeleted: false })
-                                        .orderBy("stage.stepOrder", "ASC")
-                                        .getOne();
-                                } else if (parentWfId && parentSub.status !== 'Completed') {
-                                    parentNextStage = await stageRepo.findOne({
-                                        where: { workflowId: parentWfId, stepOrder: 1, isDeleted: false },
-                                        order: { stepOrder: 'ASC' }
-                                    });
-                                }
-
-                                if (parentNextStage) {
-                                    parentSub.currentStageId = parentNextStage.id;
-                                    parentSub.status = 'In Progress';
-                                    await subRepo.save(parentSub);
-                                    await this.createStageStates(manager, parentSub, parentNextStage);
-                                } else if (parentSub.status !== 'Completed' && !parentWfId) {
-                                    // Check if closing form is directly configured in metadata
-                                    let parentMeta: any = {};
-                                    if (parentSub.form?.metadata) {
-                                        try {
-                                            parentMeta = typeof parentSub.form.metadata === 'object' ? parentSub.form.metadata : JSON.parse(parentSub.form.metadata);
-                                        } catch(e) {}
-                                    }
-                                    const closingFormId = parentMeta?.closingConfig?.closingFormId || parentMeta?.closingConfig?.formId;
-                                    if (closingFormId) {
-                                        const closingState = stateRepo.create({
-                                            submissionId: parentSub.id,
-                                            stageId: null as any,
-                                            assignedUserId: parentSub.requesterUserId,
-                                            customFormIdToFill: closingFormId,
-                                            status: 'Pending'
-                                        });
-                                        await stateRepo.save(closingState);
-                                        try {
-                                            await notificationService.createNotification(
-                                                parentSub.requesterUserId,
-                                                'Cierre de Solicitud Requerido',
-                                                `Todas las áreas han finalizado. Por favor diligencia el formulario de cierre para "${parentSub.form?.name || 'Solicitud'}".`,
-                                                'info'
-                                            );
-                                        } catch (err) {}
-                                    } else {
-                                        parentSub.currentStageId = null;
-                                        parentSub.status = 'Completed';
-                                        await subRepo.save(parentSub);
-                                        try {
-                                            await notificationService.createNotification(
-                                                parentSub.requesterUserId,
-                                                'Solicitud Completada',
-                                                `Tu solicitud de "${parentSub.form?.name || 'Producción'}" ha sido completada y aprobada.`,
-                                                'success'
-                                            );
-                                        } catch (err) {}
-                                    }
-                                } else {
-                                    // Parent submission also completed all stages!
-                                    parentSub.currentStageId = null;
-                                    parentSub.status = 'Completed';
-                                    await subRepo.save(parentSub);
-
-                                    try {
-                                        await notificationService.createNotification(
-                                            parentSub.requesterUserId,
-                                            'Solicitud Completada',
-                                            `Tu solicitud de "${parentSub.form?.name || 'Producción'}" ha sido completada y aprobada.`,
-                                            'success'
-                                        );
-                                    } catch (err) {}
-                                }
-                            }
-                        }
-                    } else {
-                        // Root workflow is completed!
-                        submission.currentStageId = null;
-                        submission.status = 'Completed';
-                        await subRepo.save(submission);
-
-                        try {
-                            await notificationService.createNotification(
-                                submission.requesterUserId,
-                                'Solicitud Completada',
-                                `Tu solicitud de "${currentState.submission.form.name}" ha sido completada y aprobada.`,
-                                'success'
-                            );
-                        } catch (err) {}
-                    }
+                    await this.handleSubmissionCompletion(manager, submission);
                 }
             } else if (action === 'reject') {
                 currentState.status = 'Rejected';

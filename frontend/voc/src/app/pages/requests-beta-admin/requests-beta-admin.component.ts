@@ -459,12 +459,12 @@ export class RequestsBetaAdminComponent implements OnInit {
         meta = {};
       }
     }
-    meta.teamWorkflows = this.formTeamWorkflows();
+    const requireClosing = this.formRequireClosingStep();
     meta.closingConfig = {
-      requireClosingStep: this.formRequireClosingStep(),
+      requireClosingStep: requireClosing,
       closingType: this.formClosingType(),
-      closingFormId: this.formClosingType() === 'form' ? this.formClosingFormId() : null,
-      closingWorkflowId: this.formClosingType() === 'workflow' ? this.formClosingWorkflowId() : null
+      closingFormId: requireClosing && this.formClosingType() === 'form' ? this.formClosingFormId() : null,
+      closingWorkflowId: requireClosing && this.formClosingType() === 'workflow' ? this.formClosingWorkflowId() : null
     };
     data.metadata = JSON.stringify(meta);
 
