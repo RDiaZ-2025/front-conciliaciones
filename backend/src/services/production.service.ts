@@ -907,14 +907,22 @@ export class ProductionService {
         const isFinalStage = !nextStageTemp;
 
          const historyStages = allStatesToInclude.map((cState) => {
-             const resolvedForm = cState.customFormToFill || cState.stage?.formToFill;
-             const resolvedFormId = cState.customFormIdToFill || cState.stage?.formIdToFill;
-             const stageVals = resolvedFormId 
-                 ? allValuesToInclude.filter(v => v && v.field && v.field.formId === resolvedFormId && (v.workflowStateId === cState.id || !v.workflowStateId))
-                 : allValuesToInclude.filter(v => v && v.field && v.workflowStateId === cState.id);
+             const resolvedForm = cState.customFormToFill || cState.stage?.formToFill || (cState.submissionId !== sub.id ? (cState as any).submission?.form : null);
+             const resolvedFormId = cState.customFormIdToFill || cState.stage?.formIdToFill || (cState.submissionId !== sub.id ? (cState as any).submission?.formId : null);
+             let stageVals = allValuesToInclude.filter(v => v && v.field && v.workflowStateId === cState.id);
+             
+             // If no specific workflowStateId, but is the initial state of a child submission/subflow without stage form:
+             if (stageVals.length === 0 && (!cState.stage || cState.stage.stepOrder === 1) && cState.status === 'Approved' && !cState.notes?.toLowerCase().includes('rechaz')) {
+                 stageVals = allValuesToInclude.filter(v => v && v.field && !v.workflowStateId && (resolvedFormId ? v.field.formId === resolvedFormId : true));
+             }
+
              const user = cState.actionedByUser || cState.assignedUser;
              
              let displayName = cState.stage ? cState.stage.name : 'Etapa';
+             if (cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir'))) {
+                 displayName = `${displayName} (Corrección)`;
+             }
+             
              if (cState.stage?.workflow && sub.workflowId && cState.stage.workflowId !== sub.workflowId) {
                  displayName = `${cState.stage.workflow.name}: ${displayName}`;
              } else if (cState.submissionId !== sub.id && (cState as any).submission?.form) {
@@ -1952,8 +1960,8 @@ export class ProductionService {
             }
 
             const maxSelectedForms = (parsedAssigneeConfig && parsedAssigneeConfig.maxSelectedForms !== undefined) ? parsedAssigneeConfig.maxSelectedForms : null;
-            const formIdToFill = isInitialRequestCorrection ? null : (isMultiForms ? -1 : (state.customFormIdToFill || state.stage?.formIdToFill || null));
-            let formToFill = isInitialRequestCorrection ? null : (state.customFormToFill || state.stage?.formToFill || null);
+            const formIdToFill = isInitialRequestCorrection ? null : (isMultiForms ? -1 : (state.customFormIdToFill || state.stage?.formIdToFill || (isCorrection ? state.submission.formId : null)));
+            let formToFill = isInitialRequestCorrection ? null : (state.customFormToFill || state.stage?.formToFill || (isCorrection ? state.submission.form : null));
 
             if (formIdToFill && formIdToFill > 0 && (!formToFill || !formToFill.fields || formToFill.fields.length === 0)) {
                 formToFill = await AppDataSource.getRepository(DynamicForm).findOne({
@@ -2422,16 +2430,9 @@ export class ProductionService {
                     const targetFormIds = new Set<number>();
                     if (currentState.customFormIdToFill) targetFormIds.add(currentState.customFormIdToFill);
                     if (stage?.formIdToFill) targetFormIds.add(stage.formIdToFill);
-
-                    // Only add ancestor/submission form if no stage/custom form was specified (i.e. true initial form correction)
-                    if (targetFormIds.size === 0) {
-                        const parentSubs = await this.getAncestorSubmissions(submission.id);
-                        if (parentSubs.length > 0) {
-                            parentSubs.forEach(p => targetFormIds.add(p.formId));
-                        } else {
-                            targetFormIds.add(submission.formId);
-                        }
-                    }
+                    targetFormIds.add(submission.formId);
+                    const parentSubs = await this.getAncestorSubmissions(submission.id);
+                    parentSubs.forEach(p => targetFormIds.add(p.formId));
 
                     const valsToSave: DynamicFormFieldValue[] = [];
                     for (const fId of Array.from(targetFormIds)) {
