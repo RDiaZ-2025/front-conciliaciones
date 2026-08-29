@@ -100,7 +100,7 @@
                                     [pTooltip]="sub.formName">
                                     <lucide-icon [name]="getFormIcon(sub)" [class]="getFormIconColor(sub) + ' mr-2'"></lucide-icon>{{ sub.formName }}
                                 </h3>
-                                <p-tag [severity]="getStatusSeverity(sub.status)" [value]="sub.status"></p-tag>
+                                <p-tag [severity]="getStatusSeverity(sub.status)" [value]="getStatusLabel(sub.status)"></p-tag>
                             </div>
                         </ng-template>
 
@@ -1555,7 +1555,7 @@
                     <span class="text-xs text-500 font-medium">Estado General</span>
                     <div>
                         <p-tag [severity]="getStatusSeverity(selectedDetails().status)" 
-                               [value]="selectedDetails().status"></p-tag>
+                               [value]="getStatusLabel(selectedDetails().status)"></p-tag>
                     </div>
                 </div>
                 <div class="col-6 flex flex-column gap-1">

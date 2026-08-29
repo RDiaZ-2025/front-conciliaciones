@@ -749,9 +749,9 @@ export class ProductionService {
             const treeSubIds = getDescendantIds(sub.id);
             const activeStatesForThisSub = allActiveStates.filter(s => treeSubIds.has(s.submissionId));
 
-            let assigneeName = 'N/A';
+            let assigneeName = 'Sin Asignar';
             let assigneeEmail: string | undefined = undefined;
-            let displayStageName = 'N/A';
+            let displayStageName = 'Sin Asignar';
 
             let users = activeStatesForThisSub.map(s => s.assignedUser).filter(Boolean);
             if (users.length > 0) {
@@ -907,13 +907,14 @@ export class ProductionService {
         const isFinalStage = !nextStageTemp;
 
          const historyStages = allStatesToInclude.map((cState) => {
-             const resolvedForm = cState.customFormToFill || cState.stage?.formToFill || (cState.submissionId !== sub.id ? (cState as any).submission?.form : null);
-             const resolvedFormId = cState.customFormIdToFill || cState.stage?.formIdToFill || (cState.submissionId !== sub.id ? (cState as any).submission?.formId : null);
+             const isChildSub = cState.submissionId !== sub.id;
+             const resolvedForm = cState.customFormToFill || cState.stage?.formToFill || (isChildSub ? (cState as any).submission?.form : null);
+             const resolvedFormId = cState.customFormIdToFill || cState.stage?.formIdToFill || (isChildSub ? (cState as any).submission?.formId : null);
              let stageVals = allValuesToInclude.filter(v => v && v.field && v.workflowStateId === cState.id);
              
-             // If no specific workflowStateId, but is the initial state of a child submission/subflow without stage form:
-             if (stageVals.length === 0 && (!cState.stage || cState.stage.stepOrder === 1) && cState.status === 'Approved' && !cState.notes?.toLowerCase().includes('rechaz')) {
-                 stageVals = allValuesToInclude.filter(v => v && v.field && !v.workflowStateId && (resolvedFormId ? v.field.formId === resolvedFormId : true));
+             // If no specific workflowStateId, but is the initial state of a child submission/subflow with its own form:
+             if (stageVals.length === 0 && isChildSub && resolvedFormId && (!cState.stage || cState.stage.stepOrder === 1) && cState.status === 'Approved' && !cState.notes?.toLowerCase().includes('rechaz')) {
+                 stageVals = allValuesToInclude.filter(v => v && v.field && v.submissionId === cState.submissionId && !v.workflowStateId && v.field.formId === resolvedFormId);
              }
 
              const user = cState.actionedByUser || cState.assignedUser;
@@ -942,8 +943,8 @@ export class ProductionService {
              return {
                  stageName: displayName,
                  formName: formName,
-                 actionedByUserName: user?.name || 'N/A',
-                 actionedByUserEmail: user?.email || 'N/A',
+                 actionedByUserName: user?.name || 'Sin Asignar',
+                 actionedByUserEmail: user?.email || '',
                  actionedAt: cState.updatedAt,
                  status: stateStatus,
                  notes: cState.notes,
@@ -1790,8 +1791,8 @@ export class ProductionService {
                 return {
                     stageName: displayName,
                     formName: formName,
-                    actionedByUserName: user?.name || 'N/A',
-                    actionedByUserEmail: user?.email || 'N/A',
+                    actionedByUserName: user?.name || 'Sin Asignar',
+                    actionedByUserEmail: user?.email || '',
                     actionedAt: cState.updatedAt,
                     status: stateStatus,
                     notes: cState.notes,

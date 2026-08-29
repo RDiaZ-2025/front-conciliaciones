@@ -7,7 +7,7 @@ const notificationService = new NotificationService();
 export const getUserNotifications = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     if (!userId) {
-        return res.status(401).json({ success: false, message: 'Unauthorized' });
+        return res.status(401).json({ success: false, message: 'No autorizado' });
     }
 
     const notifications = await notificationService.getUserNotifications(userId);
@@ -27,17 +27,17 @@ export const markAsRead = asyncHandler(async (req: Request, res: Response) => {
     const notificationId = parseInt(req.params.id);
 
     if (!userId) {
-        return res.status(401).json({ success: false, message: 'Unauthorized' });
+        return res.status(401).json({ success: false, message: 'No autorizado' });
     }
 
     if (isNaN(notificationId)) {
-        return res.status(400).json({ success: false, message: 'Invalid notification ID' });
+        return res.status(400).json({ success: false, message: 'ID de notificación inválido' });
     }
 
     const notification = await notificationService.markAsRead(userId, notificationId);
 
     if (!notification) {
-        return res.status(404).json({ success: false, message: 'Notification not found' });
+        return res.status(404).json({ success: false, message: 'Notificación no encontrada' });
     }
 
     return res.json({ success: true, data: notification });
@@ -46,10 +46,10 @@ export const markAsRead = asyncHandler(async (req: Request, res: Response) => {
 export const markAllAsRead = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     if (!userId) {
-        return res.status(401).json({ success: false, message: 'Unauthorized' });
+        return res.status(401).json({ success: false, message: 'No autorizado' });
     }
 
     await notificationService.markAllAsRead(userId);
 
-    return res.json({ success: true, message: 'All notifications marked as read' });
+    return res.json({ success: true, message: 'Todas las notificaciones fueron marcadas como leídas' });
 });

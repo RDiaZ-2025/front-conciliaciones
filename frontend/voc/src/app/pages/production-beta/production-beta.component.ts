@@ -1022,9 +1022,24 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     if (!status) return 'secondary';
     const s = status.toLowerCase();
     if (s === 'approved' || s === 'completed') return 'success';
-    if (s === 'in progress' || s === 'pending') return 'info';
+    if (s === 'in progress') return 'info';
+    if (s === 'pending') return 'warn';
     if (s === 'rejected') return 'danger';
     return 'secondary';
+  }
+
+  getStatusLabel(status: string): string {
+    if (!status) return 'Pendiente';
+    switch (status) {
+      case 'Completed': return 'Completado';
+      case 'In Progress': return 'En Proceso';
+      case 'Pending': return 'Pendiente';
+      case 'Rejected': return 'Rechazado';
+      case 'Approved': return 'Aprobado';
+      case 'Draft': return 'Borrador';
+      case 'Cancelled': return 'Cancelado';
+      default: return status;
+    }
   }
 
   goToInbox() {
@@ -2374,6 +2389,41 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   }
 
   formatLabel(key: string): string {
+    if (!key) return '';
+    const lower = key.toLowerCase().trim();
+    const dictionary: Record<string, string> = {
+      quantity: 'Cantidad',
+      cant: 'Cantidad',
+      cantidad: 'Cantidad',
+      product: 'Producto',
+      producto: 'Producto',
+      item: 'Ítem',
+      items: 'Ítems',
+      price: 'Precio',
+      cost: 'Costo',
+      total: 'Total',
+      value: 'Valor',
+      valor: 'Valor',
+      name: 'Nombre',
+      description: 'Descripción',
+      observation: 'Observación',
+      observations: 'Observaciones',
+      comments: 'Comentarios',
+      comment: 'Comentario',
+      date: 'Fecha',
+      status: 'Estado',
+      type: 'Tipo',
+      unit: 'Unidad',
+      format: 'Formato',
+      channel: 'Canal',
+      platform: 'Plataforma',
+      notes: 'Notas',
+      file: 'Archivo',
+      files: 'Archivos'
+    };
+    if (dictionary[lower]) {
+      return dictionary[lower];
+    }
     return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 
