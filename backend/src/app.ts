@@ -71,6 +71,10 @@ app.use(cookieParser()); // Cookies
 app.use(express.json({ limit: '10mb' })); // JSON parser
 app.use(express.urlencoded({ extended: true, limit: '10mb' })); // URL encoded
 
+// Servir estáticos locales para uploads de imágenes si es necesario
+import path from 'path';
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 // Middleware de logging de acciones de usuario
 app.use(actionLogger);
 

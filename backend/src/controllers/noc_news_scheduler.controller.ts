@@ -164,4 +164,109 @@ export class NocNewsSchedulerController {
             res.status(500).json({ message: 'Error interno al publicar la noticia', error: error.message });
         }
     }
+
+    async getDraftDetail(req: Request, res: Response): Promise<void> {
+        try {
+            const { id } = req.params;
+            const draft = await schedulerService.getDraftById(parseInt(id));
+            if (!draft) {
+                res.status(404).json({ message: 'Borrador no encontrado' });
+                return;
+            }
+            res.status(200).json(draft);
+        } catch (error: any) {
+            console.error('Error fetching draft detail:', error);
+            res.status(500).json({ message: 'Error interno al obtener detalle del borrador', error: error.message });
+        }
+    }
+
+    async updateDraft(req: Request, res: Response): Promise<void> {
+        try {
+            const { id } = req.params;
+            const articleData = req.body;
+            if (!articleData) {
+                res.status(400).json({ message: 'Faltan datos del artículo' });
+                return;
+            }
+            const updated = await schedulerService.updateDraft(parseInt(id), articleData);
+            res.status(200).json(updated);
+        } catch (error: any) {
+            console.error('Error updating draft:', error);
+            res.status(500).json({ message: 'Error interno al actualizar el borrador', error: error.message });
+        }
+    }
+
+    async deleteDraft(req: Request, res: Response): Promise<void> {
+        try {
+            const { id } = req.params;
+            const success = await schedulerService.deleteDraft(parseInt(id, 10));
+            if (!success) {
+                res.status(404).json({ message: 'Borrador no encontrado o ya eliminado' });
+                return;
+            }
+            res.status(200).json({ success: true, message: 'Borrador eliminado correctamente' });
+        } catch (error: any) {
+            console.error('Error deleting draft:', error);
+            res.status(400).json({ success: false, message: error.message });
+        }
+    }
+
+    async aiAdjustParagraph(req: Request, res: Response): Promise<void> {
+        try {
+            const { id } = req.params;
+            const { blockId, currentText, instruction } = req.body;
+            if (!instruction) {
+                res.status(400).json({ message: 'La instrucción en lenguaje natural es requerida' });
+                return;
+            }
+            const result = await schedulerService.aiAdjustParagraph(parseInt(id), blockId, currentText || '', instruction);
+            res.status(200).json(result);
+        } catch (error: any) {
+            console.error('Error in aiAdjustParagraph:', error);
+            res.status(500).json({ message: 'Error al ajustar párrafo con IA', error: error.message });
+        }
+    }
+
+    async aiAdjustArticle(req: Request, res: Response): Promise<void> {
+        try {
+            const { id } = req.params;
+            const { instruction, articleData } = req.body;
+            if (!instruction || !articleData) {
+                res.status(400).json({ message: 'La instrucción y la estructura del artículo son requeridas' });
+                return;
+            }
+            const result = await schedulerService.aiAdjustArticle(parseInt(id), instruction, articleData);
+            res.status(200).json(result);
+        } catch (error: any) {
+            console.error('Error in aiAdjustArticle:', error);
+            res.status(500).json({ message: 'Error al realizar ajuste global con IA', error: error.message });
+        }
+    }
+
+    async aiRegenerateImage(req: Request, res: Response): Promise<void> {
+        try {
+            const { id } = req.params;
+            const { blockId, currentUrl, prompt, instruction } = req.body;
+            if (!instruction && !prompt) {
+                res.status(400).json({ message: 'Se requiere una instrucción o prompt para la imagen' });
+                return;
+            }
+            const result = await schedulerService.aiRegenerateImage(parseInt(id), blockId, currentUrl || '', prompt || '', instruction || '');
+            res.status(200).json(result);
+        } catch (error: any) {
+            console.error('Error in aiRegenerateImage:', error);
+            res.status(500).json({ message: 'Error al regenerar imagen con IA', error: error.message });
+        }
+    }
+
+    async executeSchedule(req: Request, res: Response): Promise<void> {
+        try {
+            const { id } = req.params;
+            const result = await schedulerService.executeSchedule(id);
+            res.status(200).json(result);
+        } catch (error: any) {
+            console.error('Error executing news schedule:', error);
+            res.status(500).json({ message: error.message || 'Error interno al ejecutar agendamiento' });
+        }
+    }
 }

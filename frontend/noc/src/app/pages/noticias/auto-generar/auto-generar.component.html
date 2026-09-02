@@ -83,9 +83,18 @@
                   {{ schedule.pendingDraftsCount }}
                 </span>
               </div>
-              <button pButton pRipple class="p-button-rounded p-button-warning p-button-text" 
-                      [loading]="isExecuting(schedule.id)" pTooltip="Ejecutar Ahora" tooltipPosition="top"
-                      (click)="executeNow(schedule)"><lucide-icon name="zap"></lucide-icon></button>
+              <div class="relative inline-block">
+                <button pButton pRipple class="p-button-rounded p-button-warning p-button-text" 
+                        pTooltip="Ejecutar Ahora (Generar Noticia con IA)" tooltipPosition="top"
+                        (click)="executeNow(schedule)">
+                  <lucide-icon name="zap" [class.animate-pulse]="getGeneratingCount(schedule.id) > 0"></lucide-icon>
+                </button>
+                <span *ngIf="getGeneratingCount(schedule.id) > 0" 
+                      class="absolute bg-orange-500 text-white font-bold border-circle flex align-items-center justify-content-center pointer-events-none shadow-1"
+                      style="top: -2px; right: -2px; width: 16px; height: 16px; font-size: 9px; border: 1.5px solid white; line-height: 1; z-index: 2;">
+                  {{ getGeneratingCount(schedule.id) }}
+                </span>
+              </div>
               <button pButton pRipple class="p-button-rounded p-button-info p-button-text" 
                       pTooltip="Editar" tooltipPosition="top"
                       (click)="editSchedule(schedule)"><lucide-icon name="pencil"></lucide-icon></button>
@@ -231,29 +240,45 @@
 </p-dialog>
 
 <!-- Dialog 1: List Pending Drafts -->
-<p-dialog [(visible)]="displayDraftsDialog" [header]="'Borradores Pendientes: ' + (selectedScheduleForDrafts?.name || '')" 
-          [modal]="true" [style]="{width: '750px'}" [breakpoints]="{'960px': '85vw', '640px': '95vw'}" 
+<p-dialog [(visible)]="displayDraftsDialog" [header]="'Borradores de Noticias: ' + (selectedScheduleForDrafts?.name || '')" 
+          [modal]="true" [style]="{width: '800px'}" [breakpoints]="{'960px': '85vw', '640px': '95vw'}" 
           styleClass="custom-scheduler-modal">
   <ng-template pTemplate="content">
     <p-table [value]="pendingDrafts()" [loading]="loadingDrafts()" [rows]="5" [paginator]="true" styleClass="p-datatable-striped">
       <ng-template pTemplate="header">
         <tr>
-          <th>Fecha de Generación</th>
-          <th>Identificador / Ruta</th>
-          <th class="text-center" style="width: 240px;">Acciones</th>
+          <th>Noticia / Título</th>
+          <th style="width: 140px;">Fecha</th>
+          <th class="text-center" style="width: 110px;">Estado</th>
+          <th class="text-center" style="width: 130px;">Acciones</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-draft>
         <tr>
-          <td>{{ draft.createdAt | date:'medium' }}</td>
-          <td><code class="text-xs bg-light p-1 border-round">{{ draft.path }}</code></td>
+          <td>
+            <div class="font-bold text-main text-sm mb-1">{{ draft.title || 'Noticia Sin Título' }}</div>
+            <div class="text-xs text-muted" *ngIf="draft.subtitle">{{ draft.subtitle | slice:0:80 }}...</div>
+          </td>
+          <td>
+            <div class="text-xs text-main">{{ draft.createdAt | date:'short' }}</div>
+          </td>
           <td class="text-center">
-            <div class="flex justify-content-center gap-2">
-              <button pButton pRipple type="button" class="p-button-outlined p-button-sm border-round-md" (click)="previewDraft(draft)">
-                <lucide-icon name="eye" class="mr-1" [size]="16"></lucide-icon> Previsualizar
+            <p-tag [severity]="draft.status === 'published' ? 'success' : 'warn'" 
+                   [value]="draft.status === 'published' ? 'Publicada' : 'Borrador'" [rounded]="true"></p-tag>
+          </td>
+          <td class="text-center">
+            <div class="flex justify-content-center gap-1">
+              <button pButton pRipple type="button" class="p-button-rounded p-button-info p-button-text" 
+                      pTooltip="Editar y Previsualizar Noticia" tooltipPosition="top" (click)="openEditor(draft)">
+                <lucide-icon name="pencil"></lucide-icon>
               </button>
-              <button pButton pRipple type="button" class="p-button-success p-button-sm border-round-md" (click)="publishDraft(draft)">
-                <lucide-icon name="globe" class="mr-1" [size]="16"></lucide-icon> Publicar
+              <button *ngIf="draft.status !== 'published'" pButton pRipple type="button" class="p-button-rounded p-button-success p-button-text" 
+                      pTooltip="Publicar en la Web Oficial" tooltipPosition="top" (click)="publishDraft(draft)">
+                <lucide-icon name="globe"></lucide-icon>
+              </button>
+              <button *ngIf="draft.status !== 'published'" pButton pRipple type="button" class="p-button-rounded p-button-danger p-button-text" 
+                      pTooltip="Eliminar Borrador Definitivamente" tooltipPosition="top" (click)="confirmDeleteDraft(draft, $event)">
+                <lucide-icon name="trash-2"></lucide-icon>
               </button>
             </div>
           </td>
@@ -261,8 +286,8 @@
       </ng-template>
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="3" class="text-center p-4 text-muted">
-            No hay borradores pendientes de aprobación para este agendamiento.
+          <td colspan="4" class="text-center p-4 text-muted">
+            No hay borradores registrados para este agendamiento.
           </td>
         </tr>
       </ng-template>
@@ -275,22 +300,303 @@
   </ng-template>
 </p-dialog>
 
-<!-- Dialog 2: Preview Rendered News -->
-<p-dialog [(visible)]="displayPreviewDialog" [header]="previewTitle()" 
-          [modal]="true" [style]="{width: '800px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false"
+<!-- Dialog 2: Full Interactive Granular News Editor & Previsualizer -->
+<p-dialog [(visible)]="displayEditorDialog" [modal]="true" 
+          [style]="{width: '1000px', 'max-width': '98vw', height: '92vh'}" [draggable]="false" [resizable]="false"
+          styleClass="custom-scheduler-modal news-editor-dialog">
+  <ng-template pTemplate="header">
+    <div class="flex flex-column md:flex-row align-items-start md:align-items-center justify-content-between w-full gap-3 pr-2">
+      <div class="flex align-items-center gap-2">
+        <span class="text-2xl">📝</span>
+        <div>
+          <h3 class="text-lg font-bold text-main m-0 flex align-items-center gap-2">
+            Editor y Previsualizador de Noticia
+            <p-tag [severity]="currentDraft?.status === 'published' ? 'success' : 'warn'" 
+                   [value]="currentDraft?.status === 'published' ? 'Publicada' : 'Borrador'" [rounded]="true"></p-tag>
+          </h3>
+          <span class="text-xs text-muted">Edita cada párrafo o imagen a mano o mediante instrucciones de IA.</span>
+        </div>
+      </div>
+      <div class="flex align-items-center gap-2">
+        <button pButton pRipple type="button" class="p-button-outlined p-button-sm border-round-lg p-button-help white-space-nowrap"
+                (click)="openGlobalAiDialog()" pTooltip="Aplicar cambios globales a todo el artículo con IA" tooltipPosition="bottom">
+          <lucide-icon name="sparkles" class="mr-1" [size]="15"></lucide-icon> Ajuste Global con IA
+        </button>
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template pTemplate="content">
+    <div *ngIf="loadingEditor()" class="flex flex-column align-items-center justify-content-center p-6 gap-3 h-full">
+      <i class="pi pi-spin pi-spinner text-primary text-5xl"></i>
+      <span class="font-medium text-muted">Cargando artículo y bloques estructurados...</span>
+    </div>
+
+    <div *ngIf="!loadingEditor() && currentArticleData" class="article-canvas-container p-3 flex flex-column gap-4">
+      
+      <!-- Fuentes y Noticias Consultadas por la IA -->
+      <div *ngIf="currentArticleData.sourcesUsed && currentArticleData.sourcesUsed.length > 0" 
+           class="surface-card p-3 border-round-xl border-1 border-main shadow-1 flex flex-column gap-2"
+           style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.04) 0%, rgba(147, 51, 234, 0.04) 100%);">
+        <div class="flex justify-content-between align-items-center">
+          <div class="flex align-items-center gap-2">
+            <lucide-icon name="newspaper" class="text-blue-500" [size]="16"></lucide-icon>
+            <label class="text-xs font-bold text-main uppercase tracking-wider">Noticias y Fuentes Consultadas por la IA</label>
+          </div>
+          <span class="text-xs text-muted">{{ currentArticleData.sourcesUsed.length }} fuente(s) contrastada(s)</span>
+        </div>
+        
+        <div class="flex flex-column gap-2 mt-1">
+          <div *ngFor="let src of currentArticleData.sourcesUsed" 
+               class="flex align-items-center justify-content-between p-2 surface-overlay border-round-lg border-1 border-main gap-3 hover:surface-hover transition-colors">
+            <div class="flex align-items-center gap-2 overflow-hidden flex-grow-1">
+              <span class="px-2 py-1 border-round-md font-bold text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 white-space-nowrap">
+                {{ getSourceName(src) }}
+              </span>
+              <span class="text-sm font-medium text-main text-overflow-ellipsis white-space-nowrap overflow-hidden">
+                {{ getSourceTitle(src) }}
+              </span>
+            </div>
+            <a [href]="getSourceUrl(src)" target="_blank" rel="noopener noreferrer" 
+               class="flex align-items-center gap-1 text-xs font-semibold text-primary hover:underline white-space-nowrap px-2 py-1 border-round hover:bg-primary-50">
+              Ver Noticia Original <lucide-icon name="external-link" [size]="13"></lucide-icon>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Titular / Headline -->
+      <div class="surface-card p-3 border-round-xl border-1 border-main shadow-1 flex flex-column gap-2">
+        <div class="flex justify-content-between align-items-center">
+          <label class="text-xs font-bold text-muted uppercase tracking-wider">Titular Principal (Headline)</label>
+          <span class="text-xs text-muted italic">Editable</span>
+        </div>
+        <textarea [(ngModel)]="currentArticleData.title" rows="2" class="w-full form-headline-input" 
+                  placeholder="Escribe el título de la noticia..."></textarea>
+      </div>
+
+      <!-- Copete / Subtitle -->
+      <div class="surface-card p-3 border-round-xl border-1 border-main shadow-1 flex flex-column gap-2">
+        <div class="flex justify-content-between align-items-center">
+          <label class="text-xs font-bold text-muted uppercase tracking-wider">Copete / Subtítulo Editorial</label>
+          <span class="text-xs text-muted italic">Editable</span>
+        </div>
+        <textarea [(ngModel)]="currentArticleData.subtitle" rows="3" class="w-full form-subtitle-input" 
+                  placeholder="Escribe el copete o resumen de la noticia..."></textarea>
+      </div>
+
+      <!-- Imagen de Portada -->
+      <div *ngIf="currentArticleData.coverImage" class="surface-card p-3 border-round-xl border-1 border-main shadow-1 flex flex-column gap-3">
+        <div class="flex justify-content-between align-items-center">
+          <label class="text-xs font-bold text-muted uppercase tracking-wider">Imagen de Portada (Cover)</label>
+          <button pButton pRipple type="button" class="p-button-text p-button-sm p-button-help p-0" (click)="toggleAiCoverPrompt()">
+            <lucide-icon name="wand-2" class="mr-1" [size]="14"></lucide-icon> {{ aiCoverPromptOpen ? 'Cerrar Ajuste IA' : 'Ajustar Portada con IA' }}
+          </button>
+        </div>
+
+        <div class="cover-image-preview-wrapper relative text-center">
+          <img [src]="currentArticleData.coverImage.url" [alt]="currentArticleData.coverImage.alt" 
+               class="border-round-lg shadow-2 w-full max-h-25rem object-cover" />
+        </div>
+
+        <!-- Box Prompt IA para Portada -->
+        <div *ngIf="aiCoverPromptOpen" class="ai-prompt-box p-3 border-round-lg flex flex-column gap-2 animate-fade-in">
+          <label class="text-xs font-semibold text-main flex align-items-center gap-1">
+            <lucide-icon name="sparkles" class="text-purple-500" [size]="14"></lucide-icon> ¿Qué cambios deseas en la imagen de portada?
+          </label>
+          <div class="flex gap-2">
+            <input type="text" pInputText [(ngModel)]="aiCoverInstructionText" 
+                   placeholder="Ej: Cambiar por una fotografía fotorrealista de noche en alta definición..." 
+                   class="flex-grow-1 form-input text-sm" (keyup.enter)="applyAiRegenerateCover()" />
+            <button pButton pRipple type="button" class="p-button-help p-button-sm border-round-md" 
+                    [loading]="loadingAiCover()" (click)="applyAiRegenerateCover()">
+              <lucide-icon name="sparkles" class="mr-1" [size]="14"></lucide-icon> Generar
+            </button>
+          </div>
+        </div>
+
+        <!-- Pie de foto de portada -->
+        <div class="flex align-items-center gap-2">
+          <label class="text-xs text-muted font-medium white-space-nowrap">Pie de Foto:</label>
+          <input type="text" pInputText [(ngModel)]="currentArticleData.coverImage.caption" 
+                 placeholder="Descripción de la imagen..." class="flex-grow-1 form-input text-sm" />
+        </div>
+      </div>
+
+      <!-- Separador: Cuerpo de la Noticia -->
+      <div class="flex align-items-center gap-2 my-2">
+        <hr class="flex-grow-1 border-top-1 border-main m-0" />
+        <span class="text-xs font-bold text-muted uppercase tracking-wider px-2">Cuerpo del Artículo (Bloques)</span>
+        <hr class="flex-grow-1 border-top-1 border-main m-0" />
+      </div>
+
+      <!-- Lista de Bloques (Párrafos e Imágenes) -->
+      <div class="flex flex-column gap-3">
+        <div *ngFor="let block of currentArticleData.blocks; let i = index" class="article-block-card surface-card p-3 border-round-xl border-1 border-main shadow-1 transition-all">
+          
+          <!-- TIPO 1: PÁRRAFO -->
+          <div *ngIf="block.type === 'paragraph'" class="flex flex-column gap-2">
+            <div class="flex justify-content-between align-items-center border-bottom-1 border-main pb-2">
+              <span class="text-xs font-bold text-muted flex align-items-center gap-1">
+                <lucide-icon name="align-left" [size]="14"></lucide-icon> Párrafo {{ i + 1 }}
+              </span>
+              <div class="flex align-items-center gap-1">
+                <button pButton pRipple type="button" class="p-button-text p-button-sm p-button-secondary p-1" 
+                        pTooltip="Editar texto a mano" tooltipPosition="top" (click)="toggleEditBlock(block.id)">
+                  <lucide-icon [name]="editingBlockId === block.id ? 'check' : 'pencil'" [size]="14" class="mr-1"></lucide-icon>
+                  {{ editingBlockId === block.id ? 'Listo' : 'Editar' }}
+                </button>
+                <button pButton pRipple type="button" class="p-button-text p-button-sm p-button-help p-1" 
+                        pTooltip="Ajustar redacción con IA" tooltipPosition="top" (click)="toggleAiPrompt(block.id)">
+                  <lucide-icon name="wand-2" [size]="14" class="mr-1"></lucide-icon> Ajustar con IA
+                </button>
+                <button pButton pRipple type="button" class="p-button-text p-button-sm p-button-danger p-1" 
+                        pTooltip="Eliminar párrafo" tooltipPosition="top" (click)="removeBlock(i)">
+                  <lucide-icon name="trash-2" [size]="14"></lucide-icon>
+                </button>
+              </div>
+            </div>
+
+            <!-- Vista o Edición del Párrafo -->
+            <div *ngIf="editingBlockId === block.id" class="p-2">
+              <textarea [(ngModel)]="block.content" rows="4" class="w-full form-textarea font-serif text-base" 
+                        placeholder="Contenido del párrafo..."></textarea>
+            </div>
+            <div *ngIf="editingBlockId !== block.id" class="paragraph-content-display p-2 text-main text-base line-height-3 font-serif"
+                 [innerHTML]="block.content"></div>
+
+            <!-- Box Inline de IA para este Párrafo -->
+            <div *ngIf="aiPromptBlockId === block.id" class="ai-prompt-box p-3 border-round-lg flex flex-column gap-2 animate-fade-in mt-2">
+              <label class="text-xs font-semibold text-main flex align-items-center gap-1">
+                <lucide-icon name="sparkles" class="text-purple-500" [size]="14"></lucide-icon> ¿Cómo deseas que la IA modifique este párrafo?
+              </label>
+              <div class="flex gap-2">
+                <input type="text" pInputText [(ngModel)]="aiInstructionText" 
+                       placeholder="Ej: Hazlo más formal, resume los puntos clave, añade contexto económico..." 
+                       class="flex-grow-1 form-input text-sm" (keyup.enter)="applyAiAdjustParagraph(block)" />
+                <button pButton pRipple type="button" class="p-button-help p-button-sm border-round-md" 
+                        [loading]="loadingAiBlockId() === block.id" (click)="applyAiAdjustParagraph(block)">
+                  <lucide-icon name="sparkles" class="mr-1" [size]="14"></lucide-icon> Aplicar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TIPO 2: IMAGEN EN EL CUERPO -->
+          <div *ngIf="block.type === 'image'" class="flex flex-column gap-2">
+            <div class="flex justify-content-between align-items-center border-bottom-1 border-main pb-2">
+              <span class="text-xs font-bold text-muted flex align-items-center gap-1">
+                <lucide-icon name="image" [size]="14"></lucide-icon> Imagen Ilustrativa
+              </span>
+              <div class="flex align-items-center gap-1">
+                <button pButton pRipple type="button" class="p-button-text p-button-sm p-button-help p-1" 
+                        (click)="toggleAiImagePrompt(block.id)">
+                  <lucide-icon name="wand-2" [size]="14" class="mr-1"></lucide-icon> Regenerar con IA
+                </button>
+                <button pButton pRipple type="button" class="p-button-text p-button-sm p-button-danger p-1" 
+                        (click)="removeBlock(i)">
+                  <lucide-icon name="trash-2" [size]="14"></lucide-icon>
+                </button>
+              </div>
+            </div>
+
+            <div class="text-center p-2">
+              <img [src]="block.url" [alt]="block.alt || 'Imagen'" class="border-round-lg shadow-2 max-w-full max-h-20rem object-cover" />
+            </div>
+
+            <!-- Box Inline de IA para esta Imagen -->
+            <div *ngIf="aiImagePromptBlockId === block.id" class="ai-prompt-box p-3 border-round-lg flex flex-column gap-2 animate-fade-in mt-2">
+              <label class="text-xs font-semibold text-main flex align-items-center gap-1">
+                <lucide-icon name="sparkles" class="text-purple-500" [size]="14"></lucide-icon> Directriz para regenerar esta imagen:
+              </label>
+              <div class="flex gap-2">
+                <input type="text" pInputText [(ngModel)]="aiImageInstructionText" 
+                       placeholder="Ej: Mostrar gráfico financiero en pantalla con profesionales reunidos..." 
+                       class="flex-grow-1 form-input text-sm" (keyup.enter)="applyAiRegenerateImage(block)" />
+                <button pButton pRipple type="button" class="p-button-help p-button-sm border-round-md" 
+                        [loading]="loadingAiImage()" (click)="applyAiRegenerateImage(block)">
+                  <lucide-icon name="sparkles" class="mr-1" [size]="14"></lucide-icon> Generar
+                </button>
+              </div>
+            </div>
+
+            <!-- Pie de foto de la imagen -->
+            <div class="flex align-items-center gap-2 mt-1">
+              <label class="text-xs text-muted font-medium white-space-nowrap">Pie de Foto:</label>
+              <input type="text" pInputText [(ngModel)]="block.caption" 
+                     placeholder="Descripción o pie de foto..." class="flex-grow-1 form-input text-sm" />
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Barra para Agregar Bloques -->
+      <div class="flex justify-content-center gap-3 my-3">
+        <button pButton pRipple type="button" class="p-button-outlined p-button-secondary p-button-sm border-round-lg" (click)="addParagraphBlock()">
+          <lucide-icon name="plus" class="mr-1" [size]="15"></lucide-icon> Agregar Párrafo
+        </button>
+        <button pButton pRipple type="button" class="p-button-outlined p-button-secondary p-button-sm border-round-lg" (click)="addImageBlock()">
+          <lucide-icon name="image-plus" class="mr-1" [size]="15"></lucide-icon> Agregar Imagen
+        </button>
+      </div>
+
+    </div>
+  </ng-template>
+
+  <ng-template pTemplate="footer">
+    <div class="flex flex-column sm:flex-row justify-content-between align-items-center pt-2 w-full gap-3">
+      <div class="flex align-items-center">
+        <button *ngIf="currentDraft?.status !== 'published'" pButton pRipple type="button" 
+                class="p-button-text p-button-danger border-round-lg"
+                (click)="confirmDeleteDraft(currentDraft, $event); displayEditorDialog = false;" 
+                pTooltip="Eliminar este borrador definitivamente" tooltipPosition="top">
+          <lucide-icon name="trash-2" class="mr-2" [size]="16"></lucide-icon> Eliminar Borrador
+        </button>
+      </div>
+      <div class="flex gap-2 align-items-center">
+        <button pButton pRipple type="button" class="p-button-text p-button-secondary border-round-lg" (click)="displayEditorDialog = false">
+          <lucide-icon name="x" class="mr-2" [size]="16"></lucide-icon>Cerrar
+        </button>
+        <button pButton pRipple type="button" class="p-button-outlined p-button-primary border-round-lg" 
+                [loading]="savingDraft()" (click)="saveDraftChanges(true)"
+                pTooltip="Guardar cambios realizados en este borrador" tooltipPosition="top">
+          <lucide-icon name="save" class="mr-2" [size]="16"></lucide-icon>Guardar Cambios
+        </button>
+        <button *ngIf="currentDraft?.status !== 'published'" pButton pRipple type="button" 
+                class="p-button-success border-round-lg"
+                (click)="publishCurrentDraft()" 
+                pTooltip="Publicar definitivamente en el sitio web oficial" tooltipPosition="top">
+          <lucide-icon name="globe" class="mr-2" [size]="16"></lucide-icon>Publicar Noticia
+        </button>
+      </div>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog 3: Modal de Ajuste Global con IA -->
+<p-dialog [(visible)]="displayGlobalAiDialog" header="✨ Ajuste Global con Inteligencia Artificial" 
+          [modal]="true" [style]="{width: '600px'}" [breakpoints]="{'960px': '85vw', '640px': '95vw'}" 
           styleClass="custom-scheduler-modal">
   <ng-template pTemplate="content">
-    <div class="border-round border-1 surface-border bg-white overflow-hidden" style="height: 60vh;">
-      <div *ngIf="loadingPreview()" class="flex flex-column align-items-center justify-content-center p-5 gap-3 h-full">
-        <i class="pi pi-spin pi-spinner text-primary text-4xl"></i>
-        <span class="font-medium text-muted">Consultando previsualización al webhook...</span>
+    <div class="flex flex-column gap-3 p-2">
+      <p class="text-sm text-muted m-0">
+        Escribe en lenguaje natural qué cambios o mejoras deseas aplicar a <strong>toda la noticia</strong> (título, tono general, cohesión y estilo de todos los párrafos).
+      </p>
+      <div class="form-field">
+        <textarea [(ngModel)]="globalAiInstruction" rows="4" class="w-full form-textarea" 
+                  placeholder="Ej: Cambia el tono general para que sea periodístico de investigación. Asegúrate de destacar el impacto en la economía y optimiza la fluidez de todos los párrafos..."></textarea>
       </div>
-      <iframe *ngIf="!loadingPreview()" [srcdoc]="previewHtml()" style="width: 100%; height: 100%; border: none; display: block;"></iframe>
     </div>
   </ng-template>
   <ng-template pTemplate="footer">
-    <div class="flex justify-content-end pt-2">
-      <button pButton pRipple class="p-button-text p-button-secondary border-round-lg" (click)="displayPreviewDialog = false"><lucide-icon name="x" class="mr-2"></lucide-icon>Cerrar</button>
+    <div class="flex justify-content-end gap-2 pt-2">
+      <button pButton pRipple class="p-button-text p-button-secondary border-round-lg" (click)="displayGlobalAiDialog = false">
+        Cancelar
+      </button>
+      <button pButton pRipple class="p-button-help border-round-lg" [loading]="loadingGlobalAi()" (click)="applyGlobalAi()">
+        <lucide-icon name="sparkles" class="mr-2"></lucide-icon>Aplicar a toda la Noticia
+      </button>
     </div>
   </ng-template>
 </p-dialog>

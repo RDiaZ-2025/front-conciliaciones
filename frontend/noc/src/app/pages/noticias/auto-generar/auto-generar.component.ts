@@ -1,7 +1,7 @@
-import { LucideIconComponent } from '../../../components/lucide-icon/lucide-icon.component';
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
+import { LucideIconComponent } from '../../../components/lucide-icon/lucide-icon.component';
+import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, FormsModule, Validators } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 // PrimeNG Imports
@@ -18,7 +18,7 @@ import { SelectModule } from 'primeng/select';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { MessageService, ConfirmationService } from 'primeng/api';
 
-import { NewsSchedulerService, NewsSchedule } from '../../../services/news-scheduler.service';
+import { NewsSchedulerService, NewsSchedule, NewsBlock, NewsArticleData, NewsDraftDetail } from '../../../services/news-scheduler.service';
 
 @Component({
   selector: 'app-auto-generar',
@@ -26,6 +26,7 @@ import { NewsSchedulerService, NewsSchedule } from '../../../services/news-sched
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    FormsModule,
     TableModule,
     DialogModule,
     ButtonModule,
@@ -36,9 +37,9 @@ import { NewsSchedulerService, NewsSchedule } from '../../../services/news-sched
     ConfirmDialogModule,
     TooltipModule,
     SelectModule,
-    SelectButtonModule
-  ,
-    LucideIconComponent],
+    SelectButtonModule,
+    LucideIconComponent
+  ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './auto-generar.component.html',
   styleUrl: './auto-generar.component.css'
@@ -48,7 +49,15 @@ export class AutoGenerarComponent implements OnInit {
   displayDialog = false;
   isEditMode = false;
   currentScheduleId: string | null = null;
-  executingIds = signal<Set<string>>(new Set());
+  activeGenerationsCount = signal<Map<string, number>>(new Map());
+
+  getGeneratingCount(scheduleId: string): number {
+    return this.activeGenerationsCount().get(scheduleId) || 0;
+  }
+
+  isGenerating(scheduleId: string): boolean {
+    return this.getGeneratingCount(scheduleId) > 0;
+  }
 
   scheduleForm!: FormGroup;
 
@@ -398,9 +407,10 @@ export class AutoGenerarComponent implements OnInit {
   }
 
   executeNow(schedule: NewsSchedule): void {
-    const currentExecuting = new Set(this.executingIds());
-    currentExecuting.add(schedule.id);
-    this.executingIds.set(currentExecuting);
+    const map = new Map(this.activeGenerationsCount());
+    const current = map.get(schedule.id) || 0;
+    map.set(schedule.id, current + 1);
+    this.activeGenerationsCount.set(map);
 
     this.messageService.add({
       severity: 'info',
@@ -408,68 +418,45 @@ export class AutoGenerarComponent implements OnInit {
       detail: `Enviando solicitud a la IA para el tema "${schedule.topic}"...`
     });
 
-    this.schedulerService.triggerNow(schedule).subscribe({
+    this.schedulerService.triggerNow(schedule.id).subscribe({
       next: (res: any) => {
-        this.schedulerService.recordExecution(schedule.id).subscribe({
-          next: () => this.loadSchedules(),
-          error: () => this.loadSchedules()
-        });
-        
+        this.decrementGenerating(schedule.id);
+        this.loadSchedules();
         this.messageService.add({
           severity: 'success',
           summary: 'Noticia Generada',
-          detail: 'El webhook de generación de noticias respondió con éxito.'
+          detail: `La noticia sobre "${schedule.topic}" se ha generado con éxito.`
         });
-
-        // Guardar el borrador en base de datos si viene en la respuesta
-        const draftPath = res?.data?.[0]?.name;
-        if (draftPath) {
-          this.schedulerService.saveDraft(schedule.id, draftPath).subscribe({
-            next: () => {
-              this.messageService.add({
-                severity: 'info',
-                summary: 'Borrador Registrado',
-                detail: 'La noticia se ha guardado en la bandeja de borradores pendientes.'
-              });
-              this.loadSchedules();
-            },
-            error: (err) => {
-              console.error('Error al registrar borrador en el backend:', err);
-              this.messageService.add({
-                severity: 'error',
-                summary: 'Error de Registro',
-                detail: 'No se pudo guardar la noticia en la base de datos del backend.'
-              });
-            }
+        if (res?.draft) {
+          this.messageService.add({
+            severity: 'info',
+            summary: 'Borrador Registrado',
+            detail: 'La noticia se ha guardado en la bandeja de borradores pendientes.'
           });
         }
-
-        this.removeExecuting(schedule.id);
       },
       error: (err) => {
-        console.error('Error triggering webhook', err);
-        this.schedulerService.recordExecution(schedule.id).subscribe({
-          next: () => this.loadSchedules(),
-          error: () => this.loadSchedules()
-        });
+        console.error('Error al ejecutar agendamiento:', err);
+        this.decrementGenerating(schedule.id);
+        this.loadSchedules();
         this.messageService.add({
-          severity: 'warn',
-          summary: 'Solicitud Enviada',
-          detail: 'La solicitud fue enviada al webhook de generación.'
+          severity: 'error',
+          summary: 'Error al Generar',
+          detail: err?.error?.message || 'Ocurrió un error al ejecutar la generación de noticias.'
         });
-        this.removeExecuting(schedule.id);
       }
     });
   }
 
-  private removeExecuting(id: string): void {
-    const currentExecuting = new Set(this.executingIds());
-    currentExecuting.delete(id);
-    this.executingIds.set(currentExecuting);
-  }
-
-  isExecuting(id: string): boolean {
-    return this.executingIds().has(id);
+  private decrementGenerating(id: string): void {
+    const map = new Map(this.activeGenerationsCount());
+    const count = map.get(id) || 0;
+    if (count <= 1) {
+      map.delete(id);
+    } else {
+      map.set(id, count - 1);
+    }
+    this.activeGenerationsCount.set(map);
   }
 
   getFrequencyLabel(schedule: NewsSchedule): string {
@@ -539,11 +526,65 @@ export class AutoGenerarComponent implements OnInit {
   pendingDrafts = signal<any[]>([]);
   loadingDrafts = signal(false);
 
-  // Previsualización / Preview UI State
-  displayPreviewDialog = false;
-  previewHtml = signal<string>('');
-  loadingPreview = signal(false);
-  previewTitle = signal<string>('');
+  // --- Editor y Previsualizador Interactivo de Noticias ---
+  displayEditorDialog = false;
+  currentDraft: NewsDraftDetail | null = null;
+  currentArticleData: NewsArticleData = {
+    title: '',
+    subtitle: '',
+    blocks: [],
+    tags: [],
+    author: ''
+  };
+  loadingEditor = signal(false);
+  savingDraft = signal(false);
+
+  // Helpers para fuentes consultadas por la IA
+  getSourceName(src: any): string {
+    if (typeof src === 'object' && src?.name) return src.name;
+    if (typeof src === 'string') {
+      try {
+        const u = new URL(src);
+        return u.hostname.replace('www.', '');
+      } catch {
+        return 'Fuente Externa';
+      }
+    }
+    return 'Fuente';
+  }
+
+  getSourceUrl(src: any): string {
+    if (typeof src === 'object' && src?.url) return src.url;
+    if (typeof src === 'string') return src;
+    return '#';
+  }
+
+  getSourceTitle(src: any): string {
+    if (typeof src === 'object' && src?.title) return src.title;
+    if (typeof src === 'string') return src;
+    return 'Artículo consultado';
+  }
+
+  // Estados de edición individual por bloque
+  editingBlockId: string | null = null;
+  aiPromptBlockId: string | null = null;
+  aiInstructionText: string = '';
+  loadingAiBlockId = signal<string | null>(null);
+
+  // Estados de edición de imagen individual
+  aiImagePromptBlockId: string | null = null;
+  aiImageInstructionText: string = '';
+  loadingAiImage = signal<boolean>(false);
+
+  // Estados de portada
+  aiCoverPromptOpen: boolean = false;
+  aiCoverInstructionText: string = '';
+  loadingAiCover = signal<boolean>(false);
+
+  // Ajuste Global con IA
+  displayGlobalAiDialog = false;
+  globalAiInstruction: string = '';
+  loadingGlobalAi = signal(false);
 
   viewDrafts(schedule: NewsSchedule): void {
     this.selectedScheduleForDrafts = schedule;
@@ -570,66 +611,370 @@ export class AutoGenerarComponent implements OnInit {
     });
   }
 
-  previewDraft(draft: any): void {
-    this.previewTitle.set(`Previsualizar Borrador: ${this.selectedScheduleForDrafts?.topic || 'Noticia'}`);
-    this.displayPreviewDialog = true;
-    this.loadingPreview.set(true);
-    this.previewHtml.set('');
+  openEditor(draft: any): void {
+    this.displayEditorDialog = true;
+    this.loadingEditor.set(true);
+    this.editingBlockId = null;
+    this.aiPromptBlockId = null;
+    this.aiImagePromptBlockId = null;
+    this.aiCoverPromptOpen = false;
 
-    this.schedulerService.previewDraft(draft.path).subscribe({
-      next: (res) => {
-        let rendered = res?.data?.[0]?.body?.rendered || '';
-        
-        // Resolve relative image URLs by prepending the production domain
-        rendered = rendered.replace(/src=["']\/img\//g, 'src="https://redmas.com.co/img/');
-        rendered = rendered.replace(/src=["']img\//g, 'src="https://redmas.com.co/img/');
-
-        const documentHtml = `
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <meta charset="utf-8">
-              <style>
-                body {
-                  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                  line-height: 1.6;
-                  color: #333333;
-                  margin: 20px;
-                  padding: 0;
-                  background-color: #ffffff;
-                }
-                h1 { font-size: 2.2em; font-weight: 800; margin-top: 1.5em; margin-bottom: 1rem; color: #1a252f; }
-                h2 { font-size: 1.6em; font-weight: 700; margin-top: 2rem; margin-bottom: 0.75rem; color: #2c3e50; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; }
-                h3 { font-size: 1.25em; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; color: #2c3e50; }
-                p { margin-top: 0; margin-bottom: 1.25rem; font-size: 1.05rem; line-height: 1.75; color: #2c3e50; }
-                strong, b { font-weight: 700; color: #000000; }
-                img { max-width: 100%; height: auto; display: block; margin: 1.5rem auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
-                figure { margin: 1.5rem 0; text-align: center; }
-                figcaption { font-size: 0.9rem; color: #7f8c8d; margin-top: 0.5rem; font-style: italic; text-align: center; }
-                ul, ol { padding-left: 2rem; margin-bottom: 1.25rem; }
-                li { margin-bottom: 0.5rem; font-size: 1.05rem; color: #2c3e50; }
-              </style>
-            </head>
-            <body>
-              ${rendered}
-            </body>
-          </html>
-        `;
-
-        this.previewHtml.set(documentHtml);
-        this.loadingPreview.set(false);
+    this.schedulerService.getDraftDetail(draft.id).subscribe({
+      next: (detail: NewsDraftDetail) => {
+        this.currentDraft = detail;
+        this.currentArticleData = detail.articleData || {
+          title: detail.title || 'Sin Título',
+          subtitle: detail.subtitle || '',
+          blocks: [],
+          tags: [],
+          author: 'Redacción Red+'
+        };
+        // Garantizar que blocks sea un array
+        if (!this.currentArticleData.blocks) {
+          this.currentArticleData.blocks = [];
+        }
+        this.loadingEditor.set(false);
       },
       error: (err) => {
-        console.error('Error fetching preview', err);
-        this.loadingPreview.set(false);
-        this.previewHtml.set('<div style="color: red; font-weight: bold; text-align: center; padding: 20px;">Error al cargar la previsualización del webhook.</div>');
+        console.error('Error loading draft detail', err);
+        this.loadingEditor.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'No se pudo cargar el detalle del borrador.'
+        });
+      }
+    });
+  }
+
+  saveDraftChanges(notify: boolean = true): void {
+    if (!this.currentDraft) return;
+
+    this.savingDraft.set(true);
+    this.schedulerService.updateDraft(this.currentDraft.id, this.currentArticleData).subscribe({
+      next: () => {
+        this.savingDraft.set(false);
+        if (notify) {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Guardado',
+            detail: 'Los cambios en la noticia se han guardado en la base de datos.'
+          });
+        }
+        if (this.selectedScheduleForDrafts) {
+          this.loadDrafts(this.selectedScheduleForDrafts.id);
+        }
+      },
+      error: (err) => {
+        console.error('Error saving draft', err);
+        this.savingDraft.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error al Guardar',
+          detail: 'No se pudieron guardar los cambios en el borrador.'
+        });
+      }
+    });
+  }
+
+  // --- Edición Manual de Párrafos ---
+  toggleEditBlock(blockId: string): void {
+    this.editingBlockId = this.editingBlockId === blockId ? null : blockId;
+  }
+
+  // --- Ajuste de Párrafo con IA ---
+  toggleAiPrompt(blockId: string): void {
+    if (this.aiPromptBlockId === blockId) {
+      this.aiPromptBlockId = null;
+      this.aiInstructionText = '';
+    } else {
+      this.aiPromptBlockId = blockId;
+      this.aiInstructionText = '';
+      this.editingBlockId = null; // Cerrar edición manual si estaba abierta
+    }
+  }
+
+  applyAiAdjustParagraph(block: NewsBlock): void {
+    if (!this.currentDraft || !this.aiInstructionText.trim()) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Atención',
+        detail: 'Escribe una instrucción para la IA antes de aplicar.'
+      });
+      return;
+    }
+
+    this.loadingAiBlockId.set(block.id);
+    this.schedulerService.aiAdjustParagraph(
+      this.currentDraft.id,
+      block.id,
+      block.content || '',
+      this.aiInstructionText
+    ).subscribe({
+      next: (res: any) => {
+        block.content = res.adjustedText || res.plainText || block.content;
+        this.loadingAiBlockId.set(null);
+        this.aiPromptBlockId = null;
+        this.aiInstructionText = '';
+        this.saveDraftChanges(false);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Párrafo Ajustado con IA',
+          detail: 'El párrafo se actualizó aplicando la instrucción solicitada.'
+        });
+      },
+      error: (err) => {
+        console.error('Error adjusting paragraph with AI', err);
+        this.loadingAiBlockId.set(null);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error IA',
+          detail: 'No se pudo procesar el ajuste del párrafo.'
+        });
+      }
+    });
+  }
+
+  // --- Regeneración de Imagen con IA ---
+  toggleAiImagePrompt(blockId: string): void {
+    if (this.aiImagePromptBlockId === blockId) {
+      this.aiImagePromptBlockId = null;
+      this.aiImageInstructionText = '';
+    } else {
+      this.aiImagePromptBlockId = blockId;
+      this.aiImageInstructionText = '';
+    }
+  }
+
+  applyAiRegenerateImage(block: NewsBlock): void {
+    if (!this.currentDraft || !this.aiImageInstructionText.trim()) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Atención',
+        detail: 'Escribe una instrucción o prompt para regenerar la imagen.'
+      });
+      return;
+    }
+
+    this.loadingAiImage.set(true);
+    this.schedulerService.aiRegenerateImage(
+      this.currentDraft.id,
+      block.id,
+      block.url || '',
+      block.prompt || '',
+      this.aiImageInstructionText
+    ).subscribe({
+      next: (res: any) => {
+        if (res.newUrl) {
+          block.url = res.newUrl;
+        }
+        if (res.prompt) {
+          block.prompt = res.prompt;
+        }
+        if (res.caption) {
+          block.caption = res.caption;
+        }
+        this.loadingAiImage.set(false);
+        this.aiImagePromptBlockId = null;
+        this.aiImageInstructionText = '';
+        this.saveDraftChanges(false);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Imagen Regenerada con IA',
+          detail: 'La imagen ha sido actualizada.'
+        });
+      },
+      error: (err) => {
+        console.error('Error regenerating image with AI', err);
+        this.loadingAiImage.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error IA',
+          detail: 'No se pudo regenerar la imagen.'
+        });
+      }
+    });
+  }
+
+  // --- Portada con IA ---
+  toggleAiCoverPrompt(): void {
+    this.aiCoverPromptOpen = !this.aiCoverPromptOpen;
+    this.aiCoverInstructionText = '';
+  }
+
+  applyAiRegenerateCover(): void {
+    if (!this.currentDraft || !this.aiCoverInstructionText.trim()) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Atención',
+        detail: 'Escribe una instrucción para regenerar la portada.'
+      });
+      return;
+    }
+
+    this.loadingAiCover.set(true);
+    const currentCover = this.currentArticleData.coverImage;
+    this.schedulerService.aiRegenerateImage(
+      this.currentDraft.id,
+      'cover',
+      currentCover?.url || '',
+      currentCover?.prompt || '',
+      this.aiCoverInstructionText
+    ).subscribe({
+      next: (res: any) => {
+        if (!this.currentArticleData.coverImage) {
+          this.currentArticleData.coverImage = { url: '', alt: '', caption: '', prompt: '' };
+        }
+        if (res.newUrl) {
+          this.currentArticleData.coverImage.url = res.newUrl;
+        }
+        if (res.prompt) {
+          this.currentArticleData.coverImage.prompt = res.prompt;
+        }
+        if (res.caption) {
+          this.currentArticleData.coverImage.caption = res.caption;
+        }
+        this.loadingAiCover.set(false);
+        this.aiCoverPromptOpen = false;
+        this.aiCoverInstructionText = '';
+        this.saveDraftChanges(false);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Portada Regenerada',
+          detail: 'La imagen de portada ha sido actualizada con IA.'
+        });
+      },
+      error: (err) => {
+        console.error('Error regenerating cover image', err);
+        this.loadingAiCover.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error IA',
+          detail: 'No se pudo regenerar la portada.'
+        });
+      }
+    });
+  }
+
+  // --- Ajuste Global con IA ---
+  openGlobalAiDialog(): void {
+    this.displayGlobalAiDialog = true;
+    this.globalAiInstruction = '';
+  }
+
+  applyGlobalAi(): void {
+    if (!this.currentDraft || !this.globalAiInstruction.trim()) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Atención',
+        detail: 'Escribe la instrucción global para la IA.'
+      });
+      return;
+    }
+
+    this.loadingGlobalAi.set(true);
+    this.schedulerService.aiAdjustArticle(
+      this.currentDraft.id,
+      this.globalAiInstruction,
+      this.currentArticleData
+    ).subscribe({
+      next: (res: any) => {
+        if (res.adjustedArticle) {
+          this.currentArticleData = res.adjustedArticle;
+        }
+        this.loadingGlobalAi.set(false);
+        this.displayGlobalAiDialog = false;
+        this.saveDraftChanges(false);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Ajuste Global Aplicado',
+          detail: res.summary || 'Se aplicaron los ajustes globales a la noticia.'
+        });
+      },
+      error: (err) => {
+        console.error('Error applying global AI adjust', err);
+        this.loadingGlobalAi.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error IA',
+          detail: 'No se pudo aplicar el ajuste global.'
+        });
+      }
+    });
+  }
+
+  // --- Agregar / Eliminar Bloques ---
+  addParagraphBlock(): void {
+    const newBlock: NewsBlock = {
+      id: 'block-' + Date.now(),
+      type: 'paragraph',
+      content: 'Escribe el contenido del nuevo párrafo aquí...'
+    };
+    this.currentArticleData.blocks.push(newBlock);
+    this.editingBlockId = newBlock.id;
+  }
+
+  addImageBlock(): void {
+    const newBlock: NewsBlock = {
+      id: 'block-img-' + Date.now(),
+      type: 'image',
+      url: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1200&q=80',
+      caption: 'Pie de foto de la nueva imagen.',
+      alt: 'Imagen ilustrativa',
+      prompt: 'Fotografía profesional sobre el tema'
+    };
+    this.currentArticleData.blocks.push(newBlock);
+  }
+
+  removeBlock(index: number): void {
+    this.currentArticleData.blocks.splice(index, 1);
+  }
+
+  // --- Publicación desde el Editor o Lista ---
+  publishCurrentDraft(): void {
+    if (!this.currentDraft) return;
+
+    this.confirmationService.confirm({
+      message: `¿Estás seguro de que deseas publicar definitivamente la noticia "${this.currentArticleData.title}" en el portal oficial?`,
+      header: 'Confirmar Publicación Oficial',
+      icon: 'alert-triangle',
+      acceptLabel: 'Publicar Ahora',
+      rejectLabel: 'Cancelar',
+      accept: () => {
+        // Primero guardar cualquier cambio pendiente
+        this.schedulerService.updateDraft(this.currentDraft!.id, this.currentArticleData).subscribe({
+          next: () => {
+            this.schedulerService.publishDraft(this.currentDraft!.id).subscribe({
+              next: () => {
+                this.messageService.add({
+                  severity: 'success',
+                  summary: '¡Noticia Publicada!',
+                  detail: 'La noticia se ha publicado correctamente en el portal oficial.'
+                });
+                this.displayEditorDialog = false;
+                if (this.selectedScheduleForDrafts) {
+                  this.loadDrafts(this.selectedScheduleForDrafts.id);
+                }
+                this.loadSchedules();
+              },
+              error: (err) => {
+                console.error('Error publishing draft', err);
+                this.messageService.add({
+                  severity: 'error',
+                  summary: 'Error al Publicar',
+                  detail: 'No se pudo publicar la noticia.'
+                });
+              }
+            });
+          }
+        });
       }
     });
   }
 
   publishDraft(draft: any): void {
     this.confirmationService.confirm({
-      message: `¿Estás seguro de que deseas publicar definitivamente la noticia asociada al identificador "${draft.path}"?`,
+      message: `¿Estás seguro de que deseas publicar definitivamente la noticia "${draft.title || draft.path}"?`,
       header: 'Confirmar Publicación',
       icon: 'alert-triangle',
       acceptLabel: 'Publicar',
@@ -653,6 +998,51 @@ export class AutoGenerarComponent implements OnInit {
               severity: 'error',
               summary: 'Error',
               detail: 'No se pudo publicar la noticia.'
+            });
+          }
+        });
+      }
+    });
+  }
+
+  confirmDeleteDraft(draft: any, event?: Event): void {
+    if (draft.status === 'published') {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Acción no permitida',
+        detail: 'No se pueden eliminar noticias que ya han sido publicadas.'
+      });
+      return;
+    }
+
+    this.confirmationService.confirm({
+      target: event?.target as EventTarget,
+      message: `¿Estás seguro de que deseas eliminar definitivamente el borrador "${draft.title || 'Sin Título'}"? Esta acción no se puede deshacer.`,
+      header: 'Confirmar Eliminación de Borrador',
+      icon: 'alert-triangle',
+      acceptLabel: 'Sí, Eliminar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger p-button-sm',
+      rejectButtonStyleClass: 'p-button-secondary p-button-text p-button-sm',
+      accept: () => {
+        this.schedulerService.deleteDraft(draft.id).subscribe({
+          next: () => {
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Borrador Eliminado',
+              detail: 'El borrador ha sido eliminado definitivamente de la base de datos.'
+            });
+            if (this.selectedScheduleForDrafts) {
+              this.loadDrafts(this.selectedScheduleForDrafts.id);
+            }
+            this.loadSchedules();
+          },
+          error: (err) => {
+            console.error('Error deleting draft', err);
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error al eliminar',
+              detail: err?.error?.message || 'No se pudo eliminar el borrador.'
             });
           }
         });
