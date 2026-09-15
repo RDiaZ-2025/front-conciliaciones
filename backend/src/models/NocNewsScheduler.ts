@@ -50,6 +50,9 @@ export class NocNewsScheduler {
     @Column({ name: 'nextRunAt', type: 'datetime2', nullable: true })
     nextRunAt!: Date | null;
 
+    @Column({ name: 'serviceBusSequenceNumber', type: 'nvarchar', length: 50, nullable: true })
+    serviceBusSequenceNumber!: string | null;
+
     @CreateDateColumn({ name: 'createdAt', type: 'datetime2' })
     createdAt!: Date;
 

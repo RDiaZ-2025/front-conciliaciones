@@ -13,6 +13,7 @@ import { AppDataSource } from '../config/typeorm.config';
 import { NocNewsScheduler } from '../models/NocNewsScheduler';
 import { NocNewsDraft } from '../models/NocNewsDraft';
 import { BluestacksCmsService } from './bluestacks_cms.service';
+import { azureServiceBusSchedulerService } from './azure_service_bus_scheduler.service';
 
 export interface NewsBlock {
     id: string;
@@ -280,8 +281,14 @@ export class NocNewsSchedulerService {
             isActive: dto.isActive !== undefined ? dto.isActive : true,
             publishAutomatically: dto.publishAutomatically !== undefined ? dto.publishAutomatically : false,
             status: dto.isActive !== false ? (nextRun ? 'Pending' : 'Completed') : 'Cancelled',
-            nextRunAt: nextRun
+            nextRunAt: nextRun,
+            serviceBusSequenceNumber: null
         });
+
+        // Programar mensaje en Azure Service Bus si el agendamiento está activo
+        if (newSchedule.isActive && newSchedule.nextRunAt) {
+            newSchedule.serviceBusSequenceNumber = await azureServiceBusSchedulerService.scheduleExecution(newSchedule.id, newSchedule.nextRunAt);
+        }
 
         const saved = await this.repository.save(newSchedule);
         return {
@@ -335,6 +342,18 @@ export class NocNewsSchedulerService {
             }
         }
 
+        // Reprogramar en Azure Service Bus si cambiaron fechas o estado activo
+        if (dto.startAt !== undefined || dto.scheduleConfig !== undefined || dto.isActive !== undefined) {
+            if (schedule.serviceBusSequenceNumber) {
+                await azureServiceBusSchedulerService.cancelScheduledExecution(schedule.serviceBusSequenceNumber);
+                schedule.serviceBusSequenceNumber = null;
+            }
+
+            if (schedule.isActive && schedule.nextRunAt) {
+                schedule.serviceBusSequenceNumber = await azureServiceBusSchedulerService.scheduleExecution(schedule.id, schedule.nextRunAt);
+            }
+        }
+
         const saved = await this.repository.save(schedule);
         return {
             ...saved,
@@ -356,8 +375,16 @@ export class NocNewsSchedulerService {
             const nextRun = this.calculateNextRunFromConfig(configObj, schedule.startAt.toISOString());
             schedule.nextRunAt = nextRun;
             schedule.status = nextRun ? 'Pending' : 'Completed';
+
+            if (schedule.nextRunAt) {
+                schedule.serviceBusSequenceNumber = await azureServiceBusSchedulerService.scheduleExecution(schedule.id, schedule.nextRunAt);
+            }
         } else {
             schedule.status = 'Cancelled';
+            if (schedule.serviceBusSequenceNumber) {
+                await azureServiceBusSchedulerService.cancelScheduledExecution(schedule.serviceBusSequenceNumber);
+                schedule.serviceBusSequenceNumber = null;
+            }
         }
 
         const saved = await this.repository.save(schedule);
@@ -371,6 +398,10 @@ export class NocNewsSchedulerService {
     async deleteSchedule(id: string) {
         if (!AppDataSource.isInitialized) {
             throw new Error('Database not initialized');
+        }
+        const schedule = await this.repository.findOne({ where: { id } });
+        if (schedule?.serviceBusSequenceNumber) {
+            await azureServiceBusSchedulerService.cancelScheduledExecution(schedule.serviceBusSequenceNumber);
         }
         const result = await this.repository.delete({ id });
         return (result.affected || 0) > 0;
@@ -1128,6 +1159,16 @@ export class NocNewsSchedulerService {
         const nextRun = this.calculateNextRunFromConfig(configObj, schedule.startAt.toISOString(), now);
         schedule.nextRunAt = nextRun;
         schedule.status = nextRun ? 'Pending' : 'Completed';
+
+        // Cancelar mensaje anterior si existía y programar la siguiente repetición en Azure Service Bus
+        if (schedule.serviceBusSequenceNumber) {
+            await azureServiceBusSchedulerService.cancelScheduledExecution(schedule.serviceBusSequenceNumber);
+            schedule.serviceBusSequenceNumber = null;
+        }
+        if (nextRun && schedule.isActive) {
+            schedule.serviceBusSequenceNumber = await azureServiceBusSchedulerService.scheduleExecution(schedule.id, nextRun);
+        }
+
         const updatedSchedule = await this.repository.save(schedule);
 
         // Guardar el borrador estructurado en nuestra BD local

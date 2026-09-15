@@ -30,8 +30,10 @@
   "author": "VOC Team",
   "license": "UNLICENSED",
   "dependencies": {
+    "@azure/service-bus": "^7.9.5",
     "@azure/storage-blob": "^12.27.0",
     "@azure/storage-file-share": "^12.30.0",
+    "@types/long": "^4.0.2",
     "axios": "^1.11.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
@@ -46,6 +48,7 @@
     "glob": "^13.0.6",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
+    "long": "^5.3.2",
     "morgan": "^1.10.1",
     "mssql": "^11.0.1",
     "reflect-metadata": "^0.2.2",
