@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { NocNewsScheduler } from './NocNewsScheduler';
 
 @Entity('noc_news_drafts')
@@ -9,14 +9,26 @@ export class NocNewsDraft {
     @Column({ name: 'scheduleId', type: 'nvarchar', length: 36, nullable: false })
     scheduleId!: string;
 
-    @Column({ name: 'path', type: 'nvarchar', length: 500, nullable: false })
-    path!: string;
+    @Column({ name: 'title', type: 'nvarchar', length: 500, nullable: true })
+    title!: string | null;
+
+    @Column({ name: 'subtitle', type: 'nvarchar', length: 'MAX', nullable: true })
+    subtitle!: string | null;
+
+    @Column({ name: 'content', type: 'nvarchar', length: 'MAX', nullable: true })
+    content!: string | null; // JSON with structured article blocks (paragraphs, images)
+
+    @Column({ name: 'path', type: 'nvarchar', length: 500, nullable: true })
+    path!: string | null;
 
     @Column({ name: 'status', type: 'nvarchar', length: 50, nullable: false, default: 'pending' })
     status!: string; // 'pending', 'published'
 
     @CreateDateColumn({ name: 'createdAt', type: 'datetime2' })
     createdAt!: Date;
+
+    @UpdateDateColumn({ name: 'updatedAt', type: 'datetime2', nullable: true })
+    updatedAt!: Date | null;
 
     @Column({ name: 'publishedAt', type: 'datetime2', nullable: true })
     publishedAt!: Date | null;

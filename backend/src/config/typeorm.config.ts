@@ -42,9 +42,7 @@ export const AppDataSource = new DataSource({
   entities: entities,
   
   // Migration configuration - detect if running from compiled code
-  migrations: __filename.includes('dist') 
-    ? ['dist/migrations/*.js'] 
-    : ['src/migrations/*.ts'],
+  migrations: [require('path').join(__dirname, '../migrations/*.{js,ts}')],
   migrationsTableName: 'typeorm_migrations',
   
   // Development settings

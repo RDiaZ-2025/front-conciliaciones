@@ -1,8 +1,48 @@
 import { BaseApiService } from './base-api.service';
 import { Injectable } from '@angular/core';
-
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
+
+export interface NewsBlock {
+  id: string;
+  type: 'paragraph' | 'image' | 'heading';
+  content?: string;
+  url?: string;
+  caption?: string;
+  alt?: string;
+  prompt?: string;
+  level?: number;
+  text?: string;
+}
+
+export interface NewsArticleData {
+  title: string;
+  subtitle: string;
+  coverImage?: {
+    url: string;
+    alt: string;
+    caption: string;
+    prompt?: string;
+  };
+  blocks: NewsBlock[];
+  tags?: string[];
+  section?: string;
+  author?: string;
+  sourcesUsed?: any[];
+}
+
+export interface NewsDraftDetail {
+  id: number;
+  scheduleId: string;
+  title: string;
+  subtitle: string;
+  path: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt?: string;
+  publishedAt?: string | null;
+  articleData: NewsArticleData;
+}
 
 export interface NewsSchedule {
   id: string;
@@ -26,20 +66,11 @@ export interface NewsSchedule {
   updatedAt?: string;
 }
 
-export interface WebhookPayload {
-  sources: string[];
-  topic: string;
-  userInstructions: string | null;
-}
-
 @Injectable({
   providedIn: 'root'
 })
 export class NewsSchedulerService extends BaseApiService {
   private apiUrl = `${environment.apiUrl}/noc/news-scheduler`;
-  private webhookUrl = 'https://n8n.srv865978.hstgr.cloud/webhook/noc/generate-news';
-
-  
 
   getSchedules(): Observable<NewsSchedule[]> {
     return this.http.get<NewsSchedule[]>(this.apiUrl);
@@ -65,17 +96,8 @@ export class NewsSchedulerService extends BaseApiService {
     return this.http.delete(`${this.apiUrl}/${id}`);
   }
 
-  triggerNow(schedule: NewsSchedule): Observable<any> {
-    const payload = {
-      data: {
-        sources: schedule.sources && schedule.sources.length > 0 ? schedule.sources : [],
-        topic: schedule.topic,
-        userInstructions: schedule.userInstructions ? schedule.userInstructions : null
-      },
-      async: false
-    };
-
-    return this.http.post(this.webhookUrl, payload);
+  triggerNow(id: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${id}/run`, {});
   }
 
   recordExecution(id: string): Observable<NewsSchedule> {
@@ -84,6 +106,42 @@ export class NewsSchedulerService extends BaseApiService {
 
   getPendingDrafts(scheduleId: string): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/${scheduleId}/drafts`);
+  }
+
+  getDraftDetail(draftId: number): Observable<NewsDraftDetail> {
+    return this.http.get<NewsDraftDetail>(`${this.apiUrl}/drafts/detail/${draftId}`);
+  }
+
+  updateDraft(draftId: number, articleData: NewsArticleData): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/drafts/${draftId}`, articleData);
+  }
+
+  deleteDraft(draftId: number): Observable<{ success: boolean; message: string }> {
+    return this.http.delete<{ success: boolean; message: string }>(`${this.apiUrl}/drafts/${draftId}`);
+  }
+
+  aiAdjustParagraph(draftId: number, blockId: string, currentText: string, instruction: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/drafts/${draftId}/ai-adjust-paragraph`, {
+      blockId,
+      currentText,
+      instruction
+    });
+  }
+
+  aiAdjustArticle(draftId: number, instruction: string, articleData: NewsArticleData): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/drafts/${draftId}/ai-adjust-article`, {
+      instruction,
+      articleData
+    });
+  }
+
+  aiRegenerateImage(draftId: number, blockId: string, currentUrl: string, prompt: string, instruction: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/drafts/${draftId}/ai-regenerate-image`, {
+      blockId,
+      currentUrl,
+      prompt,
+      instruction
+    });
   }
 
   previewDraft(path: string): Observable<any> {

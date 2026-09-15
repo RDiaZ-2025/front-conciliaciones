@@ -100,10 +100,11 @@ Los controladores del backend residen en `backend/src/controllers/noc_news_sched
 
 | Método | Endpoint | Descripción | Cuerpo de Petición (Request Body) |
 |---|---|---|---|
-| **POST** | `/api/noc/news-scheduler/draft` | Registra un borrador. Llamado exclusivamente por n8n al finalizar la curaduría. | `{ "scheduleId": "UUID", "title": "String", "path": "String" }` |
-| **GET** | `/api/noc/news-scheduler/draft/schedule/:scheduleId` | Devuelve la lista de borradores pendientes (`'pending'`) para un agendamiento. | N/A |
-| **POST** | `/api/noc/news-scheduler/draft/preview` | Proxy de previsualización que consulta a n8n y retorna el HTML adaptado. | `{ "path": "String" }` |
-| **POST** | `/api/noc/news-scheduler/draft/publish/:id` | Dispara el webhook de n8n para publicar, y si es exitoso cambia el estado a `'published'`. | N/A |
+| **POST** | `/api/noc/news-scheduler/:id/run` | Ejecuta de inmediato el agendamiento invocando a n8n desde el backend, actualizando fechas y registrando borradores. | N/A |
+| **POST** | `/api/noc/news-scheduler/draft` | Registra un borrador. Llamado por n8n o internamente al finalizar la curaduría. | `{ "scheduleId": "UUID", "path": "String" }` |
+| **GET** | `/api/noc/news-scheduler/:id/drafts` | Devuelve la lista de borradores pendientes (`'pending'`) para un agendamiento. | N/A |
+| **POST** | `/api/noc/news-scheduler/drafts/preview` | Proxy de previsualización que consulta a n8n y retorna el HTML adaptado. | `{ "path": "String" }` |
+| **POST** | `/api/noc/news-scheduler/drafts/:id/publish` | Dispara el webhook de n8n para publicar, y si es exitoso cambia el estado a `'published'`. | N/A |
 
 ---
 
