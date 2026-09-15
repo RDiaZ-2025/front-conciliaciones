@@ -598,18 +598,25 @@ export class NocNewsSchedulerService {
         // Webhook URL configurable para n8n
         const n8nAdjustParagraphUrl = process.env.N8N_AI_ADJUST_PARAGRAPH_URL;
         if (n8nAdjustParagraphUrl) {
+            const payload = {
+                environment: 'prod',
+                async: false,
+                data: {
+                    draftId,
+                    blockId,
+                    currentText,
+                    instruction
+                }
+            };
             try {
-                console.log(`[AI Adjust Paragraph] Calling n8n webhook: ${n8nAdjustParagraphUrl}`);
-                const response = await axios.post(n8nAdjustParagraphUrl, {
-                    environment: 'prod',
-                    async: false,
-                    data: {
-                        draftId,
-                        blockId,
-                        currentText,
-                        instruction
-                    }
-                }, { timeout: 45000 });
+                console.log(`📡 [N8N Request][AI Adjust Paragraph] Sending to: ${n8nAdjustParagraphUrl}`);
+                console.log(`📦 [N8N Payload][AI Adjust Paragraph]:`, JSON.stringify(payload, null, 2));
+                const startTime = Date.now();
+                const response = await axios.post(n8nAdjustParagraphUrl, payload, { timeout: 45000 });
+                const duration = Date.now() - startTime;
+                console.log(`✅ [N8N Response][AI Adjust Paragraph] (${duration}ms) Status: ${response.status}`);
+                console.log(`📥 [N8N Response Data][AI Adjust Paragraph]:`, JSON.stringify(response.data, null, 2));
+
                 const result = response.data?.output || response.data;
                 if (result && result.adjustedText) {
                     return {
@@ -622,7 +629,11 @@ export class NocNewsSchedulerService {
                     };
                 }
             } catch (err: any) {
-                console.warn(`[AI Adjust Paragraph] Webhook call failed, falling back to internal processor:`, err.message);
+                console.error(`❌ [N8N Error][AI Adjust Paragraph] Webhook call to ${n8nAdjustParagraphUrl} failed:`, {
+                    message: err.message,
+                    status: err.response?.status,
+                    data: err.response?.data
+                });
             }
         }
 
@@ -658,17 +669,24 @@ export class NocNewsSchedulerService {
     async aiAdjustArticle(draftId: number, instruction: string, articleData: NewsArticleData) {
         const n8nAdjustArticleUrl = process.env.N8N_AI_ADJUST_ARTICLE_URL;
         if (n8nAdjustArticleUrl) {
+            const payload = {
+                environment: 'prod',
+                async: false,
+                data: {
+                    draftId,
+                    instruction,
+                    articleData
+                }
+            };
             try {
-                console.log(`[AI Adjust Article] Calling n8n webhook: ${n8nAdjustArticleUrl}`);
-                const response = await axios.post(n8nAdjustArticleUrl, {
-                    environment: 'prod',
-                    async: false,
-                    data: {
-                        draftId,
-                        instruction,
-                        articleData
-                    }
-                }, { timeout: 60000 });
+                console.log(`📡 [N8N Request][AI Adjust Article] Sending to: ${n8nAdjustArticleUrl}`);
+                console.log(`📦 [N8N Payload][AI Adjust Article]:`, JSON.stringify(payload, null, 2));
+                const startTime = Date.now();
+                const response = await axios.post(n8nAdjustArticleUrl, payload, { timeout: 60000 });
+                const duration = Date.now() - startTime;
+                console.log(`✅ [N8N Response][AI Adjust Article] (${duration}ms) Status: ${response.status}`);
+                console.log(`📥 [N8N Response Data][AI Adjust Article]:`, JSON.stringify(response.data, null, 2));
+
                 const result = response.data?.output || response.data;
                 if (result && result.adjustedArticle) {
                     const finalArticle = result.adjustedArticle;
@@ -683,7 +701,11 @@ export class NocNewsSchedulerService {
                     };
                 }
             } catch (err: any) {
-                console.warn(`[AI Adjust Article] Webhook call failed, falling back to internal processor:`, err.message);
+                console.error(`❌ [N8N Error][AI Adjust Article] Webhook call to ${n8nAdjustArticleUrl} failed:`, {
+                    message: err.message,
+                    status: err.response?.status,
+                    data: err.response?.data
+                });
             }
         }
 
@@ -722,19 +744,26 @@ export class NocNewsSchedulerService {
     async aiRegenerateImage(draftId: number, blockId: string, currentUrl: string, prompt: string, instruction: string) {
         const n8nRegenerateImageUrl = process.env.N8N_AI_REGENERATE_IMAGE_URL;
         if (n8nRegenerateImageUrl) {
+            const payload = {
+                environment: 'prod',
+                async: false,
+                data: {
+                    draftId,
+                    blockId,
+                    currentUrl,
+                    prompt,
+                    instruction
+                }
+            };
             try {
-                console.log(`[AI Regenerate Image] Calling n8n webhook: ${n8nRegenerateImageUrl}`);
-                const response = await axios.post(n8nRegenerateImageUrl, {
-                    environment: 'prod',
-                    async: false,
-                    data: {
-                        draftId,
-                        blockId,
-                        currentUrl,
-                        prompt,
-                        instruction
-                    }
-                }, { timeout: 60000 });
+                console.log(`📡 [N8N Request][AI Regenerate Image] Sending to: ${n8nRegenerateImageUrl}`);
+                console.log(`📦 [N8N Payload][AI Regenerate Image]:`, JSON.stringify(payload, null, 2));
+                const startTime = Date.now();
+                const response = await axios.post(n8nRegenerateImageUrl, payload, { timeout: 120000 });
+                const duration = Date.now() - startTime;
+                console.log(`✅ [N8N Response][AI Regenerate Image] (${duration}ms) Status: ${response.status}`);
+                console.log(`📥 [N8N Response Data][AI Regenerate Image]:`, JSON.stringify(response.data, null, 2));
+
                 const result = response.data?.output || response.data;
                 if (result && (result.newUrl || result.imageUrl || result.url)) {
                     const tempUrl = result.newUrl || result.imageUrl || result.url;
@@ -750,7 +779,11 @@ export class NocNewsSchedulerService {
                     };
                 }
             } catch (err: any) {
-                console.warn(`[AI Regenerate Image] Webhook call failed, falling back to internal processor:`, err.message);
+                console.error(`❌ [N8N Error][AI Regenerate Image] Webhook call to ${n8nRegenerateImageUrl} failed:`, {
+                    message: err.message,
+                    status: err.response?.status,
+                    data: err.response?.data
+                });
             }
         }
 
@@ -824,27 +857,39 @@ export class NocNewsSchedulerService {
 
     private async step1_extractNews(topic: string, userInstructions: string | null, sources: string[]): Promise<any> {
         if (this.extractNewsUrl) {
+            const payload = {
+                environment: 'prod',
+                async: false,
+                data: {
+                    topic,
+                    userInstructions,
+                    sources
+                }
+            };
             try {
-                console.log(`[Pipeline Step 1] Calling Extract News Webhook: ${this.extractNewsUrl}`);
-                const response = await axios.post(this.extractNewsUrl, {
-                    environment: 'prod',
-                    async: false,
-                    data: {
-                        topic,
-                        userInstructions,
-                        sources
-                    }
-                }, { timeout: 180000 });
+                console.log(`📡 [N8N Request][Pipeline Step 1 - Extract News] Sending to: ${this.extractNewsUrl}`);
+                console.log(`📦 [N8N Payload][Pipeline Step 1]:`, JSON.stringify(payload, null, 2));
+                const startTime = Date.now();
+                const response = await axios.post(this.extractNewsUrl, payload, { timeout: 180000 });
+                const duration = Date.now() - startTime;
+                console.log(`✅ [N8N Response][Pipeline Step 1] (${duration}ms) Status: ${response.status}`);
+                console.log(`📥 [N8N Response Data][Pipeline Step 1]:`, JSON.stringify(response.data, null, 2));
+
                 const result = response.data?.output || response.data;
                 if (result && (result.rawFacts || result.keyContext)) {
                     return result;
                 }
             } catch (err: any) {
-                console.warn(`[Pipeline Step 1] Webhook failed or timed out, falling back to mock:`, err.message);
+                console.error(`❌ [N8N Error][Pipeline Step 1 - Extract News] Webhook call failed:`, {
+                    message: err.message,
+                    status: err.response?.status,
+                    data: err.response?.data
+                });
             }
         }
 
         // Mock / Fallback de Extracción
+        console.warn(`⚠️ [Pipeline Step 1] Using fallback mock extraction data for topic: "${topic}"`);
         return {
             topic,
             sourceUrl: sources && sources.length > 0 ? sources[0] : null,
@@ -860,29 +905,41 @@ export class NocNewsSchedulerService {
 
     private async step2_draftArticle(topic: string, userInstructions: string | null, extractedData: any): Promise<any> {
         if (this.draftArticleUrl) {
+            const payload = {
+                environment: 'prod',
+                async: false,
+                data: {
+                    topic: extractedData.topic || topic,
+                    keyContext: extractedData.keyContext || '',
+                    rawFacts: extractedData.rawFacts || [],
+                    sourcesFound: extractedData.sourcesFound || [],
+                    userInstructions
+                }
+            };
             try {
-                console.log(`[Pipeline Step 2] Calling Draft Article Webhook: ${this.draftArticleUrl}`);
-                const response = await axios.post(this.draftArticleUrl, {
-                    environment: 'prod',
-                    async: false,
-                    data: {
-                        topic: extractedData.topic || topic,
-                        keyContext: extractedData.keyContext || '',
-                        rawFacts: extractedData.rawFacts || [],
-                        sourcesFound: extractedData.sourcesFound || [],
-                        userInstructions
-                    }
-                }, { timeout: 180000 });
+                console.log(`📡 [N8N Request][Pipeline Step 2 - Draft Article] Sending to: ${this.draftArticleUrl}`);
+                console.log(`📦 [N8N Payload][Pipeline Step 2]:`, JSON.stringify(payload, null, 2));
+                const startTime = Date.now();
+                const response = await axios.post(this.draftArticleUrl, payload, { timeout: 180000 });
+                const duration = Date.now() - startTime;
+                console.log(`✅ [N8N Response][Pipeline Step 2] (${duration}ms) Status: ${response.status}`);
+                console.log(`📥 [N8N Response Data][Pipeline Step 2]:`, JSON.stringify(response.data, null, 2));
+
                 const result = response.data?.output || response.data;
                 if (result && result.title && (result.blocks || result.paragraphs)) {
                     return result;
                 }
             } catch (err: any) {
-                console.warn(`[Pipeline Step 2] Webhook failed or timed out, falling back to mock:`, err.message);
+                console.error(`❌ [N8N Error][Pipeline Step 2 - Draft Article] Webhook call failed:`, {
+                    message: err.message,
+                    status: err.response?.status,
+                    data: err.response?.data
+                });
             }
         }
 
         // Mock / Fallback de Redacción y Planificación de Imágenes
+        console.warn(`⚠️ [Pipeline Step 2] Using fallback mock drafting for topic: "${topic}"`);
         const cleanTopic = topic || 'Actualidad';
         return {
             title: `Transformaciones y Nuevas Perspectivas en ${cleanTopic}`,
@@ -926,7 +983,7 @@ export class NocNewsSchedulerService {
         }
 
         try {
-            console.log(`[Storage Persistence] Downloading generated image from: ${imageUrl.substring(0, 70)}...`);
+            console.log(`📥 [Storage Persistence] Downloading image from: ${imageUrl.substring(0, 80)}...`);
             const response = await axios.get(imageUrl, {
                 responseType: 'arraybuffer',
                 timeout: 45000,
@@ -981,10 +1038,10 @@ export class NocNewsSchedulerService {
 
                     const sasToken = generateBlobSASQueryParameters(sasOptions, sharedKeyCredential).toString();
                     const permanentUrl = `${blockBlobClient.url}?${sasToken}`;
-                    console.log(`[Storage Persistence] Image successfully persisted in Azure Blob Storage: ${blockBlobClient.url}`);
+                    console.log(`☁️ [Storage Persistence] Image successfully saved in Azure Blob Storage: ${blockBlobClient.url}`);
                     return permanentUrl;
                 } catch (azureErr: any) {
-                    console.warn(`[Storage Persistence] Azure upload failed (${azureErr.message}), falling back to local storage`);
+                    console.warn(`⚠️ [Storage Persistence] Azure upload warning (${azureErr.message}), saving to local storage fallback`);
                 }
             }
 
@@ -995,26 +1052,33 @@ export class NocNewsSchedulerService {
             }
             const localFilePath = path.join(uploadsDir, fileName);
             fs.writeFileSync(localFilePath, buffer);
-            console.log(`[Storage Persistence] Image saved locally to ${localFilePath}`);
+            console.log(`💾 [Storage Persistence] Image saved locally to ${localFilePath}`);
             return `/uploads/noc-news/${fileName}`;
         } catch (err: any) {
-            console.error(`[Storage Persistence] Error downloading/persisting image:`, err.message);
+            console.error(`❌ [Storage Persistence] Error downloading/persisting image:`, err.message);
             return imageUrl;
         }
     }
 
     private async step3_generateImage(prompt: string, contextTopic: string): Promise<string> {
         if (this.generateImageUrl) {
+            const payload = {
+                environment: 'prod',
+                async: false,
+                data: {
+                    prompt,
+                    context: contextTopic
+                }
+            };
             try {
-                console.log(`[Pipeline Step 3] Calling Generate Image Webhook: ${this.generateImageUrl}`);
-                const response = await axios.post(this.generateImageUrl, {
-                    environment: 'prod',
-                    async: false,
-                    data: {
-                        prompt,
-                        context: contextTopic
-                    }
-                }, { timeout: 120000 });
+                console.log(`📡 [N8N Request][Pipeline Step 3 - Generate Image] Sending to: ${this.generateImageUrl}`);
+                console.log(`📦 [N8N Payload][Pipeline Step 3]:`, JSON.stringify(payload, null, 2));
+                const startTime = Date.now();
+                const response = await axios.post(this.generateImageUrl, payload, { timeout: 120000 });
+                const duration = Date.now() - startTime;
+                console.log(`✅ [N8N Response][Pipeline Step 3] (${duration}ms) Status: ${response.status}`);
+                console.log(`📥 [N8N Response Data][Pipeline Step 3]:`, JSON.stringify(response.data, null, 2));
+
                 const result = response.data?.output || response.data;
                 if (result && (result.imageUrl || result.url)) {
                     const tempUrl = result.imageUrl || result.url;
@@ -1023,7 +1087,11 @@ export class NocNewsSchedulerService {
                     return persistentUrl;
                 }
             } catch (err: any) {
-                console.warn(`[Pipeline Step 3] Webhook failed or timed out, falling back to mock:`, err.message);
+                console.error(`❌ [N8N Error][Pipeline Step 3 - Generate Image] Webhook call failed:`, {
+                    message: err.message,
+                    status: err.response?.status,
+                    data: err.response?.data
+                });
             }
         }
 
@@ -1048,7 +1116,8 @@ export class NocNewsSchedulerService {
 
         const sources = schedule.sources ? (typeof schedule.sources === 'string' ? JSON.parse(schedule.sources) : schedule.sources) : [];
 
-        console.log(`[Pipeline Execution Started] Schedule ID: ${id} | Topic: "${schedule.topic}"`);
+        const startTime = Date.now();
+        console.log(`🚀 [Pipeline Orchestrator] Starting news generation for Schedule ID: "${id}" | Name: "${schedule.name}" | Topic: "${schedule.topic}"`);
 
         // --- PASO 1: Ingesta y Extracción de Hechos Clave con IA ---
         const extractedData = await this.step1_extractNews(
@@ -1056,6 +1125,7 @@ export class NocNewsSchedulerService {
             schedule.userInstructions,
             Array.isArray(sources) ? sources : []
         );
+        console.log(`📋 [Pipeline Step 1 Done] Facts extracted: ${extractedData.rawFacts?.length || 0} | Context length: ${extractedData.keyContext?.length || 0} chars`);
 
         // --- PASO 2: Redacción Periodística y Planificación de Imágenes con IA ---
         const draftedContent = await this.step2_draftArticle(
@@ -1063,12 +1133,15 @@ export class NocNewsSchedulerService {
             schedule.userInstructions,
             extractedData
         );
+        console.log(`✍️ [Pipeline Step 2 Done] Article drafted: "${draftedContent.title}" | Proposed blocks: ${draftedContent.blocks?.length || 0}`);
 
         // --- PASO 3: Generación de Imagen de Portada con IA ---
+        console.log(`🎨 [Pipeline Step 3 Starting] Generating cover image with prompt: "${draftedContent.coverImagePrompt}"`);
         const coverImageUrl = await this.step3_generateImage(
             draftedContent.coverImagePrompt || `Photojournalism of ${schedule.topic}`,
             schedule.topic
         );
+        console.log(`🖼️ [Pipeline Step 3 Cover Done] Cover URL: ${coverImageUrl}`);
 
         // --- PASO 4: Ensamblado y Generación de Bloques con Imágenes Intermedias ---
         const blocks: NewsBlock[] = [];
@@ -1078,6 +1151,7 @@ export class NocNewsSchedulerService {
             for (const b of draftedContent.blocks) {
                 if (b.type === 'image') {
                     const imgPrompt = b.content || b.prompt || `Photojournalism illustrating ${schedule.topic}`;
+                    console.log(`🎨 [Pipeline Block Image] Generating in-article image #${blockIndex} with prompt: "${imgPrompt}"`);
                     const imgUrl = await this.step3_generateImage(imgPrompt, schedule.topic);
                     blocks.push({
                         id: `block-${blockIndex++}`,
@@ -1145,8 +1219,12 @@ export class NocNewsSchedulerService {
         });
         const savedDraft = await draftRepo.save(newDraft);
 
+        const totalDurationSec = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(`✅ [Pipeline Completed] Draft ID: ${savedDraft.id} | Total Time: ${totalDurationSec}s | Next Run: ${nextRun ? nextRun.toISOString() : 'None'}`);
+
         // Si tenía autopublicar activado, publicar de inmediato
         if (schedule.publishAutomatically) {
+            console.log(`🌐 [Auto-Publish] Auto-publishing draft ID: ${savedDraft.id} to Bluestacks CMS...`);
             await this.publishDraft(savedDraft.id);
         }
 
