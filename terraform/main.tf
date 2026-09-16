@@ -50,7 +50,7 @@ resource "azurerm_servicebus_queue" "news_schedule_queue" {
   namespace_id = azurerm_servicebus_namespace.sb_namespace.id
 
   # Configuración recomendada para mensajes programados y confiabilidad
-  enable_partitioning                   = false
+  partitioning_enabled                  = false
   max_delivery_count                    = 10
   default_message_ttl                   = "P14D" # 14 días
   dead_lettering_on_message_expiration = true
