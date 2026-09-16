@@ -78,6 +78,16 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 // Middleware de logging de acciones de usuario
 app.use(actionLogger);
 
+// Ruta raíz para Azure App Service / IIS Health Check / Ping
+app.get('/', skipLogging, (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'VOC & NOC Backend API is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
 // Ruta de salud (sin logging para evitar spam en los logs)
 app.get('/health', skipLogging, (req, res) => {
   res.status(200).json({

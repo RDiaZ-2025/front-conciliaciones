@@ -595,217 +595,152 @@ export class NocNewsSchedulerService {
     }
 
     async aiAdjustParagraph(draftId: number, blockId: string, currentText: string, instruction: string) {
-        // Webhook URL configurable para n8n
-        const n8nAdjustParagraphUrl = process.env.N8N_AI_ADJUST_PARAGRAPH_URL;
-        if (n8nAdjustParagraphUrl) {
-            const payload = {
-                environment: 'prod',
-                async: false,
-                data: {
-                    draftId,
-                    blockId,
-                    currentText,
-                    instruction
-                }
-            };
-            try {
-                console.log(`📡 [N8N Request][AI Adjust Paragraph] Sending to: ${n8nAdjustParagraphUrl}`);
-                console.log(`📦 [N8N Payload][AI Adjust Paragraph]:`, JSON.stringify(payload, null, 2));
-                const startTime = Date.now();
-                const response = await axios.post(n8nAdjustParagraphUrl, payload, { timeout: 45000 });
-                const duration = Date.now() - startTime;
-                console.log(`✅ [N8N Response][AI Adjust Paragraph] (${duration}ms) Status: ${response.status}`);
-                console.log(`📥 [N8N Response Data][AI Adjust Paragraph]:`, JSON.stringify(response.data, null, 2));
+        const n8nAdjustParagraphUrl = this.adjustParagraphUrl;
+        if (!n8nAdjustParagraphUrl) {
+            throw new Error('La variable de entorno N8N_AI_ADJUST_PARAGRAPH_URL no está configurada en el servidor');
+        }
 
-                const result = response.data?.output || response.data;
-                if (result && result.adjustedText) {
-                    return {
-                        success: true,
-                        blockId: result.blockId || blockId,
-                        adjustedText: result.adjustedText,
-                        plainText: result.plainText || result.adjustedText.replace(/<[^>]*>?/gm, '').trim(),
-                        instructionApplied: result.instructionApplied || instruction,
-                        timestamp: new Date().toISOString()
-                    };
-                }
-            } catch (err: any) {
-                console.error(`❌ [N8N Error][AI Adjust Paragraph] Webhook call to ${n8nAdjustParagraphUrl} failed:`, {
-                    message: err.message,
-                    status: err.response?.status,
-                    data: err.response?.data
-                });
+        const payload = {
+            environment: 'prod',
+            async: false,
+            data: {
+                draftId,
+                blockId,
+                currentText,
+                instruction
             }
-        }
-
-        // Simulación inteligente / Dummy estructurado
-        let adjusted = currentText.replace(/<[^>]*>?/gm, '').trim();
-        const lowerInst = instruction.toLowerCase();
-
-        if (lowerInst.includes('formal') || lowerInst.includes('profesional')) {
-            adjusted = `De acuerdo con fuentes institucionales, se ratifica que ${adjusted.charAt(0).toLowerCase() + adjusted.slice(1)} Este planteamiento refuerza la solidez de las directrices adoptadas.`;
-        } else if (lowerInst.includes('resum') || lowerInst.includes('cortic') || lowerInst.includes('breve')) {
-            const sentences = adjusted.split('. ');
-            adjusted = sentences.slice(0, Math.max(1, Math.floor(sentences.length / 2))).join('. ') + '.';
-        } else if (lowerInst.includes('expand') || lowerInst.includes('detall') || lowerInst.includes('más')) {
-            adjusted = `${adjusted} Asimismo, los especialistas señalan que este fenómeno traerá implicaciones significativas a mediano y largo plazo en toda la región.`;
-        } else if (lowerInst.includes('dramátic') || lowerInst.includes('impact') || lowerInst.includes('urgente')) {
-            adjusted = `¡Alerta en el sector! ${adjusted} La situación ha generado una ola de reacciones inmediatas y mantiene en vilo a las autoridades pertinentes.`;
-        } else {
-            adjusted = `${adjusted} (Nota del editor: Ajustado según la indicación: "${instruction}").`;
-        }
-
-        const adjustedHtml = `<p>${adjusted}</p>`;
-
-        return {
-            success: true,
-            blockId,
-            adjustedText: adjustedHtml,
-            plainText: adjusted,
-            instructionApplied: instruction,
-            timestamp: new Date().toISOString()
         };
+
+        try {
+            console.log(`📡 [N8N Request][AI Adjust Paragraph] Sending to: ${n8nAdjustParagraphUrl}`);
+            console.log(`📦 [N8N Payload][AI Adjust Paragraph]:`, JSON.stringify(payload, null, 2));
+            const startTime = Date.now();
+            const response = await axios.post(n8nAdjustParagraphUrl, payload, { timeout: 45000 });
+            const duration = Date.now() - startTime;
+            console.log(`✅ [N8N Response][AI Adjust Paragraph] (${duration}ms) Status: ${response.status}`);
+            console.log(`📥 [N8N Response Data][AI Adjust Paragraph]:`, JSON.stringify(response.data, null, 2));
+
+            const result = response.data?.output || response.data;
+            if (result && result.adjustedText) {
+                return {
+                    success: true,
+                    blockId: result.blockId || blockId,
+                    adjustedText: result.adjustedText,
+                    plainText: result.plainText || result.adjustedText.replace(/<[^>]*>?/gm, '').trim(),
+                    instructionApplied: result.instructionApplied || instruction,
+                    timestamp: new Date().toISOString()
+                };
+            }
+            throw new Error('La respuesta de n8n no devolvió el texto ajustado (adjustedText)');
+        } catch (err: any) {
+            console.error(`❌ [N8N Error][AI Adjust Paragraph] Webhook call to ${n8nAdjustParagraphUrl} failed:`, {
+                message: err.message,
+                status: err.response?.status,
+                data: err.response?.data
+            });
+            throw new Error(`Error al ajustar párrafo con IA: ${err.response?.data?.message || err.message}`);
+        }
     }
 
     async aiAdjustArticle(draftId: number, instruction: string, articleData: NewsArticleData) {
-        const n8nAdjustArticleUrl = process.env.N8N_AI_ADJUST_ARTICLE_URL;
-        if (n8nAdjustArticleUrl) {
-            const payload = {
-                environment: 'prod',
-                async: false,
-                data: {
-                    draftId,
-                    instruction,
-                    articleData
-                }
-            };
-            try {
-                console.log(`📡 [N8N Request][AI Adjust Article] Sending to: ${n8nAdjustArticleUrl}`);
-                console.log(`📦 [N8N Payload][AI Adjust Article]:`, JSON.stringify(payload, null, 2));
-                const startTime = Date.now();
-                const response = await axios.post(n8nAdjustArticleUrl, payload, { timeout: 60000 });
-                const duration = Date.now() - startTime;
-                console.log(`✅ [N8N Response][AI Adjust Article] (${duration}ms) Status: ${response.status}`);
-                console.log(`📥 [N8N Response Data][AI Adjust Article]:`, JSON.stringify(response.data, null, 2));
-
-                const result = response.data?.output || response.data;
-                if (result && result.adjustedArticle) {
-                    const finalArticle = result.adjustedArticle;
-                    if (draftId) {
-                        await this.updateDraft(draftId, finalArticle);
-                    }
-                    return {
-                        success: true,
-                        adjustedArticle: finalArticle,
-                        summary: result.summary || `Se aplicó la directriz "${instruction}" a todo el artículo.`,
-                        timestamp: new Date().toISOString()
-                    };
-                }
-            } catch (err: any) {
-                console.error(`❌ [N8N Error][AI Adjust Article] Webhook call to ${n8nAdjustArticleUrl} failed:`, {
-                    message: err.message,
-                    status: err.response?.status,
-                    data: err.response?.data
-                });
-            }
+        const n8nAdjustArticleUrl = this.adjustArticleUrl;
+        if (!n8nAdjustArticleUrl) {
+            throw new Error('La variable de entorno N8N_AI_ADJUST_ARTICLE_URL no está configurada en el servidor');
         }
 
-        // Simulación / Dummy estructurado para el artículo completo
-        const adjustedBlocks = (articleData.blocks || []).map((block: NewsBlock, idx: number) => {
-            if (block.type === 'paragraph' && block.content) {
-                const plain = block.content.replace(/<[^>]*>?/gm, '').trim();
+        const payload = {
+            environment: 'prod',
+            async: false,
+            data: {
+                draftId,
+                instruction,
+                articleData
+            }
+        };
+
+        try {
+            console.log(`📡 [N8N Request][AI Adjust Article] Sending to: ${n8nAdjustArticleUrl}`);
+            console.log(`📦 [N8N Payload][AI Adjust Article]:`, JSON.stringify(payload, null, 2));
+            const startTime = Date.now();
+            const response = await axios.post(n8nAdjustArticleUrl, payload, { timeout: 60000 });
+            const duration = Date.now() - startTime;
+            console.log(`✅ [N8N Response][AI Adjust Article] (${duration}ms) Status: ${response.status}`);
+            console.log(`📥 [N8N Response Data][AI Adjust Article]:`, JSON.stringify(response.data, null, 2));
+
+            const result = response.data?.output || response.data;
+            if (result && result.adjustedArticle) {
+                const finalArticle = result.adjustedArticle;
+                if (draftId) {
+                    await this.updateDraft(draftId, finalArticle);
+                }
                 return {
-                    ...block,
-                    content: `<p>${plain} <em>[Revisado con IA: ${instruction}]</em></p>`
+                    success: true,
+                    adjustedArticle: finalArticle,
+                    summary: result.summary || `Se aplicó la directriz "${instruction}" a todo el artículo.`,
+                    timestamp: new Date().toISOString()
                 };
             }
-            return block;
-        });
-
-        const adjustedArticle: NewsArticleData = {
-            ...articleData,
-            title: articleData.title ? `${articleData.title}` : 'Noticia Actualizada',
-            subtitle: articleData.subtitle ? `${articleData.subtitle} (Versión optimizada)` : '',
-            blocks: adjustedBlocks
-        };
-
-        // Persistir en la base de datos si existe el ID
-        if (draftId) {
-            await this.updateDraft(draftId, adjustedArticle);
+            throw new Error('La respuesta de n8n no devolvió el artículo ajustado (adjustedArticle)');
+        } catch (err: any) {
+            console.error(`❌ [N8N Error][AI Adjust Article] Webhook call to ${n8nAdjustArticleUrl} failed:`, {
+                message: err.message,
+                status: err.response?.status,
+                data: err.response?.data
+            });
+            throw new Error(`Error al ajustar artículo con IA: ${err.response?.data?.message || err.message}`);
         }
-
-        return {
-            success: true,
-            adjustedArticle,
-            summary: `Se aplicó la directriz "${instruction}" a todos los párrafos del artículo.`,
-            timestamp: new Date().toISOString()
-        };
     }
 
     async aiRegenerateImage(draftId: number, blockId: string, currentUrl: string, prompt: string, instruction: string) {
-        const n8nRegenerateImageUrl = process.env.N8N_AI_REGENERATE_IMAGE_URL;
-        if (n8nRegenerateImageUrl) {
-            const payload = {
-                environment: 'prod',
-                async: false,
-                data: {
-                    draftId,
-                    blockId,
-                    currentUrl,
-                    prompt,
-                    instruction
-                }
-            };
-            try {
-                console.log(`📡 [N8N Request][AI Regenerate Image] Sending to: ${n8nRegenerateImageUrl}`);
-                console.log(`📦 [N8N Payload][AI Regenerate Image]:`, JSON.stringify(payload, null, 2));
-                const startTime = Date.now();
-                const response = await axios.post(n8nRegenerateImageUrl, payload, { timeout: 120000 });
-                const duration = Date.now() - startTime;
-                console.log(`✅ [N8N Response][AI Regenerate Image] (${duration}ms) Status: ${response.status}`);
-                console.log(`📥 [N8N Response Data][AI Regenerate Image]:`, JSON.stringify(response.data, null, 2));
-
-                const result = response.data?.output || response.data;
-                if (result && (result.newUrl || result.imageUrl || result.url)) {
-                    const tempUrl = result.newUrl || result.imageUrl || result.url;
-                    // Persistir permanentemente la imagen en Azure Blob Storage
-                    const persistentUrl = await this.persistImage(tempUrl, 'noc-news-regen');
-                    return {
-                        success: true,
-                        blockId: result.blockId || blockId,
-                        newUrl: persistentUrl,
-                        prompt: result.prompt || result.newPrompt || prompt,
-                        caption: result.caption || `Imagen adaptada por IA según la directriz: "${instruction}".`,
-                        timestamp: new Date().toISOString()
-                    };
-                }
-            } catch (err: any) {
-                console.error(`❌ [N8N Error][AI Regenerate Image] Webhook call to ${n8nRegenerateImageUrl} failed:`, {
-                    message: err.message,
-                    status: err.response?.status,
-                    data: err.response?.data
-                });
-            }
+        const n8nRegenerateImageUrl = this.regenerateImageUrl;
+        if (!n8nRegenerateImageUrl) {
+            throw new Error('La variable de entorno N8N_AI_REGENERATE_IMAGE_URL no está configurada en el servidor');
         }
 
-        // Selección de imágenes realistas de alta calidad para mock
-        const sampleImages = [
-            'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=1200&q=80',
-            'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1200&q=80',
-            'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80',
-            'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
-            'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1200&q=80'
-        ];
-        const newUrl = sampleImages[Math.floor(Math.random() * sampleImages.length)];
-        const refinedPrompt = prompt ? `${prompt} - Ajuste: ${instruction}` : `Fotografía profesional periodística. ${instruction}`;
-
-        return {
-            success: true,
-            blockId,
-            newUrl,
-            prompt: refinedPrompt,
-            caption: `Imagen adaptada por IA según la directriz: "${instruction}".`,
-            timestamp: new Date().toISOString()
+        const payload = {
+            environment: 'prod',
+            async: false,
+            data: {
+                draftId,
+                blockId,
+                currentUrl,
+                prompt,
+                instruction
+            }
         };
+
+        try {
+            console.log(`📡 [N8N Request][AI Regenerate Image] Sending to: ${n8nRegenerateImageUrl}`);
+            console.log(`📦 [N8N Payload][AI Regenerate Image]:`, JSON.stringify(payload, null, 2));
+            const startTime = Date.now();
+            const response = await axios.post(n8nRegenerateImageUrl, payload, { timeout: 120000 });
+            const duration = Date.now() - startTime;
+            console.log(`✅ [N8N Response][AI Regenerate Image] (${duration}ms) Status: ${response.status}`);
+            console.log(`📥 [N8N Response Data][AI Regenerate Image]:`, JSON.stringify(response.data, null, 2));
+
+            const result = response.data?.output || response.data;
+            if (result && (result.newUrl || result.imageUrl || result.url)) {
+                const tempUrl = result.newUrl || result.imageUrl || result.url;
+                // Persistir permanentemente la imagen en Azure Blob Storage
+                const persistentUrl = await this.persistImage(tempUrl, 'noc-news-regen');
+                return {
+                    success: true,
+                    blockId: result.blockId || blockId,
+                    newUrl: persistentUrl,
+                    prompt: result.prompt || result.newPrompt || prompt,
+                    caption: result.caption || `Imagen adaptada por IA según la directriz: "${instruction}".`,
+                    timestamp: new Date().toISOString()
+                };
+            }
+            throw new Error('La respuesta de n8n no devolvió una URL válida de imagen (newUrl/imageUrl)');
+        } catch (err: any) {
+            console.error(`❌ [N8N Error][AI Regenerate Image] Webhook call to ${n8nRegenerateImageUrl} failed:`, {
+                message: err.message,
+                status: err.response?.status,
+                data: err.response?.data
+            });
+            throw new Error(`Error al regenerar imagen con IA: ${err.response?.data?.message || err.message}`);
+        }
     }
 
     async publishDraft(draftId: number) {
@@ -856,120 +791,81 @@ export class NocNewsSchedulerService {
     // --- Pipeline Modular de Inteligencia Artificial (Microservicios) ---
 
     private async step1_extractNews(topic: string, userInstructions: string | null, sources: string[]): Promise<any> {
-        if (this.extractNewsUrl) {
-            const payload = {
-                environment: 'prod',
-                async: false,
-                data: {
-                    topic,
-                    userInstructions,
-                    sources
-                }
-            };
-            try {
-                console.log(`📡 [N8N Request][Pipeline Step 1 - Extract News] Sending to: ${this.extractNewsUrl}`);
-                console.log(`📦 [N8N Payload][Pipeline Step 1]:`, JSON.stringify(payload, null, 2));
-                const startTime = Date.now();
-                const response = await axios.post(this.extractNewsUrl, payload, { timeout: 180000 });
-                const duration = Date.now() - startTime;
-                console.log(`✅ [N8N Response][Pipeline Step 1] (${duration}ms) Status: ${response.status}`);
-                console.log(`📥 [N8N Response Data][Pipeline Step 1]:`, JSON.stringify(response.data, null, 2));
-
-                const result = response.data?.output || response.data;
-                if (result && (result.rawFacts || result.keyContext)) {
-                    return result;
-                }
-            } catch (err: any) {
-                console.error(`❌ [N8N Error][Pipeline Step 1 - Extract News] Webhook call failed:`, {
-                    message: err.message,
-                    status: err.response?.status,
-                    data: err.response?.data
-                });
-            }
+        if (!this.extractNewsUrl) {
+            throw new Error('La variable de entorno N8N_AI_EXTRACT_NEWS_URL no está configurada en el servidor');
         }
 
-        // Mock / Fallback de Extracción
-        console.warn(`⚠️ [Pipeline Step 1] Using fallback mock extraction data for topic: "${topic}"`);
-        return {
-            topic,
-            sourceUrl: sources && sources.length > 0 ? sources[0] : null,
-            sourcesFound: sources.map((s, i) => ({ name: `Fuente ${i+1}`, url: s, title: topic })),
-            rawFacts: [
-                `Se han reportado importantes avances y novedades en relación con ${topic}.`,
-                `Los principales actores del sector señalan cambios estructurales y normativos.`,
-                `Existe un consenso sobre el impacto positivo y la necesidad de monitoreo continuo.`
-            ],
-            keyContext: `Acontecimientos recientes e impacto sectorial alrededor de ${topic}.`
+        const payload = {
+            environment: 'prod',
+            async: false,
+            data: {
+                topic,
+                userInstructions,
+                sources
+            }
         };
+        try {
+            console.log(`📡 [N8N Request][Pipeline Step 1 - Extract News] Sending to: ${this.extractNewsUrl}`);
+            console.log(`📦 [N8N Payload][Pipeline Step 1]:`, JSON.stringify(payload, null, 2));
+            const startTime = Date.now();
+            const response = await axios.post(this.extractNewsUrl, payload, { timeout: 180000 });
+            const duration = Date.now() - startTime;
+            console.log(`✅ [N8N Response][Pipeline Step 1] (${duration}ms) Status: ${response.status}`);
+            console.log(`📥 [N8N Response Data][Pipeline Step 1]:`, JSON.stringify(response.data, null, 2));
+
+            const result = response.data?.output || response.data;
+            if (result && (result.rawFacts || result.keyContext)) {
+                return result;
+            }
+            throw new Error('La respuesta de n8n no contiene la estructura esperada (rawFacts/keyContext)');
+        } catch (err: any) {
+            console.error(`❌ [N8N Error][Pipeline Step 1 - Extract News] Webhook call failed:`, {
+                message: err.message,
+                status: err.response?.status,
+                data: err.response?.data
+            });
+            throw new Error(`Error en el Paso 1 (Extracción de Noticias con IA): ${err.response?.data?.message || err.message}`);
+        }
     }
 
     private async step2_draftArticle(topic: string, userInstructions: string | null, extractedData: any): Promise<any> {
-        if (this.draftArticleUrl) {
-            const payload = {
-                environment: 'prod',
-                async: false,
-                data: {
-                    topic: extractedData.topic || topic,
-                    keyContext: extractedData.keyContext || '',
-                    rawFacts: extractedData.rawFacts || [],
-                    sourcesFound: extractedData.sourcesFound || [],
-                    userInstructions
-                }
-            };
-            try {
-                console.log(`📡 [N8N Request][Pipeline Step 2 - Draft Article] Sending to: ${this.draftArticleUrl}`);
-                console.log(`📦 [N8N Payload][Pipeline Step 2]:`, JSON.stringify(payload, null, 2));
-                const startTime = Date.now();
-                const response = await axios.post(this.draftArticleUrl, payload, { timeout: 180000 });
-                const duration = Date.now() - startTime;
-                console.log(`✅ [N8N Response][Pipeline Step 2] (${duration}ms) Status: ${response.status}`);
-                console.log(`📥 [N8N Response Data][Pipeline Step 2]:`, JSON.stringify(response.data, null, 2));
-
-                const result = response.data?.output || response.data;
-                if (result && result.title && (result.blocks || result.paragraphs)) {
-                    return result;
-                }
-            } catch (err: any) {
-                console.error(`❌ [N8N Error][Pipeline Step 2 - Draft Article] Webhook call failed:`, {
-                    message: err.message,
-                    status: err.response?.status,
-                    data: err.response?.data
-                });
-            }
+        if (!this.draftArticleUrl) {
+            throw new Error('La variable de entorno N8N_AI_DRAFT_ARTICLE_URL no está configurada en el servidor');
         }
 
-        // Mock / Fallback de Redacción y Planificación de Imágenes
-        console.warn(`⚠️ [Pipeline Step 2] Using fallback mock drafting for topic: "${topic}"`);
-        const cleanTopic = topic || 'Actualidad';
-        return {
-            title: `Transformaciones y Nuevas Perspectivas en ${cleanTopic}`,
-            subtitle: `Un análisis exhaustivo sobre los acontecimientos más recientes en torno a ${cleanTopic.toLowerCase()} y su impacto estratégico.`,
-            category: 'General',
-            coverImagePrompt: `A professional editorial photo of ${cleanTopic}, natural lighting, realistic press style.`,
-            blocks: [
-                {
-                    position: 1,
-                    type: 'paragraph',
-                    content: `<p>En las últimas horas se han consolidado importantes acontecimientos en el ámbito de <strong>${cleanTopic}</strong>. Expertos y analistas del sector destacan que las decisiones recientes marcan un punto de inflexión significativo.</p>`
-                },
-                {
-                    position: 2,
-                    type: 'paragraph',
-                    content: `<p>De acuerdo con la información contrastada, la adopción de nuevas directrices y herramientas ha permitido dinamizar los procesos operativos, generando un entorno propicio para la innovación.</p>`
-                },
-                {
-                    position: 3,
-                    type: 'image',
-                    content: `Editorial photo of professionals analyzing data and charts on screens in a modern tech office.`
-                },
-                {
-                    position: 4,
-                    type: 'paragraph',
-                    content: `<p>Los especialistas concluyen que el seguimiento riguroso a estas métricas y variables será determinante para consolidar el crecimiento y garantizar la sostenibilidad en los próximos periodos.</p>`
-                }
-            ],
-            sourcesSummary: 'Información contrastada a partir de fuentes de noticias autorizadas.'
+        const payload = {
+            environment: 'prod',
+            async: false,
+            data: {
+                topic: extractedData.topic || topic,
+                keyContext: extractedData.keyContext || '',
+                rawFacts: extractedData.rawFacts || [],
+                sourcesFound: extractedData.sourcesFound || [],
+                userInstructions
+            }
         };
+        try {
+            console.log(`📡 [N8N Request][Pipeline Step 2 - Draft Article] Sending to: ${this.draftArticleUrl}`);
+            console.log(`📦 [N8N Payload][Pipeline Step 2]:`, JSON.stringify(payload, null, 2));
+            const startTime = Date.now();
+            const response = await axios.post(this.draftArticleUrl, payload, { timeout: 180000 });
+            const duration = Date.now() - startTime;
+            console.log(`✅ [N8N Response][Pipeline Step 2] (${duration}ms) Status: ${response.status}`);
+            console.log(`📥 [N8N Response Data][Pipeline Step 2]:`, JSON.stringify(response.data, null, 2));
+
+            const result = response.data?.output || response.data;
+            if (result && result.title && (result.blocks || result.paragraphs)) {
+                return result;
+            }
+            throw new Error('La respuesta de n8n no contiene la estructura esperada del artículo (title/blocks)');
+        } catch (err: any) {
+            console.error(`❌ [N8N Error][Pipeline Step 2 - Draft Article] Webhook call failed:`, {
+                message: err.message,
+                status: err.response?.status,
+                data: err.response?.data
+            });
+            throw new Error(`Error en el Paso 2 (Redacción Periodística con IA): ${err.response?.data?.message || err.message}`);
+        }
     }
 
     async persistImage(imageUrl: string, prefix: string = 'noc-news'): Promise<string> {
@@ -1061,48 +957,43 @@ export class NocNewsSchedulerService {
     }
 
     private async step3_generateImage(prompt: string, contextTopic: string): Promise<string> {
-        if (this.generateImageUrl) {
-            const payload = {
-                environment: 'prod',
-                async: false,
-                data: {
-                    prompt,
-                    context: contextTopic
-                }
-            };
-            try {
-                console.log(`📡 [N8N Request][Pipeline Step 3 - Generate Image] Sending to: ${this.generateImageUrl}`);
-                console.log(`📦 [N8N Payload][Pipeline Step 3]:`, JSON.stringify(payload, null, 2));
-                const startTime = Date.now();
-                const response = await axios.post(this.generateImageUrl, payload, { timeout: 120000 });
-                const duration = Date.now() - startTime;
-                console.log(`✅ [N8N Response][Pipeline Step 3] (${duration}ms) Status: ${response.status}`);
-                console.log(`📥 [N8N Response Data][Pipeline Step 3]:`, JSON.stringify(response.data, null, 2));
-
-                const result = response.data?.output || response.data;
-                if (result && (result.imageUrl || result.url)) {
-                    const tempUrl = result.imageUrl || result.url;
-                    // Persistir permanentemente la imagen en Azure Blob Storage
-                    const persistentUrl = await this.persistImage(tempUrl, 'noc-news');
-                    return persistentUrl;
-                }
-            } catch (err: any) {
-                console.error(`❌ [N8N Error][Pipeline Step 3 - Generate Image] Webhook call failed:`, {
-                    message: err.message,
-                    status: err.response?.status,
-                    data: err.response?.data
-                });
-            }
+        if (!this.generateImageUrl) {
+            throw new Error('La variable de entorno N8N_AI_GENERATE_IMAGE_URL no está configurada en el servidor');
         }
 
-        // Mock / Fallback de Generación de Imagen
-        const sampleImages = [
-            'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=1200&q=80',
-            'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1200&q=80',
-            'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80',
-            'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80'
-        ];
-        return sampleImages[Math.floor(Math.random() * sampleImages.length)];
+        const payload = {
+            environment: 'prod',
+            async: false,
+            data: {
+                prompt,
+                context: contextTopic
+            }
+        };
+        try {
+            console.log(`📡 [N8N Request][Pipeline Step 3 - Generate Image] Sending to: ${this.generateImageUrl}`);
+            console.log(`📦 [N8N Payload][Pipeline Step 3]:`, JSON.stringify(payload, null, 2));
+            const startTime = Date.now();
+            const response = await axios.post(this.generateImageUrl, payload, { timeout: 120000 });
+            const duration = Date.now() - startTime;
+            console.log(`✅ [N8N Response][Pipeline Step 3] (${duration}ms) Status: ${response.status}`);
+            console.log(`📥 [N8N Response Data][Pipeline Step 3]:`, JSON.stringify(response.data, null, 2));
+
+            const result = response.data?.output || response.data;
+            if (result && (result.imageUrl || result.url)) {
+                const tempUrl = result.imageUrl || result.url;
+                // Persistir permanentemente la imagen en Azure Blob Storage
+                const persistentUrl = await this.persistImage(tempUrl, 'noc-news');
+                return persistentUrl;
+            }
+            throw new Error('La respuesta de n8n no devolvió una URL válida de imagen (imageUrl/url)');
+        } catch (err: any) {
+            console.error(`❌ [N8N Error][Pipeline Step 3 - Generate Image] Webhook call failed:`, {
+                message: err.message,
+                status: err.response?.status,
+                data: err.response?.data
+            });
+            throw new Error(`Error en el Paso 3 (Generación de Imagen con IA): ${err.response?.data?.message || err.message}`);
+        }
     }
 
     async executeSchedule(id: string) {
