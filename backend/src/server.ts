@@ -8,6 +8,8 @@ validateEnv();
 
 import app from './app';
 import { AppDataSource } from './config/typeorm.config';
+import { azureServiceBusSchedulerService } from './services/azure_service_bus_scheduler.service';
+import { NocNewsSchedulerService } from './services/noc_news_scheduler.service';
 
 const PORT = process.env.PORT || 22741;
 
@@ -18,6 +20,13 @@ const startServer = async (): Promise<void> => {
     try {
       await AppDataSource.initialize();
       console.log('✅ Base de datos conectada');
+
+      // Iniciar receptor de Azure Service Bus para agendamientos de noticias
+      const nocNewsSchedulerService = new NocNewsSchedulerService();
+      azureServiceBusSchedulerService.startListener(async (scheduleId: string) => {
+        console.log(`⚡ [Scheduler Auto-Trigger] Disparando generación automática para: ${scheduleId}`);
+        await nocNewsSchedulerService.executeSchedule(scheduleId);
+      });
     } catch (error) {
       console.error('❌ Error conectando a la base de datos (iniciando servidor sin DB):', error);
     }
@@ -34,13 +43,14 @@ const startServer = async (): Promise<void> => {
       server.close(async () => {
         console.log('✅ Servidor HTTP cerrado');
         try {
+          await azureServiceBusSchedulerService.close();
           if (AppDataSource.isInitialized) {
             await AppDataSource.destroy();
             console.log('✅ Conexión TypeORM cerrada');
           }
           process.exit(0);
         } catch (error) {
-          console.error('❌ Error cerrando TypeORM:', error);
+          console.error('❌ Error cerrando TypeORM / Service Bus:', error);
           process.exit(1);
         }
       });

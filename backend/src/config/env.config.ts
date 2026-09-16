@@ -34,6 +34,10 @@ const envSchema = z.object({
   AZURE_AUTOCONSUMO_ACCOUNT_KEY: z.string().optional(),
   AZURE_AUTOCONSUMO_CONTAINER_NAME: z.string().optional(),
 
+  // Azure Service Bus (NOC News Scheduler)
+  AZURE_SERVICE_BUS_CONNECTION_STRING: z.string().optional(),
+  AZURE_SERVICE_BUS_QUEUE_NAME: z.string().optional().default('noc-news-schedules'),
+
   // Rate Limiting
   RATE_LIMIT_WINDOW_MS: z.string().optional().default('900000'),
   RATE_LIMIT_MAX_REQUESTS: z.string().optional().default('100'),
