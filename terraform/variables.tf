@@ -6,26 +6,26 @@ variable "create_resource_group" {
 
 variable "resource_group_name" {
   type        = string
-  description = "Nombre del Resource Group en Azure (ej: rg-voc-dev o rg-voc-prod)."
-  default     = "rg-voc-dev"
+  description = "Nombre del Resource Group en Azure."
+  default     = "voc-project"
 }
 
 variable "location" {
   type        = string
-  description = "Región de Azure donde se desplegará el Service Bus (ej: eastus2, brazilsouth, eastus)."
-  default     = "eastus2"
+  description = "Región de Azure donde se desplegará el Service Bus."
+  default     = "eastus"
 }
 
 variable "environment" {
   type        = string
   description = "Entorno de despliegue (dev, qa, prod)."
-  default     = "dev"
+  default     = "prod"
 }
 
 variable "servicebus_namespace_name" {
   type        = string
-  description = "Nombre específico para el Service Bus Namespace. Si se deja vacío, se generará automáticamente."
-  default     = ""
+  description = "Nombre específico para el Service Bus Namespace."
+  default     = "sb-voc-project"
 }
 
 variable "servicebus_sku" {

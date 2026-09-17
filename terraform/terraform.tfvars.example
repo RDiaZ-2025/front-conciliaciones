@@ -1,8 +1,8 @@
-# Ejemplo de valores para terraform.tfvars
+# Valores preconfigurados para VOC/NOC
 create_resource_group     = false
-resource_group_name       = "rg-voc-dev"
-location                  = "eastus2"
-environment               = "dev"
-servicebus_namespace_name = "sb-voc-dev-news"
+resource_group_name       = "voc-project"
+location                  = "eastus"
+environment               = "prod"
+servicebus_namespace_name = "sb-voc-project"
 servicebus_sku            = "Basic"
 queue_name                = "noc-news-schedules"
