@@ -14,9 +14,16 @@ export class AzureServiceBusSchedulerService {
 
         if (connectionString && connectionString.trim() !== '') {
             try {
-                this.client = new ServiceBusClient(connectionString);
+                // En entornos de producción restringidos (como el sandbox de Azure App Service con Windows/iisnode),
+                // el puerto TCP 5671 nativo de AMQP está bloqueado por el firewall del sandbox.
+                // Forzamos AMQP sobre WebSockets (puerto 443 estándar HTTPS/WSS) para garantizar conectividad total.
+                const clientOptions = typeof globalThis.WebSocket !== 'undefined'
+                    ? { webSocketOptions: { webSocket: globalThis.WebSocket as any } }
+                    : undefined;
+
+                this.client = new ServiceBusClient(connectionString, clientOptions);
                 this.sender = this.client.createSender(this.queueName);
-                console.log(`✅ [Azure Service Bus] Cliente inicializado para la cola: ${this.queueName}`);
+                console.log(`✅ [Azure Service Bus] Cliente inicializado sobre WebSockets (puerto 443) para la cola: ${this.queueName}`);
             } catch (error) {
                 console.error('❌ [Azure Service Bus] Error inicializando cliente:', error);
                 this.client = null;
