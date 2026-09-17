@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-import { AppDataSource } from './config/typeorm.config';
+import { AppDataSource } from '../config/typeorm.config';
 
 async function run() {
     try {

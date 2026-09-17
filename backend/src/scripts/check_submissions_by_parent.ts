@@ -2,8 +2,8 @@ import 'reflect-metadata';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-import { AppDataSource } from './config/typeorm.config';
-import { DynamicFormSubmission } from './models/DynamicFormSubmission';
+import { AppDataSource } from '../config/typeorm.config';
+import { DynamicFormSubmission } from '../models/DynamicFormSubmission';
 
 async function run() {
     try {

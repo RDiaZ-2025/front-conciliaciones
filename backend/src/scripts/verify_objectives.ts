@@ -1,5 +1,5 @@
-import { AppDataSource, initializeDatabase } from './config/typeorm.config';
-import { Objective } from './models/Objective';
+import { AppDataSource, initializeDatabase } from '../config/typeorm.config';
+import { Objective } from '../models/Objective';
 
 async function verify() {
     try {

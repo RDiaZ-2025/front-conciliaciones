@@ -2,8 +2,8 @@ import 'reflect-metadata';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-import { AppDataSource } from './config/typeorm.config';
-import { Product } from './models/Product';
+import { AppDataSource } from '../config/typeorm.config';
+import { Product } from '../models/Product';
 
 async function listProducts() {
     try {
