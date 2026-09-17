@@ -84,7 +84,7 @@ export class UserDialogComponent implements OnInit {
 
   loadUsers() {
     this.userService.getAllUsers().subscribe(users => {
-      // Filter out the current user to avoid self-reference as boss
+
       if (this.config.data.user) {
         this.users = users.filter(u => u.id !== this.config.data.user.id);
       } else {
@@ -97,11 +97,11 @@ export class UserDialogComponent implements OnInit {
   onSubmit() {
     if (this.userForm.valid) {
       const formValue = this.userForm.getRawValue();
-      // Ensure teamId is a number if present
+
       if (formValue.teamId) {
         formValue.teamId = Number(formValue.teamId);
       }
-      // Ensure bossId is a number if present
+
       if (formValue.bossId) {
         formValue.bossId = Number(formValue.bossId);
       }

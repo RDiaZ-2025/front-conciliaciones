@@ -4,7 +4,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
-// PrimeNG Imports
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { SelectButtonModule } from 'primeng/selectbutton';
@@ -19,7 +18,6 @@ import { SessionInfoComponent } from '../../components/session-info/session-info
 import { AuthService } from '../../services/auth.service';
 import { PERMISSIONS } from '../../constants/permissions';
 
-// Interfaces
 interface SubCategory {
   nombre: string;
   presupuestado: number;
@@ -56,7 +54,6 @@ interface TooltipData {
   content: string;
 }
 
-// Initial Data
 const initialData: DashboardData = {
   2023: {
     presupuestado: 950000,
@@ -204,36 +201,30 @@ export class DashboardComponent {
   private router = inject(Router);
   private authService = inject(AuthService);
 
-  // Constants
   readonly PERMISSIONS = PERMISSIONS;
   readonly years = [2023, 2024, 2025];
   readonly months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
-  // Options for SelectButton
   readonly seguimientoOptions = [
     { label: 'Ingresos', value: 'ingresos' },
     { label: 'Costos', value: 'costos' },
     { label: 'Ebitda', value: 'ebitda' }
   ];
 
-  // State Signals
   selectedYear = signal<number>(2025);
-  selectedMonth = signal<string | null>(null); // Empty string in React, using null here for cleaner PrimeNG handling
+  selectedMonth = signal<string | null>(null);
   tipoSeguimiento = signal<'ingresos' | 'costos' | 'ebitda'>('ingresos');
   expandedCategories = signal<{ [key: string]: boolean }>({});
   tooltip = signal<TooltipData | null>(null);
 
-  // Computed Signals
   currentData = computed(() => {
     const yearData = initialData[this.selectedYear()];
     const tipo = this.tipoSeguimiento();
 
-    // Apply multipliers based on type (logic from React hook)
     let multiplier = 1;
     if (tipo === 'ingresos') multiplier = 0.6;
     else if (tipo === 'costos') multiplier = 0.4;
 
-    // Deep copy and apply multiplier
     const processedData = JSON.parse(JSON.stringify(yearData));
 
     if (multiplier !== 1) {
@@ -295,7 +286,6 @@ export class DashboardComponent {
     }).join(' ');
   });
 
-  // Methods
   hasPermission(permission: string): boolean {
     return this.authService.hasPermission(permission);
   }
@@ -319,7 +309,6 @@ export class DashboardComponent {
     return !!this.expandedCategories()[categoryName];
   }
 
-  // Chart helpers
   getBarHeight(value: number): number {
     const height = 220;
     const max = this.maxY();
@@ -335,14 +324,8 @@ export class DashboardComponent {
   getDifferenceY(presupuestado: number, ejecutado: number): number {
     const height = 220;
     const max = this.maxY();
-    const val = ejecutado - presupuestado + presupuestado; // Logic from React: (h.ejecutado - h.presupuestado + h.presupuestado) which simplifies to h.ejecutado ?? Wait.
-    // React code: height - ((h.ejecutado - h.presupuestado + h.presupuestado) / maxY) * height
-    // h.ejecutado - h.presupuestado + h.presupuestado = h.ejecutado.
-    // So it's just h.ejecutado?
-    // Let's re-read React code:
-    // <circle cx={x} cy={height - ((h.ejecutado - h.presupuestado + h.presupuestado) / maxY) * height}
-    // Yes, it simplifies to h.ejecutado. But maybe the intention was different. I'll stick to h.ejecutado.
-    // Wait, the polyline also uses this.
+    const val = ejecutado - presupuestado + presupuestado;
+
     return this.getBarY(ejecutado);
   }
 

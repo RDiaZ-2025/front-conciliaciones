@@ -1,9 +1,7 @@
-
 import { BlobServiceClient, StorageSharedKeyCredential } from '@azure/storage-blob';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-// Load env vars
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 async function listBlobs() {
@@ -29,8 +27,7 @@ async function listBlobs() {
     );
 
     const containerClient = blobServiceClient.getContainerClient(containerName);
-    
-    // Check if container exists
+
     const exists = await containerClient.exists();
     console.log(`Container exists: ${exists}`);
 
@@ -45,10 +42,10 @@ async function listBlobs() {
         break;
       }
     }
-    
+
     if (count === 0) {
         console.log('No blobs found with that prefix.');
-        // Try listing root to see if we are close
+
         console.log('Listing first 10 blobs in container root:');
         let rootCount = 0;
         for await (const blob of containerClient.listBlobsFlat()) {

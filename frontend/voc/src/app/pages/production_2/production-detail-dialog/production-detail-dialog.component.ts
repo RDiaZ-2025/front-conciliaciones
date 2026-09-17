@@ -40,7 +40,6 @@ export class ProductionDetailDialogComponent implements OnInit {
     });
   }
 
-  // File Preview State
   previewVisible = signal(false);
   previewFile = signal<File | null>(null);
   isPreviewLoading = signal(false);

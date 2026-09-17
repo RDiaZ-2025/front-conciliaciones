@@ -60,7 +60,7 @@ export class StageTransitionUploadDialogComponent implements OnInit {
           uploadDate: new Date().toISOString()
         };
       });
-      this.cdr.markForCheck(); // Trigger change detection
+      this.cdr.markForCheck();
     }).catch(err => {
       console.error('Error loading files:', err);
     });
@@ -106,7 +106,6 @@ export class StageTransitionUploadDialogComponent implements OnInit {
 
       this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Archivos cargados correctamente.' });
 
-      // Clear upload component and reload files
       this.fileUpload.clear();
       this.selectedFiles = [];
       this.loadFiles();

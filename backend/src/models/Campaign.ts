@@ -33,7 +33,7 @@ export class Campaign {
     endDate!: Date;
 
     @Column({ name: 'Impacts', type: 'nvarchar', length: 'MAX', nullable: true })
-    impacts!: string; // Stored as JSON string
+    impacts!: string;
 
     @Column({ name: 'CreatedBy', type: 'int', nullable: true })
     createdBy!: number | null;

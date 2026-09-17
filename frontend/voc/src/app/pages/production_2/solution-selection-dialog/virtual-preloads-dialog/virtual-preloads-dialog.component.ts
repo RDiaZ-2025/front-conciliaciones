@@ -77,13 +77,11 @@ export class VirtualPreloadsDialogComponent implements OnDestroy {
     if (!event.files || event.files.length === 0) return;
     const file = event.files[0];
 
-    // For non-image files (like APK), just add them directly
     if (category === 'apk') {
       this.processValidFile(file, category, uploader);
       return;
     }
 
-    // For images (icon, image), validate dimensions
     const img = new Image();
     const objectURL = URL.createObjectURL(file);
     img.src = objectURL;
@@ -99,9 +97,7 @@ export class VirtualPreloadsDialogComponent implements OnDestroy {
           isValid = false;
           errorMsg = `El icono debe ser exactamente de 256x256 píxeles. La imagen actual es de ${width}x${height}.`;
         }
-      } 
-      // Optional: Add validation for 'image' category if needed in future
-      // else if (category === 'image') { ... }
+      }
 
       if (!isValid) {
         this.messageService.add({ severity: 'error', summary: 'Dimensiones Inválidas', detail: errorMsg });
@@ -117,9 +113,9 @@ export class VirtualPreloadsDialogComponent implements OnDestroy {
   }
 
   private processValidFile(file: any, category: string, uploader: any, objectURL: string | null = null) {
-    // Remove existing file of same category if any
+
     this.removeFile(category, null);
-    
+
     let safeUrl = null;
     if (objectURL) {
       safeUrl = this.sanitizer.bypassSecurityTrustUrl(objectURL);
@@ -128,7 +124,7 @@ export class VirtualPreloadsDialogComponent implements OnDestroy {
     const fileWithCategory = Object.assign(file, { category, objectURL, safeUrl });
     this.uploadedFiles.push(fileWithCategory);
     this.messageService.add({ severity: 'info', summary: 'Éxito', detail: 'Archivo subido correctamente' });
-    
+
     if (uploader && typeof uploader.clear === 'function') {
       uploader.clear();
     }

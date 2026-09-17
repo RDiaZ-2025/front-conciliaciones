@@ -30,10 +30,9 @@ export class LoginComponent {
       this.errorMsg = '';
       const { email, password } = this.loginForm.value;
 
-      // Enviamos el email como 'username' porque el backend espera ese campo en OAuth2PasswordRequestForm
       this.authService.login({ username: email, password }).subscribe({
         next: () => {
-          this.router.navigate(['/admin/dashboard']); // Redirigir al dashboard
+          this.router.navigate(['/admin/dashboard']);
         },
         error: (err) => {
           this.isLoading = false;

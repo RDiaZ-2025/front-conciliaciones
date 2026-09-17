@@ -8,7 +8,7 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { filter, take } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
-import { ChipModule } from 'primeng/chip'; // Or TagModule
+import { ChipModule } from 'primeng/chip';
 import { TagModule } from 'primeng/tag';
 import { MenuModule } from 'primeng/menu';
 import { ToastModule } from 'primeng/toast';
@@ -111,8 +111,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   });
-  
-  // Inbox Integration State
+
   pendingTasks = signal<any[]>([]);
   loadingTasks = signal<boolean>(false);
   showActionDialog = signal<boolean>(false);
@@ -127,15 +126,12 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   loading = signal<boolean>(true);
   loading$ = toObservable(this.loading);
 
-  // Preview state
   previewFile = signal<File | string | null>(null);
   previewVisible = signal<boolean>(false);
   isPreviewLoading = signal<boolean>(false);
 
-  // SLA Rules state
   slaRulesVisible = signal<boolean>(false);
 
-  // Historical View state
   showHistorical = signal<boolean>(false);
   showDetailsDialog = signal<boolean>(false);
   loadingDetails = signal<boolean>(false);
@@ -143,14 +139,12 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
   workflowStages: { id: string; label: string }[] = [];
 
-  // Computed lists
   activeRequests = computed(() => this.requests().filter(r => r.stage !== 'completed'));
   historicalRequests = computed(() => this.requests().filter(r => r.stage === 'completed'));
 
   canViewHistory = computed(() => {
     const user = this.authService.currentUser();
-    // Allow if user has 'production_management' permission (Area Head/Supervisor)
-    // Or if user is an admin
+
     return user?.permissions?.some(p =>
       ['production_management', 'admin_panel'].includes(p.toLowerCase())
     ) ?? false;
@@ -163,15 +157,12 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
   ref: DynamicDialogRef | undefined | null;
 
-  // SLA Monitoring
   now = signal<Date>(new Date());
   private intervalId: any;
-  private alertedRequests = new Set<number>(); // Track alerted requests to avoid spam
+  private alertedRequests = new Set<number>();
 
-  // Local Logic State
   campaignTypeSelectionVisible = signal<boolean>(false);
 
-  // Beta Wizard State
   showTypeSelectionDialog = signal<boolean>(false);
   loadingRequestTypes = signal<boolean>(false);
   requestTypes = signal<any[]>([]);
@@ -191,7 +182,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   isProcessingMove = signal<boolean>(false);
   currentRequestProcessing: ProductionRequest | null = null;
 
-  // Step 3: Closing Step for Requester
   requireClosingStep = signal<boolean>(false);
   selectedClosingType = signal<'form' | 'workflow'>('form');
   selectedClosingFormId = signal<number | null>(null);
@@ -244,14 +234,12 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.loadWorkflowStages();
     this.loadPendingTasks();
 
-    // Handle deep linking
     this.route.queryParams.subscribe(params => {
       if (params['action'] === 'open' && params['requestName']) {
         this.handleDeepLink(params['requestName']);
       }
     });
 
-    // Update time every minute
     this.intervalId = setInterval(() => {
       this.now.set(new Date());
       this.checkSLAAlerts();
@@ -275,7 +263,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     const request = this.requests().find(r => r.name === name);
     if (request) {
       this.openDialog(request);
-      // Clear query params
+
       this.router.navigate([], {
         queryParams: { action: null, requestName: null },
         queryParamsHandling: 'merge'
@@ -320,21 +308,19 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ... (rest of the methods)
-
   getSLAStatus(deliveryDate?: string): 'success' | 'warn' | 'danger' {
-    if (!deliveryDate) return 'success'; // No deadline, so technically "on time" or N/A
+    if (!deliveryDate) return 'success';
 
     const deadline = new Date(deliveryDate).getTime();
     const now = this.now().getTime();
     const diff = deadline - now;
 
     if (diff < 0) {
-      return 'danger'; // Overdue
-    } else if (diff < 24 * 60 * 60 * 1000) { // Less than 24 hours
-      return 'warn'; // Approaching deadline
+      return 'danger';
+    } else if (diff < 24 * 60 * 60 * 1000) {
+      return 'warn';
     } else {
-      return 'success'; // On time
+      return 'success';
     }
   }
 
@@ -387,7 +373,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       const deadline = new Date(request.deliveryDate).getTime();
       const diff = deadline - now;
 
-      // Trigger alert if within 2 hours and not overdue yet (or just about to be)
       if (diff > 0 && diff <= twoHours) {
         this.messageService.add({
           severity: 'warn',
@@ -399,7 +384,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     });
   }
-
 
   authService = inject(AuthService);
 
@@ -423,7 +407,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       if (this.ref) {
         this.ref.onClose.subscribe((result: Partial<ProductionRequest>) => {
           if (result) {
-            // Reload requests to ensure we have the latest data and correct status mapping
+
             this.loadRequests();
           }
         });
@@ -433,7 +417,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
   evaluateDefaultValueExpression(f: any): string {
     if (!f.defaultValueExpression) return '';
-    
+
     const now = new Date();
     const pad = (n: number) => n.toString().padStart(2, '0');
     const formattedDateTimeLocal = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
@@ -485,10 +469,10 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         }
 
         if (formsList.length > 0) {
-          const fieldsObservables = formsList.map(form => 
+          const fieldsObservables = formsList.map(form =>
             this.productionService.getDynamicFormFields(form.id)
           );
-          
+
           forkJoin(fieldsObservables).subscribe({
             next: (allFieldsArray: any[][]) => {
               const vals: Record<string, string> = {};
@@ -516,7 +500,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
                     this.initMultiselectField(form.id + '_' + f.name, vals[form.id + '_' + f.name]);
                   }
                 });
-                form.fields = fields; // store fields inside form object
+                form.fields = fields;
               });
               this.initialFormValues.set(vals);
               this.loadingRequestTypes.set(false);
@@ -538,7 +522,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Load forms and workflows for Step 3 (Closing step)
     this.requireClosingStep.set(false);
     this.selectedClosingType.set('form');
     this.selectedClosingFormId.set(null);
@@ -603,27 +586,26 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Validate fields for selected initial form
     const values = this.initialFormValues();
     for (const field of (form.fields || [])) {
       if (field.isRequired && field.type !== 'section_header' && this.isFieldVisible(field, form.fields, values, form.id)) {
         if (field.type === 'file') {
           const files = this.getInitialSelectedFiles(form.id, field.name);
           if (files.length === 0) {
-            this.messageService.add({ 
-              severity: 'error', 
-              summary: 'Error de Validación', 
-              detail: `El campo "${field.label}" requiere cargar al menos un archivo.` 
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error de Validación',
+              detail: `El campo "${field.label}" requiere cargar al menos un archivo.`
             });
             return;
           }
         } else {
           const val = values[form.id + '_' + field.name];
           if (val === undefined || val === null || String(val).trim() === '') {
-            this.messageService.add({ 
-              severity: 'error', 
-              summary: 'Error de Validación', 
-              detail: `El campo "${field.label}" es obligatorio.` 
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error de Validación',
+              detail: `El campo "${field.label}" es obligatorio.`
             });
             return;
           }
@@ -631,20 +613,18 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     }
 
-    // Validate teams selected
     const selectedTeams = this.teams().filter(t => t.selected);
     if (selectedTeams.length === 0) {
-      this.messageService.add({ 
-        severity: 'warn', 
-        summary: 'Atención', 
-        detail: 'Debe seleccionar al menos un Equipo / Área destinataria para procesar la solicitud.' 
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Atención',
+        detail: 'Debe seleccionar al menos un Equipo / Área destinataria para procesar la solicitud.'
       });
       return;
     }
 
     this.loadingRequestTypes.set(true);
 
-    // Upload files for initial form if any
     for (const field of (form.fields || [])) {
       if (field.type === 'file') {
         const fileKey = form.id + '_' + field.name;
@@ -691,7 +671,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       } catch(e) {}
     }
 
-    // Build the submissions array payload
     const formValues: Record<string, string> = {};
     (form.fields || []).forEach((f: any) => {
       formValues[f.name] = values[form.id + '_' + f.name];
@@ -701,13 +680,13 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.productionService.submitDynamicForm(form.id, formValues, undefined, submissions, targetTeamIds, targetTeams, closingConfig).subscribe({
       next: () => {
         this.showTypeSelectionDialog.set(false);
-        this.messageService.add({ 
-          severity: 'success', 
-          summary: 'Éxito', 
-          detail: 'Solicitud enviada exitosamente a los equipos seleccionados.' 
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Éxito',
+          detail: 'Solicitud enviada exitosamente a los equipos seleccionados.'
         });
-        this.tempFiles = {}; // Clear temp files
-        this.loadRequests(); // Reload list
+        this.tempFiles = {};
+        this.loadRequests();
         this.loadingRequestTypes.set(false);
       },
       error: () => {
@@ -772,8 +751,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }
     this.selectedRequestTypes.set(selected);
     this.showTypeSelectionDialog.set(false);
-    
-    // Start form dialog flow
+
     this.currentFormIndex.set(0);
     this.loadFormFieldsForIndex(0);
     this.showFormDialog.set(true);
@@ -792,20 +770,20 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           const val = this.formValues[field.name];
           const hasUploaded = this.getUploadedFiles(val).length > 0;
           if (files.length === 0 && !hasUploaded) {
-            this.messageService.add({ 
-              severity: 'error', 
-              summary: 'Error de Validación', 
-              detail: `El campo "${field.label}" requiere cargar al menos un archivo.` 
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error de Validación',
+              detail: `El campo "${field.label}" requiere cargar al menos un archivo.`
             });
             return;
           }
         } else {
           const val = this.formValues[field.name];
           if (val === undefined || val === null || String(val).trim() === '') {
-            this.messageService.add({ 
-              severity: 'error', 
-              summary: 'Error de Validación', 
-              detail: `El campo "${field.label}" es obligatorio.` 
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error de Validación',
+              detail: `El campo "${field.label}" es obligatorio.`
             });
             return;
           }
@@ -817,7 +795,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.uploadFilesAndSubmit(currentForm);
   }
 
-  // --- File Uploader Helpers ---
   tempFiles: Record<string, File[]> = {};
 
   onFileSelected(event: any, field: any) {
@@ -834,19 +811,16 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
-      // Check count limit
       if (newList.length >= maxCount) {
         this.messageService.add({ severity: 'warn', summary: 'Límite excedido', detail: `Solo se permiten máximo ${maxCount} archivos en el campo "${field.label}".` });
         break;
       }
 
-      // Check size limit
       if (file.size > maxMB * 1024 * 1024) {
         this.messageService.add({ severity: 'error', summary: 'Archivo muy grande', detail: `El archivo "${file.name}" supera el peso máximo permitido de ${maxMB}MB.` });
         continue;
       }
 
-      // Check file formats
       const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
       if (allowed.length > 0 && !allowed.includes(ext)) {
         this.messageService.add({ severity: 'error', summary: 'Formato no permitido', detail: `El formato de "${file.name}" no está permitido. Formatos aceptados: ${field.metadata.allowedFormats}.` });
@@ -939,7 +913,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.loadingRequestTypes.set(true);
 
     const fields = this.currentFormFields();
-    // 1. Upload files
+
     for (const field of fields) {
       if (field.type === 'file') {
         const filesToUpload = this.tempFiles[field.name] || [];
@@ -961,7 +935,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     }
 
-    // 2. Submit the form
     this.productionService.submitDynamicForm(currentForm.id, this.formValues).subscribe({
       next: (res) => {
         this.tempFiles = {};
@@ -972,12 +945,12 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           this.loadFormFieldsForIndex(nextIndex);
         } else {
           this.showFormDialog.set(false);
-          this.messageService.add({ 
-            severity: 'success', 
-            summary: 'Éxito', 
-            detail: 'Formularios enviados y registrados en base de datos exitosamente.' 
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Éxito',
+            detail: 'Formularios enviados y registrados en base de datos exitosamente.'
           });
-          this.loadRequests(); // Reload submissions list
+          this.loadRequests();
         }
       },
       error: (err) => {
@@ -1196,7 +1169,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     const currentStage = request.stage;
     let nextStageId = '';
 
-    // Budget cleaning helper
     const getBudget = (req: ProductionRequest): number => {
       const budgetStr = String(req.campaignDetail?.budget || '0');
       const cleanBudget = budgetStr.replace(/[^0-9]/g, '');
@@ -1205,7 +1177,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
     switch (currentStage) {
       case 'request':
-        // Skip quotation, go directly to in_sell or get_data based on budget
+
         const budget = getBudget(request);
         if (budget < 50000000) {
           nextStageId = 'get_data';
@@ -1215,7 +1187,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         break;
 
       case 'quotation':
-        // Legacy path, just in case
+
         const budgetQ = getBudget(request);
         if (budgetQ < 50000000) {
           nextStageId = 'get_data';
@@ -1228,12 +1200,11 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         this.openStageTransitionUploadDialog(request, 'get_data');
         return;
 
-      case 'get_data': // formerly obtener_datos
+      case 'get_data':
         this.openStageTransitionUploadDialog(request, 'in_sell');
         return;
 
-
-      case 'in_sell': // formerly venta
+      case 'in_sell':
         this.ref = this.dialogService.open(InSellActionDialogComponent, {
           header: 'Confirmar Venta',
           width: '400px',
@@ -1249,7 +1220,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
               } else if (result.action === 'not_sold') {
                 this.performMove(request, 'completed');
               }
-              // 'cancel' or other results do nothing
+
             }
           });
         }
@@ -1273,7 +1244,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         return;
 
       case 'material_preparation':
-        // Left here for backward compatibility if any request is currently in this stage
+
         this.openAssignImplementationDialog(request);
         return;
 
@@ -1312,7 +1283,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         return;
 
       default:
-        // Fallback for any other stage
+
         const currentIndex = this.workflowStages.findIndex(s => s.id === request.stage);
         if (currentIndex !== -1 && currentIndex < this.workflowStages.length - 1) {
           nextStageId = String(this.workflowStages[currentIndex + 1].id);
@@ -1356,7 +1327,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     return this.workflowStages.find(s => s.id === stageId)?.label || stageId;
   }
 
-  // Method to get severity for Tag based on stage (optional but nice)
   getStageSeverity(stageId: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' | undefined {
     switch (stageId) {
       case 'completed': return 'success';
@@ -1416,7 +1386,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }
   }
 
-  // --- Inbox Integration Logic ---
   loadPendingTasks() {
     this.loadingTasks.set(true);
     this.productionService.getPendingApprovals().subscribe({
@@ -1771,20 +1740,20 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
               const val = this.stageFormValues[field.name];
               const hasUploaded = this.getStageUploadedFiles(val).length > 0;
               if (files.length === 0 && !hasUploaded) {
-                this.messageService.add({ 
-                  severity: 'error', 
-                  summary: 'Validación', 
-                  detail: `El campo "${field.label}" requiere cargar al menos un archivo.` 
+                this.messageService.add({
+                  severity: 'error',
+                  summary: 'Validación',
+                  detail: `El campo "${field.label}" requiere cargar al menos un archivo.`
                 });
                 return;
               }
             } else {
               const val = this.stageFormValues[field.name];
               if (val === undefined || val === null || String(val).trim() === '') {
-                this.messageService.add({ 
-                  severity: 'error', 
-                  summary: 'Validación', 
-                  detail: `El campo "${field.label}" es requerido para continuar.` 
+                this.messageService.add({
+                  severity: 'error',
+                  summary: 'Validación',
+                  detail: `El campo "${field.label}" es requerido para continuar.`
                 });
                 return;
               }
@@ -1950,7 +1919,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     }
 
-    // 1.5. Upload files from parent correction forms if any
     const parentForms = task.parentForms || [];
     for (const form of parentForms) {
       for (const field of form.fields) {
@@ -1976,7 +1944,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     }
 
-    // 1.8. Upload files from multi forms if any
     if (task.formIdToFill === -1 && this.getSelectedMultiForms().length > 0) {
       for (const mForm of this.getSelectedMultiForms()) {
         for (const field of mForm.fields) {
@@ -2011,10 +1978,10 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         this.loadRequests();
         this.loadingAction.set(false);
 
-        this.messageService.add({ 
-          severity: 'success', 
-          summary: 'Éxito', 
-          detail: action === 'approve' ? (this.isCorrection(task) ? 'Corrección enviada con éxito.' : 'Solicitud aprobada con éxito.') : 'Solicitud rechazada/devuelta.' 
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Éxito',
+          detail: action === 'approve' ? (this.isCorrection(task) ? 'Corrección enviada con éxito.' : 'Solicitud aprobada con éxito.') : 'Solicitud rechazada/devuelta.'
         });
       },
       error: () => {
@@ -2121,7 +2088,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       this.initialFormValues.set({ ...values });
     }
 
-    // Validate teams selected options against enabling conditions
     const currentTeams = this.teams();
     let teamsChanged = false;
     for (const t of currentTeams) {
@@ -2224,7 +2190,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   isFieldVisible(field: any, allFields: any[], formValues: Record<string, any>, formId?: number): boolean {
     if (!field) return false;
     if (field.isActive === false) return false;
-    
+
     const dependency = field.metadata?.dependency;
     if (!dependency || !dependency.fieldName) {
       return true;
@@ -2305,7 +2271,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     });
 
     this.dynamicListRows[key] = newList;
-    
+
     const jsonVal = JSON.stringify(newList);
     if (containerType === 'initial') {
       const vals = this.initialFormValues();
@@ -2339,7 +2305,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     const list = this.dynamicListRows[key] || [];
     const removedItem = list[itemIdx];
     list.splice(itemIdx, 1);
-    
+
     if (removedItem) {
       const name = removedItem.item || removedItem.product;
       this.dynamicListSelected[key] = (this.dynamicListSelected[key] || []).filter(i => i !== name);
@@ -2525,8 +2491,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
     const values = this.initialFormValues();
     const removeAccents = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    
-    // Check all conditions (AND logic)
+
     for (const cond of meta.enableConditions) {
       let val: any = undefined;
       const keys = cond.fieldKeys || (cond.fieldKey ? [cond.fieldKey] : []);
@@ -2535,13 +2500,13 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           val = values[key];
           break;
         }
-        // Also check with selected initial form prefix
+
         const formId = this.selectedInitialFormId();
         if (formId && values[`${formId}_${key}`] !== undefined && values[`${formId}_${key}`] !== null && values[`${formId}_${key}`] !== '') {
           val = values[`${formId}_${key}`];
           break;
         }
-        // Check cleanKey without form prefix
+
         const cleanKey = key.includes('_') ? key.split('_').slice(1).join('_') : key;
         if (formId && values[`${formId}_${cleanKey}`] !== undefined && values[`${formId}_${cleanKey}`] !== null && values[`${formId}_${cleanKey}`] !== '') {
           val = values[`${formId}_${cleanKey}`];
@@ -2570,7 +2535,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         return false;
       }
 
-      // Extract cond values array
       let condValuesArray: string[] = [];
       if (Array.isArray(condVal)) {
         condValuesArray = condVal.map(v => removeAccents(String(v)).toLowerCase().trim());
@@ -2585,7 +2549,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         condValuesArray = [removeAccents(String(condVal)).toLowerCase().trim()];
       }
 
-      // Extract user values array
       let userValuesArray: string[] = [];
       if (Array.isArray(val)) {
         userValuesArray = val.map(v => typeof v === 'object' && v !== null ? (v.item || v.product || v.name || JSON.stringify(v)) : String(v));

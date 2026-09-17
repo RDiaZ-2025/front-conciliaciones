@@ -7,7 +7,7 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { filter, take } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
-import { ChipModule } from 'primeng/chip'; // Or TagModule
+import { ChipModule } from 'primeng/chip';
 import { TagModule } from 'primeng/tag';
 import { MenuModule } from 'primeng/menu';
 import { ToastModule } from 'primeng/toast';
@@ -57,8 +57,7 @@ import { MaterialRegisterListDialogComponent } from './material-register-list-di
     FilePreviewComponent,
     PageHeaderComponent,
     AnsDialogComponent,
-    // Dynamic components do not strictly need to be in imports if opened via DialogService, 
-    // but good practice if used in template or for standalone verification
+
   ],
   providers: [DialogService, ConfirmationService, MessageService],
   templateUrl: './production.component.html',
@@ -77,27 +76,22 @@ export class ProductionComponent implements OnInit, OnDestroy {
   loading = signal<boolean>(true);
   loading$ = toObservable(this.loading);
 
-  // Preview state
   previewFile = signal<File | string | null>(null);
   previewVisible = signal<boolean>(false);
   isPreviewLoading = signal<boolean>(false);
 
-  // SLA Rules state
   slaRulesVisible = signal<boolean>(false);
 
-  // Historical View state
   showHistorical = signal<boolean>(false);
 
   workflowStages: { id: string; label: string }[] = [];
 
-  // Computed lists
   activeRequests = computed(() => this.requests().filter(r => r.stage !== 'completed'));
   historicalRequests = computed(() => this.requests().filter(r => r.stage === 'completed'));
 
   canViewHistory = computed(() => {
     const user = this.authService.currentUser();
-    // Allow if user has 'production_management' permission (Area Head/Supervisor)
-    // Or if user is an admin
+
     return user?.permissions?.some(p =>
       ['production_management', 'admin_panel'].includes(p.toLowerCase())
     ) ?? false;
@@ -110,12 +104,10 @@ export class ProductionComponent implements OnInit, OnDestroy {
 
   ref: DynamicDialogRef | undefined | null;
 
-  // SLA Monitoring
   now = signal<Date>(new Date());
   private intervalId: any;
-  private alertedRequests = new Set<number>(); // Track alerted requests to avoid spam
+  private alertedRequests = new Set<number>();
 
-  // Local Logic State
   campaignTypeSelectionVisible = signal<boolean>(false);
   isProcessingMove = signal<boolean>(false);
   currentRequestProcessing: ProductionRequest | null = null;
@@ -124,14 +116,12 @@ export class ProductionComponent implements OnInit, OnDestroy {
     this.loadRequests();
     this.loadWorkflowStages();
 
-    // Handle deep linking
     this.route.queryParams.subscribe(params => {
       if (params['action'] === 'open' && params['requestName']) {
         this.handleDeepLink(params['requestName']);
       }
     });
 
-    // Update time every minute
     this.intervalId = setInterval(() => {
       this.now.set(new Date());
       this.checkSLAAlerts();
@@ -155,7 +145,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
     const request = this.requests().find(r => r.name === name);
     if (request) {
       this.openDialog(request);
-      // Clear query params
+
       this.router.navigate([], {
         queryParams: { action: null, requestName: null },
         queryParamsHandling: 'merge'
@@ -179,14 +169,14 @@ export class ProductionComponent implements OnInit, OnDestroy {
     this.loading.set(true);
     this.productionService.getProductionRequests().subscribe({
       next: (data) => {
-        // Map status.code or status string to stage property required by frontend logic
+
         const mappedData = data.map(req => ({
           ...req,
           stage: (typeof req.status === 'string' ? req.status : req.status?.code) || req.stage || 'request'
         }));
         this.requests.set(mappedData);
         this.loading.set(false);
-        this.checkSLAAlerts(); // Check initially after loading
+        this.checkSLAAlerts();
       },
       error: (err) => {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load requests' });
@@ -206,21 +196,19 @@ export class ProductionComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ... (rest of the methods)
-
   getSLAStatus(deliveryDate?: string): 'success' | 'warn' | 'danger' {
-    if (!deliveryDate) return 'success'; // No deadline, so technically "on time" or N/A
+    if (!deliveryDate) return 'success';
 
     const deadline = new Date(deliveryDate).getTime();
     const now = this.now().getTime();
     const diff = deadline - now;
 
     if (diff < 0) {
-      return 'danger'; // Overdue
-    } else if (diff < 24 * 60 * 60 * 1000) { // Less than 24 hours
-      return 'warn'; // Approaching deadline
+      return 'danger';
+    } else if (diff < 24 * 60 * 60 * 1000) {
+      return 'warn';
     } else {
-      return 'success'; // On time
+      return 'success';
     }
   }
 
@@ -273,7 +261,6 @@ export class ProductionComponent implements OnInit, OnDestroy {
       const deadline = new Date(request.deliveryDate).getTime();
       const diff = deadline - now;
 
-      // Trigger alert if within 2 hours and not overdue yet (or just about to be)
       if (diff > 0 && diff <= twoHours) {
         this.messageService.add({
           severity: 'warn',
@@ -285,7 +272,6 @@ export class ProductionComponent implements OnInit, OnDestroy {
       }
     });
   }
-
 
   authService = inject(AuthService);
 
@@ -306,7 +292,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
     if (this.ref) {
       this.ref.onClose.subscribe((result: Partial<ProductionRequest>) => {
         if (result) {
-          // Reload requests to ensure we have the latest data and correct status mapping
+
           this.loadRequests();
         }
       });
@@ -459,7 +445,6 @@ export class ProductionComponent implements OnInit, OnDestroy {
     const currentStage = request.stage;
     let nextStageId = '';
 
-    // Budget cleaning helper
     const getBudget = (req: ProductionRequest): number => {
       const budgetStr = String(req.campaignDetail?.budget || '0');
       const cleanBudget = budgetStr.replace(/[^0-9]/g, '');
@@ -468,7 +453,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
 
     switch (currentStage) {
       case 'request':
-        // Skip quotation, go directly to in_sell or get_data based on budget
+
         const budget = getBudget(request);
         if (budget < 50000000) {
           nextStageId = 'get_data';
@@ -478,7 +463,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
         break;
 
       case 'quotation':
-        // Legacy path, just in case
+
         const budgetQ = getBudget(request);
         if (budgetQ < 50000000) {
           nextStageId = 'get_data';
@@ -491,12 +476,11 @@ export class ProductionComponent implements OnInit, OnDestroy {
         this.openStageTransitionUploadDialog(request, 'get_data');
         return;
 
-      case 'get_data': // formerly obtener_datos
+      case 'get_data':
         this.openStageTransitionUploadDialog(request, 'in_sell');
         return;
 
-
-      case 'in_sell': // formerly venta
+      case 'in_sell':
         this.ref = this.dialogService.open(InSellActionDialogComponent, {
           header: 'Confirmar Venta',
           width: '400px',
@@ -512,7 +496,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
               } else if (result.action === 'not_sold') {
                 this.performMove(request, 'completed');
               }
-              // 'cancel' or other results do nothing
+
             }
           });
         }
@@ -536,7 +520,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
         return;
 
       case 'material_preparation':
-        // Left here for backward compatibility if any request is currently in this stage
+
         this.openAssignImplementationDialog(request);
         return;
 
@@ -575,7 +559,7 @@ export class ProductionComponent implements OnInit, OnDestroy {
         return;
 
       default:
-        // Fallback for any other stage
+
         const currentIndex = this.workflowStages.findIndex(s => s.id === request.stage);
         if (currentIndex !== -1 && currentIndex < this.workflowStages.length - 1) {
           nextStageId = String(this.workflowStages[currentIndex + 1].id);
@@ -619,7 +603,6 @@ export class ProductionComponent implements OnInit, OnDestroy {
     return this.workflowStages.find(s => s.id === stageId)?.label || stageId;
   }
 
-  // Method to get severity for Tag based on stage (optional but nice)
   getStageSeverity(stageId: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' | undefined {
     switch (stageId) {
       case 'completed': return 'success';

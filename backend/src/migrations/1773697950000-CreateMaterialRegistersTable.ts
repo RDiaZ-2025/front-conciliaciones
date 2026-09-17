@@ -67,7 +67,7 @@ export class CreateMaterialRegistersTable1773697950000 implements MigrationInter
             columnNames: ["CreatedBy"],
             referencedColumnNames: ["Id"],
             referencedTableName: "Users",
-            onDelete: "NO ACTION" // Or CASCADE depending on requirement, usually user deletion shouldn't delete logs/registers
+            onDelete: "NO ACTION"
         }));
     }
 
@@ -75,10 +75,10 @@ export class CreateMaterialRegistersTable1773697950000 implements MigrationInter
         const table = await queryRunner.getTable("MaterialRegisters");
         const foreignKeyRequest = table!.foreignKeys.find(fk => fk.columnNames.indexOf("ProductionRequestId") !== -1);
         const foreignKeyUser = table!.foreignKeys.find(fk => fk.columnNames.indexOf("CreatedBy") !== -1);
-        
+
         if (foreignKeyRequest) await queryRunner.dropForeignKey("MaterialRegisters", foreignKeyRequest);
         if (foreignKeyUser) await queryRunner.dropForeignKey("MaterialRegisters", foreignKeyUser);
-        
+
         await queryRunner.dropTable("MaterialRegisters");
     }
 }

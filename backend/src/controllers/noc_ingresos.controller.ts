@@ -102,20 +102,17 @@ export class NocIngresosController {
       return;
     }
 
-    // Portal totals
     const portalSumRaw = await AppDataSource.getRepository(IngresoPortal).createQueryBuilder('ip')
       .select('SUM(ip.ingresosAdExchange)', 'total')
       .getRawOne();
     const totalAdmanager = Number(portalSumRaw?.total || 0);
 
-    // Youtube totals
     const youtubeSumRaw = await AppDataSource.getRepository(IngresoRedes).createQueryBuilder('ir')
       .select('SUM(ir.totalNeto)', 'total')
       .where('UPPER(ir.plataforma) = :platform', { platform: 'YOUTUBE' })
       .getRawOne();
     const totalYoutube = Number(youtubeSumRaw?.total || 0);
 
-    // Facebook totals
     const fbSumRaw = await AppDataSource.getRepository(IngresoRedes).createQueryBuilder('ir')
       .select('SUM(ir.totalNeto)', 'total')
       .where('UPPER(ir.plataforma) = :platform', { platform: 'FACEBOOK' })

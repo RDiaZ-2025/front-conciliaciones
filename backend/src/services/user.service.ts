@@ -40,7 +40,6 @@ import { UserResponseDTO } from '../types';
 export class UserService {
   private readonly SALT_ROUNDS = 12;
 
-  // Crear nuevo usuario
   async createUser(userData: CreateUserRequest): Promise<CreateUserResponse> {
     if (!AppDataSource.isInitialized) {
       return {
@@ -53,7 +52,6 @@ export class UserService {
     const permissionRepository = AppDataSource.getRepository(Permission);
     const permissionByUserRepository = AppDataSource.getRepository(PermissionByUser);
 
-    // Verificar si el email ya existe
     const existingUser = await userRepository.findOne({
       where: { email: userData.email }
     });
@@ -65,10 +63,8 @@ export class UserService {
       };
     }
 
-    // Hash de la contraseña
     const passwordHash = await bcrypt.hash(userData.password, this.SALT_ROUNDS);
 
-    // Crear el usuario
     const newUser = userRepository.create({
       name: userData.name,
       email: userData.email,
@@ -80,18 +76,17 @@ export class UserService {
 
     const savedUser = await userRepository.save(newUser);
 
-    // Asignar permisos si se proporcionaron
     const assignedPermissions: string[] = [];
     if (userData.permissions && userData.permissions.length > 0) {
       for (const permissionName of userData.permissions) {
         try {
-          // Buscar el permiso (sin convertir a mayúsculas, usar el nombre tal como está)
+
           const permission = await permissionRepository.findOne({
             where: { name: permissionName }
           });
 
           if (permission) {
-            // Asignar el permiso al usuario
+
             const permissionByUser = permissionByUserRepository.create({
               userId: savedUser.id,
               permissionId: permission.id,
@@ -109,17 +104,14 @@ export class UserService {
       }
     }
 
-    // Asignar equipo si se proporcionó
     if (userData.teamId) {
       savedUser.teamId = userData.teamId;
     }
 
-    // Asignar jefe si se proporcionó
     if (userData.bossId) {
       savedUser.bossId = userData.bossId;
     }
 
-    // Guardar nuevamente si hubo cambios de relaciones
     if (userData.teamId || userData.bossId) {
       await userRepository.save(savedUser);
     }
@@ -138,7 +130,6 @@ export class UserService {
     };
   }
 
-  // Obtener todos los usuarios
   async getAllUsers(): Promise<UserResponseDTO[]> {
     if (!AppDataSource.isInitialized) {
       throw new Error('Base de datos no disponible');
@@ -146,13 +137,11 @@ export class UserService {
 
     const userRepository = AppDataSource.getRepository(User);
 
-    // Obtener todos los usuarios con sus permisos y equipos en una sola consulta
     const users = await userRepository.find({
       order: { name: 'ASC' },
       relations: ['permissions', 'permissions.permission', 'team', 'boss']
     });
 
-    // Mapear a la respuesta deseada
     const usersWithDetails = users.map(user => {
       const permissions = user.permissions
         ? user.permissions.map(up => up.permission.name)
@@ -175,7 +164,6 @@ export class UserService {
     return usersWithDetails;
   }
 
-  // Obtener usuario por ID
   async getUserById(userId: number): Promise<UserResponseDTO | null> {
     if (!AppDataSource.isInitialized) {
       return null;
@@ -183,7 +171,6 @@ export class UserService {
 
     const userRepository = AppDataSource.getRepository(User);
 
-    // Buscar el usuario por ID y status activo
     const user = await userRepository.findOne({
       where: { id: userId, status: 1 },
       relations: ['team', 'boss', 'permissions', 'permissions.permission']
@@ -209,7 +196,6 @@ export class UserService {
     };
   }
 
-  // Actualizar usuario
   async updateUser(userId: number, updateData: UpdateUserRequest): Promise<{ success: boolean; message?: string }> {
     if (!AppDataSource.isInitialized) {
       return {
@@ -222,7 +208,6 @@ export class UserService {
     const permissionRepository = AppDataSource.getRepository(Permission);
     const permissionByUserRepository = AppDataSource.getRepository(PermissionByUser);
 
-    // Buscar el usuario
     const user = await userRepository.findOne({
       where: { id: userId }
     });
@@ -234,7 +219,6 @@ export class UserService {
       };
     }
 
-    // Actualizar campos del usuario
     if (updateData.name) {
       user.name = updateData.name;
     }
@@ -260,12 +244,10 @@ export class UserService {
       user.permissionsStr = updateData.permissions.join(',');
     }
 
-    // Guardar cambios del usuario
     await userRepository.save(user);
 
-    // Actualizar permisos si se proporcionaron
     if (updateData.permissions && updateData.permissions.length > 0) {
-      // Eliminar permisos existentes
+
       await permissionByUserRepository.delete({ userId: userId });
 
       const permissions = await permissionRepository.find({
@@ -286,13 +268,11 @@ export class UserService {
       await permissionByUserRepository.delete({ userId: userId });
     }
 
-    // Actualizar equipo si se proporcionó (aunque sea null)
     if (updateData.teamId !== undefined) {
-      // Asignar nuevo equipo si no es null
+
       user.teamId = updateData.teamId;
     }
 
-    // Actualizar jefe si se proporcionó (aunque sea null)
     if (updateData.bossId !== undefined) {
       user.bossId = updateData.bossId;
     }
@@ -315,7 +295,6 @@ export class UserService {
 
     const userRepository = AppDataSource.getRepository(User);
 
-    // Buscar el usuario
     const user = await userRepository.findOne({
       where: { id: userId }
     });
@@ -327,7 +306,6 @@ export class UserService {
       };
     }
 
-    // Cambiar el estado
     const newStatus = user.status === 1 ? 0 : 1;
     user.status = newStatus;
 
@@ -391,7 +369,6 @@ export class UserService {
 
   }
 
-  // Eliminar usuario
   async deleteUser(userId: number): Promise<{ success: boolean; message?: string }> {
     if (!AppDataSource.isInitialized) {
       return {
@@ -414,10 +391,8 @@ export class UserService {
       };
     }
 
-    // Eliminar permisos asociados
     await permissionByUserRepository.delete({ userId: userId });
 
-    // Eliminar usuario
     await userRepository.remove(user);
 
     return {

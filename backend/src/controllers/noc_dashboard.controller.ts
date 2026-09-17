@@ -40,7 +40,7 @@ export class NocDashboardController {
     }
 
     let { start_date, end_date } = req.query as { start_date?: string, end_date?: string };
-    
+
     const parseDate = (d: string) => new Date(d);
     const formatDate = (d: Date) => d.toISOString().split('T')[0];
 
@@ -120,7 +120,6 @@ export class NocDashboardController {
       active_source: (req.query.source as string) || "Todas"
     };
 
-    // History for chart
     const dateKeySql = durationDays <= 60
       ? "CONVERT(VARCHAR(10), d.fecha_url, 120)"
       : "SUBSTRING(CONVERT(VARCHAR(10), d.fecha_url, 120), 1, 7)";
@@ -142,7 +141,6 @@ export class NocDashboardController {
       views: Number(h.views || 0)
     }));
 
-    // Trends
     const trendQb = AppDataSource.getRepository(DashboardData).createQueryBuilder('d')
       .select(dateKeySql, 'date_key')
       .addSelect('SUM(d.sessions)', 'sessions')
@@ -165,7 +163,6 @@ export class NocDashboardController {
       };
     });
 
-    // Highlights
     const minSessions = 50;
     const highlightQb = (field: string) => {
       const q = AppDataSource.getRepository(DashboardData).createQueryBuilder('d')
@@ -225,7 +222,6 @@ export class NocDashboardController {
 
     const { start_date, end_date } = req.query as { start_date?: string, end_date?: string };
 
-    // Topics Matrix
     const topicQb = AppDataSource.getRepository(DashboardData).createQueryBuilder('d')
       .select('d.temaPrincipal', 'topic')
       .addSelect('SUM(d.sessions)', 'sessions')
@@ -245,7 +241,6 @@ export class NocDashboardController {
       };
     });
 
-    // Author Ranking
     const authorQb = AppDataSource.getRepository(DashboardData).createQueryBuilder('d')
       .select('d.autor', 'author')
       .addSelect('SUM(d.sessions)', 'sessions')
@@ -295,7 +290,6 @@ export class NocDashboardController {
 
     const { start_date, end_date } = req.query as { start_date?: string, end_date?: string };
 
-    // 1. Avg Global Engagement
     const totalQb = AppDataSource.getRepository(DashboardData).createQueryBuilder('d')
       .select('SUM(d.sessions)', 's')
       .addSelect('SUM(d.engagedSessions)', 'es');
@@ -305,7 +299,6 @@ export class NocDashboardController {
     const totalEs = Number(totalRaw?.es || 0);
     const sectionAvgEr = totalS > 0 ? (totalEs / totalS * 100) : 0;
 
-    // 2. Entity aggregates
     const entityQb = AppDataSource.getRepository(DashboardData).createQueryBuilder('d')
       .innerJoin('d.entities', 'e')
       .select('e.name', 'entity_name')
@@ -346,7 +339,7 @@ export class NocDashboardController {
       const eng = Number(row.engaged_sessions || 0);
       const sem = Number(row.sem || 0.0);
       const syn = Number(row.syn || 0.0);
-      
+
       const rowDate = row.fecha_url ? new Date(row.fecha_url) : null;
       const dateStr = rowDate ? rowDate.toISOString().split('T')[0] : '';
 
@@ -367,7 +360,6 @@ export class NocDashboardController {
       }
     }
 
-    // 3. Combinations
     const comboQb = AppDataSource.getRepository(DashboardData).createQueryBuilder('d')
       .innerJoin('d.entities', 'e')
       .select('d.id', 'art_id')
@@ -400,7 +392,6 @@ export class NocDashboardController {
       }
     }
 
-    // 4. Format Output
     const entitiesList = [];
     for (const eName in entityStats) {
       const stats = entityStats[eName];
@@ -473,7 +464,6 @@ export class NocDashboardController {
       return;
     }
 
-    // Find all articles mentioning this entity
     const articleIdsQb = AppDataSource.getRepository(DashboardData).createQueryBuilder('d')
       .innerJoin('d.entities', 'e')
       .select('DISTINCT d.id', 'id')
@@ -496,7 +486,6 @@ export class NocDashboardController {
     const totalEng = articles.reduce((acc, a) => acc + (a.engagedSessions || 0), 0);
     const avgEr = totalSess > 0 ? (totalEng / totalSess * 100) : 0;
 
-    // Scores
     const entityRecords = await AppDataSource.getRepository(DashboardEntity).createQueryBuilder('e')
       .where('e.name = :entity AND e.dashboardDataId IN (:...articleIds)', { entity, articleIds })
       .getMany();
@@ -579,7 +568,6 @@ export class NocDashboardController {
 
     topArticlesList.sort((a, b) => b.er - a.er);
 
-    // Secondary entities linked to this entity
     const secondaryRecords = await AppDataSource.getRepository(DashboardEntity).createQueryBuilder('e')
       .where('e.dashboardDataId IN (:...articleIds) AND e.isPrincipal = 0 AND e.name != :entity', { articleIds, entity })
       .getMany();
@@ -623,7 +611,7 @@ export class NocDashboardController {
       const erVal = data.sessions > 0 ? (data.engaged_sessions / data.sessions * 100) : 0;
       const sem = data.sem_count > 0 ? (data.sem_sum / data.sem_count) : 0;
       const syn = data.syn_count > 0 ? (data.syn_sum / data.syn_count) : 0;
-      
+
       let bestCat = "General";
       let maxCount = -1;
       for (const [c, cnt] of Object.entries(data.categories)) {
@@ -679,7 +667,6 @@ export class NocDashboardController {
 
     const { start_date, end_date } = req.query as { start_date?: string, end_date?: string };
 
-    // Unique Users by Section
     const usersQb = AppDataSource.getRepository(DashboardData).createQueryBuilder('d')
       .select('d.seccion', 'section')
       .addSelect('SUM(d.totalUsers)', 'users');
@@ -688,7 +675,6 @@ export class NocDashboardController {
 
     const usersRaw = await usersQb.getRawMany();
 
-    // Page Views by Topic
     const viewsQb = AppDataSource.getRepository(DashboardData).createQueryBuilder('d')
       .select('d.temaPrincipal', 'topic')
       .addSelect('SUM(d.screenPageViews)', 'views');
@@ -697,7 +683,6 @@ export class NocDashboardController {
 
     const viewsRaw = await viewsQb.getRawMany();
 
-    // Depth ratio by section (Page Views / Sessions)
     const depthQb = AppDataSource.getRepository(DashboardData).createQueryBuilder('d')
       .select('d.seccion', 'section')
       .addSelect('SUM(d.screenPageViews)', 'views')
@@ -765,7 +750,7 @@ export class NocDashboardController {
         fidelity: Number(fid.toFixed(2)),
         fidelity_status: fid >= globalFidelity ? "green" : "red",
         engagement_rate: Number(er.toFixed(2)),
-        share_of_volume: 0 // Will map to UI correctly
+        share_of_volume: 0
       };
     });
 
@@ -807,7 +792,7 @@ export class NocDashboardController {
   });
 
   importDashboardData = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    // Stub endpoint for compatibility (normally triggered by ETL pipeline)
+
     res.status(200).json({
       success: true,
       message: 'Datos importados exitosamente.'

@@ -9,8 +9,8 @@ async function run() {
     try {
         await AppDataSource.initialize();
         const service = new ProductionService();
-        // Assume user id 1
-        const tasks = await service.getPendingApprovals(91); // Michael QA is ID 91
+
+        const tasks = await service.getPendingApprovals(91);
         console.log("Tasks for User 91:", tasks.map(t => t.stateId));
         const task = tasks.find(t => t.stateId === 43);
         if (task) {

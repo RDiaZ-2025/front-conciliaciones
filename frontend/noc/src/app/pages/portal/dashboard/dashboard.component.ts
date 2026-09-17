@@ -47,7 +47,6 @@ export class DashboardComponent implements OnInit {
 
   activeTab: Tab = 'overview';
 
-  // Data containers
   overviewData: OverviewStats | null = null;
   contentData: ContentStats | null = null;
   entitiesData: EntityStats | null = null;
@@ -86,16 +85,13 @@ export class DashboardComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    // Set default dates
+
     if (!this.filters.start_date) {
       this.filters.start_date = DASHBOARD_CONFIG.defaultStartDate;
     }
     if (!this.filters.end_date) {
       this.filters.end_date = new Date().toISOString().split('T')[0];
     }
-
-    // Set default source if needed, e.g. "Discover"
-    // this.filters.source = 'Discover';
 
     this.updateVisibility();
     this.loadFilters();
@@ -110,7 +106,7 @@ export class DashboardComponent implements OnInit {
   }
 
   updateVisibility() {
-    // Show Source, Section, and Topic across all tabs as requested
+
     const defaultVisible = {
       date: true,
       source: true,
@@ -177,7 +173,7 @@ export class DashboardComponent implements OnInit {
   loadData() {
     this.isLoading = true;
     this.hasError = false;
-    this.cdr.detectChanges(); // Show loader immediately
+    this.cdr.detectChanges();
 
     let obs;
     switch (this.activeTab) {
@@ -193,7 +189,7 @@ export class DashboardComponent implements OnInit {
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: (data: any) => {
-            // Assign data to correct property
+
             if (this.activeTab === 'overview') this.overviewData = data;
             if (this.activeTab === 'content') this.contentData = data;
             if (this.activeTab === 'entities') this.entitiesData = data;
@@ -214,7 +210,7 @@ export class DashboardComponent implements OnInit {
   }
 
   onFilterChange(newFilters: any) {
-    this.filters = newFilters; // Ensure inputs are synced
+    this.filters = newFilters;
     this.loadData();
   }
 
@@ -224,7 +220,6 @@ export class DashboardComponent implements OnInit {
     if (event.topic) this.filters.topic = event.topic;
     if (event.category) this.filters.category = event.category;
 
-    // Switch tab logic
     if (event.author || event.topic) {
       this.activeTab = 'content';
     } else if (event.category) {

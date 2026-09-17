@@ -4,7 +4,6 @@ import { LucideIconComponent } from '../../../components/lucide-icon/lucide-icon
 import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, FormsModule, Validators } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
-// PrimeNG Imports
 import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
@@ -116,16 +115,15 @@ export class AutoGenerarComponent implements OnInit {
       userInstructions: [''],
       sources: this.fb.array([this.fb.control('', [Validators.required])]),
       startAt: [nowLocal, [Validators.required]],
-      // Unified inputs
-      intervalMinutes: [0, [Validators.required]], // 0 = weekly day/time rules, >0 = regular intervals
+
+      intervalMinutes: [0, [Validators.required]],
       endAt: [''],
       weeklyRules: this.fb.array([]),
       isActive: [true],
       publishAutomatically: [false]
     });
 
-    // Make sure we have at least one weekly rule by default
-    this.addWeeklyRule(1, '12:00'); // Default Monday at 12:00
+    this.addWeeklyRule(1, '12:00');
   }
 
   get sourcesArray(): FormArray {
@@ -135,8 +133,6 @@ export class AutoGenerarComponent implements OnInit {
   get weeklyRulesArray(): FormArray {
     return this.scheduleForm.get('weeklyRules') as FormArray;
   }
-
-
 
   addSource(urlValue: string = ''): void {
     this.sourcesArray.push(this.fb.control(urlValue, [Validators.required]));
@@ -234,13 +230,13 @@ export class AutoGenerarComponent implements OnInit {
     if (config.weeklyRules && config.weeklyRules.length > 0) {
       config.weeklyRules.forEach((rule: any) => this.addWeeklyRule(rule.dayOfWeek, rule.time));
     } else if (intervalMin === 0) {
-      // Fallback from old config models
+
       if (config.times && config.times.length > 0) {
         config.times.forEach((t: string) => {
           if (config.daysOfWeek && config.daysOfWeek.length > 0) {
             config.daysOfWeek.forEach((d: number) => this.addWeeklyRule(d, t));
           } else {
-            // Default everyday (Mon-Sun) if no day filters existed
+
             [1, 2, 3, 4, 5, 6, 0].forEach(d => this.addWeeklyRule(d, t));
           }
         });
@@ -275,7 +271,6 @@ export class AutoGenerarComponent implements OnInit {
       return;
     }
 
-    // Build the simplified configuration JSON
     const interval = Number(formVal.intervalMinutes);
     let scheduleConfig: any = {};
 
@@ -464,8 +459,7 @@ export class AutoGenerarComponent implements OnInit {
   getFrequencyLabel(schedule: NewsSchedule): string {
     const config = schedule.scheduleConfig || {};
     const intervalMin = config.intervalMinutes || 0;
-    
-    // Day of week labels dictionary
+
     const dayNames: { [key: number]: string } = {
       1: 'Lun',
       2: 'Mar',
@@ -486,7 +480,7 @@ export class AutoGenerarComponent implements OnInit {
         else if (intervalMin < 1440) label = `Cada ${Math.floor(intervalMin / 60)} horas`;
         else label = `Cada ${Math.floor(intervalMin / 1440)} días`;
       }
-      
+
       if (config.daysOfWeek && config.daysOfWeek.length > 0) {
         const names = config.daysOfWeek.map((d: number) => dayNames[d]);
         label += ` (Días: ${names.join(', ')})`;
@@ -496,7 +490,7 @@ export class AutoGenerarComponent implements OnInit {
       if (rules.length === 0) {
         label = 'Sin programar';
       } else {
-        // Group times by dayOfWeek to display nicely (e.g. "Lun: 09:00, 22:00 | Mar: 15:00")
+
         const grouped: { [key: number]: string[] } = {};
         rules.forEach((r: any) => {
           if (!grouped[r.dayOfWeek]) {
@@ -506,7 +500,7 @@ export class AutoGenerarComponent implements OnInit {
         });
 
         const sortedDays = Object.keys(grouped).map(Number).sort((a, b) => {
-          // Sort Mon-Sun (1,2,3,4,5,6,0)
+
           const order = [1, 2, 3, 4, 5, 6, 0];
           return order.indexOf(a) - order.indexOf(b);
         });
@@ -522,13 +516,11 @@ export class AutoGenerarComponent implements OnInit {
     return label;
   }
 
-  // --- Borradores / Drafts UI State and Actions ---
   displayDraftsDialog = false;
   selectedScheduleForDrafts: NewsSchedule | null = null;
   pendingDrafts = signal<any[]>([]);
   loadingDrafts = signal(false);
 
-  // --- Editor y Previsualizador Interactivo de Noticias ---
   displayEditorDialog = false;
   currentDraft: NewsDraftDetail | null = null;
   currentArticleData: NewsArticleData = {
@@ -541,7 +533,6 @@ export class AutoGenerarComponent implements OnInit {
   loadingEditor = signal(false);
   savingDraft = signal(false);
 
-  // Helpers para fuentes consultadas por la IA
   getSourceName(src: any): string {
     if (typeof src === 'object' && src?.name) return src.name;
     if (typeof src === 'string') {
@@ -567,23 +558,19 @@ export class AutoGenerarComponent implements OnInit {
     return 'Artículo consultado';
   }
 
-  // Estados de edición individual por bloque
   editingBlockId: string | null = null;
   aiPromptBlockId: string | null = null;
   aiInstructionText: string = '';
   loadingAiBlockId = signal<string | null>(null);
 
-  // Estados de edición de imagen individual
   aiImagePromptBlockId: string | null = null;
   aiImageInstructionText: string = '';
   loadingAiImage = signal<boolean>(false);
 
-  // Estados de portada
   aiCoverPromptOpen: boolean = false;
   aiCoverInstructionText: string = '';
   loadingAiCover = signal<boolean>(false);
 
-  // Ajuste Global con IA
   displayGlobalAiDialog = false;
   globalAiInstruction: string = '';
   loadingGlobalAi = signal(false);
@@ -631,7 +618,7 @@ export class AutoGenerarComponent implements OnInit {
           tags: [],
           author: 'Redacción Red+'
         };
-        // Garantizar que blocks sea un array
+
         if (!this.currentArticleData.blocks) {
           this.currentArticleData.blocks = [];
         }
@@ -679,12 +666,10 @@ export class AutoGenerarComponent implements OnInit {
     });
   }
 
-  // --- Edición Manual de Párrafos ---
   toggleEditBlock(blockId: string): void {
     this.editingBlockId = this.editingBlockId === blockId ? null : blockId;
   }
 
-  // --- Ajuste de Párrafo con IA ---
   toggleAiPrompt(blockId: string): void {
     if (this.aiPromptBlockId === blockId) {
       this.aiPromptBlockId = null;
@@ -692,7 +677,7 @@ export class AutoGenerarComponent implements OnInit {
     } else {
       this.aiPromptBlockId = blockId;
       this.aiInstructionText = '';
-      this.editingBlockId = null; // Cerrar edición manual si estaba abierta
+      this.editingBlockId = null;
     }
   }
 
@@ -737,7 +722,6 @@ export class AutoGenerarComponent implements OnInit {
     });
   }
 
-  // --- Regeneración de Imagen con IA ---
   toggleAiImagePrompt(blockId: string): void {
     if (this.aiImagePromptBlockId === blockId) {
       this.aiImagePromptBlockId = null;
@@ -798,7 +782,6 @@ export class AutoGenerarComponent implements OnInit {
     });
   }
 
-  // --- Portada con IA ---
   toggleAiCoverPrompt(): void {
     this.aiCoverPromptOpen = !this.aiCoverPromptOpen;
     this.aiCoverInstructionText = '';
@@ -858,7 +841,6 @@ export class AutoGenerarComponent implements OnInit {
     });
   }
 
-  // --- Ajuste Global con IA ---
   openGlobalAiDialog(): void {
     this.displayGlobalAiDialog = true;
     this.globalAiInstruction = '';
@@ -905,7 +887,6 @@ export class AutoGenerarComponent implements OnInit {
     });
   }
 
-  // --- Agregar / Eliminar Bloques ---
   addParagraphBlock(): void {
     const newBlock: NewsBlock = {
       id: 'block-' + Date.now(),
@@ -932,7 +913,6 @@ export class AutoGenerarComponent implements OnInit {
     this.currentArticleData.blocks.splice(index, 1);
   }
 
-  // --- Publicación desde el Editor o Lista ---
   publishCurrentDraft(): void {
     if (!this.currentDraft) return;
 
@@ -943,7 +923,7 @@ export class AutoGenerarComponent implements OnInit {
       acceptLabel: 'Publicar Ahora',
       rejectLabel: 'Cancelar',
       accept: () => {
-        // Primero guardar cualquier cambio pendiente
+
         this.schedulerService.updateDraft(this.currentDraft!.id, this.currentArticleData).subscribe({
           next: () => {
             this.schedulerService.publishDraft(this.currentDraft!.id).subscribe({

@@ -159,12 +159,10 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   private sanitizer = inject(DomSanitizer);
   private hostEl = inject(ElementRef);
 
-  // Keeps a reference to the layout scroll container so we can restore it on destroy
   private scrollContainer: HTMLElement | null = null;
 
   @Output() requestCreated = new EventEmitter<any>();
 
-  // Typing status messages rotation
   private readonly typingMessages = [
     'MIA está pensando',
     'MIA está procesando tu solicitud',
@@ -186,7 +184,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   typingStatusText = signal<string>('MIA está pensando');
   private typingMessageInterval: ReturnType<typeof setInterval> | null = null;
 
-  // State
   messages = signal<ChatMessage[]>([]);
   isTyping = signal<boolean>(false);
   summary = signal<string>('');
@@ -195,21 +192,17 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   isSubmitting = signal<boolean>(false);
   inputText: string = '';
 
-  // Mobile Sidebar State
   showMobileSidebar = signal<boolean>(false);
 
-  // Attach panel and summary drawer
   attachPanelVisible = signal<boolean>(false);
   showSummaryDrawer = signal<boolean>(false);
   showHistoryDrawer = signal<boolean>(false);
 
-  // Conversations history
   conversations = signal<ConversationItem[]>([]);
   conversationsLoading = signal<boolean>(false);
   conversationMessagesLoading = signal<boolean>(false);
   selectedConversationId = signal<string | null>(null);
 
-  // Search & grouping
   searchQuery = signal<string>('');
 
   filteredConversations = computed(() => {
@@ -254,7 +247,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
 
   private readonly AGENT_ID = 'drWvQYWbVmoG8rRTxseV';
 
-  // Cancels any in-flight assistant or conversation-load request
   private cancelPending$ = new Subject<void>();
   private destroy$ = new Subject<void>();
   private blobUrls: string[] = [];
@@ -291,7 +283,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     if (!rawPath) return name || '';
     let clean = rawPath.trim();
 
-    // Extract decoded object path from Firebase Storage URL format (/o/encodedPath?...)
     if (clean.includes('/o/')) {
       const afterO = clean.split('/o/')[1];
       if (afterO) {
@@ -300,7 +291,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       }
     }
 
-    // Handle generic HTTP/HTTPS URLs by stripping protocol and host
     if (/^https?:\/\//i.test(clean)) {
       try {
         const url = new URL(clean);
@@ -310,7 +300,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         }
         return clean;
       } catch (e) {
-        // Fallback
+
       }
     }
 
@@ -328,7 +318,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   downloadDocument(attachment: ChatMessageAttachment, msgIndex: number): void {
     if (attachment.downloading) return;
 
-    // Archivo local (recién subido) — descargar directamente del blobUrl
     if (!attachment.path) {
       if (attachment.blobUrl) {
         const a = document.createElement('a');
@@ -339,7 +328,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       return;
     }
 
-    // Archivo remoto (cargado del historial) — descargar desde el servidor
     this.messages.update(msgs =>
       msgs.map((m, i) => i === msgIndex ? { ...m, attachment: { ...m.attachment!, downloading: true } } : m)
     );
@@ -399,7 +387,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         );
         this.conversations.set(sorted);
         this.conversationsLoading.set(false);
-        // Si no hay conversación seleccionada (chat nuevo), seleccionar la más reciente
+
         if (!this.selectedConversationId() && sorted.length > 0) {
           this.selectedConversationId.set(sorted[0].id);
         }
@@ -484,7 +472,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     if (this.isTyping()) return;
     const email = this.authService.currentUser()?.email;
     if (!email) return;
-    // Cancel any pending request or polling before starting a new conversation view
+
     this.stopPolling();
     this.cancelPending$.next();
     this.selectedConversationId.set(conv.id);
@@ -534,7 +522,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     };
 
     let attempts = 0;
-    const maxAttempts = 60; // Max 5 minutes (60 * 5s)
+    const maxAttempts = 60;
 
     this.pollingSubscription = timer(5000, 5000).pipe(
       takeUntil(this.cancelPending$),
@@ -557,7 +545,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         const unique = list.filter((m, i, arr) => arr.findIndex(x => x.id === m.id) === i);
         const sorted = unique.sort((a, b) => a.messageContent.timestamp - b.messageContent.timestamp);
 
-        // Check if there is an assistant response after/at user's message timestamp
         const hasAssistantResponse = sorted.some(m =>
           m.sender.id === m.agentId && m.messageContent.timestamp >= (sendTimeSeconds - 2)
         );
@@ -591,17 +578,14 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     });
   }
 
-  // Unique ID for the conversation session
   private memoryUniqueId: string;
 
-  // Mock computed value to enable the submit button if we have enough info
-  // For a real implementation, this would check if the required fields in summary are populated
   isRequestReady = computed(() => {
     return this.messages().length > 2 || this.summary().length > 0;
   });
 
   constructor() {
-    // Generate a unique GUID for this conversation
+
     this.memoryUniqueId = this.generateGuid();
     this.loadConversations();
   }
@@ -620,7 +604,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     this.showMobileSidebar.update(v => !v);
   }
 
-  // --- Modal Logic ---
   closeDialog() {
     if (this.ref) {
       this.ref.close();
@@ -629,29 +612,24 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     }
   }
 
-  // --- Chat Logic ---
-
   sendMessage() {
     if (!this.inputText.trim() && this.files().length === 0) return;
 
     const text = this.inputText.trim();
     this.inputText = '';
 
-    // Add user message
     this.messages.update(m => [...m, {
       role: 'user',
       content: text || (this.files().length > 0 ? `[${this.files().length} archivo(s) adjunto(s)]` : ''),
       timestamp: new Date()
     }]);
 
-    // Reset textarea height
     if (this.chatInput) {
       this.chatInput.nativeElement.style.height = '44px';
     }
 
     this.scrollToBottom();
 
-    // Process pending files and send them along with the text
     const pendingFiles = [...this.files()];
     this.files.set([]);
 
@@ -672,7 +650,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     const blobUrl = URL.createObjectURL(file);
     this.blobUrls.push(blobUrl);
 
-    // Agregar attachment al mensaje del usuario para que se vea el cuadro de documento/media
     this.messages.update(msgs => {
       const updated = [...msgs];
       const lastIdx = updated.length - 1;
@@ -753,8 +730,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    // Walk up the DOM to find the nearest scrollable layout wrapper and disable its
-    // scroll so the page never shifts — only this component disables it and restores on destroy.
+
     let p: HTMLElement | null = (this.hostEl.nativeElement as HTMLElement).parentElement;
     while (p) {
       const ov = getComputedStyle(p).overflowY;
@@ -782,8 +758,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     this.stopTypingMessageRotation();
   }
 
-  // --- Typing status rotation ---
-
   private startTypingMessageRotation(): void {
     let index = 0;
     this.typingStatusText.set(this.typingMessages[0]);
@@ -801,7 +775,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     this.typingStatusText.set('MIA está pensando');
   }
 
-  // Call the AI assistant API
   private askAssistant(userText: string, webMessageFile?: WebMessageFile | null, fileMessageType: string = 'text') {
     this.isTyping.set(true);
     this.startTypingMessageRotation();
@@ -836,7 +809,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         }
 
         if (convId) {
-          // Poll every 5 seconds for the assistant's response via POST /Agents/conversation-messages
+
           this.pollForAssistantResponse(convId, sendTimeSeconds);
         } else {
           this.stopTypingMessageRotation();
@@ -854,8 +827,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       }
     });
   }
-
-  // --- File Upload Logic ---
 
   onDragOver(event: DragEvent) {
     event.preventDefault();
@@ -883,7 +854,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     if (event.target.files) {
       this.handleFiles(event.target.files);
     }
-    // Reset input so the same file can be selected again if needed
+
     event.target.value = '';
   }
 
@@ -894,7 +865,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     ];
-    const maxFileSize = 5 * 1024 * 1024; // 5MB
+    const maxFileSize = 5 * 1024 * 1024;
     const newFiles: File[] = [];
 
     for (let i = 0; i < fileList.length; i++) {
@@ -916,7 +887,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     }
 
     if (newFiles.length > 0) {
-      // Solo un archivo por mensaje - reemplazar si ya hay uno
+
       this.files.set([newFiles[0]]);
     }
   }
@@ -929,12 +900,9 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     });
   }
 
-  // --- Submission ---
-
   submitRequest() {
     this.isSubmitting.set(true);
 
-    // Simulate API call to create request
     setTimeout(() => {
       this.isSubmitting.set(false);
       this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Solicitud creada correctamente.' });
@@ -942,7 +910,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       const result = {
         name: 'Nueva Solicitud via Chat',
         description: this.summary(),
-        // other mapped fields...
+
       };
 
       if (this.ref) {

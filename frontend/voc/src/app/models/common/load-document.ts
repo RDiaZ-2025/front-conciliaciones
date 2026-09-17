@@ -1,8 +1,8 @@
 export interface LoadDocument {
   Id: number;
   IdUser: number;
-  IdFolder: string; // GUID
-  Fecha: string; // Date string
+  IdFolder: string;
+  Fecha: string;
   Status: string;
   FileName: string;
   UserEmail?: string;

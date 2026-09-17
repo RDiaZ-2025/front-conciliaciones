@@ -10,26 +10,22 @@ export const authGuard: CanActivateFn = (route, state): boolean | Observable<boo
   const router = inject(Router);
   const userService = inject(UserService);
 
-  // Verificamos si está logueado
   if (authService.isLoggedIn()) {
-    
-    // Verificar si la ruta es EXCLUSIVA de administrador
+
     const requireAdmin = route.data?.['requireAdmin'];
     if (requireAdmin && !authService.isAdmin()) {
       router.navigate([authService.getDefaultRoute()]);
       return false;
     }
 
-    // Verificar permisos normales si la ruta lo requiere
     const requiredPermission = route.data?.['permission'];
 
     if (requiredPermission && !authService.hasPermission(requiredPermission)) {
-      // En lugar de alert, redirigir suavemente a su página por defecto
+
       router.navigate([authService.getDefaultRoute()]);
       return false;
     }
 
-    // Si tiene permiso a nivel de JWT, validamos el estado GLOBAL del módulo (mantenimiento/deshabilitado)
     if (requiredPermission) {
       return userService.getSystemModules().pipe(
         map(modules => {
@@ -57,15 +53,15 @@ export const authGuard: CanActivateFn = (route, state): boolean | Observable<boo
         }),
         catchError(err => {
           console.warn("FastAPI backend offline or unreachable. Skipping module state validation.", err);
-          // Permitir el acceso para evitar bloquear al usuario cuando el backend de Python está apagado
+
           return of(true);
         })
       );
     }
 
-    return true; // ✅ Tiene token y permisos (si aplica)
+    return true;
   } else {
-    router.navigate(['/login']); // ⛔ No tiene token, lo mandamos al login
+    router.navigate(['/login']);
     return false;
   }
 };

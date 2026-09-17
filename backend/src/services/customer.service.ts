@@ -8,9 +8,6 @@ export class CustomerService {
     return AppDataSource.getRepository(Customer);
   }
 
-  /**
-   * Get list of customers with search, pagination, and active status filter
-   */
   async getCustomers(params: {
     search?: string;
     page?: number;
@@ -45,20 +42,13 @@ export class CustomerService {
     return { data, total };
   }
 
-  /**
-   * Get single customer by ID
-   */
   async getCustomerById(id: number): Promise<Customer | null> {
     return await this.getRepository().findOne({ where: { id } });
   }
 
-  /**
-   * Create a single customer
-   */
   async createCustomer(data: Partial<Customer>): Promise<Customer> {
     const repository = this.getRepository();
 
-    // Check uniqueness of documentType + documentNumber
     const docType = data.documentType?.trim();
     const docNum = data.documentNumber?.trim();
     if (!docType || !docNum) {
@@ -73,7 +63,7 @@ export class CustomerService {
       if (existing.isActive) {
         throw new Error(`Ya existe un cliente activo con el tipo de documento ${docType} y número ${docNum}`);
       } else {
-        // If inactive, reactivate and update details
+
         Object.assign(existing, {
           ...data,
           isActive: true
@@ -91,15 +81,11 @@ export class CustomerService {
     return await repository.save(customer);
   }
 
-  /**
-   * Update customer details
-   */
   async updateCustomer(id: number, data: Partial<Customer>): Promise<Customer | null> {
     const repository = this.getRepository();
     const customer = await this.getCustomerById(id);
     if (!customer) return null;
 
-    // Check unique document combination if changed
     if (
       (data.documentType && data.documentType !== customer.documentType) ||
       (data.documentNumber && data.documentNumber !== customer.documentNumber)
@@ -118,9 +104,6 @@ export class CustomerService {
     return await repository.save(customer);
   }
 
-  /**
-   * Logically delete / deactivate a customer
-   */
   async deleteCustomer(id: number): Promise<boolean> {
     const repository = this.getRepository();
     const customer = await this.getCustomerById(id);
@@ -131,9 +114,6 @@ export class CustomerService {
     return true;
   }
 
-  /**
-   * Bulk upload and upsert clients from Excel or CSV
-   */
   async bulkUpload(
     fileBuffer: Buffer,
     fileName: string
@@ -155,13 +135,11 @@ export class CustomerService {
         throw new Error('El archivo CSV está vacío o solo contiene encabezados');
       }
 
-      // Clean UTF-8 BOM if present
       const cleanFirstLine = lines[0].replace(/^\uFEFF/, '');
 
-      // Detect separator: Excel in Spanish uses semicolon (;) instead of comma (,)
       const separator = cleanFirstLine.includes(';') ? ';' : ',';
       const headers = cleanFirstLine.split(separator).map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
-      
+
       const expectedHeaders = ['tipodedocumento', 'numerodedocumento', 'razonsocial', 'correoelectronico', 'numerocelular'];
       const missing = expectedHeaders.filter(h => !headers.includes(h));
       if (missing.length > 0) {
@@ -174,7 +152,6 @@ export class CustomerService {
       const idxEmail = headers.indexOf('correoelectronico');
       const idxPhone = headers.indexOf('numerocelular');
 
-      // Escaping regex for dynamic separator splitting
       const separatorRegex = new RegExp(`${separator}(?=(?:(?:[^"]*"){2})*[^"]*$)`);
 
       for (let i = 1; i < lines.length; i++) {
@@ -197,7 +174,7 @@ export class CustomerService {
         });
       }
     } else {
-      // Excel File processing
+
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(fileBuffer as any);
       const worksheet = workbook.worksheets[0];
@@ -208,11 +185,11 @@ export class CustomerService {
       let headers: string[] = [];
       worksheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) {
-          // Read headers
+
           row.eachCell((cell) => {
             headers.push(String(cell.value || '').trim().toLowerCase());
           });
-          
+
           const expectedHeaders = ['tipodedocumento', 'numerodedocumento', 'razonsocial', 'correoelectronico', 'numerocelular'];
           const missing = expectedHeaders.filter(h => !headers.includes(h));
           if (missing.length > 0) {
@@ -237,7 +214,6 @@ export class CustomerService {
       });
     }
 
-    // 2. Pre-validation pass (No database writes happen if any row fails)
     const validationErrors: { row: number; error: string }[] = [];
     const fileSeenKeys = new Set<string>();
     const phoneRegex = /^[0-9\s+\-+()]+$/;
@@ -249,7 +225,6 @@ export class CustomerService {
       const email = row.email?.trim();
       const phone = row.phoneNumber?.trim();
 
-      // Required fields
       if (!docType) {
         validationErrors.push({ row: row.rowNum, error: 'El tipo de documento es obligatorio' });
         continue;
@@ -263,7 +238,6 @@ export class CustomerService {
         continue;
       }
 
-      // Max length validations matching DB fields
       if (docType.length > 50) {
         validationErrors.push({ row: row.rowNum, error: `El tipo de documento supera los 50 caracteres permitidos (longitud: ${docType.length})` });
       }
@@ -280,7 +254,6 @@ export class CustomerService {
         validationErrors.push({ row: row.rowNum, error: `El número de celular supera los 50 caracteres permitidos (longitud: ${phone.length})` });
       }
 
-      // Format validations
       if (!this.isValidEmail(email)) {
         validationErrors.push({ row: row.rowNum, error: `Formato de correo electrónico inválido: "${email}"` });
       }
@@ -288,7 +261,6 @@ export class CustomerService {
         validationErrors.push({ row: row.rowNum, error: `El número celular solo debe contener números, espacios y caracteres especiales (+, -, paréntesis) (valor: "${phone}")` });
       }
 
-      // Duplicate rows inside the file
       const rowKey = `${docType.toLowerCase()}_${docNum.toLowerCase()}`;
       if (fileSeenKeys.has(rowKey)) {
         validationErrors.push({ row: row.rowNum, error: `Número de identificación duplicado dentro de este archivo para: ${docType} ${docNum}` });
@@ -309,12 +281,10 @@ export class CustomerService {
 
     const repository = this.getRepository();
 
-    // 3. Fetch all existing customers' keys and IDs in a single query (optimized)
     const allExisting = await repository.find({
       select: ['id', 'documentType', 'documentNumber']
     });
 
-    // Create a fast lookup map: key = "type_number" -> id
     const existingLookup = new Map<string, number>();
     for (const ext of allExisting) {
       const lookupKey = `${ext.documentType.trim().toLowerCase()}_${ext.documentNumber.trim().toLowerCase()}`;
@@ -324,10 +294,9 @@ export class CustomerService {
     const toSave: Customer[] = [];
     const processedKeys = new Set<string>();
 
-    // Process rows in memory for saving
     for (const row of rowsData) {
       results.processed++;
-      
+
       const docType = row.documentType.trim();
       const docNum = row.documentNumber.trim();
       const email = row.email.trim();
@@ -340,7 +309,7 @@ export class CustomerService {
 
       const existingId = existingLookup.get(rowKey);
       if (existingId) {
-        // It's an update
+
         const cust = new Customer();
         cust.id = existingId;
         cust.documentType = docType;
@@ -352,7 +321,7 @@ export class CustomerService {
         toSave.push(cust);
         results.updated++;
       } else {
-        // It's an insert
+
         const cust = new Customer();
         cust.documentType = docType;
         cust.documentNumber = docNum;
@@ -365,7 +334,6 @@ export class CustomerService {
       }
     }
 
-    // 4. Batch save using TypeORM chunking (highly optimized)
     if (toSave.length > 0) {
       const chunkSize = 1000;
       for (let i = 0; i < toSave.length; i += chunkSize) {
@@ -373,9 +341,9 @@ export class CustomerService {
           const chunk = toSave.slice(i, i + chunkSize);
           await repository.save(chunk);
         } catch (err: any) {
-          results.errors.push({ 
-            row: i + 2, 
-            error: `Error al guardar lote de registros: ${err.message || 'Error en la base de datos'}` 
+          results.errors.push({
+            row: i + 2,
+            error: `Error al guardar lote de registros: ${err.message || 'Error en la base de datos'}`
           });
         }
       }

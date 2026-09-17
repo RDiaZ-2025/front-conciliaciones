@@ -15,7 +15,7 @@ export class NocNewsScheduler {
     userInstructions!: string | null;
 
     @Column({ name: 'sources', type: 'nvarchar', length: 'MAX', nullable: false })
-    sources!: string; // Stored as JSON string array
+    sources!: string;
 
     @Column({ name: 'url', type: 'nvarchar', length: 500, nullable: false })
     url!: string;
@@ -33,7 +33,7 @@ export class NocNewsScheduler {
     cronExpression!: string | null;
 
     @Column({ name: 'scheduleConfig', type: 'nvarchar', length: 'MAX', nullable: false })
-    scheduleConfig!: string; // JSON string representing the schedule configuration
+    scheduleConfig!: string;
 
     @Column({ name: 'isActive', type: 'bit', nullable: false, default: 1 })
     isActive!: boolean;

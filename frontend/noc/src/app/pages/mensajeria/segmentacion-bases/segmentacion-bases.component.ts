@@ -8,7 +8,5 @@ import { CommonModule } from '@angular/common';
     templateUrl: './segmentacion-bases.component.html'
 })
 export class SegmentacionBasesComponent {
-    // Logic needed?
-    // User asked for "just create this structure for now".
-    // So a placeholder is fine.
+
 }

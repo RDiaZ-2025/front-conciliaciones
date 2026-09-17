@@ -43,8 +43,7 @@ export interface SystemHealthResponse {
 export class SystemHealthService extends BaseApiService {
 
   getHealth(): Observable<SystemHealthResponse> {
-    // Normalizar baseApiUrl para consultar la ruta raíz /health
-    // Funciona tanto en desarrollo local (http://localhost:22741/health) como en producción Azure (https://voc-backend.azurewebsites.net/health)
+
     const rootUrl = this.baseApiUrl.replace(/\/api\/?$/, '');
     const healthUrl = `${rootUrl}/health`;
 

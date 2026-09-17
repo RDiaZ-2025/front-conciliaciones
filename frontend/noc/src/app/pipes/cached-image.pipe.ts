@@ -17,8 +17,7 @@ export class CachedImagePipe implements PipeTransform, OnDestroy {
     }
 
     this.lastUrl = url;
-    
-    // Revoke old blob URL if it exists
+
     if (this.cachedBlobUrl) {
       URL.revokeObjectURL(this.cachedBlobUrl);
       this.cachedBlobUrl = undefined;

@@ -18,13 +18,13 @@ import { azureServiceBusSchedulerService } from './azure_service_bus_scheduler.s
 export interface NewsBlock {
     id: string;
     type: 'paragraph' | 'image' | 'heading';
-    content?: string; // HTML or plain text for paragraph
-    url?: string; // Image URL
-    caption?: string; // Image caption
-    alt?: string; // Image alt text
-    prompt?: string; // Image AI prompt
-    level?: number; // Heading level (2, 3)
-    text?: string; // Heading text
+    content?: string;
+    url?: string;
+    caption?: string;
+    alt?: string;
+    prompt?: string;
+    level?: number;
+    text?: string;
 }
 
 export interface NewsArticleData {
@@ -49,7 +49,7 @@ export interface CreateNewsScheduleDto {
     userInstructions?: string | null;
     sources: string[];
     startAt: string;
-    scheduleConfig: any; // Raw JSON config from frontend
+    scheduleConfig: any;
     isActive?: boolean;
     publishAutomatically?: boolean;
 }
@@ -60,14 +60,14 @@ export interface UpdateNewsScheduleDto {
     userInstructions?: string | null;
     sources?: string[];
     startAt?: string;
-    scheduleConfig?: any; // Raw JSON config from frontend
+    scheduleConfig?: any;
     isActive?: boolean;
     status?: string;
     publishAutomatically?: boolean;
 }
 
 export class NocNewsSchedulerService {
-    // Microservicios Modulares de IA en n8n
+
     private get extractNewsUrl(): string | undefined {
         return process.env.N8N_AI_EXTRACT_NEWS_URL;
     }
@@ -118,7 +118,6 @@ export class NocNewsSchedulerService {
         return `*/${minutes} * * * *`;
     }
 
-    // Simplified dynamic next run calculator using a unified JSON config
     private calculateNextRunFromConfig(config: any, startAtISO: string, fromDate: Date = new Date()): Date | null {
         const startDate = this.parseColombiaDate(startAtISO);
         const next = new Date(fromDate.getTime());
@@ -127,32 +126,29 @@ export class NocNewsSchedulerService {
 
         if (!config) return null;
 
-        // Check if global endAt boundary has already passed
         if (config.endAt) {
             const endDate = this.parseColombiaDate(config.endAt);
             if (fromDate > endDate) {
-                return null; // Expiration reached
+                return null;
             }
         }
 
-        // Case A: Interval-based execution
         if (config.intervalMinutes && config.intervalMinutes > 0) {
             const minutes = config.intervalMinutes;
             const start = startDate.getTime();
             const now = fromDate.getTime();
-            
+
             let target = start;
             if (isNaN(start)) {
                 target = now;
             }
-            
+
             while (target <= now) {
                 target += minutes * 60000;
             }
 
             const nextRun = new Date(target);
-            
-            // Loop until we hit a valid day of the week if day selection is active (fallback legacy support)
+
             if (config.daysOfWeek && config.daysOfWeek.length > 0) {
                 while (!config.daysOfWeek.includes(nextRun.getDay())) {
                     nextRun.setDate(nextRun.getDate() + 1);
@@ -162,16 +158,14 @@ export class NocNewsSchedulerService {
             if (config.endAt) {
                 const endDate = this.parseColombiaDate(config.endAt);
                 if (nextRun > endDate) {
-                    return null; // Expiration boundary reached
+                    return null;
                 }
             }
             return nextRun;
         }
 
-        // Case B: Specific Day/Time Rules execution (weeklyRules)
         const rules = config.weeklyRules && config.weeklyRules.length > 0 ? config.weeklyRules : [{ dayOfWeek: 1, time: "12:00" }];
-        
-        // Helper to format date in Colombia local timezone
+
         const getColombiaDateStr = (d: Date) => {
             const options: Intl.DateTimeFormatOptions = { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' };
             const formatter = new Intl.DateTimeFormat('en-US', options);
@@ -184,16 +178,15 @@ export class NocNewsSchedulerService {
             const dateStr = getColombiaDateStr(fromDate);
             const candidate = new Date(`${dateStr}T${rule.time}:00-05:00`);
 
-            // Compute correct Colombia day of week
             const colDateObj = new Date(`${dateStr}T12:00:00-05:00`);
             const colDayOfWeek = colDateObj.getDay();
 
             let daysDiff = (rule.dayOfWeek - colDayOfWeek + 7) % 7;
 
             if (daysDiff === 0) {
-                // If it is today, check if time has already passed
+
                 if (candidate <= fromDate) {
-                    daysDiff = 7; // Move to next week same day
+                    daysDiff = 7;
                 }
             }
 
@@ -263,7 +256,6 @@ export class NocNewsSchedulerService {
         const startAtDate = this.parseColombiaDate(dto.startAt);
         const nextRun = this.calculateNextRunFromConfig(dto.scheduleConfig, dto.startAt);
 
-        // Fallback backward compatibility for interval minutes
         let intervalMin = dto.scheduleConfig?.intervalMinutes || 1440;
 
         const newSchedule = this.repository.create({
@@ -285,7 +277,6 @@ export class NocNewsSchedulerService {
             serviceBusSequenceNumber: null
         });
 
-        // Programar mensaje en Azure Service Bus si el agendamiento está activo
         if (newSchedule.isActive && newSchedule.nextRunAt) {
             newSchedule.serviceBusSequenceNumber = await azureServiceBusSchedulerService.scheduleExecution(newSchedule.id, newSchedule.nextRunAt);
         }
@@ -309,7 +300,7 @@ export class NocNewsSchedulerService {
         if (dto.topic !== undefined) schedule.topic = dto.topic;
         if (dto.userInstructions !== undefined) schedule.userInstructions = dto.userInstructions;
         if (dto.sources !== undefined) schedule.sources = JSON.stringify(dto.sources);
-        
+
         if (dto.isActive !== undefined) {
             schedule.isActive = dto.isActive;
             schedule.status = dto.isActive ? 'Pending' : 'Cancelled';
@@ -334,7 +325,7 @@ export class NocNewsSchedulerService {
             if (dto.startAt !== undefined) schedule.startAt = this.parseColombiaDate(dto.startAt);
             const startAtStr = dto.startAt !== undefined ? dto.startAt : schedule.startAt.toISOString();
             const configObj = dto.scheduleConfig !== undefined ? dto.scheduleConfig : JSON.parse(schedule.scheduleConfig);
-            
+
             const nextRun = this.calculateNextRunFromConfig(configObj, startAtStr);
             schedule.nextRunAt = nextRun;
             if (schedule.isActive && !nextRun) {
@@ -342,7 +333,6 @@ export class NocNewsSchedulerService {
             }
         }
 
-        // Reprogramar en Azure Service Bus si cambiaron fechas o estado activo
         if (dto.startAt !== undefined || dto.scheduleConfig !== undefined || dto.isActive !== undefined) {
             if (schedule.serviceBusSequenceNumber) {
                 await azureServiceBusSchedulerService.cancelScheduledExecution(schedule.serviceBusSequenceNumber);
@@ -416,7 +406,7 @@ export class NocNewsSchedulerService {
 
         const now = new Date();
         schedule.lastRunAt = now;
-        
+
         const configObj = JSON.parse(schedule.scheduleConfig);
         const nextRun = this.calculateNextRunFromConfig(configObj, schedule.startAt.toISOString(), now);
         schedule.nextRunAt = nextRun;
@@ -425,7 +415,7 @@ export class NocNewsSchedulerService {
         } else {
             schedule.status = 'Pending';
         }
-        
+
         const saved = await this.repository.save(schedule);
         return {
             ...saved,
@@ -489,14 +479,14 @@ export class NocNewsSchedulerService {
         if (!AppDataSource.isInitialized) {
             throw new Error('Database not initialized');
         }
-        
+
         const schedule = await this.repository.findOne({ where: { id: scheduleId } });
         if (!schedule) {
             throw new Error(`Schedule with ID ${scheduleId} not found`);
         }
 
         const draftRepo = AppDataSource.getRepository(NocNewsDraft);
-        
+
         let articleData: NewsArticleData;
         let pathStr: string | null = null;
 
@@ -616,7 +606,6 @@ export class NocNewsSchedulerService {
         const draft = await draftRepo.findOne({ where: { id } });
         if (!draft) return false;
 
-        // Solo permitir eliminar borradores que no hayan sido publicados
         if (draft.status === 'published') {
             throw new Error('No se pueden eliminar noticias que ya hayan sido publicadas');
         }
@@ -646,7 +635,7 @@ export class NocNewsSchedulerService {
             console.log(`📡 [N8N Request][AI Adjust Paragraph] Sending to: ${n8nAdjustParagraphUrl}`);
             console.log(`📦 [N8N Payload][AI Adjust Paragraph]:`, JSON.stringify(payload, null, 2));
             const startTime = Date.now();
-            const response = await axios.post(n8nAdjustParagraphUrl, payload, { 
+            const response = await axios.post(n8nAdjustParagraphUrl, payload, {
                 timeout: 45000,
                 headers: this.getN8nHeaders()
             });
@@ -696,7 +685,7 @@ export class NocNewsSchedulerService {
             console.log(`📡 [N8N Request][AI Adjust Article] Sending to: ${n8nAdjustArticleUrl}`);
             console.log(`📦 [N8N Payload][AI Adjust Article]:`, JSON.stringify(payload, null, 2));
             const startTime = Date.now();
-            const response = await axios.post(n8nAdjustArticleUrl, payload, { 
+            const response = await axios.post(n8nAdjustArticleUrl, payload, {
                 timeout: 60000,
                 headers: this.getN8nHeaders()
             });
@@ -750,7 +739,7 @@ export class NocNewsSchedulerService {
             console.log(`📡 [N8N Request][AI Regenerate Image] Sending to: ${n8nRegenerateImageUrl}`);
             console.log(`📦 [N8N Payload][AI Regenerate Image]:`, JSON.stringify(payload, null, 2));
             const startTime = Date.now();
-            const response = await axios.post(n8nRegenerateImageUrl, payload, { 
+            const response = await axios.post(n8nRegenerateImageUrl, payload, {
                 timeout: 120000,
                 headers: this.getN8nHeaders()
             });
@@ -761,7 +750,7 @@ export class NocNewsSchedulerService {
             const result = response.data?.output || response.data;
             if (result && (result.newUrl || result.imageUrl || result.url)) {
                 const tempUrl = result.newUrl || result.imageUrl || result.url;
-                // Persistir permanentemente la imagen en Azure Blob Storage
+
                 const persistentUrl = await this.persistImage(tempUrl, 'noc-news-regen');
                 return {
                     success: true,
@@ -803,13 +792,12 @@ export class NocNewsSchedulerService {
         let cmsPath = draft.path;
         try {
             const bluestacksCms = new BluestacksCmsService();
-            // 1. Si no tiene path en CMS aún, crear el borrador en Bluestacks
+
             if (!cmsPath) {
                 const createRes = await bluestacksCms.createNewsDraft(articleData);
                 cmsPath = createRes.cmsPath;
             }
 
-            // 2. Publicar la noticia en el CMS Bluestacks
             if (cmsPath) {
                 await bluestacksCms.publishNews(cmsPath);
             }
@@ -827,8 +815,6 @@ export class NocNewsSchedulerService {
     async previewDraft(path: string) {
         return { success: true, message: 'Preview is now handled locally by structured draft editor' };
     }
-
-    // --- Pipeline Modular de Inteligencia Artificial (Microservicios) ---
 
     private getN8nHeaders(): Record<string, string> {
         const headers: Record<string, string> = {
@@ -859,7 +845,7 @@ export class NocNewsSchedulerService {
             console.log(`📡 [N8N Request][Pipeline Step 1 - Extract News] Sending to: ${this.extractNewsUrl}`);
             console.log(`📦 [N8N Payload][Pipeline Step 1]:`, JSON.stringify(payload, null, 2));
             const startTime = Date.now();
-            const response = await axios.post(this.extractNewsUrl, payload, { 
+            const response = await axios.post(this.extractNewsUrl, payload, {
                 timeout: 180000,
                 headers: this.getN8nHeaders()
             });
@@ -902,7 +888,7 @@ export class NocNewsSchedulerService {
             console.log(`📡 [N8N Request][Pipeline Step 2 - Draft Article] Sending to: ${this.draftArticleUrl}`);
             console.log(`📦 [N8N Payload][Pipeline Step 2]:`, JSON.stringify(payload, null, 2));
             const startTime = Date.now();
-            const response = await axios.post(this.draftArticleUrl, payload, { 
+            const response = await axios.post(this.draftArticleUrl, payload, {
                 timeout: 180000,
                 headers: this.getN8nHeaders()
             });
@@ -934,17 +920,14 @@ export class NocNewsSchedulerService {
 
             const hostname = parsed.hostname.toLowerCase();
 
-            // Bloquear localhost, loopback y cero
             if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '0.0.0.0') {
                 return false;
             }
 
-            // Bloquear servicio de metadatos de la nube (169.254.169.254) y link-local
             if (hostname.startsWith('169.254.') || hostname.endsWith('.internal') || hostname.endsWith('.local')) {
                 return false;
             }
 
-            // Bloquear rangos de IP privadas (RFC 1918)
             if (hostname.startsWith('10.') || hostname.startsWith('192.168.')) {
                 return false;
             }
@@ -963,12 +946,10 @@ export class NocNewsSchedulerService {
             return imageUrl;
         }
 
-        // Si ya es una URL permanente de Azure Blob Storage o de nuestro propio servidor, no es necesario volver a subirla
         if (imageUrl.includes('.blob.core.windows.net') || imageUrl.startsWith('/uploads/')) {
             return imageUrl;
         }
 
-        // Protección anti-SSRF
         if (!this.isSafeImageUrl(imageUrl)) {
             console.warn(`⚠️ [Security Alert] Rechazada URL sospechosa de SSRF en persistImage: ${imageUrl}`);
             return imageUrl;
@@ -982,13 +963,12 @@ export class NocNewsSchedulerService {
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
                 },
-                maxContentLength: 20 * 1024 * 1024 // Limitar a 20MB máximo
+                maxContentLength: 20 * 1024 * 1024
             });
 
             const buffer = Buffer.from(response.data);
             const fileName = `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.jpg`;
 
-            // Intentar subir a Azure Blob Storage
             const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME || 'vocprojectstorage';
             const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY;
             const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME || 'public';
@@ -1001,7 +981,7 @@ export class NocNewsSchedulerService {
                         sharedKeyCredential
                     );
                     const containerClient = blobServiceClient.getContainerClient(containerName);
-                    
+
                     await containerClient.createIfNotExists({ access: 'blob' });
 
                     const blobPath = `noc-news/${fileName}`;
@@ -1014,7 +994,6 @@ export class NocNewsSchedulerService {
                         }
                     });
 
-                    // Generar SAS de larga duración (5 años) para asegurar acceso ininterrumpido
                     const startDate = new Date();
                     startDate.setMinutes(startDate.getMinutes() - 15);
                     const expiryDate = new Date();
@@ -1038,7 +1017,6 @@ export class NocNewsSchedulerService {
                 }
             }
 
-            // Fallback a almacenamiento local en disco
             const uploadsDir = path.join(process.cwd(), 'uploads', 'noc-news');
             if (!fs.existsSync(uploadsDir)) {
                 fs.mkdirSync(uploadsDir, { recursive: true });
@@ -1070,7 +1048,7 @@ export class NocNewsSchedulerService {
             console.log(`📡 [N8N Request][Pipeline Step 3 - Generate Image] Sending to: ${this.generateImageUrl}`);
             console.log(`📦 [N8N Payload][Pipeline Step 3]:`, JSON.stringify(payload, null, 2));
             const startTime = Date.now();
-            const response = await axios.post(this.generateImageUrl, payload, { 
+            const response = await axios.post(this.generateImageUrl, payload, {
                 timeout: 120000,
                 headers: this.getN8nHeaders()
             });
@@ -1081,7 +1059,7 @@ export class NocNewsSchedulerService {
             const result = response.data?.output || response.data;
             if (result && (result.imageUrl || result.url)) {
                 const tempUrl = result.imageUrl || result.url;
-                // Persistir permanentemente la imagen en Azure Blob Storage
+
                 const persistentUrl = await this.persistImage(tempUrl, 'noc-news');
                 return persistentUrl;
             }
@@ -1110,7 +1088,6 @@ export class NocNewsSchedulerService {
         const startTime = Date.now();
         console.log(`🚀 [Pipeline Orchestrator] Starting news generation for Schedule ID: "${id}" | Name: "${schedule.name}" | Topic: "${schedule.topic}"`);
 
-        // --- PASO 1: Ingesta y Extracción de Hechos Clave con IA ---
         const extractedData = await this.step1_extractNews(
             schedule.topic,
             schedule.userInstructions,
@@ -1118,7 +1095,6 @@ export class NocNewsSchedulerService {
         );
         console.log(`📋 [Pipeline Step 1 Done] Facts extracted: ${extractedData.rawFacts?.length || 0} | Context length: ${extractedData.keyContext?.length || 0} chars`);
 
-        // --- PASO 2: Redacción Periodística y Planificación de Imágenes con IA ---
         const draftedContent = await this.step2_draftArticle(
             schedule.topic,
             schedule.userInstructions,
@@ -1126,7 +1102,6 @@ export class NocNewsSchedulerService {
         );
         console.log(`✍️ [Pipeline Step 2 Done] Article drafted: "${draftedContent.title}" | Proposed blocks: ${draftedContent.blocks?.length || 0}`);
 
-        // --- PASO 3: Generación de Imagen de Portada con IA ---
         console.log(`🎨 [Pipeline Step 3 Starting] Generating cover image with prompt: "${draftedContent.coverImagePrompt}"`);
         const coverImageUrl = await this.step3_generateImage(
             draftedContent.coverImagePrompt || `Photojournalism of ${schedule.topic}`,
@@ -1134,7 +1109,6 @@ export class NocNewsSchedulerService {
         );
         console.log(`🖼️ [Pipeline Step 3 Cover Done] Cover URL: ${coverImageUrl}`);
 
-        // --- PASO 4: Ensamblado y Generación de Bloques con Imágenes Intermedias ---
         const blocks: NewsBlock[] = [];
         let blockIndex = 1;
 
@@ -1186,7 +1160,6 @@ export class NocNewsSchedulerService {
             sourcesUsed: extractedData.sourcesFound || extractedData.sourcesUsed || sources
         };
 
-        // Actualizar la fecha de última y próxima ejecución
         const now = new Date();
         schedule.lastRunAt = now;
         const configObj = typeof schedule.scheduleConfig === 'string' ? JSON.parse(schedule.scheduleConfig || '{}') : (schedule.scheduleConfig || {});
@@ -1194,7 +1167,6 @@ export class NocNewsSchedulerService {
         schedule.nextRunAt = nextRun;
         schedule.status = nextRun ? 'Pending' : 'Completed';
 
-        // Cancelar mensaje anterior si existía y programar la siguiente repetición en Azure Service Bus
         if (schedule.serviceBusSequenceNumber) {
             await azureServiceBusSchedulerService.cancelScheduledExecution(schedule.serviceBusSequenceNumber);
             schedule.serviceBusSequenceNumber = null;
@@ -1205,7 +1177,6 @@ export class NocNewsSchedulerService {
 
         const updatedSchedule = await this.repository.save(schedule);
 
-        // Guardar el borrador estructurado en nuestra BD local
         const draftRepo = AppDataSource.getRepository(NocNewsDraft);
         const newDraft = draftRepo.create({
             scheduleId: schedule.id,
@@ -1223,7 +1194,6 @@ export class NocNewsSchedulerService {
         const totalDurationSec = ((Date.now() - startTime) / 1000).toFixed(1);
         console.log(`✅ [Pipeline Completed] Draft ID: ${savedDraft.id} | Total Time: ${totalDurationSec}s | Next Run: ${nextRun ? nextRun.toISOString() : 'None'}`);
 
-        // Si tenía autopublicar activado, publicar de inmediato
         if (schedule.publishAutomatically) {
             console.log(`🌐 [Auto-Publish] Auto-publishing draft ID: ${savedDraft.id} to Bluestacks CMS...`);
             await this.publishDraft(savedDraft.id);

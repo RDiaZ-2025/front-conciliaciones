@@ -55,7 +55,7 @@ export class Cover15MinutesComponent implements OnInit {
 
   async refreshCurrentImage() {
     try {
-      // Add timestamp to bypass browser cache
+
       const url = await this.azureService.getFileUrl('15minutes/cover.jpg', 'public');
       this.currentImageUrl.set(`${url}&t=${Date.now()}`);
     } catch (error) {
@@ -67,17 +67,15 @@ export class Cover15MinutesComponent implements OnInit {
     this.coverService.getAllCovers().subscribe({
       next: async (response) => {
         if (response.success) {
-          // Process history items to get fresh SAS URLs
+
           const historyPromises = response.data.map(async (item) => {
-            // Extract blob name from URL if possible, or assume it's stored as full URL
-            // If stored as full URL: https://account.blob.../container/15minutes/guid.jpg
+
             let blobName = item.url;
             if (item.url.includes('/15minutes/')) {
               const parts = item.url.split('/15minutes/');
               blobName = `15minutes/${parts[1]}`;
             }
 
-            // Clean up query params if any
             blobName = blobName.split('?')[0];
 
             const signedUrl = await this.azureService.getFileUrl(blobName, 'public');
@@ -89,7 +87,6 @@ export class Cover15MinutesComponent implements OnInit {
 
           const historyWithSas = await Promise.all(historyPromises);
 
-          // Sort by timestamp desc
           historyWithSas.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
           this.history.set(historyWithSas);
         }
@@ -133,16 +130,12 @@ export class Cover15MinutesComponent implements OnInit {
         }
       };
 
-      // 1. Upload with random name (for history)
       await this.azureService.uploadBlob(file, randomName, 'public', uploadOptions);
 
-      // 2. Upload with fixed name (for current cover)
       await this.azureService.uploadBlob(file, fixedName, 'public', uploadOptions);
 
-      // 3. Save to DB
-      // Get signed URL to extract the base URL
       const signedUrl = await this.azureService.getFileUrl(randomName, 'public');
-      const historyUrl = signedUrl.split('?')[0]; // Store URL without SAS token
+      const historyUrl = signedUrl.split('?')[0];
 
       const user = this.authService.currentUser();
       const uploaderLog = user ? `${user.name} (${user.email})` : 'Unknown User';
@@ -176,4 +169,3 @@ export class Cover15MinutesComponent implements OnInit {
     });
   }
 }
-

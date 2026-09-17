@@ -91,7 +91,7 @@ export class PushMultimediaDialogComponent implements OnDestroy {
     const img = new Image();
     const objectURL = URL.createObjectURL(file);
     img.src = objectURL;
-    
+
     img.onload = () => {
       const width = img.width;
       const height = img.height;
@@ -117,9 +117,9 @@ export class PushMultimediaDialogComponent implements OnDestroy {
           uploader.clear();
         }
       } else {
-        // Remove existing file of same category if any
+
         this.removeFile(category, null);
-        
+
         const safeUrl = this.sanitizer.bypassSecurityTrustUrl(objectURL);
         const fileWithCategory = Object.assign(file, { category, objectURL, safeUrl });
         this.uploadedFiles.push(fileWithCategory);

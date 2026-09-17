@@ -36,10 +36,10 @@ export class GenericUploadDialogComponent implements OnDestroy {
   isUploading = signal<boolean>(false);
   solutionType = signal<string>('');
   private objectUrls: string[] = [];
-  
+
   instructions = computed(() => {
     const type = this.solutionType();
-    // Copy instructions from solutionRules in material-preparation-dialog
+
     const rules: {[key: string]: string} = {
         'MOBILE_DISPLAY': 'Tamaños de los banners: 300x200, 300x50, 300x110, 300x250, 200x200',
         'DESKTOP_DISPLAY': 'Tamaños de los banners: 160x600, 200x200, 250x250, 486x60, 728x90, 970x90, 300x600, 300x250, 300x280',
@@ -70,7 +70,7 @@ export class GenericUploadDialogComponent implements OnDestroy {
 
   async onUpload(event: any, uploader: any) {
     const validFiles = [];
-    
+
     for (const file of event.files) {
       if (this.solutionType() === 'MOBILE_DISPLAY' && file.type.startsWith('image/')) {
          const isValid = await this.validateImageDimensions(file, [
@@ -80,14 +80,14 @@ export class GenericUploadDialogComponent implements OnDestroy {
              { w: 300, h: 250 },
              { w: 200, h: 200 }
          ]);
-         
+
          if (!isValid) {
-             this.messageService.add({ 
-                 severity: 'error', 
-                 summary: 'Dimensión incorrecta', 
-                 detail: `El archivo ${file.name} no cumple con los tamaños permitidos (300x200, 300x50, 300x110, 300x250, 200x200).` 
+             this.messageService.add({
+                 severity: 'error',
+                 summary: 'Dimensión incorrecta',
+                 detail: `El archivo ${file.name} no cumple con los tamaños permitidos (300x200, 300x50, 300x110, 300x250, 200x200).`
              });
-             continue; // Skip invalid file
+             continue;
          }
       }
 
@@ -97,10 +97,10 @@ export class GenericUploadDialogComponent implements OnDestroy {
         this.objectUrls.push(objectURL);
         safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(objectURL);
       }
-      
+
       validFiles.push({ ...file, category: 'general', safeUrl, name: file.name });
     }
-    
+
     if (validFiles.length > 0) {
       this.uploadedFiles.push(...validFiles);
       this.messageService.add({ severity: 'info', summary: 'Éxito', detail: 'Archivo(s) cargado(s) correctamente' });
@@ -116,18 +116,18 @@ export class GenericUploadDialogComponent implements OnDestroy {
       return new Promise((resolve) => {
           const img = new Image();
           const objectUrl = URL.createObjectURL(file);
-          
+
           img.onload = () => {
               const match = allowedDimensions.some(d => d.w === img.width && d.h === img.height);
               URL.revokeObjectURL(objectUrl);
               resolve(match);
           };
-          
+
           img.onerror = () => {
               URL.revokeObjectURL(objectUrl);
-              resolve(false); // If it can't be loaded as an image, we reject it
+              resolve(false);
           };
-          
+
           img.src = objectUrl;
       });
   }

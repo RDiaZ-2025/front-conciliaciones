@@ -10,10 +10,9 @@ import { environment } from '../../environments/environment';
   providedIn: 'root'
 })
 export class UserService extends BaseApiService {
-  // Caché de módulos para no saturar el backend
+
   private cachedModules: any[] | null = null;
 
-  // Obtener módulos dinámicos del sistema
   getSystemModules(forceRefresh = false): Observable<any[]> {
     if (this.cachedModules && !forceRefresh) {
       return new Observable<any[]>(observer => {
@@ -23,11 +22,10 @@ export class UserService extends BaseApiService {
     }
     return this.http.get<any[]>(`${environment.apiUrl}/system-modules`).pipe(
       map(backendModules => {
-        // Hacemos un merge de los estados del backend con la configuración estricta del frontend
-        // Esto asegura que conservamos las propiedades 'route', 'adminOnly', y los iconos originales.
+
         return SYSTEM_MODULES.map(sysMod => {
           const backMod = backendModules.find(bm => bm.name === sysMod.name);
-          
+
           return {
             ...sysMod,
             submodules: sysMod.submodules.map(sysSub => {
@@ -35,7 +33,7 @@ export class UserService extends BaseApiService {
               if (backMod) {
                 backSub = backMod.submodules.find((bs: any) => bs.code === sysSub.code);
               }
-              // Combinamos las propiedades
+
               return {
                 ...sysSub,
                 is_under_maintenance: backSub ? backSub.is_under_maintenance : false,

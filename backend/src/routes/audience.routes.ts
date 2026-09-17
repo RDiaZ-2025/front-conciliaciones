@@ -3,7 +3,6 @@ import { getGenders, getAgeRanges, getSocioeconomicLevels } from '../controllers
 
 const router = express.Router();
 
-// Public routes for audience dropdowns
 router.get('/genders', getGenders);
 router.get('/age-ranges', getAgeRanges);
 router.get('/socioeconomic-levels', getSocioeconomicLevels);

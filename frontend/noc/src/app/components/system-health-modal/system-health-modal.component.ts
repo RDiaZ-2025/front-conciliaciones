@@ -47,7 +47,7 @@ export class SystemHealthModalComponent {
   });
 
   constructor() {
-    // Al abrir el modal (visible cambia a true), consultar automáticamente el estado actualizado
+
     effect(() => {
       if (this.visible()) {
         this.refresh();

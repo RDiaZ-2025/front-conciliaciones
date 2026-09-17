@@ -10,7 +10,7 @@ async function updateIcons() {
         await AppDataSource.initialize();
         const repo = AppDataSource.getRepository(DynamicForm);
         const forms = await repo.find();
-        
+
         console.log("Found forms in database:", forms.map(f => f.name));
 
         for (const form of forms) {

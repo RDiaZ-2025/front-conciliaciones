@@ -18,7 +18,7 @@ import { Status } from '../models/common/status';
   providedIn: 'root'
 })
 export class ProductionService extends BaseApiService {
-  private apiUrl = `${environment.apiUrl}/production`; // Updated to match likely route mount point
+  private apiUrl = `${environment.apiUrl}/production`;
   private objectiveUrl = `${environment.apiUrl}/objectives`;
   private audienceUrl = `${environment.apiUrl}/audience`;
   private statusUrl = `${environment.apiUrl}/statuses`;
@@ -31,7 +31,6 @@ export class ProductionService extends BaseApiService {
     return this.http.get<ProductionRequest>(`${this.apiUrl}/${id}`);
   }
 
-  // Alias for compatibility
   getProductionRequestById(id: number): Observable<ProductionRequest> {
     return this.getProductionRequest(id);
   }
@@ -91,13 +90,11 @@ export class ProductionService extends BaseApiService {
   getProducts(): Observable<Product[]> {
     return this.http.get<Product[]>(`${this.apiUrl}/products`);
   }
-  
-  // Objective methods
+
   getObjectives(): Observable<Objective[]> {
     return this.http.get<Objective[]>(this.objectiveUrl);
   }
 
-  // Audience methods
   getGenders(): Observable<Gender[]> {
     return this.http.get<Gender[]>(`${this.audienceUrl}/genders`);
   }
@@ -110,7 +107,6 @@ export class ProductionService extends BaseApiService {
     return this.http.get<SocioeconomicLevel[]>(`${this.audienceUrl}/socioeconomic-levels`);
   }
 
-  // Production Options methods
   getFormatTypes(): Observable<FormatType[]> {
     return this.http.get<FormatType[]>(`${this.apiUrl}/format-types`);
   }
@@ -142,20 +138,20 @@ export class ProductionService extends BaseApiService {
   }
 
   submitDynamicForm(
-    formId: number, 
-    values: any, 
-    targetFormIds?: number[], 
-    submissions?: any[], 
-    targetTeamIds?: number[], 
+    formId: number,
+    values: any,
+    targetFormIds?: number[],
+    submissions?: any[],
+    targetTeamIds?: number[],
     targetTeams?: Array<{ teamId: number; assignmentMode?: string }>,
     closingConfig?: { formId?: number | null; workflowId?: number | null }
   ): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/submissions`, { 
-      formId, 
-      values, 
-      targetFormIds, 
-      submissions, 
-      targetTeamIds, 
+    return this.http.post<any>(`${this.apiUrl}/submissions`, {
+      formId,
+      values,
+      targetFormIds,
+      submissions,
+      targetTeamIds,
       targetTeams,
       closingConfig
     });
@@ -195,7 +191,6 @@ export class ProductionService extends BaseApiService {
     return this.http.post<any[]>(`${this.apiUrl}/admin/forms/${formId}/stages`, stages);
   }
 
-  // --- Independent Workflows ---
   adminGetWorkflows(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/admin/workflows`);
   }

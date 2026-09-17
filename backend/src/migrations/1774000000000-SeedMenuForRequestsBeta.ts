@@ -4,7 +4,7 @@ export class SeedMenuForRequestsBeta1774000000000 implements MigrationInterface 
     name = 'SeedMenuForRequestsBeta1774000000000'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        // Insert menu items for Approvals Inbox and Admin panel under parent 13 (Comercial)
+
         await queryRunner.query(`
             INSERT INTO "MenuItems" ("Label", "Icon", "Route", "ParentId", "DisplayOrder", "IsActive", "PermissionId") VALUES
             ('Aprobaciones (Beta)', 'pi pi-inbox', '/requests-beta/inbox', 13, 21, 1, NULL),

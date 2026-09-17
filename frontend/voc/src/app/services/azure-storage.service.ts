@@ -43,7 +43,6 @@ interface SasTokenResponse {
 })
 export class AzureStorageService extends BaseApiService {
 
-  // Cache for container sessions
   private sessions = new Map<string, {
     client: ContainerClient | ShareClient;
     expiry: Date;
@@ -59,13 +58,12 @@ export class AzureStorageService extends BaseApiService {
   private async getClient(containerName: string = 'private'): Promise<ContainerClient | ShareClient> {
     const session = this.sessions.get(containerName);
 
-    // Check if we have a valid session
     if (session && session.expiry > new Date()) {
       return session.client;
     }
 
     try {
-      // Pass container parameter to backend
+
       const response = await firstValueFrom(
         this.http.get<SasTokenResponse>(`${environment.apiUrl}/storage/sas-token`, {
           params: { container: containerName }
@@ -77,7 +75,7 @@ export class AzureStorageService extends BaseApiService {
       }
 
       const expiryDate = new Date(response.data.expiresOn);
-      // Ensure we subtract a buffer (e.g., 5 mins) to refresh before actual expiry
+
       expiryDate.setMinutes(expiryDate.getMinutes() - 5);
 
       const serviceType = response.data.serviceType || 'blob';
@@ -95,7 +93,6 @@ export class AzureStorageService extends BaseApiService {
         client = blobServiceClient.getContainerClient(response.data.containerName);
       }
 
-      // Store in cache
       this.sessions.set(containerName, {
         client,
         expiry: expiryDate,
@@ -106,7 +103,7 @@ export class AzureStorageService extends BaseApiService {
 
       return client;
     } catch (error: any) {
-      // Handle missing configuration gracefully
+
       if (error.status === 500 && error.error?.message?.includes('Azure Storage configuration missing')) {
         console.warn(`Azure Storage not configured: ${error.error.message}`);
         throw new Error('Azure Storage not configured');
@@ -117,7 +114,6 @@ export class AzureStorageService extends BaseApiService {
     }
   }
 
-  // Backwards compatibility alias
   private async getContainerClient(containerName: string = 'private'): Promise<ContainerClient> {
     const client = await this.getClient(containerName);
     if (this.isShareClient(client)) {
@@ -130,10 +126,6 @@ export class AzureStorageService extends BaseApiService {
     return (client as ShareClient).getDirectoryClient !== undefined;
   }
 
-
-  /**
-   * Upload a single file to Azure Storage
-   */
   async uploadFile(file: File, options: UploadOptions): Promise<UploadResult> {
     try {
       const containerClient = await this.getContainerClient(options.containerName);
@@ -141,7 +133,6 @@ export class AzureStorageService extends BaseApiService {
       const blobName = `${options.folderPath}/${fileName}`;
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
-      // Sanitize metadata to avoid fetch TypeError in headers due to non-ASCII characters
       const sanitizedMetadata: Record<string, string> = {
         originalName: this.toAscii(file.name),
         uploadDate: new Date().toISOString()
@@ -155,7 +146,6 @@ export class AzureStorageService extends BaseApiService {
         }
       }
 
-      // Upload with progress tracking
       const uploadOptions = {
         blobHTTPHeaders: {
           blobContentType: file.type,
@@ -187,9 +177,6 @@ export class AzureStorageService extends BaseApiService {
     }
   }
 
-  /**
-   * List blobs with a prefix
-   */
   async listBlobs(prefix: string, containerName: string = 'private'): Promise<string[]> {
     const blobs: string[] = [];
     try {
@@ -203,9 +190,6 @@ export class AzureStorageService extends BaseApiService {
     return blobs;
   }
 
-  /**
-   * Download a blob as a Blob object
-   */
   async downloadBlob(blobName: string, containerName: string = 'private'): Promise<Blob | undefined> {
     if (containerName === 'autoconsumoshared') {
       const url = `${environment.apiUrl}/storage/commercial/download?path=${encodeURIComponent(blobName)}`;
@@ -230,9 +214,6 @@ export class AzureStorageService extends BaseApiService {
     }
   }
 
-  /**
-   * Upload a single blob with a specific name
-   */
   async uploadBlob(file: Blob | File, blobName: string, containerName: string = 'private', options?: { blobHTTPHeaders?: any }): Promise<boolean> {
     try {
       const containerClient = await this.getContainerClient(containerName);
@@ -251,37 +232,30 @@ export class AzureStorageService extends BaseApiService {
     }
   }
 
-  /**
-   * Upload multiple files to Azure Storage
-   */
   async uploadFiles(files: File[], options: UploadOptions): Promise<UploadResult[]> {
     const uploadPromises = files.map(file => {
-      // Extract custom category if attached to file
+
       const fileCategory = (file as any).category;
       const metadata = { ...options.metadata };
       if (fileCategory) {
         metadata['category'] = fileCategory;
       }
-      
+
       return this.uploadFile(file, {
         ...options,
         metadata,
-        onProgress: undefined, // Individual progress tracking not supported for batch uploads
+        onProgress: undefined,
       });
     });
 
     return Promise.all(uploadPromises);
   }
 
-  /**
-   * Download files from a specific folder
-   */
   async downloadFiles(options: DownloadOptions): Promise<void> {
     try {
       const containerClient = await this.getContainerClient(options.containerName);
       const folderPath = options.folderPath.toLowerCase();
 
-      // Try different possible folder path variations
       const possiblePaths = [
         folderPath,
         `${folderPath}/`,
@@ -289,7 +263,7 @@ export class AzureStorageService extends BaseApiService {
         `SalidaDatosProcesados/${folderPath}`,
         `salidadatosprocesados/${folderPath}/`,
         `SalidaDatosProcesados/${folderPath}/`,
-        options.folderPath, // Original case
+        options.folderPath,
         `${options.folderPath}/`,
       ];
 
@@ -304,7 +278,7 @@ export class AzureStorageService extends BaseApiService {
           }
 
           if (blobs.length > 0) {
-            break; // Stop searching once we find files
+            break;
           }
         } catch (pathError) {
           console.error(`Error searching with prefix ${searchPath}:`, pathError);
@@ -315,10 +289,9 @@ export class AzureStorageService extends BaseApiService {
         throw new Error(`No files found in folder: ${options.folderPath}`);
       }
 
-      // Download each blob
       for (const blobName of blobs) {
         if (options.fileName && !blobName.includes(options.fileName)) {
-          continue; // Skip if specific file requested and this isn't it
+          continue;
         }
 
         const blockBlobClient = containerClient.getBlockBlobClient(blobName);
@@ -342,9 +315,6 @@ export class AzureStorageService extends BaseApiService {
     }
   }
 
-  /**
-   * List files in a specific folder
-   */
   async listFiles(folderPath: string, containerName: string = 'private'): Promise<string[]> {
     try {
       const containerClient = await this.getContainerClient(containerName);
@@ -394,9 +364,6 @@ export class AzureStorageService extends BaseApiService {
     }
   }
 
-  /**
-   * Get detailed file information for a specific folder
-   */
   async getFilesDetails(folderPath: string, containerName: string = 'private'): Promise<Array<{
     id: string;
     name: string;
@@ -405,7 +372,7 @@ export class AzureStorageService extends BaseApiService {
     url: string;
     uploadDate: string;
   }>> {
-    // If commercial container, use proxy to avoid CORS issues
+
     if (containerName === 'autoconsumoshared') {
       return this.getCommercialFiles(folderPath);
     }
@@ -425,14 +392,12 @@ export class AzureStorageService extends BaseApiService {
       }> = [];
 
       if (this.isShareClient(client)) {
-        // Share Logic
-        // Remove trailing slash for Share Directory Client
+
         let searchPath = folderPath;
         if (searchPath.endsWith('/')) searchPath = searchPath.slice(0, -1);
 
         const directoryClient = searchPath ? client.getDirectoryClient(searchPath) : client.rootDirectoryClient;
 
-        // Check existence (only if not root, root always exists in valid share)
         if (searchPath && !await directoryClient.exists()) {
           return [];
         }
@@ -456,7 +421,7 @@ export class AzureStorageService extends BaseApiService {
                 name: entity.name,
                 size: entity.properties.contentLength || 0,
                 type: this.getMimeType(entity.name.split('.').pop()?.toLowerCase() || ''),
-                // Generate URL with SAS token
+
                 url: `https://${accountName}.file.core.windows.net/${containerName}/${entityPath}${session?.sasToken}`,
                 uploadDate: entity.properties.lastModified?.toISOString() || new Date().toISOString()
               });
@@ -467,7 +432,7 @@ export class AzureStorageService extends BaseApiService {
           throw e;
         }
       } else {
-        // Blob Logic
+
         const searchPath = folderPath.endsWith('/') ? folderPath : `${folderPath}/`;
 
         for await (const blob of client.listBlobsFlat({
@@ -516,9 +481,6 @@ export class AzureStorageService extends BaseApiService {
     return mimeTypes[extension] || 'application/octet-stream';
   }
 
-  /**
-   * Delete a file from Azure Storage
-   */
   async deleteFile(blobName: string, containerName: string = 'private'): Promise<boolean> {
     try {
       const containerClient = await this.getContainerClient(containerName);
@@ -531,41 +493,36 @@ export class AzureStorageService extends BaseApiService {
     }
   }
 
-  /**
-   * Get file URL for preview/download
-   */
   async getFileUrl(blobName: string, containerName: string = 'private'): Promise<string> {
-    await this.getClient(containerName); // Ensure session is loaded
+    await this.getClient(containerName);
     const session = this.sessions.get(containerName);
-    
+
     if (!session) {
       throw new Error(`No session found for container ${containerName}`);
     }
 
     const client = session.client;
-    
+
     if (this.isShareClient(client)) {
-      // Share Logic
+
       const lastSlashIndex = blobName.lastIndexOf('/');
       const directoryPath = lastSlashIndex > -1 ? blobName.substring(0, lastSlashIndex) : '';
       const fileName = lastSlashIndex > -1 ? blobName.substring(lastSlashIndex + 1) : blobName;
 
       const directoryClient = directoryPath ? client.getDirectoryClient(directoryPath) : client.rootDirectoryClient;
       const fileClient = directoryClient.getFileClient(fileName);
-      
-      // Append SAS token if not already present
+
       let url = fileClient.url;
       if (session.sasToken && !url.includes('sig=')) {
         url += (url.includes('?') ? '&' : '?') + session.sasToken.replace(/^\?/, '');
       }
       return url;
     } else {
-      // Blob Logic
+
       const blobClient = client as ContainerClient;
       const blockBlobClient = blobClient.getBlockBlobClient(blobName);
       let url = blockBlobClient.url;
-      
-      // Append SAS token if not already present
+
       if (session.sasToken && !url.includes('sig=')) {
         url += (url.includes('?') ? '&' : '?') + session.sasToken.replace(/^\?/, '');
       }
@@ -573,9 +530,6 @@ export class AzureStorageService extends BaseApiService {
     }
   }
 
-  /**
-   * Check if a file exists
-   */
   async fileExists(blobName: string): Promise<boolean> {
     try {
       const containerClient = await this.getContainerClient();
@@ -588,11 +542,8 @@ export class AzureStorageService extends BaseApiService {
     }
   }
 
-  /**
-   * Sanitize file name for Azure Storage
-   */
   private sanitizeFileName(fileName: string): string {
-    // Remove or replace invalid characters for Azure blob names
+
     return fileName
       .replace(/[<>:"/\\|?*]/g, '_')
       .replace(/\s+/g, '_')
@@ -602,16 +553,13 @@ export class AzureStorageService extends BaseApiService {
   private toAscii(str: string): string {
     return str
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove accents
-      .replace(/[^\x00-\x7F]/g, '_'); // Replace any other non-ASCII character with underscore
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\x00-\x7F]/g, '_');
   }
 
-  /**
-   * Download a single file by its blob name
-   */
   async downloadSingleFile(blobName: string, fileName?: string, containerName: string = 'private', onProgress?: (progress: number) => void, fileSize?: number): Promise<void> {
     if (containerName === 'autoconsumoshared') {
-      // Use proxy download
+
       const url = `${environment.apiUrl}/storage/commercial/download?path=${encodeURIComponent(blobName)}`;
       try {
         let blob: Blob;
@@ -624,7 +572,7 @@ export class AzureStorageService extends BaseApiService {
             this.http.request(req).pipe(
               tap(event => {
                 if (event.type === HttpEventType.DownloadProgress) {
-                  // Some backends might not send Content-Length, so total could be undefined
+
                   const total = event.total || fileSize;
                   const percentDone = total ? Math.round(100 * event.loaded / total) : 0;
                   onProgress(percentDone);
@@ -658,20 +606,18 @@ export class AzureStorageService extends BaseApiService {
     try {
       const client = await this.getClient(containerName);
 
-      // Allow passing a full URL; extract blob path if needed
       let resolvedBlobName = blobName;
       if (/^https?:\/\//i.test(blobName)) {
         const url = new URL(blobName);
         const parts = url.pathname.split('/').filter(Boolean);
-        // parts: [container, ...blobSegments]
+
         resolvedBlobName = decodeURIComponent(parts.slice(1).join('/'));
       }
 
       let blobData: Blob | undefined;
 
       if (this.isShareClient(client)) {
-        // Share Logic
-        // resolvedBlobName is the full path relative to the share (e.g. "Folder/file.txt")
+
         const lastSlashIndex = resolvedBlobName.lastIndexOf('/');
         const directoryPath = lastSlashIndex > -1 ? resolvedBlobName.substring(0, lastSlashIndex) : '';
         const name = lastSlashIndex > -1 ? resolvedBlobName.substring(lastSlashIndex + 1) : resolvedBlobName;
@@ -696,7 +642,7 @@ export class AzureStorageService extends BaseApiService {
         });
         blobData = await downloadResponse.blobBody;
       } else {
-        // Blob Logic
+
         const blockBlobClient = client.getBlockBlobClient(resolvedBlobName);
 
         let totalSize = fileSize;
@@ -733,9 +679,6 @@ export class AzureStorageService extends BaseApiService {
     }
   }
 
-  /**
-   * Get blob data for preview
-   */
   async getBlobData(blobNameOrUrl: string): Promise<Blob> {
     try {
       const containerClient = await this.getContainerClient();
@@ -752,7 +695,7 @@ export class AzureStorageService extends BaseApiService {
       if (!blobBody) {
         throw new Error('Blob body not available');
       }
-      return await blobBody; // actual Blob
+      return await blobBody;
     } catch (error) {
       console.error('Error getting blob data:', error);
       throw error;

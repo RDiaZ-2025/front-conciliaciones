@@ -61,7 +61,6 @@ export class RequestsReportComponent implements OnInit {
     const workload = data.workload || [];
     const stages = data.stages || [];
 
-    // Workload Chart (Horizontal Bar)
     this.workloadChartData = {
       labels: workload.map((w: any) => w.userName),
       datasets: [
@@ -73,7 +72,6 @@ export class RequestsReportComponent implements OnInit {
       ]
     };
 
-    // Execution Status Chart (Pie/Doughnut)
     this.executionChartData = {
       labels: ['Pendiente', 'En Curso', 'Completado'],
       datasets: [
@@ -89,13 +87,12 @@ export class RequestsReportComponent implements OnInit {
       ]
     };
 
-    // Stages Chart (Horizontal Bar)
     this.stageChartData = {
       labels: stages.map((s: any) => s.label),
       datasets: [
         {
           label: 'Solicitudes por Etapa',
-          backgroundColor: '#EE3829', // Claro Red
+          backgroundColor: '#EE3829',
           data: stages.map((s: any) => s.count)
         }
       ]

@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { 
-  getAllPermissions, 
-  createPermission, 
-  updatePermission, 
-  deletePermission 
+import {
+  getAllPermissions,
+  createPermission,
+  updatePermission,
+  deletePermission
 } from '../controllers/permission.controller';
 import { authenticateToken } from '../middleware/auth';
 

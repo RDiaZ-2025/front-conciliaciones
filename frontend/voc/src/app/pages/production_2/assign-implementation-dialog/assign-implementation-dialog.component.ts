@@ -51,7 +51,7 @@ export class AssignImplementationDialogComponent implements OnInit {
 
   loadOperationsUsers() {
     this.isLoadingUsers.set(true);
-    // Team ID 2 is Operaciones
+
     this.teamService.getUsersByTeam(2).subscribe({
       next: (response: any) => {
         if (response.success) {

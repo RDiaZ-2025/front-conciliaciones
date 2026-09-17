@@ -4,7 +4,6 @@ import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 
-// PrimeNG Imports
 import { DrawerModule } from 'primeng/drawer';
 import { ToolbarModule } from 'primeng/toolbar';
 import { ButtonModule } from 'primeng/button';
@@ -26,7 +25,7 @@ import { SystemHealthModalComponent } from '../system-health-modal/system-health
   styleUrls: ['./admin-layout.component.scss'],
   standalone: true,
   imports: [
-    CommonModule, 
+    CommonModule,
     RouterModule,
     DrawerModule,
     ToolbarModule,
@@ -46,23 +45,19 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
   private menuService = inject(MenuService);
   private router = inject(Router);
 
-  // Health modal state (signal)
   showHealthModal = signal(false);
 
-  // Drawer state
   isDrawerOpen = false;
 
-  // Lista de módulos del sistema para generar el menú dinámicamente (signal reactivo)
   modules = signal<MenuItem[]>([]);
 
-  // Estado de los menús desplegables (qué modulo está abierto)
   openMenus: { [key: string]: boolean } = {};
 
   userMenuItems: PrimeMenuItem[] = [
-    { 
-      label: 'Cerrar Sesión', 
-      icon: 'log-out', 
-      command: () => this.logout() 
+    {
+      label: 'Cerrar Sesión',
+      icon: 'log-out',
+      command: () => this.logout()
     }
   ];
 
@@ -71,7 +66,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
       if (response.success) {
         const allItems = response.data;
         const isFlatList = allItems.some(item => !!item.parentId);
-        
+
         let rawModules: MenuItem[] = [];
         if (isFlatList) {
           const activeItems = allItems.filter(item => item.isActive !== false);
@@ -86,7 +81,6 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
           rawModules = allItems;
         }
 
-        // Filter modules and submodules by activity and user permissions
         const filtered = rawModules
           .filter(module => module.isActive !== false)
           .map(module => {

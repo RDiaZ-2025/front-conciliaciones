@@ -62,7 +62,6 @@ export class AuthService extends BaseApiService {
               ? this.normalizePermissions(rawData.permissions)
               : (userData.permissions ? this.normalizePermissions(userData.permissions) : []);
 
-            // Try to preserve teamId from localStorage if backend doesn't send it in verify
             let teamId = rawData.teamId;
             if (teamId == null && storedUser) {
               try {

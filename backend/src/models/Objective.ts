@@ -1,9 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
-/**
- * Objective entity representing campaign objectives
- * Maps to Objectives table in the database
- */
 @Entity('Objectives')
 export class Objective {
     @PrimaryGeneratedColumn({ name: 'Id' })

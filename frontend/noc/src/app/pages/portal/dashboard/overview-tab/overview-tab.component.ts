@@ -6,7 +6,6 @@ import { KpiCard } from '../../../../components/kpi-card/kpi-card.component';
 import { DASHBOARD_COLORS, CHART_DEFAULTS, getChartTheme } from '../dashboard.models';
 import { ThemeService } from '../../../../services/theme.service';
 
-
 Chart.register(...registerables);
 
 @Component({
@@ -30,9 +29,9 @@ export class OverviewTabComponent implements OnChanges, AfterViewInit {
     private themeService = inject(ThemeService);
 
     constructor() {
-        // Redraw charts when theme changes
+
         effect(() => {
-            this.themeService.theme(); // Register dependency
+            this.themeService.theme();
             if (this.data) {
                 setTimeout(() => this.updateCharts(), 0);
             }

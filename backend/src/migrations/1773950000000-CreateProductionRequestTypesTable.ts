@@ -46,7 +46,6 @@ export class CreateProductionRequestTypesTable1773950000000 implements Migration
             ]
         }), true);
 
-        // Seed the 5 items from the image
         await queryRunner.query(`
             INSERT INTO ProductionRequestTypes (Name, Responsible, Role, Email, Phone) VALUES
             ('CONTENT MARKETING', 'Luisa Fajardo', 'Jefe Preventa', 'luisa.fajardoro@claro.com.co', '+3102266514'),

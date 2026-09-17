@@ -6,7 +6,6 @@ import { IngresoRedes } from '../models/IngresoRedes';
 import { Presupuesto } from '../models/Presupuesto';
 import axios from 'axios';
 
-// System Prompt for Groq
 const SYSTEM_PROMPT = `Eres el Asistente Financiero de RED+, un grupo de medios colombiano.
 Tienes acceso a herramientas y datos en tiempo real de la base de datos de la empresa, inyectados en tu contexto.
 
@@ -38,7 +37,6 @@ const _variacion = (actual: number, anterior: number) => {
   };
 };
 
-// Data retrieval functions
 async function getAdmanagerData(dias = 30) {
   const repo = AppDataSource.getRepository(IngresoPortal);
   const hoy = new Date();
@@ -250,7 +248,7 @@ export class NocAgentController {
     }
 
     try {
-      // 1. Fetch DB summaries for context (RAG)
+
       const admanager = await getAdmanagerData(30);
       const youtube = await getYoutubeData(3);
       const facebook = await getFacebookData(3);
@@ -293,15 +291,13 @@ ${(facebook.detalle_por_mes || []).map(m => `  - ${m.mes}: Neto $${m.total_neto.
 ${Object.entries(presupuesto.por_seccion || {}).map(([sec, sData]: any) => `  - ${sec}: Ppto: $${sData.presupuesto.toLocaleString()}, Ejecución: $${sData.ejecucion.toLocaleString()} (${sData.pct_ejecucion}%, estado: ${sData.estado})`).join('\n')}
 `;
 
-      // 2. Format messages for Groq API
       const messages = [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'system', content: `El contexto actual de la base de datos es el siguiente:\n${context}` }
       ];
 
-      // Add conversation history
       if (history && Array.isArray(history)) {
-        for (const msg of history.slice(-10)) { // Limit to last 10 messages for token context
+        for (const msg of history.slice(-10)) {
           messages.push({
             role: msg.role === 'assistant' ? 'assistant' : 'user',
             content: msg.content
@@ -309,10 +305,8 @@ ${Object.entries(presupuesto.por_seccion || {}).map(([sec, sData]: any) => `  - 
         }
       }
 
-      // Add current message
       messages.push({ role: 'user', content: message });
 
-      // 3. Request completion from Groq API
       const groqResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
         model: 'llama-3.3-70b-versatile',
         messages,

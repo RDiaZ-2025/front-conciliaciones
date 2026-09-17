@@ -16,13 +16,13 @@ export class NocNewsDraft {
     subtitle!: string | null;
 
     @Column({ name: 'content', type: 'nvarchar', length: 'MAX', nullable: true })
-    content!: string | null; // JSON with structured article blocks (paragraphs, images)
+    content!: string | null;
 
     @Column({ name: 'path', type: 'nvarchar', length: 500, nullable: true })
     path!: string | null;
 
     @Column({ name: 'status', type: 'nvarchar', length: 50, nullable: false, default: 'pending' })
-    status!: string; // 'pending', 'published'
+    status!: string;
 
     @CreateDateColumn({ name: 'createdAt', type: 'datetime2' })
     createdAt!: Date;

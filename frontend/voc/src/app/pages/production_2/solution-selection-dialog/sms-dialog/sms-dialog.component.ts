@@ -40,8 +40,7 @@ export class SmsDialogComponent {
     uploadedFiles: any[] = [];
     isUploading = signal<boolean>(false);
 
-    // SMS Constraints
-    maxFileSize = 1000000; // 1MB
+    maxFileSize = 1000000;
     fileAccept = 'image/*,video/*';
 
     smsContentValidator = (control: AbstractControl): ValidationErrors | null => {
@@ -50,7 +49,6 @@ export class SmsDialogComponent {
 
         const errors: ValidationErrors = {};
 
-        // 1. Forbidden characters: Accented (á, é, í, ó, ú), Opening punctuation (¿, ¡), ñ, Ñ
         if (/[áéíóúÁÉÍÓÚñÑ¡¿]/.test(value)) {
             errors['forbiddenChars'] = true;
         }
@@ -67,7 +65,6 @@ export class SmsDialogComponent {
             sms_destinationUrl: ['', [Validators.required]]
         });
 
-        // Pre-fill if editing? The requirement is for new flow, but maybe editing too.
         if (this.config.data?.request?.materialData) {
             this.form.patchValue(this.config.data.request.materialData);
             if (this.config.data.request.materialData.files) {

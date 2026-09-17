@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://voc-backend.azurewebsites.net/api' // Deploy trigger comment
+  apiUrl: 'https://voc-backend.azurewebsites.net/api'
 };

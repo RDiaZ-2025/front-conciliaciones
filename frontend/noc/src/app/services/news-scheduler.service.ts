@@ -52,10 +52,10 @@ export interface NewsSchedule {
   sources: string[];
   url?: string;
   method?: string;
-  startAt: string; // ISO string
-  intervalMinutes: number; // Interval in minutes (e.g., 15, 30, 60, 1440)
+  startAt: string;
+  intervalMinutes: number;
   cronExpression?: string | null;
-  scheduleConfig: any; // Flexible JSON config
+  scheduleConfig: any;
   isActive: boolean;
   publishAutomatically?: boolean;
   pendingDraftsCount?: number;

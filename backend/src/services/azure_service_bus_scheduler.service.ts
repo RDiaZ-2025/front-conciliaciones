@@ -78,12 +78,6 @@ export class AzureServiceBusSchedulerService {
         return null;
     }
 
-    /**
-     * Programa un mensaje en Azure Service Bus para ser entregado en la fecha y hora exacta.
-     * @param scheduleId ID del agendamiento a ejecutar
-     * @param executeAt Fecha y hora de ejecución (Date)
-     * @returns Número de secuencia del mensaje programado (string) o null si Service Bus no está configurado.
-     */
     async scheduleExecution(scheduleId: string, executeAt: Date): Promise<string | null> {
         const sender = this.ensureSender();
         if (!sender) {
@@ -92,10 +86,10 @@ export class AzureServiceBusSchedulerService {
         }
 
         try {
-            // Aseguramos que la fecha sea futura
+
             const now = new Date();
-            const scheduledTime = executeAt.getTime() <= now.getTime() 
-                ? new Date(now.getTime() + 1000) // 1 segundo en el futuro si ya venció
+            const scheduledTime = executeAt.getTime() <= now.getTime()
+                ? new Date(now.getTime() + 1000)
                 : executeAt;
 
             const message: ServiceBusMessage = {
@@ -116,10 +110,6 @@ export class AzureServiceBusSchedulerService {
         }
     }
 
-    /**
-     * Cancela un mensaje programado en Azure Service Bus usando su SequenceNumber.
-     * @param sequenceNumberStr Número de secuencia en string
-     */
     async cancelScheduledExecution(sequenceNumberStr: string | null | undefined): Promise<void> {
         const sender = this.ensureSender();
         if (!sender || !sequenceNumberStr) {
@@ -131,15 +121,11 @@ export class AzureServiceBusSchedulerService {
             await sender.cancelScheduledMessages(sequenceNumber);
             console.log(`🗑️ [Azure Service Bus] Mensaje programado cancelado (SequenceNumber: ${sequenceNumberStr})`);
         } catch (error: any) {
-            // Si el mensaje ya fue entregado o no existe, no rompemos el flujo
+
             console.warn(`⚠️ [Azure Service Bus] No se pudo cancelar el mensaje programado ${sequenceNumberStr}: ${error?.message || error}`);
         }
     }
 
-    /**
-     * Inicia el receptor AMQP en segundo plano para procesar los mensajes cuando Azure los entrega.
-     * @param onTrigger Callback que ejecuta el agendamiento (recibe scheduleId)
-     */
     startListener(onTrigger: (scheduleId: string) => Promise<void>): void {
         this.triggerCallback = onTrigger;
         if (!this.client) {
@@ -183,9 +169,6 @@ export class AzureServiceBusSchedulerService {
         }
     }
 
-    /**
-     * Devuelve el estado de diagnóstico de la conexión para monitoreo (/health).
-     */
     getStatus() {
         let wsModuleStatus = 'unknown';
         try {
@@ -206,9 +189,6 @@ export class AzureServiceBusSchedulerService {
         };
     }
 
-    /**
-     * Cierra de manera ordenada todas las conexiones AMQP con Azure Service Bus.
-     */
     async close(): Promise<void> {
         try {
             if (this.receiver) {

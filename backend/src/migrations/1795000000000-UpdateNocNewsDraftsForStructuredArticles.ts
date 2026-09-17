@@ -2,7 +2,7 @@ import { MigrationInterface, QueryRunner } from "typeorm";
 
 export class UpdateNocNewsDraftsForStructuredArticles1795000000000 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
-        // 1. Agregar columnas title, subtitle, content y updatedAt a noc_news_drafts si no existen
+
         await queryRunner.query(`
             IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'noc_news_drafts' AND COLUMN_NAME = 'title')
             BEGIN
@@ -31,7 +31,6 @@ export class UpdateNocNewsDraftsForStructuredArticles1795000000000 implements Mi
             END
         `);
 
-        // 2. Asegurar que la columna path permita valores nulos durante la fase de borrador
         await queryRunner.query(`
             IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'noc_news_drafts' AND COLUMN_NAME = 'path' AND IS_NULLABLE = 'NO')
             BEGIN

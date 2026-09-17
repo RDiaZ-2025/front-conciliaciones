@@ -8,11 +8,10 @@ export type Theme = 'light' | 'dark';
 export class ThemeService {
     private readonly STORAGE_KEY = 'redplus_theme_preference';
 
-    // Theme state as a signal for reactive updates
     theme = signal<Theme>(this.getInitialTheme());
 
     constructor() {
-        // Save theme to localStorage and apply to body whenever it changes
+
         effect(() => {
             const currentTheme = this.theme();
             localStorage.setItem(this.STORAGE_KEY, currentTheme);
@@ -36,13 +35,12 @@ export class ThemeService {
         const saved = localStorage.getItem(this.STORAGE_KEY) as Theme;
         if (saved) return saved;
 
-        // Check system preference if no saved choice
         return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
     }
 
     private applyTheme(theme: Theme): void {
         document.body.setAttribute('data-theme', theme);
-        // Add specific styling for tailwind if needed, though data-theme is usually enough
+
         if (theme === 'dark') {
             document.documentElement.classList.add('dark');
         } else {

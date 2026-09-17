@@ -59,11 +59,10 @@ export class UploadService {
       let debugValues: string[] = [];
 
       for (const cell of this.EXCEL_CONFIG.requiredCells) {
-        // cell.row is 1-based. cell.col is 0-based. ExcelJS uses 1-based indices for both row and column.
+
         const worksheetCell = worksheet.getCell(cell.row, cell.col + 1);
         let value = worksheetCell.value;
 
-        // If the cell contains a formula, get the result of the formula
         if (value && typeof value === 'object') {
           if ('result' in value) {
             value = value.result;

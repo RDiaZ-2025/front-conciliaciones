@@ -16,7 +16,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      // Only 401 Unauthorized (missing, invalid, or expired session) requires logging out
+
       if (error.status === 401 && !req.url.includes('/auth/login')) {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user');

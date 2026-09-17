@@ -48,7 +48,6 @@ export class HistoricalOcComponent implements OnInit {
   loading = signal<boolean>(true);
   downloading = signal<boolean>(false);
 
-  // For global filter
   searchValue = signal<string>('');
 
   ngOnInit() {
@@ -60,7 +59,7 @@ export class HistoricalOcComponent implements OnInit {
     this.loadDocumentsService.getDocuments().subscribe({
       next: (response) => {
         const docs = response.data || response.documents || response.result || response || [];
-        // Sort descending by date
+
         const sortedDocs = Array.isArray(docs) ? docs.sort((a: any, b: any) => {
           return new Date(b.Fecha || 0).getTime() - new Date(a.Fecha || 0).getTime();
         }) : [];
@@ -112,7 +111,7 @@ export class HistoricalOcComponent implements OnInit {
               zip.file(fileName, blob);
             }
           }
-          break; // Found files in this path, stop searching
+          break;
         }
       }
 

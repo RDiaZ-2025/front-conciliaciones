@@ -1,4 +1,3 @@
-
 import { Request, Response } from 'express';
 import { ProductionService } from '../services/production.service';
 import { asyncHandler } from "../utils/asyncHandler";
@@ -92,10 +91,10 @@ export const createSubmission = asyncHandler(async (req: Request, res: Response)
     const requesterUserId = req.user?.userId;
     if (!requesterUserId) return res.status(401).json({ message: 'Usuario no autenticado' });
     const submission = await productionService.createSubmission(
-        formId ? parseInt(formId) : 0, 
-        requesterUserId, 
-        values, 
-        targetFormIds, 
+        formId ? parseInt(formId) : 0,
+        requesterUserId,
+        values,
+        targetFormIds,
         submissions,
         targetTeamIds,
         targetTeams,

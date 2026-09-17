@@ -5,7 +5,6 @@ import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
-// PrimeNG Imports
 import { Table, TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -204,7 +203,6 @@ export class UsersComponent implements OnInit {
 
       const combinedHistory: AccessHistoryRecord[] = [];
 
-      // Get backend history for this user
       if (backendHistory[email]) {
         backendHistory[email].forEach((record: any) => {
           combinedHistory.push({
@@ -214,7 +212,6 @@ export class UsersComponent implements OnInit {
         });
       }
 
-      // Get frontend history for this user
       frontendHistory.forEach((record: any) => {
         if (record.email === email) {
           combinedHistory.push({
@@ -224,7 +221,6 @@ export class UsersComponent implements OnInit {
         }
       });
 
-      // Sort by date descending
       return combinedHistory.sort((a, b) => new Date(b.loginTime).getTime() - new Date(a.loginTime).getTime());
     } catch (error) {
       console.error('Error loading access history:', error);
@@ -240,7 +236,6 @@ export class UsersComponent implements OnInit {
   getPermissionSeverity(perm: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' | undefined {
     const color = PERMISSION_COLORS[perm as keyof typeof PERMISSION_COLORS];
 
-    // Map colors to PrimeNG Tag severities
     const severityMap: Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast'> = {
       'primary': 'info',
       'accent': 'secondary',

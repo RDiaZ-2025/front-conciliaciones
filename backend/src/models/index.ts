@@ -33,7 +33,6 @@ export * from './DynamicWorkflowStage';
 export * from './DynamicSubmissionWorkflowState';
 export * from './Customer';
 
-
 export { MenuItem } from './MenuItem';
 export { UserActionLog } from './UserActionLog';
 export { Cover15Minute } from './Cover15Minute';
@@ -83,7 +82,6 @@ import { DynamicFormFieldValue } from './DynamicFormFieldValue';
 import { DynamicWorkflowStage } from './DynamicWorkflowStage';
 import { DynamicSubmissionWorkflowState } from './DynamicSubmissionWorkflowState';
 import { Customer } from './Customer';
-
 
 export const entities = [
   User,
@@ -138,16 +136,10 @@ export const ModelCategories = {
     Notification
   },
 
-  /**
-   * Menu and navigation models
-   */
   Menu: {
     MenuItem
   },
 
-  /**
-   * Production management models
-   */
   Production: {
     ProductionRequest,
     ProductionRequestHistory,
@@ -158,23 +150,14 @@ export const ModelCategories = {
     Campaign
   },
 
-  /**
-   * Cover 15 Minute models
-   */
   Covers: {
     Cover15Minute
   },
 
-  /**
-   * Audit and logging models
-   */
   Audit: {
     UserActionLog
   },
 
-  /**
-   * Team management models
-   */
   Team: {
     Team
   }

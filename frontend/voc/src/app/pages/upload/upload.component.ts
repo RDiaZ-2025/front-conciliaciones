@@ -46,7 +46,6 @@ export class UploadComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
 
-  // State
   tipoUsuario = signal<'cliente' | 'agencia' | null>(null);
   activeStep = signal<number>(0);
 
@@ -68,17 +67,16 @@ export class UploadComponent {
 
   guid = signal<string | null>(null);
 
-  // Computed
   isExcelStepValid = computed(() => !!this.excelFile() && this.excelUploaded());
   isPdfStepValid = computed(() => !!this.pdfFile() && this.pdfUploaded() && this.manualPdfConfirmation());
 
   constructor() {
-    // Generate GUID when Excel is selected (handled in method)
+
   }
 
   setTipoUsuario(type: 'cliente' | 'agencia') {
     this.tipoUsuario.set(type);
-    this.activeStep.set(1); // Move to next step
+    this.activeStep.set(1);
   }
 
   onActiveStepChange(step: number | undefined) {
@@ -96,11 +94,9 @@ export class UploadComponent {
       return;
     }
 
-    // Generate GUID
     this.guid.set(crypto.randomUUID());
     this.excelFile.set(file);
 
-    // Validate
     const validation = await this.uploadService.validateExcel(file);
     if (!validation.isValid) {
       this.messageService.add({ severity: 'error', summary: 'Error de Validación', detail: validation.message });
@@ -111,7 +107,6 @@ export class UploadComponent {
 
     this.debugExcelValues.set(validation.debugValues || []);
 
-    // Upload
     this.uploading.set(true);
     const uploaded = await this.uploadService.uploadToAzure(file, `validationsOC/${this.guid()}`);
     this.uploading.set(false);
@@ -136,7 +131,6 @@ export class UploadComponent {
 
     this.pdfFile.set(file);
 
-    // Validate
     const validation = await this.uploadService.validatePdf(file);
     if (!validation.isValid) {
       this.messageService.add({ severity: 'error', summary: 'Error de Validación', detail: validation.message });
@@ -144,10 +138,8 @@ export class UploadComponent {
       return;
     }
 
-    // Generate Thumbnail (just URL for iframe)
     this.pdfThumbnail.set(URL.createObjectURL(file));
 
-    // Upload
     this.uploading.set(true);
     const uploaded = await this.uploadService.uploadToAzure(file, `validationsOC/${this.guid()}`);
     this.uploading.set(false);
@@ -163,7 +155,7 @@ export class UploadComponent {
 
   onMaterialesSelect(event: any) {
     const files = event.currentFiles;
-    const maxSizeInBytes = 1024 * 1024 * 1024; // 1GB
+    const maxSizeInBytes = 1024 * 1024 * 1024;
     const validFiles: File[] = [];
     const invalidFiles: string[] = [];
 
@@ -192,7 +184,7 @@ export class UploadComponent {
     this.uploading.set(true);
 
     try {
-      // 1. Upload Materials if needed
+
       if (this.deseaSubirMateriales() && this.materiales().length > 0) {
         const uploadPromises = this.materiales().map(file =>
           this.uploadService.uploadToAzure(file, `validationsOC/${this.guid()}`)
@@ -204,7 +196,6 @@ export class UploadComponent {
         }
       }
 
-      // 2. Notify N8N
       const payload = {
         tipoUsuario: this.tipoUsuario(),
         excelFilename: this.excelFile()?.name,

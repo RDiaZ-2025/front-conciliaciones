@@ -4,7 +4,6 @@ import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
-// Require authentication for all customer routes
 router.use(authenticateToken);
 
 router.get('/', customerController.getCustomers);

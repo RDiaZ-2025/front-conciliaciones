@@ -10,14 +10,13 @@ import { DynamicFormFieldValue } from '../models/DynamicFormFieldValue';
 async function run() {
     try {
         await AppDataSource.initialize();
-        
-        // Find latest submission
+
         const subs = await AppDataSource.getRepository(DynamicFormSubmission).find({
             relations: ['form'],
             order: { id: 'DESC' },
             take: 1
         });
-        
+
         if (subs.length === 0) {
             console.log("No submissions found.");
             await AppDataSource.destroy();

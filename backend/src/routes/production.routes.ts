@@ -9,23 +9,19 @@ const router = Router();
 const productionController = new ProductionController();
 const requestsReportController = new RequestsReportController();
 
-// Public routes for production options
 router.get('/format-types', productionController.getFormatTypes);
 router.get('/rights-durations', productionController.getRightsDurations);
 router.get('/workflow-stages', productionController.getWorkflowStages);
 router.get('/request-types', productionController.getRequestTypes);
 router.get('/initial-form', productionController.getInitialForm);
 
-// Protected routes
 router.use(authenticateToken);
 
-// Dynamic forms routes
 router.get('/forms/:id/fields', getFormFields);
 router.post('/submissions', createSubmission);
 router.get('/submissions', getSubmissions);
 router.get('/submissions/:submissionId', getSubmissionDetails);
 
-// Admin Forms (Library)
 router.get('/admin/forms', adminGetForms);
 router.post('/admin/forms', adminCreateForm);
 router.put('/admin/forms/:id', adminUpdateForm);
@@ -34,7 +30,6 @@ router.post('/admin/forms/:id/fields', adminSaveFields);
 router.get('/admin/forms/:id/stages', adminGetStages);
 router.post('/admin/forms/:id/stages', adminSaveStages);
 
-// Admin Workflows (Independent)
 router.get('/admin/workflows', adminGetWorkflows);
 router.post('/admin/workflows', adminCreateWorkflow);
 router.put('/admin/workflows/:id', adminUpdateWorkflow);
@@ -42,17 +37,13 @@ router.delete('/admin/workflows/:id', adminDeleteWorkflow);
 router.get('/admin/workflows/:id/stages', adminGetWorkflowStages);
 router.post('/admin/workflows/:id/stages', adminSaveWorkflowStages);
 
-// Approvals Inbox
 router.get('/approvals/pending', getPendingApprovals);
 router.post('/approvals/:stateId/action', actionApproval);
 
-// Product routes
 router.get('/products', getProducts);
 
-// Dashboard Stats
 router.get('/dashboard-stats', requirePermission('production_management'), requestsReportController.getDashboardStats);
 
-// Production Request routes
 router.get('/', getAllProductionRequests);
 router.get('/:id', getProductionRequestById);
 router.get('/:id/history', getProductionRequestHistory);
@@ -63,11 +54,10 @@ router.put('/:id/customer', updateStepCustomer);
 router.put('/:id/campaign', updateStepCampaign);
 router.put('/:id/audience', updateStepAudience);
 router.put('/:id/production', updateStepProduction);
-// Material Routes
+
 router.post('/:id/material', addMaterialRegister);
 router.get('/:id/material', getMaterialRegisters);
 
-// Deprecated or alternative material data update
 router.put('/:id/material-data', updateMaterialData);
 router.put('/:id/move', moveProductionRequest);
 

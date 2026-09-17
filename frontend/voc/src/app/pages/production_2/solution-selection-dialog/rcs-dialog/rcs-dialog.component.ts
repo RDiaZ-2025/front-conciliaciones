@@ -45,8 +45,7 @@ export class RcsDialogComponent {
     uploadedFiles: any[] = [];
     isUploading = signal<boolean>(false);
 
-    // RCS Constraints
-    maxFileSize = 5000000; // 5MB
+    maxFileSize = 5000000;
     fileAccept = 'image/*,video/*';
 
     mediaTypes = [
@@ -62,26 +61,23 @@ export class RcsDialogComponent {
             rcs_agentData: [null, Validators.required],
             rcs_messageText: ['', [Validators.maxLength(100)]],
             rcs_redirectUrl: ['', [Validators.pattern(/https?:\/\/.+/)]],
-            rcs_mediaType: [''], // IMAGE, CAROUSEL, VIDEO
-            
-            // RCS Media specific
+            rcs_mediaType: [''],
+
             rcs_image_caption: [''],
             rcs_image_button_label: [''],
             rcs_image_button_url: [''],
-            
+
             rcs_buttons: this.fb.array([])
         });
 
-        // Pre-fill if editing
         if (this.config.data?.request?.materialData) {
             this.form.patchValue(this.config.data.request.materialData);
             if (this.config.data.request.materialData.files) {
                 this.uploadedFiles = this.config.data.request.materialData.files;
             }
-            // Handle FormArray population if needed (complex for deep structures, might need manual push)
+
         }
 
-        // Handle RCS Media Type Changes
         this.form.get('rcs_mediaType')?.valueChanges.subscribe(type => {
             this.updateRCSValidators(type);
         });
@@ -95,7 +91,7 @@ export class RcsDialogComponent {
         if (this.rcsButtons.length < 4) {
             const buttonGroup = this.fb.group({
                 label: ['', [Validators.required, Validators.maxLength(25)]],
-                type: ['URL', Validators.required], // URL or PHONE
+                type: ['URL', Validators.required],
                 value: ['', [Validators.required, Validators.pattern(/^(https?:\/\/.+|[\d\+]+)$/)]]
             });
             this.rcsButtons.push(buttonGroup);
@@ -107,7 +103,7 @@ export class RcsDialogComponent {
     }
 
     updateRCSValidators(mediaType: string) {
-        // Limpiar archivos multimedia al cambiar de tipo para evitar inconsistencias
+
         this.uploadedFiles = [];
 
         if (mediaType === 'IMAGE') {
@@ -115,7 +111,7 @@ export class RcsDialogComponent {
             this.setValidators('rcs_image_button_label', [Validators.maxLength(25)]);
             this.setValidators('rcs_image_button_url', [Validators.pattern(/https?:\/\/.+/)]);
         } else {
-            // Clear validators if not image
+
             this.setValidators('rcs_image_caption', []);
             this.setValidators('rcs_image_button_label', []);
             this.setValidators('rcs_image_button_url', []);
@@ -138,18 +134,17 @@ export class RcsDialogComponent {
                 img.src = URL.createObjectURL(file);
                 img.onload = () => {
                     if (img.width !== 480 || img.height !== 220) {
-                        this.messageService.add({ 
-                            severity: 'error', 
-                            summary: 'Dimensión Inválida', 
-                            detail: `La imagen ${file.name} debe ser exactamente de 480x220 píxeles. (Actual: ${img.width}x${img.height})` 
+                        this.messageService.add({
+                            severity: 'error',
+                            summary: 'Dimensión Inválida',
+                            detail: `La imagen ${file.name} debe ser exactamente de 480x220 píxeles. (Actual: ${img.width}x${img.height})`
                         });
-                        
-                        // Limpiar el uploader para que no muestre ni retenga el archivo inválido
+
                         if (uploader && typeof uploader.clear === 'function') {
                             uploader.clear();
                         }
                     } else {
-                        // Evitar duplicados
+
                         if (!this.uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
                             this.uploadedFiles.push(file);
                             this.messageService.add({ severity: 'info', summary: 'Archivo Subido', detail: file.name });
@@ -176,7 +171,7 @@ export class RcsDialogComponent {
     removeUploadedFile(index: number, uploader: any) {
         const file = this.uploadedFiles[index];
         this.uploadedFiles.splice(index, 1);
-        
+
         if (uploader && uploader.files) {
             const uploaderIndex = uploader.files.findIndex((f: any) => f.name === file.name && f.size === file.size);
             if (uploaderIndex !== -1) {
@@ -197,7 +192,7 @@ export class RcsDialogComponent {
 
     submit() {
         if (this.form.valid) {
-            // RCS Custom Validations
+
             if (!this.form.get('rcs_agentData')?.value) {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Datos de Creación de Agente Google requeridos.' });
                 return;

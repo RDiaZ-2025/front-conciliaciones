@@ -58,7 +58,7 @@ export class LucideIconComponent implements OnInit, OnChanges {
   private resolveIconName(name: string): string {
     if (!name) return '';
     let clean = name.trim();
-    // Handle 'pi pi-xxx' or 'pi-xxx'
+
     clean = clean.replace(/^pi\s+pi-/, '').replace(/^pi-/, '').replace(/^pi\s+/, '');
     const tokens = clean.split(/\s+/);
     const mainToken = tokens.find(t => !t.startsWith('text-') && !t.startsWith('bg-') && !t.startsWith('p-')) || tokens[0];
@@ -89,7 +89,7 @@ export class LucideIconComponent implements OnInit, OnChanges {
     if (icon) {
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-      
+
       const defaultSize = this.size ? String(this.size) : '24';
       svg.setAttribute('width', defaultSize);
       svg.setAttribute('height', defaultSize);

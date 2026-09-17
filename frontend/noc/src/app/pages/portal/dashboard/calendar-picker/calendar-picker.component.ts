@@ -33,11 +33,9 @@ export class CalendarPickerComponent implements OnInit {
     }
 
     generateYears() {
-        this.years = []; // IMPORTANT: Clear array to prevent accumulation
+        this.years = [];
         const currentYear = new Date().getFullYear();
-        
-        // Mejor UX: Rango más lógico (desde futuro cercano hasta hace 3 años)
-        // Y ordenado descendentemente para que los años recientes aparezcan primero en el select
+
         for (let i = currentYear + 1; i >= currentYear - 3; i--) {
             this.years.push(i);
         }
@@ -50,8 +48,6 @@ export class CalendarPickerComponent implements OnInit {
         const firstDay = new Date(year, month, 1).getDay();
         const lastDate = new Date(year, month + 1, 0).getDate();
 
-        // Adjust first day to start on Monday (optional, common in LatAm)
-        // 0 is Sunday, 1 is Monday. To start on Monday: (firstDay + 6) % 7
         const adjustedFirstDay = (firstDay + 6) % 7;
 
         this.emptyCells = Array(adjustedFirstDay).fill(0);

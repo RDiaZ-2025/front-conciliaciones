@@ -3,15 +3,15 @@ import { MigrationInterface, QueryRunner } from "typeorm";
 export class UpdateCampaignsTable1769308000000 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        // Check if Campaigns table exists
+
         const tableExists = await queryRunner.query(`
-            SELECT * FROM INFORMATION_SCHEMA.TABLES 
-            WHERE TABLE_SCHEMA = 'dbo' 
+            SELECT * FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_SCHEMA = 'dbo'
             AND TABLE_NAME = 'Campaigns'
         `);
 
         if (tableExists.length === 0) {
-            // Create table if it doesn't exist
+
             await queryRunner.query(`
                 CREATE TABLE Campaigns (
                     Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
@@ -31,10 +31,10 @@ export class UpdateCampaignsTable1769308000000 implements MigrationInterface {
                 )
             `);
         } else {
-            // Table exists, check and add missing columns
+
             const columns = [
                 { name: 'Name', type: 'nvarchar(255)', default: "''" },
-                { name: 'TeamId', type: 'int', default: '0' }, // Assuming Team 0 or handling constraint later
+                { name: 'TeamId', type: 'int', default: '0' },
                 { name: 'Slot', type: 'nvarchar(100)', default: "''" },
                 { name: 'Copy', type: 'nvarchar(500)', default: "''" },
                 { name: 'Url', type: 'nvarchar(MAX)', default: "''" },
@@ -48,8 +48,8 @@ export class UpdateCampaignsTable1769308000000 implements MigrationInterface {
 
             for (const col of columns) {
                 const colExists = await queryRunner.query(`
-                    SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
-                    WHERE TABLE_NAME = 'Campaigns' 
+                    SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_NAME = 'Campaigns'
                     AND COLUMN_NAME = '${col.name}'
                 `);
 
@@ -61,14 +61,11 @@ export class UpdateCampaignsTable1769308000000 implements MigrationInterface {
                     await queryRunner.query(query);
                 }
             }
-            
-            // Add FK for TeamId if not exists (Basic check)
-            // Note: This might fail if column TeamId existed but FK didn't, and data is invalid.
-            // Skipping complex FK checks for now to avoid migration failure on existing data.
+
         }
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        // Do nothing to preserve data
+
     }
 }

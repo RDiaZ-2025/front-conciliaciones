@@ -7,9 +7,6 @@ export class TeamService {
   private teamRepository = AppDataSource.getRepository(Team);
   private userRepository = AppDataSource.getRepository(User);
 
-  /**
-   * Get all teams with leader and default workflow
-   */
   async getAllTeams(): Promise<Team[]> {
     return await this.teamRepository.find({
       relations: ['leader', 'defaultWorkflow', 'users'],
@@ -19,9 +16,6 @@ export class TeamService {
     });
   }
 
-  /**
-   * Get team by ID with relations
-   */
   async getTeamById(id: number): Promise<Team | null> {
     return await this.teamRepository.findOne({
       where: { id },
@@ -29,9 +23,6 @@ export class TeamService {
     });
   }
 
-  /**
-   * Create new team and sync bossId if leader is provided
-   */
   async createTeam(data: Partial<Team>): Promise<Team> {
     const team = this.teamRepository.create({
       name: data.name,
@@ -49,18 +40,12 @@ export class TeamService {
     return await this.getTeamById(savedTeam.id) || savedTeam;
   }
 
-  /**
-   * Get users by team ID
-   */
   async getUsersByTeam(teamId: number): Promise<User[]> {
     return await this.userRepository.find({
       where: { teamId: teamId }
     });
   }
 
-  /**
-   * Update team and sync bossId if leader changed
-   */
   async updateTeam(id: number, data: Partial<Team>): Promise<Team | null> {
     const team = await this.teamRepository.findOne({ where: { id } });
     if (!team) return null;
@@ -76,7 +61,6 @@ export class TeamService {
 
     await this.teamRepository.save(team);
 
-    // If leader changed or is set, synchronize team members' bossId
     if (newLeaderId && newLeaderId !== previousLeaderId) {
       await this.syncTeamMembersBoss(id, newLeaderId);
     }
@@ -84,30 +68,21 @@ export class TeamService {
     return await this.getTeamById(id);
   }
 
-  /**
-   * Helper to set bossId of all team members to the team's leader
-   */
   private async syncTeamMembersBoss(teamId: number, leaderId: number): Promise<void> {
-    // Set bossId = leaderId for all members of this team except the leader himself
+
     await this.userRepository.update(
       { teamId, id: Not(leaderId) },
       { bossId: leaderId }
     );
   }
 
-  /**
-   * Delete team
-   */
   async deleteTeam(id: number): Promise<boolean> {
-    // Unassign users from this team first
+
     await this.userRepository.update({ teamId: id }, { teamId: null });
     const result = await this.teamRepository.delete(id);
     return (result.affected ?? 0) > 0;
   }
 
-  /**
-   * Update users in a team
-   */
   async updateTeamUsers(teamId: number, userIds: number[]): Promise<void> {
     const team = await this.teamRepository.findOne({ where: { id: teamId } });
     const queryRunner = AppDataSource.createQueryRunner();
@@ -118,7 +93,7 @@ export class TeamService {
       const userRepo = queryRunner.manager.getRepository(User);
 
       if (userIds.length > 0) {
-        // 1. Remove users no longer in this team
+
         await userRepo
           .createQueryBuilder()
           .update(User)
@@ -127,13 +102,11 @@ export class TeamService {
           .andWhere("id NOT IN (:...userIds)", { userIds })
           .execute();
 
-        // 2. Add/Update users in the list to this team
         await userRepo.update(
           { id: In(userIds) },
           { teamId: teamId }
         );
 
-        // 3. If the team has a leader, automatically set bossId for non-leader members
         if (team && team.leaderId) {
           const nonLeaderIds = userIds.filter(uid => uid !== team.leaderId);
           if (nonLeaderIds.length > 0) {
@@ -144,7 +117,7 @@ export class TeamService {
           }
         }
       } else {
-        // Remove all users from this team
+
         await userRepo.update(
           { teamId: teamId },
           { teamId: null }

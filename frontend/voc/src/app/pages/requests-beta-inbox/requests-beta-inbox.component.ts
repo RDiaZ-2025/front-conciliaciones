@@ -53,18 +53,15 @@ export class RequestsBetaInboxComponent implements OnInit {
   private messageService = inject(MessageService);
   private azureService = inject(AzureStorageService);
 
-  // States
   pendingTasks = signal<any[]>([]);
   loadingTasks = signal<boolean>(false);
 
-  // Action Dialog States
   showActionDialog = signal<boolean>(false);
   loadingAction = signal<boolean>(false);
   selectedTask = signal<any>(null);
   parentFormGroups = signal<any[]>([]);
   comments = signal<string>('');
 
-  // Submissions History States
   submissions = signal<any[]>([]);
   filteredSubmissions = computed(() => {
     const pendingSubmissionIds = new Set<number>();
@@ -93,7 +90,6 @@ export class RequestsBetaInboxComponent implements OnInit {
   selectedDetails = signal<any>(null);
   detailsParentFormGroups = signal<any[]>([]);
 
-  // Additional form to fill at this stage
   stageFormFields = signal<any[]>([]);
   stageFormValues: Record<string, string> = {};
   loadingStageFields = signal<boolean>(false);
@@ -142,7 +138,7 @@ export class RequestsBetaInboxComponent implements OnInit {
 
   evaluateDefaultValueExpression(f: any): string {
     if (!f.defaultValueExpression) return '';
-    
+
     const now = new Date();
     const pad = (n: number) => n.toString().padStart(2, '0');
     const formattedDateTimeLocal = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
@@ -243,7 +239,7 @@ export class RequestsBetaInboxComponent implements OnInit {
   setFormValue(key: string, val: any, type: 'initial' | 'stage' | 'parent') {
     const stringVal = val !== null && val !== undefined ? String(val) : '';
     if (type === 'initial') {
-      // requests-beta-inbox doesn't create requests, but has parent and stage values
+
     } else if (type === 'stage') {
       this.stageFormValues[key] = stringVal;
       this.recalculateStageFormulas();
@@ -420,7 +416,6 @@ export class RequestsBetaInboxComponent implements OnInit {
       return;
     }
 
-    // Validate fields if approving
     if (action === 'approve') {
       if (task.parentForms && task.parentForms.length > 0) {
         for (const frm of task.parentForms) {
@@ -502,20 +497,20 @@ export class RequestsBetaInboxComponent implements OnInit {
               const val = this.stageFormValues[field.name];
               const hasUploaded = this.getUploadedFiles(val).length > 0;
               if (files.length === 0 && !hasUploaded) {
-                this.messageService.add({ 
-                  severity: 'error', 
-                  summary: 'Validación', 
-                  detail: `El campo "${field.label}" requiere cargar al menos un archivo.` 
+                this.messageService.add({
+                  severity: 'error',
+                  summary: 'Validación',
+                  detail: `El campo "${field.label}" requiere cargar al menos un archivo.`
                 });
                 return;
               }
             } else {
               const val = this.stageFormValues[field.name];
               if (val === undefined || val === null || String(val).trim() === '') {
-                this.messageService.add({ 
-                  severity: 'error', 
-                  summary: 'Validación', 
-                  detail: `El campo "${field.label}" es requerido para continuar.` 
+                this.messageService.add({
+                  severity: 'error',
+                  summary: 'Validación',
+                  detail: `El campo "${field.label}" es requerido para continuar.`
                 });
                 return;
               }
@@ -544,7 +539,6 @@ export class RequestsBetaInboxComponent implements OnInit {
     }
   }
 
-  // --- File Uploader Helpers ---
   tempFiles: Record<string, File[]> = {};
 
   onFileSelected(event: any, field: any) {
@@ -561,19 +555,16 @@ export class RequestsBetaInboxComponent implements OnInit {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
-      // Check count limit
       if (newList.length >= maxCount) {
         this.messageService.add({ severity: 'warn', summary: 'Límite excedido', detail: `Solo se permiten máximo ${maxCount} archivos en el campo "${field.label}".` });
         break;
       }
 
-      // Check size limit
       if (file.size > maxMB * 1024 * 1024) {
         this.messageService.add({ severity: 'error', summary: 'Archivo muy grande', detail: `El archivo "${file.name}" supera el peso máximo permitido de ${maxMB}MB.` });
         continue;
       }
 
-      // Check file formats
       const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
       if (allowed.length > 0 && !allowed.includes(ext)) {
         this.messageService.add({ severity: 'error', summary: 'Formato no permitido', detail: `El formato de "${file.name}" no está permitido. Formatos aceptados: ${field.metadata.allowedFormats}.` });
@@ -665,7 +656,7 @@ export class RequestsBetaInboxComponent implements OnInit {
     this.loadingAction.set(true);
 
     const fields = this.stageFormFields();
-    // 1. Upload files
+
     for (const field of fields) {
       if (field.type === 'file') {
         const filesToUpload = this.tempFiles[field.name] || [];
@@ -687,7 +678,6 @@ export class RequestsBetaInboxComponent implements OnInit {
       }
     }
 
-    // 1.5. Upload files from parent correction forms if any
     const parentForms = task.parentForms || [];
     for (const form of parentForms) {
       for (const field of form.fields) {
@@ -713,7 +703,6 @@ export class RequestsBetaInboxComponent implements OnInit {
       }
     }
 
-    // 1.8. Upload files from multi forms if any
     if (task.formIdToFill === -1 && this.getSelectedMultiForms().length > 0) {
       for (const mForm of this.getSelectedMultiForms()) {
         for (const field of mForm.fields) {
@@ -740,7 +729,6 @@ export class RequestsBetaInboxComponent implements OnInit {
       }
     }
 
-    // 2. Process action
     this.productionService.actionApproval(task.stateId, action, notes, action === 'approve' ? this.stageFormValues : undefined).subscribe({
       next: (res) => {
         this.tempFiles = {};
@@ -748,10 +736,10 @@ export class RequestsBetaInboxComponent implements OnInit {
         this.loadPendingTasks();
         this.loadingAction.set(false);
 
-        this.messageService.add({ 
-          severity: 'success', 
-          summary: 'Éxito', 
-          detail: action === 'approve' ? (this.isCorrection(task) ? 'Corrección enviada con éxito.' : 'Solicitud aprobada con éxito.') : 'Solicitud rechazada/devuelta.' 
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Éxito',
+          detail: action === 'approve' ? (this.isCorrection(task) ? 'Corrección enviada con éxito.' : 'Solicitud aprobada con éxito.') : 'Solicitud rechazada/devuelta.'
         });
       },
       error: () => {
@@ -874,7 +862,7 @@ export class RequestsBetaInboxComponent implements OnInit {
   isFieldVisible(field: any, allFields: any[], formValues: Record<string, any>, formId?: number): boolean {
     if (!field) return false;
     if (field.isActive === false) return false;
-    
+
     const dependency = field.metadata?.dependency;
     if (!dependency || !dependency.fieldName) {
       return true;
@@ -955,7 +943,7 @@ export class RequestsBetaInboxComponent implements OnInit {
     });
 
     this.dynamicListRows[key] = newList;
-    
+
     const jsonVal = JSON.stringify(newList);
     valuesContainer[key] = jsonVal;
     if (key.includes('_')) {
@@ -983,7 +971,7 @@ export class RequestsBetaInboxComponent implements OnInit {
     const list = this.dynamicListRows[key] || [];
     const removedItem = list[itemIdx];
     list.splice(itemIdx, 1);
-    
+
     if (removedItem) {
       const name = removedItem.item || removedItem.product;
       this.dynamicListSelected[key] = (this.dynamicListSelected[key] || []).filter(i => i !== name);

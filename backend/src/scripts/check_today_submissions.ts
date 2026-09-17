@@ -10,7 +10,7 @@ import { DynamicFormFieldValue } from '../models/DynamicFormFieldValue';
 async function run() {
     try {
         await AppDataSource.initialize();
-        
+
         console.log("=== SUBMISSIONS FROM TODAY ===");
         const subs = await AppDataSource.getRepository(DynamicFormSubmission).find({
             relations: ['form', 'requesterUser'],

@@ -3,8 +3,7 @@ import { DynamicFormField } from '../models/DynamicFormField';
 
 async function checkDataForm() {
     await AppDataSource.initialize();
-    
-    // Find fields
+
     const fieldRepo = AppDataSource.getRepository(DynamicFormField);
     const fields = await fieldRepo.find({ where: { formId: 2 } });
     console.log('\n--- CAMPOS DETALLADOS ---');
@@ -19,7 +18,7 @@ async function checkDataForm() {
             defaultValueExpression: f.defaultValueExpression,
         });
     });
-    
+
     await AppDataSource.destroy();
 }
 

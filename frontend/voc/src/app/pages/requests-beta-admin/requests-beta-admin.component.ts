@@ -106,24 +106,21 @@ export class RequestsBetaAdminComponent implements OnInit {
 
   currentUser = computed(() => this.authService.currentUser());
 
-  // States
   activeTab = signal<string>('forms');
   forms = signal<any[]>([]);
   activeForms = computed(() => this.forms().filter(f => f.isActive !== false));
   entryForms = computed(() => this.activeForms().filter(f => f.isEntryForm));
   internalForms = computed(() => this.activeForms().filter(f => !f.isEntryForm));
-  
-  // Users & Teams
+
   users = signal<User[]>([]);
   teams = signal<any[]>([]);
 
-  // Dialog states for Form metadata
   showFormDialog = signal<boolean>(false);
   isNewForm = signal<boolean>(false);
   formMetadataText = '';
   initialFormsFields = signal<any[]>([]);
   conditionsList = signal<any[]>([]);
-  
+
   operatorOptions = [
     { label: 'Contiene', value: 'contains' },
     { label: 'Igual (=)', value: 'eq' },
@@ -183,42 +180,35 @@ export class RequestsBetaAdminComponent implements OnInit {
     { label: 'Carpeta', value: 'folder' }
   ];
 
-  // Fields editor state
   showFieldsDialog = signal<boolean>(false);
   editingFormForFields = signal<any>(null);
   formFields = signal<FormFieldItem[]>([]);
 
-  // File configuration editor state
   showFileConfigDialog = signal<boolean>(false);
   selectedFieldForFileConfig = signal<any>(null);
 
-  // Select option configuration editor state
   showSelectConfigDialog = signal<boolean>(false);
   selectedFieldForSelectConfig = signal<any>(null);
   tempSelectOptions = signal<{ value: string }[]>([]);
   showExpressionsHelpDialog = signal<boolean>(false);
 
-  // Dynamic list option configuration editor state
   showDynamicListConfigDialog = signal<boolean>(false);
   selectedFieldForDynamicListConfig = signal<any>(null);
   tempDynamicListOptions = signal<{ value: string }[]>([]);
   tempDynamicListSubFields = signal<{ name: string; label: string; type: string }[]>([]);
 
-  // Formula editor state
   showFormulaConfigDialog = signal<boolean>(false);
   selectedFieldForFormulaConfig = signal<any>(null);
   tempFormulaExpression = signal<string>('');
   tempFormulaRounding = signal<number>(2);
   showFormulaHelpDialog = signal<boolean>(false);
 
-  // Dependency/Conditional visibility configuration state
   showDependencyConfigDialog = signal<boolean>(false);
   selectedFieldForDependencyConfig = signal<any>(null);
   tempDependencyFieldName = signal<string>('');
   tempDependencyValue = signal<string>('');
   tempDependencySelectedOptions = signal<string[]>([]);
 
-  // Number formatting configuration state
   showNumberConfigDialog = signal<boolean>(false);
   selectedFieldForNumberConfig = signal<any | null>(null);
   tempNumberFormat = 'none';
@@ -230,7 +220,6 @@ export class RequestsBetaAdminComponent implements OnInit {
     { label: 'Separador de miles (Coma) - 123,456', value: 'thousands_comma' }
   ];
 
-  // Workflows state
   workflows = signal<any[]>([]);
   activeWorkflows = computed(() => this.workflows().filter(w => w.isActive !== false));
   selectedWorkflowId = signal<number | null>(null);
@@ -260,7 +249,6 @@ export class RequestsBetaAdminComponent implements OnInit {
 
   loadingForms = signal<boolean>(false);
 
-  // Field type options
   fieldTypeOptions = [
     { label: 'Texto Corto', value: 'text' },
     { label: 'Párrafo / Textarea', value: 'textarea' },
@@ -277,7 +265,6 @@ export class RequestsBetaAdminComponent implements OnInit {
     { label: 'Cliente (Autocompletar)', value: 'customer' }
   ];
 
-  // Assignee & Rejection Type options
   assigneeTypeOptions = [
     { label: 'Usuario Específico', value: 'specific_user' },
     { label: '👔 Líder de Equipo', value: 'team_leader' },
@@ -340,7 +327,7 @@ export class RequestsBetaAdminComponent implements OnInit {
       next: (forms: any[]) => {
         const formsList = Array.isArray(forms) ? forms : (forms ? [forms] : []);
         if (formsList.length > 0) {
-          const fieldsObservables = formsList.map(form => 
+          const fieldsObservables = formsList.map(form =>
             this.productionService.getDynamicFormFields(form.id)
           );
           forkJoin(fieldsObservables).subscribe({
@@ -409,7 +396,7 @@ export class RequestsBetaAdminComponent implements OnInit {
     this.isNewForm.set(false);
     this.selectedForm.set({ ...form });
     this.formMetadataText = form.metadata ? (typeof form.metadata === 'object' ? JSON.stringify(form.metadata, null, 2) : form.metadata) : '';
-    
+
     let teamWfs: { [teamId: number]: number | null } = {};
     let closingCfg: any = null;
     if (form.metadata) {
@@ -540,7 +527,6 @@ export class RequestsBetaAdminComponent implements OnInit {
     });
   }
 
-  // --- Field Configurator ---
   openFieldsConfigurator(form: any) {
     this.editingFormForFields.set(form);
     this.formFields.set([]);
@@ -713,7 +699,7 @@ export class RequestsBetaAdminComponent implements OnInit {
       const opts = this.tempDynamicListOptions()
         .map(opt => opt.value.trim())
         .filter(val => val.length > 0);
-      
+
       const subFields = this.tempDynamicListSubFields()
         .map(sf => ({
           name: sf.name.trim() || `col_${Date.now()}`,
@@ -744,7 +730,7 @@ export class RequestsBetaAdminComponent implements OnInit {
   getAvailableFormulaFields(): any[] {
     const current = this.selectedFieldForFormulaConfig();
     if (!current) return [];
-    // Return all active fields in the form that are number or decimal fields and are not the current field itself
+
     return this.formFields().filter(f => f.name !== current.name && f.isActive && (f.type === 'number' || f.type === 'decimal'));
   }
 
@@ -759,7 +745,7 @@ export class RequestsBetaAdminComponent implements OnInit {
       if (!field.metadata) field.metadata = {};
       field.metadata.formula = this.tempFormulaExpression().trim();
       field.metadata.formulaRounding = this.tempFormulaRounding();
-      // Ensure the field is read-only since it is a formula calculated field
+
       field.isReadOnly = true;
     }
     this.showFormulaConfigDialog.set(false);
@@ -773,10 +759,10 @@ export class RequestsBetaAdminComponent implements OnInit {
     if (!field.metadata.dependency) {
       field.metadata.dependency = { fieldName: '', value: '' };
     }
-    
+
     this.selectedFieldForDependencyConfig.set(field);
     this.tempDependencyFieldName.set(field.metadata.dependency.fieldName || '');
-    
+
     const val = field.metadata.dependency.value;
     let arrVal: string[] = [];
     if (Array.isArray(val)) {
@@ -792,7 +778,7 @@ export class RequestsBetaAdminComponent implements OnInit {
     }
     this.tempDependencySelectedOptions.set(arrVal);
     this.tempDependencyValue.set(arrVal.join(', '));
-    
+
     this.showDependencyConfigDialog.set(true);
   }
 
@@ -807,12 +793,12 @@ export class RequestsBetaAdminComponent implements OnInit {
     if (!parentName) return [];
     const parentField = this.formFields().find(f => f.name === parentName);
     if (!parentField) return [];
-    
+
     let metadataObj = parentField.metadata;
     if (typeof metadataObj === 'string') {
       try { metadataObj = JSON.parse(metadataObj); } catch(e) {}
     }
-    
+
     if (metadataObj && Array.isArray(metadataObj.options)) {
       return metadataObj.options
         .map((opt: any) => typeof opt === 'object' && opt !== null ? (opt.value ?? opt.label ?? '') : String(opt ?? ''))
@@ -829,7 +815,7 @@ export class RequestsBetaAdminComponent implements OnInit {
       if (typeof field.metadata === 'string') {
         try { field.metadata = JSON.parse(field.metadata); } catch(e){}
       }
-      
+
       const parentName = this.tempDependencyFieldName();
       if (!parentName) {
         delete field.metadata.dependency;
@@ -845,7 +831,7 @@ export class RequestsBetaAdminComponent implements OnInit {
             hasOptions = true;
           }
         }
-           
+
         let val: any;
         if (hasOptions) {
           const selected = this.tempDependencySelectedOptions()
@@ -863,7 +849,7 @@ export class RequestsBetaAdminComponent implements OnInit {
             val = cleanList;
           }
         }
-        
+
         field.metadata.dependency = {
           fieldName: parentName,
           value: val
@@ -947,7 +933,7 @@ export class RequestsBetaAdminComponent implements OnInit {
   removeField(index: number) {
     const currentFields = [...this.formFields()];
     currentFields.splice(index, 1);
-    // Re-adjust display orders
+
     currentFields.forEach((f, i) => f.displayOrder = i + 1);
     this.formFields.set(currentFields);
   }
@@ -958,12 +944,11 @@ export class RequestsBetaAdminComponent implements OnInit {
     const temp = fields[index];
     fields[index] = fields[index - 1];
     fields[index - 1] = temp;
-    
-    // Update displayOrder values based on their new indices
+
     fields.forEach((f, idx) => {
       f.displayOrder = idx + 1;
     });
-    
+
     this.formFields.set(fields);
   }
 
@@ -974,7 +959,6 @@ export class RequestsBetaAdminComponent implements OnInit {
     fields[index] = fields[index + 1];
     fields[index + 1] = temp;
 
-    // Update displayOrder values based on their new indices
     fields.forEach((f, idx) => {
       f.displayOrder = idx + 1;
     });
@@ -986,7 +970,6 @@ export class RequestsBetaAdminComponent implements OnInit {
     const form = this.editingFormForFields();
     const fields = this.formFields();
 
-    // Basic check
     for (const f of fields) {
       if (!f.label.trim()) {
         this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'Todos los campos deben tener una etiqueta válida.' });
@@ -1006,7 +989,6 @@ export class RequestsBetaAdminComponent implements OnInit {
     });
   }
 
-  // --- Workflow Configurator (Independent Workflows) ---
   loadWorkflows() {
     this.productionService.adminGetWorkflows().subscribe({
       next: (data) => {
@@ -1121,8 +1103,8 @@ export class RequestsBetaAdminComponent implements OnInit {
           let maxSelectedForms: number | null = null;
           if (s.assigneeUserIds) {
             try {
-              const parsed = typeof s.assigneeUserIds === 'string' 
-                ? JSON.parse(s.assigneeUserIds) 
+              const parsed = typeof s.assigneeUserIds === 'string'
+                ? JSON.parse(s.assigneeUserIds)
                 : s.assigneeUserIds;
               if (Array.isArray(parsed)) {
                 if (parsed.length > 0 && (parsed[0].sourceFormId !== undefined || parsed[0].targetFormIdToFill !== undefined || parsed[0].targetSubflowFormId !== undefined || parsed[0].targetSubflowWorkflowId !== undefined)) {
@@ -1279,7 +1261,7 @@ export class RequestsBetaAdminComponent implements OnInit {
     const temp = current[index];
     current[index] = current[index - 1];
     current[index - 1] = temp;
-    // Update orders
+
     current.forEach((s, i) => s.stepOrder = i + 1);
     this.workflowStages.set(current);
   }
@@ -1290,7 +1272,7 @@ export class RequestsBetaAdminComponent implements OnInit {
     const temp = current[index];
     current[index] = current[index + 1];
     current[index + 1] = temp;
-    // Update orders
+
     current.forEach((s, i) => s.stepOrder = i + 1);
     this.workflowStages.set(current);
   }
@@ -1301,7 +1283,6 @@ export class RequestsBetaAdminComponent implements OnInit {
 
     const stages = this.workflowStages();
 
-    // Basic check: verify assignees are set where needed
     for (const s of stages) {
       if (!s.name.trim()) {
         this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'Todas las etapas deben tener un nombre.' });
@@ -1358,7 +1339,6 @@ export class RequestsBetaAdminComponent implements OnInit {
       }
     }
 
-    // Convert selectedUserIds and customForms or multiFormsConfig to the expected assigneeUserIds JSON-serializable structure
     const payload = stages.map(s => {
       let assigneeUserIdsObj: any = null;
       if (s.formIdToFill === -1) {

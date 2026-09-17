@@ -43,7 +43,6 @@ export class PmaxDialogComponent {
       pmax_descriptions60: this.fb.array([])
     });
 
-    // Initialize arrays
     this.initArrays();
   }
 

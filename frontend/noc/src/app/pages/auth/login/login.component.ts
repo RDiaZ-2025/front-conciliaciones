@@ -7,7 +7,6 @@ import { AuthService } from '../../../services/auth.service';
 import { ThemeService } from '../../../services/theme.service';
 import { CommonModule } from '@angular/common';
 
-// PrimeNG Imports
 import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
@@ -22,7 +21,7 @@ import { FloatLabelModule } from 'primeng/floatlabel';
   selector: 'app-login',
   standalone: true,
   imports: [
-    ReactiveFormsModule, 
+    ReactiveFormsModule,
     CommonModule,
     CardModule,
     InputTextModule,
@@ -78,7 +77,7 @@ export class LoginComponent {
 
           this.messageService.add({ severity: 'error', summary: 'Error', detail: errorMsg });
           console.error(err);
-          this.cdr.detectChanges(); 
+          this.cdr.detectChanges();
         }
       });
     } else {
@@ -91,13 +90,13 @@ export class LoginComponent {
     const defaultRoute = this.authService.getDefaultRoute();
     if (defaultRoute === '/login') {
       this.isLoading = false;
-      this.messageService.add({ 
-        severity: 'error', 
-        summary: 'Acceso Denegado', 
-        detail: 'No tienes módulos asignados. Contacta al administrador.' 
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Acceso Denegado',
+        detail: 'No tienes módulos asignados. Contacta al administrador.'
       });
-      this.authService.logout(); 
-      this.cdr.detectChanges(); 
+      this.authService.logout();
+      this.cdr.detectChanges();
     } else {
       this.router.navigate([defaultRoute]);
     }

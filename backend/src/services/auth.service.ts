@@ -4,8 +4,6 @@ import { User, Permission, PermissionByUser } from '../models';
 import { AppDataSource } from '../config/typeorm.config';
 import { LoginRequest, LoginResponse, JWTPayload } from '../types';
 
-// Servicio de autenticación usando base de datos
-
 export class AuthService {
   private readonly SALT_ROUNDS = 12;
   private readonly JWT_SECRET: string;
@@ -27,7 +25,6 @@ export class AuthService {
   private async loginWithTypeORM(credentials: LoginRequest): Promise<LoginResponse> {
     const userRepository = AppDataSource.getRepository(User);
 
-    // Buscar usuario por email
     const user = await userRepository.findOne({
       where: { email: credentials.email },
       relations: ['team', 'permissions', 'permissions.permission']
@@ -40,7 +37,6 @@ export class AuthService {
       };
     }
 
-    // Si el usuario está deshabilitado
     if (user.status === 0) {
       return {
         success: false,
@@ -48,7 +44,6 @@ export class AuthService {
       };
     }
 
-    // Verificar contraseña
     const isValidPassword = await bcrypt.compare(credentials.password, user.passwordHash);
     if (!isValidPassword) {
       return {
@@ -57,23 +52,18 @@ export class AuthService {
       };
     }
 
-    // Combinar permisos del rol, permisos directos y la columna de permisos (para compatibilidad con NOC)
     const dbPermissions = user.permissions?.map(up => up.permission?.name).filter(Boolean) || [];
     const colPermissions = user.permissionsStr
       ? user.permissionsStr.split(',').map(p => p.trim()).filter(Boolean)
       : [];
     const permissions = Array.from(new Set([...dbPermissions, ...colPermissions]));
 
-    // Obtener el rol del usuario desde la base de datos
     const role = user.role || 'user';
 
-    // Obtener equipos del usuario
     const teams = user.team ? [user.team.name] : [];
 
-    // Actualizar último acceso
     await userRepository.update(user.id, { lastAccess: new Date() });
 
-    // Generar token JWT con rol y permisos
     const token = this.generateToken({
       userId: user.id,
       email: user.email,
@@ -95,8 +85,6 @@ export class AuthService {
       token
     };
   }
-
-
 
   async getUserById(userId: number): Promise<User | null> {
     if (!AppDataSource.isInitialized) {

@@ -5,8 +5,6 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { providePrimeNG } from 'primeng/config';
 import { ClaroPreset } from '../../public/ClaroPreset';
 
-
-
 import { routes } from './app.routes';
 import { authInterceptor } from './interceptors/auth-interceptor';
 import { DialogService } from 'primeng/dynamicdialog';
@@ -93,7 +91,7 @@ export const appConfig: ApplicationConfig = {
         }
       }
     }),
-    // CoreDialogService
+
     DialogService
   ]
 };

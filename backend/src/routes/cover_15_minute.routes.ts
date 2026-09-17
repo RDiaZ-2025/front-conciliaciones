@@ -9,4 +9,3 @@ router.post('/', authenticateToken, controller.saveCover);
 router.get('/', authenticateToken, controller.getAllCovers);
 
 export default router;
-

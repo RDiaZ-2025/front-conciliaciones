@@ -27,9 +27,6 @@ export class BluestacksCmsService {
         };
     }
 
-    /**
-     * Autenticación en el CMS Bluestacks para obtener el token de sesión.
-     */
     async login(): Promise<string> {
         if (this.cachedToken && Date.now() < this.tokenExpiry) {
             return this.cachedToken;
@@ -56,7 +53,7 @@ export class BluestacksCmsService {
             if (response.data && response.data.token) {
                 const tokenStr = String(response.data.token);
                 this.cachedToken = tokenStr;
-                this.tokenExpiry = Date.now() + 10 * 60 * 1000; // 10 minutos
+                this.tokenExpiry = Date.now() + 10 * 60 * 1000;
                 console.log(`[Bluestacks CMS] Authentication successful.`);
                 return tokenStr;
             }
@@ -68,9 +65,6 @@ export class BluestacksCmsService {
         }
     }
 
-    /**
-     * Sube una imagen binaria al CMS Bluestacks y retorna la ruta interna (ej. /sites/redmas/...).
-     */
     async uploadImage(imageUrl: string, fileName?: string, description?: string, title?: string): Promise<string> {
         const token = await this.login();
         try {
@@ -91,7 +85,7 @@ export class BluestacksCmsService {
             const formData = new FormData();
             formData.append('site', this.config.site);
             formData.append('publication', this.config.publication);
-            
+
             const blob = new Blob([buffer], { type: 'image/jpeg' });
             formData.append('file[0]', blob, cleanFileName);
             formData.append('file[0].name', cleanFileName);
@@ -111,7 +105,7 @@ export class BluestacksCmsService {
             let cmsPath = resData?.path || firstItem?.name || firstItem?.path || resData?.name;
 
             if (cmsPath) {
-                // Eliminar cualquier prefijo /sites/... para que quede como /img/YYYY/MM/DD/...
+
                 cmsPath = '/' + cmsPath.replace(/^(\/sites\/[^\/]+)?\//, '').replace(/^\/+/, '');
                 console.log(`[Bluestacks CMS] Image uploaded successfully. CMS Path: ${cmsPath}`);
                 return cmsPath;
@@ -125,9 +119,6 @@ export class BluestacksCmsService {
         }
     }
 
-    /**
-     * Construye el cuerpo en HTML estructurado para el CMS Bluestacks, incrustando las macros de imágenes.
-     */
     private buildCmsHtmlBody(blocks: NewsBlock[], uploadedImagePaths: Map<string, string>): string {
         const parts: string[] = [];
 
@@ -147,13 +138,9 @@ export class BluestacksCmsService {
         return parts.join('\n');
     }
 
-    /**
-     * Crea el borrador del artículo en el CMS Bluestacks.
-     */
     async createNewsDraft(articleData: NewsArticleData): Promise<{ cmsPath: string; rawResponse: any }> {
         const token = await this.login();
 
-        // 1. Subir imagen de portada a Bluestacks CMS si existe
         let cmsCoverPath = '';
         if (articleData.coverImage?.url) {
             cmsCoverPath = await this.uploadImage(
@@ -164,7 +151,6 @@ export class BluestacksCmsService {
             );
         }
 
-        // 2. Subir imágenes de bloques intermedios a Bluestacks CMS si existen
         const uploadedImagesMap = new Map<string, string>();
         if (articleData.blocks && Array.isArray(articleData.blocks)) {
             for (const block of articleData.blocks) {
@@ -180,7 +166,6 @@ export class BluestacksCmsService {
             }
         }
 
-        // 3. Ensamblar cuerpo HTML con macros del CMS
         const cuerpoHtml = this.buildCmsHtmlBody(articleData.blocks || [], uploadedImagesMap);
         const clavesStr = Array.isArray(articleData.tags) ? articleData.tags.join(', ') : (articleData.tags || 'noticias, actualidad');
         const seccionStr = (articleData.section || 'general').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -232,9 +217,6 @@ export class BluestacksCmsService {
         }
     }
 
-    /**
-     * Publica de forma definitiva una noticia en el CMS Bluestacks.
-     */
     async publishNews(newsCmsPath: string): Promise<any> {
         const token = await this.login();
         try {

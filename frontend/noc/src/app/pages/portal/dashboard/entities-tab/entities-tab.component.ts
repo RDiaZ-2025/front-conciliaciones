@@ -37,7 +37,7 @@ export class EntitiesTabComponent {
         if (this.isDetailLoading) return;
 
         this.isDetailLoading = true;
-        this.cdr.detectChanges(); // Ensure blur shows immediately
+        this.cdr.detectChanges();
 
         this.dashboardService.getEntityDetail(entity, this.currentFilters).subscribe({
             next: (detail) => {

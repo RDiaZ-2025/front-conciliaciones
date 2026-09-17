@@ -10,7 +10,7 @@ function sheetToJSON(worksheet: any, startRow: number = 1): any[] {
   const rows: any[] = [];
   const headerRow = worksheet.getRow(startRow);
   const headers: string[] = [];
-  
+
   headerRow.eachCell({ includeEmpty: true }, (cell: any, colNumber: number) => {
     let val = cell.value;
     if (val && typeof val === 'object' && 'result' in val) {
@@ -60,13 +60,12 @@ export class NocPresupuestoController {
     const year = Number(req.query.year || 2026);
     const filter_type = String(req.query.filter_type || 'TOTAL');
 
-    // 1. Get max month from presupuesto where execution > 0 for this year
     const maxMonthRaw = await AppDataSource.getRepository(Presupuesto).createQueryBuilder('p')
       .select('MAX(MONTH(p.fecha))', 'max_month')
       .where('p.ejecucion > 0')
       .andWhere('YEAR(p.fecha) = :year', { year })
       .getRawOne();
-    
+
     const maxMonth = maxMonthRaw?.max_month ? Number(maxMonthRaw.max_month) : 12;
 
     let startMonth = 1;
@@ -83,7 +82,6 @@ export class NocPresupuestoController {
       endMonth = maxMonth;
     }
 
-    // 2. Monthly Summary
     const mensualQuery = await AppDataSource.getRepository(Presupuesto).createQueryBuilder('p')
       .select('p.fecha', 'fecha')
       .addSelect('SUM(p.ppto)', 'total_ppto')
@@ -113,7 +111,6 @@ export class NocPresupuestoController {
       });
     }
 
-    // 3. Breakdown by Source
     const fuentesQuery = await AppDataSource.getRepository(Presupuesto).createQueryBuilder('p')
       .select('p.seccion', 'seccion')
       .addSelect('p.fuente', 'fuente')
@@ -160,13 +157,13 @@ export class NocPresupuestoController {
     }
 
     try {
-      // Resolve path
+
       const searchPaths = [
         path.resolve(process.cwd(), 'ppto_2026.xlsx'),
         path.resolve(process.cwd(), 'NOC', 'ppto_2026.xlsx'),
         path.resolve(process.cwd(), 'backend', 'noc', 'ppto_2026.xlsx')
       ];
-      
+
       let foundPath = '';
       for (const p of searchPaths) {
         if (fs.existsSync(p)) {

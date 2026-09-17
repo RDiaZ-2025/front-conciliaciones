@@ -130,7 +130,7 @@ export class NocNewsSchedulerController {
 
     async getDrafts(req: Request, res: Response): Promise<void> {
         try {
-            const { id } = req.params; // Schedule ID
+            const { id } = req.params;
             const drafts = await schedulerService.getDraftsByScheduleId(id);
             res.status(200).json(drafts);
         } catch (error: any) {
@@ -156,7 +156,7 @@ export class NocNewsSchedulerController {
 
     async publishDraft(req: Request, res: Response): Promise<void> {
         try {
-            const { id } = req.params; // Draft ID
+            const { id } = req.params;
             const draft = await schedulerService.publishDraft(parseInt(id));
             res.status(200).json(draft);
         } catch (error: any) {

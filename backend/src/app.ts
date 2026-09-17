@@ -7,7 +7,6 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 
-// Importar rutas
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import productionRoutes from './routes/production.routes';
@@ -31,12 +30,10 @@ dotenv.config();
 
 const app = express();
 
-// Confiar en el primer proxy (Azure App Service / Reverse Proxy) para obtener la IP real del cliente
 app.set('trust proxy', 1);
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Lista de orígenes de producción permitidos
 const allowedOrigins: string[] = [
   'https://vocclaromedia.com',
   'https://www.vocclaromedia.com',
@@ -48,14 +45,13 @@ if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
 }
 
-// Orígenes locales solo permitidos en desarrollo o si se habilitan explícitamente
 if (!isProduction || process.env.ALLOW_LOCALHOST_CORS === 'true') {
   allowedOrigins.push('http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000');
 }
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    // Permitir peticiones sin origen (ej. curl, tareas programadas, llamadas de servidor a servidor)
+
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
@@ -66,10 +62,9 @@ const corsOptions: cors.CorsOptions = {
   optionsSuccessStatus: 200
 };
 
-// Configuración de Rate Limiting general para la API
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutos
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '1000'),     // 1000 peticiones por ventana
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '1000'),
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -78,9 +73,8 @@ const limiter = rateLimit({
   }
 });
 
-// Middlewares globales de seguridad
 app.use(helmet({
-  contentSecurityPolicy: false, // Gestionado por headers del reverse proxy / frontend
+  contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
   hsts: {
     maxAge: 31536000,
@@ -91,21 +85,19 @@ app.use(helmet({
     action: 'sameorigin'
   }
 }));
-app.use(cors(corsOptions)); // CORS controlado
-app.use(compression()); // Compresión
-app.use(morgan('combined')); // Logging
+app.use(cors(corsOptions));
+app.use(compression());
+app.use(morgan('combined'));
 if (process.env.NODE_ENV === 'production') {
-  app.use(limiter); // Rate limiting en producción
+  app.use(limiter);
 }
-app.use(cookieParser()); // Cookies
-app.use(express.json({ limit: '10mb' })); // JSON parser
-app.use(express.urlencoded({ extended: true, limit: '10mb' })); // URL encoded
+app.use(cookieParser());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Servir estáticos locales para uploads de imágenes si es necesario
 import path from 'path';
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-// Middleware de logging de acciones de usuario
 app.use(actionLogger);
 
 import { AppDataSource } from './config/typeorm.config';
@@ -156,7 +148,6 @@ const getHealthPayload = () => {
   };
 };
 
-// Ruta raíz para Azure App Service / IIS Health Check / Ping
 app.get('/', skipLogging, (req, res) => {
   res.status(200).json({
     success: true,
@@ -166,12 +157,10 @@ app.get('/', skipLogging, (req, res) => {
   });
 });
 
-// Ruta de salud enriquecida (disponible en /health y /api/health sin logging)
 app.get(['/health', '/api/health'], skipLogging, (req, res) => {
   res.status(200).json(getHealthPayload());
 });
 
-// Rutas de la API
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/production', productionRoutes);
@@ -188,7 +177,6 @@ app.use('/api/campaigns', campaignRoutes);
 app.use('/api', nocRoutes);
 app.use('/api/customers', customerRoutes);
 
-// Ruta 404
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
@@ -198,7 +186,6 @@ app.use('*', (req, res) => {
 
 import { errorHandler } from './middleware/errorHandler';
 
-// Middleware de manejo de errores global
 app.use(errorHandler);
 
 export default app;

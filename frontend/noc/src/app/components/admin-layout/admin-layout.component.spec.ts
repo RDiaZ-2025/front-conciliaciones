@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core'; // 👈 Importamos signal
+import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
@@ -11,10 +11,9 @@ import { AuthService } from '../../../services/auth.service';
   styleUrls: ['./admin-layout.component.spec.ts.component.scss']
 })
 export class AdminLayoutComponent {
-  // Signal para controlar si el sidebar está visible en móviles
+
   isSidebarOpen = signal(false);
 
-  // Signal para controlar el sub-menú de Administración
   isAdminMenuOpen = signal(false);
 
   constructor(public authService: AuthService) { }

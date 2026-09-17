@@ -6,10 +6,6 @@ import { AudienceData } from './AudienceData';
 import { ProductionInfo } from './ProductionInfo';
 import { MaterialRegister } from './MaterialRegister';
 
-/**
- * ProductionRequest entity representing production request management
- * Maps to ProductionRequests table in the database
- */
 @Entity('ProductionRequests')
 @Index('IX_ProductionRequests_RequestDate', ['requestDate'])
 export class ProductionRequest {

@@ -63,7 +63,7 @@ export class FilePreviewComponent implements OnDestroy {
     const url = this.fileUrl();
     const type = this.fileType();
     if (type === 'presentation' && url) {
-      // Office viewer needs encoded URL
+
       return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
     }
     return null;
@@ -71,14 +71,14 @@ export class FilePreviewComponent implements OnDestroy {
 
   constructor() {
     effect(() => {
-      // Create URL when file and visible change
+
       const fileData = this.file();
       const isVisible = this.visible();
       const type = this.fileType();
       const size = this.fileSize();
-      
+
       if (fileData && isVisible) {
-        // Size checks for Office Online Viewer (increased to 250MB for heavy use cases)
+
         if (type === 'presentation' && size > 250 * 1024 * 1024) {
           this.error.set('El archivo es demasiado grande para previsualizarlo con el visor de Office (Máximo 250MB). Por favor, descárgalo para verlo.');
           return;
@@ -113,9 +113,7 @@ export class FilePreviewComponent implements OnDestroy {
   }
 
   private cleanupUrl() {
-    // Only revoke if we created it (i.e. if file was a File object)
-    // But we don't store if it was a blob url or string url easily in signal.
-    // Actually, createObjectURL returns "blob:..."
+
     const url = this.fileUrl();
     if (url && url.startsWith('blob:')) {
       URL.revokeObjectURL(url);
@@ -155,7 +153,6 @@ export class FilePreviewComponent implements OnDestroy {
     this.onDownload.emit();
   }
 
-  // Method to be called from parent to update progress or reset state
   setDownloadProgress(progress: number) {
     this.downloadProgress.set(progress);
     if (progress >= 100) {

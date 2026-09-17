@@ -27,7 +27,7 @@ export class DynamicFormSubmission {
   currentStageId!: number | null;
 
   @Column({ name: 'Status', type: 'nvarchar', length: 50, default: 'Pending' })
-  status!: string; // 'Pending', 'In Progress', 'Approved', 'Rejected', 'Completed'
+  status!: string;
 
   @Column({ name: 'Consecutive', type: 'nvarchar', length: 100, nullable: true })
   consecutive!: string | null;

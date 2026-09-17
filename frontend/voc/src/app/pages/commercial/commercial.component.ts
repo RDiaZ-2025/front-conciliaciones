@@ -58,23 +58,19 @@ export class CommercialComponent implements OnInit {
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
 
-  // Configuration
   private readonly CONTAINER_NAME = 'autoconsumoshared';
-  // Use the path exactly as seen in Azure, but be careful with slashes
+
   private readonly ROOT_PATH = 'Comercial/Repositorio Comercial';
 
-  // State
   files = signal<FileItem[]>([]);
   loading = signal<boolean>(false);
   currentPath = signal<string>(this.ROOT_PATH);
   breadcrumbItems = signal<MenuItem[]>([]);
   searchValue = signal<string>('');
 
-  // Download State
   downloadingFileId = signal<string | null>(null);
   downloadProgress = signal<number>(0);
 
-  // Preview State
   previewVisible = signal<boolean>(false);
   previewFile = signal<File | string | null>(null);
   previewFileName = signal<string>('');
@@ -114,15 +110,13 @@ export class CommercialComponent implements OnInit {
       const allFiles = await this.azureService.getFilesDetails(path, this.CONTAINER_NAME);
       console.log('Raw files from Azure:', allFiles);
 
-      // Process files to extract folders and direct files
       const items: FileItem[] = [];
       const folders = new Set<string>();
 
-      // Normalize path to ensure trailing slash for replacement
       const normalizedPath = path.endsWith('/') ? path : `${path}/`;
 
       for (const file of allFiles) {
-        // Remove the current path prefix
+
         const relativePath = file.id.startsWith(normalizedPath)
           ? file.id.substring(normalizedPath.length)
           : file.id;
@@ -132,7 +126,7 @@ export class CommercialComponent implements OnInit {
         const parts = relativePath.split('/');
 
         if (parts.length > 1) {
-          // It's in a subfolder
+
           const folderName = parts[0];
           if (!folders.has(folderName)) {
             folders.add(folderName);
@@ -147,7 +141,7 @@ export class CommercialComponent implements OnInit {
             });
           }
         } else {
-          // It's a file or a direct folder (from Share)
+
           const isDirectory = file.type === 'directory';
 
           if (isDirectory) {
@@ -168,7 +162,7 @@ export class CommercialComponent implements OnInit {
       }
 
       this.files.set(items.sort((a, b) => {
-        // Folders first
+
         if (a.isFolder && !b.isFolder) return -1;
         if (!a.isFolder && b.isFolder) return 1;
         return a.name.localeCompare(b.name);
@@ -191,7 +185,7 @@ export class CommercialComponent implements OnInit {
       if (this.isPreviewable(item.name)) {
         this.previewDocument(item);
       } else {
-        // Download file on click since actions column is removed
+
         this.performDownload(item);
       }
     }
@@ -227,8 +221,6 @@ export class CommercialComponent implements OnInit {
       const extension = item.name.toLowerCase().split('.').pop() || '';
       this.previewFileSize.set(item.size);
 
-      // Try to get a direct URL with SAS token first for efficiency
-      // This is much better than downloading the entire blob to memory
       try {
         const directUrl = await this.azureService.getFileUrl(item.id, this.CONTAINER_NAME);
         if (directUrl) {
@@ -241,13 +233,12 @@ export class CommercialComponent implements OnInit {
         console.warn('Could not get direct URL for preview, falling back to blob download', e);
       }
 
-      // Fallback: download as blob (only for small files or if direct URL fails)
       const blob = await this.azureService.downloadBlob(item.id, this.CONTAINER_NAME);
 
       if (blob) {
-        // Ensure we have a correct MIME type for the preview
-        const mimeType = blob.type && blob.type !== 'application/octet-stream' 
-          ? blob.type 
+
+        const mimeType = blob.type && blob.type !== 'application/octet-stream'
+          ? blob.type
           : this.getMimeTypeFromExtension(extension);
 
         this.previewFile.set(new File([blob], item.name, { type: mimeType }));
@@ -271,7 +262,7 @@ export class CommercialComponent implements OnInit {
        this.downloadingFileId.set(null);
      }
    }
- 
+
    downloadFileFromPreview() {
      const file = this.previewFile();
      const fileName = this.previewFileName();
@@ -279,7 +270,7 @@ export class CommercialComponent implements OnInit {
      const fileId = Array.isArray(this.files()) ? this.files().find(f => f.name === fileName)?.id : null;
 
      if (file instanceof File) {
-       // It's already a local File object from a previous blob download
+
        const url = URL.createObjectURL(file);
        const a = document.createElement('a');
        a.href = url;
@@ -290,10 +281,10 @@ export class CommercialComponent implements OnInit {
        URL.revokeObjectURL(url);
        this.filePreview?.setDownloadProgress(100);
      } else if (typeof file === 'string' && fileId) {
-       // It's a direct URL, we should use performDownload to show progress
+
        this.performDownload({ id: fileId, name: fileName, size: fileSize } as FileItem, true);
      } else {
-       // Fallback for string URL without ID
+
        const a = document.createElement('a');
        a.href = file as string;
        a.download = fileName;
@@ -351,7 +342,6 @@ export class CommercialComponent implements OnInit {
     const items: MenuItem[] = [];
     let current = this.ROOT_PATH;
 
-    // Always add Root (Repositorio Comercial)
     items.push({
       label: 'Repositorio Comercial',
       command: () => {
@@ -363,7 +353,7 @@ export class CommercialComponent implements OnInit {
 
     for (const part of parts) {
       current = `${current}/${part}`;
-      const path = current; // Capture for closure
+      const path = current;
       items.push({
         label: part,
         command: () => {

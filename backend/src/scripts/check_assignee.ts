@@ -4,8 +4,7 @@ import { DynamicWorkflowStage } from '../models/DynamicWorkflowStage';
 
 async function checkAssignee() {
     await AppDataSource.initialize();
-    
-    // Check user with ID 98
+
     const userRepo = AppDataSource.getRepository(User);
     const user = await userRepo.findOne({ where: { id: 98 } });
     if (user) {
@@ -13,8 +12,7 @@ async function checkAssignee() {
     } else {
         console.log('¡ERROR! El usuario con ID 98 NO existe en la base de datos.');
     }
-    
-    // Check all workflow stages and see if their assignee users exist
+
     const stageRepo = AppDataSource.getRepository(DynamicWorkflowStage);
     const stages = await stageRepo.find({ relations: ['form'] });
     console.log('\n--- ETAPAS DE FLUJO Y SUS ASIGNADOS ---');
@@ -26,7 +24,7 @@ async function checkAssignee() {
             console.log(`Form: ${s.form?.name || 'N/A'}, Stage: ${s.name}, AssigneeType: ${s.assigneeType}`);
         }
     }
-    
+
     await AppDataSource.destroy();
 }
 

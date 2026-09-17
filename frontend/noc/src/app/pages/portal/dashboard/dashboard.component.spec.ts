@@ -27,19 +27,15 @@ export class DashboardComponent implements OnInit {
     category: ''
   };
 
-  // --- Charts Configuration ---
-
-  // 1. Trend (Month) - Bar
   public barChartOptions: ChartConfiguration['options'] = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { display: false } }, // Hide legend for cleaner look
+    plugins: { legend: { display: false } },
     scales: { x: { grid: { display: false } }, y: { grid: { color: '#f3f4f6' } } }
   };
   public barChartType: ChartType = 'bar';
   public barChartData: ChartData<'bar'> = { labels: [], datasets: [] };
 
-  // 2. Trend (Year) - Bar
   public yearChartOptions: ChartConfiguration['options'] = {
     responsive: true,
     maintainAspectRatio: false,
@@ -49,7 +45,6 @@ export class DashboardComponent implements OnInit {
   public yearChartType: ChartType = 'bar';
   public yearChartData: ChartData<'bar'> = { labels: [], datasets: [] };
 
-  // 3. Section Dist - Pie
   public pieChartOptions: ChartConfiguration['options'] = {
     responsive: true,
     maintainAspectRatio: false,
@@ -58,7 +53,6 @@ export class DashboardComponent implements OnInit {
   public pieChartType: ChartType = 'pie';
   public pieChartData: ChartData<'pie'> = { labels: [], datasets: [] };
 
-  // 4. Topics - Horizontal Bar
   public topicChartOptions: ChartConfiguration['options'] = {
     indexAxis: 'y',
     responsive: true,
@@ -69,7 +63,6 @@ export class DashboardComponent implements OnInit {
   public topicChartType: ChartType = 'bar';
   public topicChartData: ChartData<'bar'> = { labels: [], datasets: [] };
 
-  // 5. Category - Doughnut
   public categoryChartOptions: ChartConfiguration<'doughnut'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,
@@ -79,7 +72,6 @@ export class DashboardComponent implements OnInit {
   public categoryChartType: 'doughnut' = 'doughnut';
   public categoryChartData: ChartData<'doughnut'> = { labels: [], datasets: [] };
 
-  // 6. Performance Tiers - Bar (Vertical or Doughnut) - Let's use Bar for comparison
   public tierChartOptions: ChartConfiguration['options'] = {
     responsive: true,
     maintainAspectRatio: false,
@@ -89,7 +81,6 @@ export class DashboardComponent implements OnInit {
   public tierChartType: ChartType = 'bar';
   public tierChartData: ChartData<'bar'> = { labels: [], datasets: [] };
 
-  // 7. Users per Section (Radar)
   public radarChartOptions: ChartConfiguration['options'] = {
     responsive: true,
     maintainAspectRatio: false,
@@ -99,18 +90,16 @@ export class DashboardComponent implements OnInit {
   public radarChartType: ChartType = 'radar';
   public radarChartData: ChartData<'radar'> | undefined;
 
-  // 8. Authors (Horizontal Bar)
   public authorChartOptions: ChartConfiguration['options'] = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: { legend: { display: false } },
     scales: { x: { grid: { display: false } }, y: { grid: { display: false } } },
-    indexAxis: 'y', // Horizontal bars
+    indexAxis: 'y',
   };
   public authorChartType: ChartType = 'bar';
   public authorChartData: ChartData<'bar'> | undefined;
 
-  // Colors Palette
   private colors = {
     red: '#E63946',
     navy: '#1D3557',
@@ -125,7 +114,7 @@ export class DashboardComponent implements OnInit {
   constructor(private dashboardService: DashboardService) { }
 
   ngOnInit(): void {
-    // Initial load
+
     this.isLoading = true;
     this.loadFilters();
     this.loadStats();
@@ -156,7 +145,7 @@ export class DashboardComponent implements OnInit {
   }
 
   updateCharts(data: DashboardStats) {
-    // 1. Month Trend
+
     this.barChartData = {
       labels: data.articles_by_month.map(d => d.mes),
       datasets: [{
@@ -168,7 +157,6 @@ export class DashboardComponent implements OnInit {
       }]
     };
 
-    // 2. Year Trend
     this.yearChartData = {
       labels: data.articles_by_year.map(d => d.year),
       datasets: [{
@@ -180,7 +168,6 @@ export class DashboardComponent implements OnInit {
       }]
     };
 
-    // 3. Section Dist
     this.pieChartData = {
       labels: data.articles_by_section.map(d => d.seccion),
       datasets: [{
@@ -189,8 +176,6 @@ export class DashboardComponent implements OnInit {
       }]
     };
 
-    // 4. Topics (Top 10)
-    // Horizontal Bar needs mapping
     this.topicChartData = {
       labels: data.articles_by_topic.map(d => d.topic),
       datasets: [{
@@ -202,7 +187,6 @@ export class DashboardComponent implements OnInit {
       }]
     };
 
-    // 5. Category (Entity)
     this.categoryChartData = {
       labels: data.articles_by_category.map(d => d.category),
       datasets: [{
@@ -211,18 +195,13 @@ export class DashboardComponent implements OnInit {
       }]
     };
 
-    // 6. Performance Tiers
-    // Map specific colors for Diamond/Gold/Silver/Bronze
-    // Tiers often come in specific order from backend? Backend returns list of dicts.
-    // Let's assume order is fixed or we map by name if needed.
-    // For simplicity, just map data directly.
     const tierColors = {
-      "Diamante (>50k)": "#b9f2ff", // Diamond-ish
-      "Oro (10k-50k)": "#ffd700",   // Gold
-      "Plata (1k-10k)": "#c0c0c0",  // Silver
-      "Bronce (<1k)": "#cd7f32"     // Bronze
+      "Diamante (>50k)": "#b9f2ff",
+      "Oro (10k-50k)": "#ffd700",
+      "Plata (1k-10k)": "#c0c0c0",
+      "Bronce (<1k)": "#cd7f32"
     };
-    // We should map backend data to colors
+
     const tiersData = data.performance_tiers;
     this.tierChartData = {
       labels: tiersData.map(d => d.tier),
@@ -233,7 +212,6 @@ export class DashboardComponent implements OnInit {
       }]
     };
 
-    // 7. Users Radar
     this.radarChartData = {
       labels: data.users_by_section.map(d => d.seccion),
       datasets: [{
@@ -248,7 +226,6 @@ export class DashboardComponent implements OnInit {
       }]
     };
 
-    // 8. Authors
     this.authorChartData = {
       labels: data.articles_by_author.map(d => d.author),
       datasets: [{

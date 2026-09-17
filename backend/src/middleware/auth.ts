@@ -3,7 +3,6 @@ import { AuthService } from '../services/auth.service';
 import { JWTPayload } from '../types';
 const authService = new AuthService();
 
-// Extender la interfaz Request para incluir user
 declare global {
   namespace Express {
     interface Request {
@@ -57,7 +56,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
         req.user = decoded;
       }
     } catch (error) {
-      // Si el token es inválido en optionalAuth, simplemente continuamos sin usuario autenticado
+
       console.warn('Token inválido en optionalAuth:', error);
     }
   }
@@ -65,7 +64,6 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
   next();
 };
 
-// Middleware para verificar permisos específicos contra la base de datos
 export const requirePermission = (permission: string) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -77,13 +75,11 @@ export const requirePermission = (permission: string) => {
         return;
       }
 
-      // Bypass para administradores
       if (req.user.role?.toLowerCase() === 'admin') {
         next();
         return;
       }
 
-      // Obtener permisos del usuario desde la base de datos
       const userPermissions = await authService.getUserPermissions(req.user.userId);
       const hasPermission = userPermissions.some(p => p.toLowerCase() === permission.toLowerCase());
 
@@ -106,7 +102,6 @@ export const requirePermission = (permission: string) => {
   };
 };
 
-// Middleware para verificar múltiples permisos (requiere al menos uno)
 export const requireAnyPermission = (permissions: string[]) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -123,7 +118,6 @@ export const requireAnyPermission = (permissions: string[]) => {
         return;
       }
 
-      // Obtener permisos del usuario desde la base de datos
       const userPermissions = await authService.getUserPermissions(req.user.userId);
       const lowerUserPerms = userPermissions.map(p => p.toLowerCase());
       const hasPermission = permissions.some(p => lowerUserPerms.includes(p.toLowerCase()));
@@ -147,7 +141,6 @@ export const requireAnyPermission = (permissions: string[]) => {
   };
 };
 
-// Middleware para verificar múltiples permisos (requiere todos)
 export const requireAllPermissions = (permissions: string[]) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -164,7 +157,6 @@ export const requireAllPermissions = (permissions: string[]) => {
         return;
       }
 
-      // Obtener permisos del usuario desde la base de datos
       const userPermissions = await authService.getUserPermissions(req.user.userId);
       const lowerUserPerms = userPermissions.map(p => p.toLowerCase());
       const hasAllPermissions = permissions.every(p => lowerUserPerms.includes(p.toLowerCase()));
@@ -189,17 +181,14 @@ export const requireAllPermissions = (permissions: string[]) => {
   };
 };
 
-// Middleware para permitir tanto usuarios autenticados como webhooks automatizados autorizados (ej. n8n)
 export const authenticateTokenOrWebhook = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const webhookSecret = process.env.N8N_WEBHOOK_SECRET || process.env.WEBHOOK_SECRET;
   const providedSecret = (req.headers['x-webhook-secret'] as string) || (req.headers['x-api-key'] as string);
 
-  // 1. Validar si coincide con el secreto de webhook configurado
   if (webhookSecret && providedSecret && providedSecret === webhookSecret) {
     return next();
   }
 
-  // 2. Validar cabecera de autorización Bearer
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -211,7 +200,6 @@ export const authenticateTokenOrWebhook = async (req: Request, res: Response, ne
     return;
   }
 
-  // Si se envió el secreto como Bearer token
   if (webhookSecret && token === webhookSecret) {
     return next();
   }

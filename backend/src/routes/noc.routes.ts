@@ -15,11 +15,9 @@ const nocPresupuestoController = new NocPresupuestoController();
 const nocAgentController = new NocAgentController();
 const nocNewsSchedulerController = new NocNewsSchedulerController();
 
-// System Modules
 router.get('/system-modules', authenticateToken, systemModulesController.getSystemModules);
 router.put('/system-modules/:code/state', authenticateToken, systemModulesController.updateModuleState);
 
-// Dashboard
 router.get('/dashboard/filters', authenticateToken, requirePermission('dashboard'), nocDashboardController.getDashboardFilters);
 router.get('/dashboard/overview', authenticateToken, requirePermission('dashboard'), nocDashboardController.getOverviewStats);
 router.get('/dashboard/content', authenticateToken, requirePermission('dashboard'), nocDashboardController.getContentStats);
@@ -29,20 +27,16 @@ router.get('/dashboard/reach', authenticateToken, requirePermission('dashboard')
 router.get('/dashboard/audience', authenticateToken, requirePermission('dashboard'), nocDashboardController.getAudienceStats);
 router.post('/dashboard/import', authenticateToken, requirePermission('dashboard'), nocDashboardController.importDashboardData);
 
-// Ingresos
 router.get('/ingresos/datos-grafico', authenticateToken, requirePermission('ingresos'), nocIngresosController.getIngresosGrafico);
 router.get('/ingresos/datos-redes/:plataforma', authenticateToken, requirePermission('ingresos'), nocIngresosController.getIngresosRedes);
 router.get('/ingresos/resumen-general', authenticateToken, requirePermission('ingresos'), nocIngresosController.getResumenGeneral);
 
-// Presupuesto
 router.get('/portal-presupuesto/dashboard', authenticateToken, requirePermission('presupuesto'), nocPresupuestoController.getDashboardPresupuesto);
 router.post('/portal-presupuesto/importar', authenticateToken, requirePermission('presupuesto'), nocPresupuestoController.importarPresupuesto);
 
-// AI Chat
 router.post('/agent/chat', authenticateToken, nocAgentController.agentChat);
 router.get('/agent/health', nocAgentController.agentHealth);
 
-// News Scheduler (Support both /noc/news-scheduler and /news-scheduler)
 router.get(['/news-scheduler', '/noc/news-scheduler'], authenticateToken, (req, res) => nocNewsSchedulerController.getSchedules(req, res));
 router.get(['/news-scheduler/:id', '/noc/news-scheduler/:id'], authenticateToken, (req, res) => nocNewsSchedulerController.getScheduleById(req, res));
 router.post(['/news-scheduler', '/noc/news-scheduler'], authenticateToken, (req, res) => nocNewsSchedulerController.createSchedule(req, res));
@@ -52,7 +46,6 @@ router.post(['/news-scheduler/:id/record-execution', '/noc/news-scheduler/:id/re
 router.post(['/news-scheduler/:id/run', '/noc/news-scheduler/:id/run'], authenticateToken, (req, res) => nocNewsSchedulerController.executeSchedule(req, res));
 router.delete(['/news-scheduler/:id', '/noc/news-scheduler/:id'], authenticateToken, (req, res) => nocNewsSchedulerController.deleteSchedule(req, res));
 
-// Borradores / Drafts (Protegido contra inyecciones no autorizadas)
 router.post(['/news-scheduler/draft', '/noc/news-scheduler/draft'], authenticateTokenOrWebhook, (req, res) => nocNewsSchedulerController.saveDraft(req, res));
 router.get(['/news-scheduler/:id/drafts', '/noc/news-scheduler/:id/drafts'], authenticateToken, (req, res) => nocNewsSchedulerController.getDrafts(req, res));
 router.get(['/news-scheduler/drafts/detail/:id', '/noc/news-scheduler/drafts/detail/:id'], authenticateToken, (req, res) => nocNewsSchedulerController.getDraftDetail(req, res));
@@ -61,10 +54,8 @@ router.delete(['/news-scheduler/drafts/:id', '/noc/news-scheduler/drafts/:id'], 
 router.post(['/news-scheduler/drafts/preview', '/noc/news-scheduler/drafts/preview'], authenticateToken, (req, res) => nocNewsSchedulerController.previewDraft(req, res));
 router.post(['/news-scheduler/drafts/:id/publish', '/noc/news-scheduler/drafts/:id/publish'], authenticateToken, (req, res) => nocNewsSchedulerController.publishDraft(req, res));
 
-// Acciones de Inteligencia Artificial (IA) sobre Borradores
 router.post(['/news-scheduler/drafts/:id/ai-adjust-paragraph', '/noc/news-scheduler/drafts/:id/ai-adjust-paragraph'], authenticateToken, (req, res) => nocNewsSchedulerController.aiAdjustParagraph(req, res));
 router.post(['/news-scheduler/drafts/:id/ai-adjust-article', '/noc/news-scheduler/drafts/:id/ai-adjust-article'], authenticateToken, (req, res) => nocNewsSchedulerController.aiAdjustArticle(req, res));
 router.post(['/news-scheduler/drafts/:id/ai-regenerate-image', '/noc/news-scheduler/drafts/:id/ai-regenerate-image'], authenticateToken, (req, res) => nocNewsSchedulerController.aiRegenerateImage(req, res));
 
 export default router;
-

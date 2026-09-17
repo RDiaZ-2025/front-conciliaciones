@@ -61,7 +61,6 @@ export class MenusComponent implements OnInit {
   loadData() {
     this.loading.set(true);
 
-    // Load permissions first, then menus
     this.permissionService.getAllPermissions().subscribe({
       next: (response) => {
         if (response.success) {
@@ -72,7 +71,7 @@ export class MenusComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error loading permissions:', err);
-        // Still try to load menus even if permissions fail
+
         this.loadMenuItems();
       }
     });
@@ -163,8 +162,7 @@ export class MenusComponent implements OnInit {
 
   saveItem(data: MenuFormData) {
     this.saving.set(true);
-    
-    // Set project value from the current selector state
+
     data.project = this.selectedProject();
 
     const request = this.editingItem()
