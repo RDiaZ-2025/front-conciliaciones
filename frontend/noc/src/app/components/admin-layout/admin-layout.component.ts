@@ -1,6 +1,6 @@
 import { CachedImagePipe } from '../../pipes/cached-image.pipe';
 import { LucideIconComponent } from '../lucide-icon/lucide-icon.component';
-import { Component, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 
@@ -18,6 +18,8 @@ import { AuthService } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
 import { MenuService, MenuItem } from '../../services/menu.service';
 
+import { SystemHealthModalComponent } from '../system-health-modal/system-health-modal.component';
+
 @Component({
   selector: 'app-admin-layout',
   templateUrl: './admin-layout.component.html',
@@ -34,7 +36,8 @@ import { MenuService, MenuItem } from '../../services/menu.service';
     StyleClassModule,
     MenuModule,
     LucideIconComponent,
-    CachedImagePipe
+    CachedImagePipe,
+    SystemHealthModalComponent
   ]
 })
 export class AdminLayoutComponent implements OnInit, OnDestroy {
@@ -43,11 +46,14 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
   private menuService = inject(MenuService);
   private router = inject(Router);
 
+  // Health modal state (signal)
+  showHealthModal = signal(false);
+
   // Drawer state
   isDrawerOpen = false;
 
-  // Lista de módulos del sistema para generar el menú dinámicamente
-  modules: MenuItem[] = [];
+  // Lista de módulos del sistema para generar el menú dinámicamente (signal reactivo)
+  modules = signal<MenuItem[]>([]);
 
   // Estado de los menús desplegables (qué modulo está abierto)
   openMenus: { [key: string]: boolean } = {};
@@ -72,8 +78,9 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
           const parents = activeItems.filter(item => !item.parentId);
           parents.forEach(parent => {
             parent.children = activeItems.filter(child => child.parentId == parent.id);
-            parent.children.sort((a, b) => a.displayOrder - b.displayOrder);
+            parent.children.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
           });
+          parents.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
           rawModules = parents;
         } else {
           rawModules = allItems;
@@ -97,15 +104,17 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
           })
           .filter(module => (module.children && module.children.length > 0) || module.route);
 
-        setTimeout(() => {
-          this.modules = filtered;
-        });
+        this.modules.set(filtered);
       }
     });
   }
 
   toggleDrawer() {
     this.isDrawerOpen = !this.isDrawerOpen;
+  }
+
+  openHealthModal() {
+    this.showHealthModal.set(true);
   }
 
   onDrawerVisibleChange(isVisible: boolean) {
