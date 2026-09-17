@@ -9,37 +9,21 @@ import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { DrawerModule } from 'primeng/drawer';
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Subject, Subscription, timer } from 'rxjs';
 import { takeUntil, switchMap } from 'rxjs/operators';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MarkdownPipe } from '../../../pipes/markdown.pipe';
 import { AuthService } from '../../../services/auth.service';
 import { AzureStorageService } from '../../../services/azure-storage.service';
-import { environment } from '../../../../environments/environment';
+import {
+  MiaChatService,
+  WebMessageFile,
+  WebMessageRequest,
+  ConversationItem,
+  ConversationMessage
+} from '../../../services/mia-chat.service';
 
-export interface WebMessageFile {
-  path: string;
-  name: string;
-  mimeType: string;
-  size: number;
-  extension: string;
-}
-
-export interface WebMessageContent {
-  text?: string | null;
-  type: string;
-  timestamp?: string | null;
-  file?: WebMessageFile | null;
-}
-
-export interface WebMessageRequest {
-  agentId: string;
-  conversationId?: string | null;
-  contactId: string;
-  channelId: string;
-  message: WebMessageContent;
-}
+export type { WebMessageFile, WebMessageRequest, ConversationItem, ConversationMessage };
 
 interface ChatMessageAttachment {
   type: 'image' | 'audio' | 'video' | 'document';
@@ -57,59 +41,6 @@ interface ChatMessage {
   timestamp: Date;
   ppt?: string | null;
   attachment?: ChatMessageAttachment | null;
-}
-
-interface ConversationItem {
-  id: string;
-  lastMessage: string;
-  createdAt: string;
-  updatedAt: string;
-  messageCount: number;
-  unreadCount: number;
-  status: string;
-  assignedTo: string;
-  humanAgentId: string | null;
-  secondsProcessed: number;
-  escalated: boolean;
-  solved: boolean;
-  tags: string[];
-  rating: string | null;
-  feeling: string | null;
-  summary: string | null;
-}
-
-interface ConversationMessageSender {
-  id: string;
-  phone: string;
-  name: string;
-  email: string;
-  address: string;
-  urlPhotoProfile: string | null;
-}
-
-interface ConversationMessageContent {
-  text: string;
-  type: string;
-  timestamp: number;
-  metadata: {
-    name: string;
-    extension: string;
-    size: number;
-    contentType: string;
-    mimeType: string;
-    duration: number | null;
-    path: string;
-  } | null;
-}
-
-interface ConversationMessage {
-  id: string;
-  agentId: string;
-  conversationId: string;
-  contactId: string;
-  channelId: string;
-  sender: ConversationMessageSender;
-  messageContent: ConversationMessageContent;
 }
 
 interface FileAttachment {
@@ -153,7 +84,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
 
   ref = inject(DynamicDialogRef, { optional: true }) as DynamicDialogRef | null;
   messageService = inject(MessageService);
-  http = inject(HttpClient);
+  private miaChatService = inject(MiaChatService);
   private authService = inject(AuthService);
   private azureService = inject(AzureStorageService);
   private sanitizer = inject(DomSanitizer);
@@ -343,10 +274,8 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     this.messages.update(msgs =>
       msgs.map((m, i) => i === msgIndex ? { ...m, attachment: { ...m.attachment!, downloading: true } } : m)
     );
-    const headers = new HttpHeaders({ 'x-api-key': environment.chatApiKey });
     const cleanPath = this.extractCleanPath(attachment.path, attachment.name);
-    const body = { agentId: environment.chatAgentId, channelId: environment.chatChannelId, path: cleanPath };
-    this.http.post(environment.chatDownloadFileUrl, body, { headers, responseType: 'blob' })
+    this.miaChatService.downloadFile(cleanPath)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (blob) => {
@@ -381,17 +310,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     const email = this.authService.currentUser()?.email;
     if (!email) return;
     this.conversationsLoading.set(true);
-    const headers = new HttpHeaders({ 'x-api-key': environment.chatApiKey });
-    const body = {
-      agentId: environment.chatAgentId,
-      channelId: environment.chatChannelId,
-      contactId: email
-    };
-    this.http.post<ConversationItem[]>(
-      environment.chatGetConversationsUrl,
-      body,
-      { headers }
-    ).subscribe({
+    this.miaChatService.getConversations(email).subscribe({
       next: (data) => {
         const list = Array.isArray(data) ? data : [];
         const sorted = list.sort(
@@ -451,10 +370,8 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   private loadAttachmentsForMessages(mapped: ChatMessage[]): void {
     mapped.forEach((msg, index) => {
       if (!msg.attachment || msg.attachment.type === 'document') return;
-      const dlHeaders = new HttpHeaders({ 'x-api-key': environment.chatApiKey });
       const cleanPath = this.extractCleanPath(msg.attachment.path, msg.attachment.name);
-      const dlBody = { agentId: environment.chatAgentId, channelId: environment.chatChannelId, path: cleanPath };
-      this.http.post(environment.chatDownloadFileUrl, dlBody, { headers: dlHeaders, responseType: 'blob' })
+      this.miaChatService.downloadFile(cleanPath)
         .pipe(takeUntil(this.cancelPending$))
         .subscribe({
           next: (blob) => {
@@ -491,18 +408,8 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     this.conversationMessagesLoading.set(true);
     this.messages.set([]);
     this.summary.set('');
-    const headers = new HttpHeaders({ 'x-api-key': environment.chatApiKey });
-    const body = {
-      agentId: environment.chatAgentId,
-      channelId: environment.chatChannelId,
-      contactId: email,
-      conversationId: conv.id
-    };
-    this.http.post<ConversationMessage[]>(
-      environment.chatGetMessagesUrl,
-      body,
-      { headers }
-    ).pipe(takeUntil(this.cancelPending$)).subscribe({
+    this.miaChatService.getConversationMessages(email, conv.id)
+      .pipe(takeUntil(this.cancelPending$)).subscribe({
       next: (data) => {
         const mapped = this.mapApiMessagesToChatMessages(data);
         this.messages.set(mapped);
@@ -525,14 +432,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       return;
     }
 
-    const headers = new HttpHeaders({ 'x-api-key': environment.chatApiKey });
-    const body = {
-      agentId: environment.chatAgentId,
-      channelId: environment.chatChannelId,
-      contactId: email,
-      conversationId: targetConvId
-    };
-
     let attempts = 0;
     const maxAttempts = 60; // Max 5 minutes (60 * 5s)
 
@@ -543,11 +442,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         if (attempts > maxAttempts) {
           throw new Error('Polling timeout');
         }
-        return this.http.post<ConversationMessage[]>(
-          environment.chatGetMessagesUrl,
-          body,
-          { headers }
-        );
+        return this.miaChatService.getConversationMessages(email, targetConvId);
       })
     ).subscribe({
       next: (data) => {
@@ -811,24 +706,17 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     const conversationId = this.selectedConversationId();
     const sendTimeSeconds = Math.floor(Date.now() / 1000);
 
-    const payload: WebMessageRequest = {
-      agentId: environment.chatAgentId,
-      conversationId: conversationId || null,
-      contactId: email || '',
-      channelId: environment.chatChannelId,
-      message: {
-        text: userText || null,
-        type: webMessageFile ? fileMessageType : 'text',
-        timestamp: String(sendTimeSeconds),
-        file: webMessageFile || null
-      }
-    };
+    const payload = this.miaChatService.buildMessagePayload(
+      email,
+      userText,
+      conversationId,
+      webMessageFile,
+      fileMessageType,
+      sendTimeSeconds
+    );
 
-    this.http.post<any>(
-      environment.chatSendMessageUrl,
-      payload,
-      { headers: { 'x-api-key': environment.chatApiKey } }
-    ).pipe(takeUntil(this.cancelPending$)).subscribe({
+    this.miaChatService.sendMessage(payload)
+      .pipe(takeUntil(this.cancelPending$)).subscribe({
       next: (response) => {
         const convId = response?.conversationId || conversationId || this.selectedConversationId();
         if (response?.conversationId) {

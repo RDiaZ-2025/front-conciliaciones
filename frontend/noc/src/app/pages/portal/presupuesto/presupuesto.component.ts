@@ -1,40 +1,11 @@
 import { LucideIconComponent } from '../../../components/lucide-icon/lucide-icon.component';
-import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, OnDestroy, ChangeDetectorRef } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../../environments/environment';
+import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { catchError } from 'rxjs/operators';
-import { of } from 'rxjs';
 import Chart from 'chart.js/auto';
 
 import { PageHeaderComponent } from '../../../components/page-header/page-header.component';
 import { ButtonModule } from 'primeng/button';
-
-export interface ResumenMensual {
-  mes: string;
-  total_ppto: number;
-  total_ejecucion: number;
-  diferencia: number;
-  porcentaje_cumplimiento: number;
-}
-
-export interface ResumenFuente {
-  fuente: string;
-  seccion: string;
-  total_ppto: number;
-  total_ejecucion: number;
-  diferencia: number;
-  porcentaje_cumplimiento: number;
-}
-
-export interface DashboardResponse {
-  resumen_mensual: ResumenMensual[];
-  desglose_fuentes: ResumenFuente[];
-  total_anual_ppto: number;
-  total_anual_ejecucion: number;
-  diferencia_anual: number;
-  porcentaje_anual: number;
-}
+import { PresupuestoService, DashboardResponse, ResumenFuente } from '../../../services/presupuesto.service';
 
 @Component({
   selector: 'app-presupuesto',
@@ -49,7 +20,7 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('chartBarras') chartBarrasCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('chartEvolucion') chartEvolucionCanvas!: ElementRef<HTMLCanvasElement>;
 
-  private apiUrl = environment.apiUrl;
+  private presupuestoService = inject(PresupuestoService);
   private donaChart: Chart | null = null;
   private barrasChart: Chart | null = null;
   private evolucionChart: Chart | null = null;
@@ -68,7 +39,7 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
   mejorFuente: ResumenFuente | null = null;
   peorFuente: ResumenFuente | null = null;
 
-  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
+  constructor(private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.cargarDatos();
@@ -104,55 +75,29 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
     this.isLoading = true;
     this.hasError = false;
     
-    this.http.get<DashboardResponse>(`${this.apiUrl}/portal-presupuesto/dashboard?year=2026&filter_type=${this.periodFilter}`)
-      .pipe(
-        catchError(err => {
-          console.warn('FastAPI offline, using mock dashboard response for budget.', err);
-          return of({
-            resumen_mensual: [
-              { mes: "2026-01", total_ppto: 120000, total_ejecucion: 115000, diferencia: 5000, porcentaje_cumplimiento: 95.8 },
-              { mes: "2026-02", total_ppto: 125000, total_ejecucion: 128000, diferencia: -3000, porcentaje_cumplimiento: 102.4 },
-              { mes: "2026-03", total_ppto: 130000, total_ejecucion: 125000, diferencia: 5000, porcentaje_cumplimiento: 96.1 },
-              { mes: "2026-04", total_ppto: 115000, total_ejecucion: 110000, diferencia: 5000, porcentaje_cumplimiento: 95.6 },
-              { mes: "2026-05", total_ppto: 140000, total_ejecucion: 145000, diferencia: -5000, porcentaje_cumplimiento: 103.5 },
-              { mes: "2026-06", total_ppto: 135000, total_ejecucion: 130000, diferencia: 5000, porcentaje_cumplimiento: 96.3 }
-            ],
-            desglose_fuentes: [
-              { fuente: "Ad Exchange", seccion: "Digital", total_ppto: 350000, total_ejecucion: 342000, diferencia: 8000, porcentaje_cumplimiento: 97.7 },
-              { fuente: "Direct Sales", seccion: "Digital", total_ppto: 250000, total_ejecucion: 260000, diferencia: -10000, porcentaje_cumplimiento: 104.0 },
-              { fuente: "YouTube Red+", seccion: "Redes Sociales", total_ppto: 120000, total_ejecucion: 115000, diferencia: 5000, porcentaje_cumplimiento: 95.8 },
-              { fuente: "Facebook Mon", seccion: "Redes Sociales", total_ppto: 45000, total_ejecucion: 48000, diferencia: -3000, porcentaje_cumplimiento: 106.6 }
-            ],
-            total_anual_ppto: 865000,
-            total_anual_ejecucion: 853000,
-            diferencia_anual: 12000,
-            porcentaje_anual: 98.6
-          });
-        })
-      )
-      .subscribe({
-        next: (res) => {
-          this.data = res;
-          this.analizarFuentes();
-          this.isLoading = false;
-          this.cdr.detectChanges();
-          
-          if (this.activeTab === 'director') {
-              setTimeout(() => this.renderizarGraficas(), 100);
-          }
-        },
-        error: (err) => {
-          console.error('Error cargando presupuesto:', err);
-          this.isLoading = false;
-          this.hasError = true;
-          if (err.status === 403) {
-            this.errorMessage = 'Módulo protegido: No tienes permisos para visualizar el presupuesto.';
-          } else {
-            this.errorMessage = 'Error al cargar los datos del presupuesto.';
-          }
-          this.cdr.detectChanges();
+    this.presupuestoService.getDashboard(2026, this.periodFilter).subscribe({
+      next: (res) => {
+        this.data = res;
+        this.analizarFuentes();
+        this.isLoading = false;
+        this.cdr.detectChanges();
+        
+        if (this.activeTab === 'director') {
+            setTimeout(() => this.renderizarGraficas(), 100);
         }
-      });
+      },
+      error: (err) => {
+        console.error('Error cargando presupuesto:', err);
+        this.isLoading = false;
+        this.hasError = true;
+        if (err.status === 403) {
+          this.errorMessage = 'Módulo protegido: No tienes permisos para visualizar el presupuesto.';
+        } else {
+          this.errorMessage = 'Error al cargar los datos del presupuesto.';
+        }
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   importarPresupuesto(): void {
@@ -161,27 +106,20 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
     this.importSuccess = '';
     this.hasError = false;
     
-    this.http.post<any>(`${this.apiUrl}/portal-presupuesto/importar`, {})
-      .pipe(
-        catchError(err => {
-          console.warn('FastAPI offline, using mock import response.', err);
-          return of({ mensaje: 'Presupuesto importado exitosamente (Offline Mode).' });
-        })
-      )
-      .subscribe({
-        next: (res) => {
-          this.importSuccess = res.mensaje || 'Presupuesto importado exitosamente.';
-          this.isImporting = false;
-          this.cargarDatos();
-        },
-        error: (err) => {
-          console.error('Error importando presupuesto:', err);
-          this.isImporting = false;
-          this.hasError = true;
-          this.errorMessage = 'Error al importar los datos desde el archivo Excel.';
-          this.cdr.detectChanges();
-        }
-      });
+    this.presupuestoService.importarPresupuesto().subscribe({
+      next: (res) => {
+        this.importSuccess = res.mensaje || 'Presupuesto importado exitosamente.';
+        this.isImporting = false;
+        this.cargarDatos();
+      },
+      error: (err) => {
+        console.error('Error importando presupuesto:', err);
+        this.isImporting = false;
+        this.hasError = true;
+        this.errorMessage = 'Error al importar los datos desde el archivo Excel.';
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   private analizarFuentes(): void {

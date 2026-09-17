@@ -43,28 +43,28 @@ router.post('/agent/chat', authenticateToken, nocAgentController.agentChat);
 router.get('/agent/health', nocAgentController.agentHealth);
 
 // News Scheduler (Support both /noc/news-scheduler and /news-scheduler)
-router.get(['/news-scheduler', '/noc/news-scheduler'], authenticateToken, (req, res) => nocNewsSchedulerController.getSchedules(req, res));
-router.get(['/news-scheduler/:id', '/noc/news-scheduler/:id'], authenticateToken, (req, res) => nocNewsSchedulerController.getScheduleById(req, res));
-router.post(['/news-scheduler', '/noc/news-scheduler'], authenticateToken, (req, res) => nocNewsSchedulerController.createSchedule(req, res));
-router.put(['/news-scheduler/:id', '/noc/news-scheduler/:id'], authenticateToken, (req, res) => nocNewsSchedulerController.updateSchedule(req, res));
-router.patch(['/news-scheduler/:id/toggle', '/noc/news-scheduler/:id/toggle'], authenticateToken, (req, res) => nocNewsSchedulerController.toggleActive(req, res));
-router.post(['/news-scheduler/:id/record-execution', '/noc/news-scheduler/:id/record-execution'], authenticateToken, (req, res) => nocNewsSchedulerController.recordExecution(req, res));
-router.post(['/news-scheduler/:id/run', '/noc/news-scheduler/:id/run'], authenticateToken, (req, res) => nocNewsSchedulerController.executeSchedule(req, res));
-router.delete(['/news-scheduler/:id', '/noc/news-scheduler/:id'], authenticateToken, (req, res) => nocNewsSchedulerController.deleteSchedule(req, res));
+router.get(['/news-scheduler', '/noc/news-scheduler'], authenticateToken, nocNewsSchedulerController.getSchedules);
+router.get(['/news-scheduler/:id', '/noc/news-scheduler/:id'], authenticateToken, nocNewsSchedulerController.getScheduleById);
+router.post(['/news-scheduler', '/noc/news-scheduler'], authenticateToken, nocNewsSchedulerController.createSchedule);
+router.put(['/news-scheduler/:id', '/noc/news-scheduler/:id'], authenticateToken, nocNewsSchedulerController.updateSchedule);
+router.patch(['/news-scheduler/:id/toggle', '/noc/news-scheduler/:id/toggle'], authenticateToken, nocNewsSchedulerController.toggleActive);
+router.post(['/news-scheduler/:id/record-execution', '/noc/news-scheduler/:id/record-execution'], authenticateToken, nocNewsSchedulerController.recordExecution);
+router.post(['/news-scheduler/:id/run', '/noc/news-scheduler/:id/run'], authenticateToken, nocNewsSchedulerController.executeSchedule);
+router.delete(['/news-scheduler/:id', '/noc/news-scheduler/:id'], authenticateToken, nocNewsSchedulerController.deleteSchedule);
 
 // Borradores / Drafts (Protegido contra inyecciones no autorizadas)
-router.post(['/news-scheduler/draft', '/noc/news-scheduler/draft'], authenticateTokenOrWebhook, (req, res) => nocNewsSchedulerController.saveDraft(req, res));
-router.get(['/news-scheduler/:id/drafts', '/noc/news-scheduler/:id/drafts'], authenticateToken, (req, res) => nocNewsSchedulerController.getDrafts(req, res));
-router.get(['/news-scheduler/drafts/detail/:id', '/noc/news-scheduler/drafts/detail/:id'], authenticateToken, (req, res) => nocNewsSchedulerController.getDraftDetail(req, res));
-router.put(['/news-scheduler/drafts/:id', '/noc/news-scheduler/drafts/:id'], authenticateToken, (req, res) => nocNewsSchedulerController.updateDraft(req, res));
-router.delete(['/news-scheduler/drafts/:id', '/noc/news-scheduler/drafts/:id'], authenticateToken, (req, res) => nocNewsSchedulerController.deleteDraft(req, res));
-router.post(['/news-scheduler/drafts/preview', '/noc/news-scheduler/drafts/preview'], authenticateToken, (req, res) => nocNewsSchedulerController.previewDraft(req, res));
-router.post(['/news-scheduler/drafts/:id/publish', '/noc/news-scheduler/drafts/:id/publish'], authenticateToken, (req, res) => nocNewsSchedulerController.publishDraft(req, res));
+router.post(['/news-scheduler/draft', '/noc/news-scheduler/draft'], authenticateTokenOrWebhook, nocNewsSchedulerController.saveDraft);
+router.get(['/news-scheduler/:id/drafts', '/noc/news-scheduler/:id/drafts'], authenticateToken, nocNewsSchedulerController.getDrafts);
+router.get(['/news-scheduler/drafts/detail/:id', '/noc/news-scheduler/drafts/detail/:id'], authenticateToken, nocNewsSchedulerController.getDraftDetail);
+router.put(['/news-scheduler/drafts/:id', '/noc/news-scheduler/drafts/:id'], authenticateToken, nocNewsSchedulerController.updateDraft);
+router.delete(['/news-scheduler/drafts/:id', '/noc/news-scheduler/drafts/:id'], authenticateToken, nocNewsSchedulerController.deleteDraft);
+router.post(['/news-scheduler/drafts/preview', '/noc/news-scheduler/drafts/preview'], authenticateToken, nocNewsSchedulerController.previewDraft);
+router.post(['/news-scheduler/drafts/:id/publish', '/noc/news-scheduler/drafts/:id/publish'], authenticateToken, nocNewsSchedulerController.publishDraft);
 
 // Acciones de Inteligencia Artificial (IA) sobre Borradores
-router.post(['/news-scheduler/drafts/:id/ai-adjust-paragraph', '/noc/news-scheduler/drafts/:id/ai-adjust-paragraph'], authenticateToken, (req, res) => nocNewsSchedulerController.aiAdjustParagraph(req, res));
-router.post(['/news-scheduler/drafts/:id/ai-adjust-article', '/noc/news-scheduler/drafts/:id/ai-adjust-article'], authenticateToken, (req, res) => nocNewsSchedulerController.aiAdjustArticle(req, res));
-router.post(['/news-scheduler/drafts/:id/ai-regenerate-image', '/noc/news-scheduler/drafts/:id/ai-regenerate-image'], authenticateToken, (req, res) => nocNewsSchedulerController.aiRegenerateImage(req, res));
+router.post(['/news-scheduler/drafts/:id/ai-adjust-paragraph', '/noc/news-scheduler/drafts/:id/ai-adjust-paragraph'], authenticateToken, nocNewsSchedulerController.aiAdjustParagraph);
+router.post(['/news-scheduler/drafts/:id/ai-adjust-article', '/noc/news-scheduler/drafts/:id/ai-adjust-article'], authenticateToken, nocNewsSchedulerController.aiAdjustArticle);
+router.post(['/news-scheduler/drafts/:id/ai-regenerate-image', '/noc/news-scheduler/drafts/:id/ai-regenerate-image'], authenticateToken, nocNewsSchedulerController.aiRegenerateImage);
 
 export default router;
 
