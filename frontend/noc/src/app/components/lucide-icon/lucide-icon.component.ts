@@ -41,12 +41,50 @@ export class LucideIconComponent implements OnInit, OnChanges {
     }
   }
 
+  private readonly iconAliases: Record<string, string> = {
+    'users': 'Users',
+    'user': 'User',
+    'inbox': 'Inbox',
+    'sliders-h': 'SlidersHorizontal',
+    'sliders': 'Sliders',
+    'file-edit': 'FilePenLine',
+    'database': 'Database',
+    'lightbulb': 'Lightbulb',
+    'rocket': 'Rocket',
+    'chart-line': 'LineChart',
+    'tag': 'Tag'
+  };
+
+  private resolveIconName(name: string): string {
+    if (!name) return '';
+    let clean = name.trim();
+    clean = clean.replace(/^pi\s+pi-/, '').replace(/^pi-/, '').replace(/^pi\s+/, '');
+    const tokens = clean.split(/\s+/);
+    const mainToken = tokens.find(t => !t.startsWith('text-') && !t.startsWith('bg-') && !t.startsWith('p-')) || tokens[0];
+    const key = mainToken.toLowerCase();
+
+    if (this.iconAliases[key]) {
+      return this.iconAliases[key];
+    }
+
+    return this.toPascalCase(mainToken);
+  }
+
   private renderIcon() {
     if (!this.name) return;
 
-    const pascalName = this.toPascalCase(this.name);
-    const icon = (icons as any)[pascalName];
-    
+    const resolvedName = this.resolveIconName(this.name);
+    let icon = (icons as any)[resolvedName];
+
+    if (!icon) {
+      const directPascal = this.toPascalCase(this.name);
+      icon = (icons as any)[directPascal];
+    }
+
+    if (!icon) {
+      icon = (icons as any)['Circle'] || (icons as any)['HelpCircle'];
+    }
+
     if (icon) {
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
@@ -73,8 +111,6 @@ export class LucideIconComponent implements OnInit, OnChanges {
 
       this.el.nativeElement.innerHTML = '';
       this.el.nativeElement.appendChild(svg);
-    } else {
-      console.warn(`Lucide icon not found: ${this.name} (${pascalName})`);
     }
   }
 
