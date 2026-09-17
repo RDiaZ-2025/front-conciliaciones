@@ -1,9 +1,10 @@
 import { BaseApiService } from './base-api.service';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { map, catchError, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
+import { SYSTEM_MODULES } from '../models/common/modules-config';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -93,4 +94,50 @@ export class UserService extends BaseApiService {
   updateUserPermissions(id: number, permissions: string[]): Observable<any> {
     return this.http.put(`${this.apiUrl}/${id}/permissions`, { permissions });
   }
+
+  private cachedModules: any[] | null = null;
+
+  getSystemModules(forceRefresh = false): Observable<any[]> {
+    if (this.cachedModules && !forceRefresh) {
+      return new Observable<any[]>(observer => {
+        observer.next(this.cachedModules!);
+        observer.complete();
+      });
+    }
+    return this.http.get<any[]>(`${environment.apiUrl}/system-modules`).pipe(
+      map(backendModules => {
+        return SYSTEM_MODULES.map(sysMod => {
+          const backMod = backendModules.find(bm => bm.name === sysMod.name);
+          return {
+            ...sysMod,
+            submodules: sysMod.submodules.map(sysSub => {
+              let backSub: any = null;
+              if (backMod) {
+                backSub = backMod.submodules.find((bs: any) => bs.code === sysSub.code);
+              }
+              return {
+                ...sysSub,
+                is_under_maintenance: backSub ? backSub.is_under_maintenance : false,
+                maintenance_message: backSub ? backSub.maintenance_message : 'Módulo en mantenimiento',
+                is_disabled: backSub ? backSub.is_disabled : false
+              };
+            })
+          };
+        });
+      }),
+      catchError(err => {
+        return of(SYSTEM_MODULES.map(sysMod => ({
+          ...sysMod,
+          submodules: sysMod.submodules.map(sysSub => ({
+            ...sysSub,
+            is_under_maintenance: false,
+            maintenance_message: 'Módulo en mantenimiento',
+            is_disabled: false
+          }))
+        })));
+      }),
+      tap(modules => this.cachedModules = modules)
+    );
+  }
 }
+

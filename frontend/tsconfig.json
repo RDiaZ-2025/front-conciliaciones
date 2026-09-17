@@ -29,12 +29,6 @@
     },
     {
       "path": "./voc/tsconfig.spec.json"
-    },
-    {
-      "path": "./noc/tsconfig.app.json"
-    },
-    {
-      "path": "./noc/tsconfig.spec.json"
     }
   ]
 }

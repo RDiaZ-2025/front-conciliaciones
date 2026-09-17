@@ -3,15 +3,19 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
+    "start": "ng serve voc",
+    "dev": "ng serve voc --port 5173",
+    "build": "ng build voc",
     "start:voc": "ng serve voc",
-    "start:noc": "ng serve noc",
+    "start:noc": "ng serve voc",
     "dev:voc": "ng serve voc --port 5173",
-    "dev:noc": "ng serve noc --port 5174",
+    "dev:noc": "ng serve voc --port 5173",
     "build:voc": "ng build voc",
-    "build:noc": "ng build noc",
+    "build:noc": "ng build voc",
     "watch": "ng build voc --watch --configuration development",
+    "test": "ng test voc",
     "test:voc": "ng test voc",
-    "test:noc": "ng test noc"
+    "test:noc": "ng test voc"
   },
   "prettier": {
     "printWidth": 100,

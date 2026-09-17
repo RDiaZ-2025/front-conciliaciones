@@ -218,7 +218,7 @@ export class LayoutComponent implements OnInit {
 
   private fetchMenuItems() {
     this.loading.set(true);
-    this.menuService.getAllMenuItems('voc').subscribe({
+    this.menuService.getAllMenuItems().subscribe({
       next: (response) => {
         if (response.success) {
           const allItems = response.data;
