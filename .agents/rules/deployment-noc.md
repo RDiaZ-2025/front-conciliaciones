@@ -9,11 +9,11 @@ This rule outlines the step-by-step process to deploy the NOC system components.
 
 ## 1. NOC Frontend Deployment
 
-The NOC frontend is an Angular application located in `frontend/noc/`.
+The NOC frontend has been unified into VOC located in `frontend/voc/`.
 
 ### Automated Deployment (Recommended)
 - **CI/CD Pipeline:** Deployed automatically using GitHub Actions via `.github/workflows/azure-static-web-apps-noc.yml`.
-- **Trigger:** Any push or merged Pull Request to the `main` branch that modifies files in the `frontend/noc/**` path.
+- **Trigger:** Any push or merged Pull Request to the `main` branch that modifies files in the `frontend/**` path.
 - **Azure Resource:** Azure Static Web App.
 
 ### Manual / Local Build
@@ -22,11 +22,11 @@ If you need to build the frontend locally to verify it:
    ```bash
    cd frontend
    ```
-2. Build the NOC project:
+2. Build the project:
    ```bash
-   npm run build:noc
+   npm run build:voc
    ```
-3. The build artifacts will be generated in `frontend/dist/noc/browser/`.
+3. The build artifacts will be generated in `frontend/dist/voc/browser/`.
 
 ---
 

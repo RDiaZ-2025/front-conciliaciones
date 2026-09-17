@@ -13,7 +13,7 @@ The VOC frontend is an Angular application located in `frontend/voc/`.
 
 ### Automated Deployment (Recommended)
 - **CI/CD Pipeline:** Deployed automatically using GitHub Actions via `.github/workflows/azure-static-web-apps-blue-pebble-080603f0f.yml`.
-- **Trigger:** Any push or merged Pull Request to the `main` branch that modifies files in the `frontend/voc/**` path.
+- **Trigger:** Any push or merged Pull Request to the `main` branch that modifies files in the `frontend/**` path.
 - **Azure Resource:** Azure Static Web App (e.g., `wonderful-coast-0c074260f`).
 
 ### Manual / Local Build
