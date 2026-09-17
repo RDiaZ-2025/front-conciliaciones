@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, requirePermission } from '../middleware/auth';
+import { authenticateToken, requirePermission, authenticateTokenOrWebhook } from '../middleware/auth';
 import { SystemModulesController } from '../controllers/system_modules.controller';
 import { NocDashboardController } from '../controllers/noc_dashboard.controller';
 import { NocIngresosController } from '../controllers/noc_ingresos.controller';
@@ -52,8 +52,8 @@ router.post(['/news-scheduler/:id/record-execution', '/noc/news-scheduler/:id/re
 router.post(['/news-scheduler/:id/run', '/noc/news-scheduler/:id/run'], authenticateToken, (req, res) => nocNewsSchedulerController.executeSchedule(req, res));
 router.delete(['/news-scheduler/:id', '/noc/news-scheduler/:id'], authenticateToken, (req, res) => nocNewsSchedulerController.deleteSchedule(req, res));
 
-// Borradores / Drafts
-router.post(['/news-scheduler/draft', '/noc/news-scheduler/draft'], (req, res) => nocNewsSchedulerController.saveDraft(req, res)); // PUBLIC
+// Borradores / Drafts (Protegido contra inyecciones no autorizadas)
+router.post(['/news-scheduler/draft', '/noc/news-scheduler/draft'], authenticateTokenOrWebhook, (req, res) => nocNewsSchedulerController.saveDraft(req, res));
 router.get(['/news-scheduler/:id/drafts', '/noc/news-scheduler/:id/drafts'], authenticateToken, (req, res) => nocNewsSchedulerController.getDrafts(req, res));
 router.get(['/news-scheduler/drafts/detail/:id', '/noc/news-scheduler/drafts/detail/:id'], authenticateToken, (req, res) => nocNewsSchedulerController.getDraftDetail(req, res));
 router.put(['/news-scheduler/drafts/:id', '/noc/news-scheduler/drafts/:id'], authenticateToken, (req, res) => nocNewsSchedulerController.updateDraft(req, res));

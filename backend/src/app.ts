@@ -33,21 +33,39 @@ const app = express();
 // Confiar en el primer proxy (Azure App Service / Reverse Proxy) para obtener la IP real del cliente
 app.set('trust proxy', 1);
 
-const corsOptions = {
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:5173',
-    'http://localhost:5173', // Desarrollo local
-    'http://localhost:5174', // Puerto alternativo cuando 5173 está ocupado
-    'https://vocclaromedia.com', // Dominio de producción
-    'https://www.vocclaromedia.com', // Dominio de producción con www
-    'https://blue-pebble-080603f0f.3.azurestaticapps.net', // Producción (URL anterior)
-    'https://wonderful-coast-0c074260f.7.azurestaticapps.net' // Producción (URL actual)
-  ],
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Lista de orígenes de producción permitidos
+const allowedOrigins: string[] = [
+  'https://vocclaromedia.com',
+  'https://www.vocclaromedia.com',
+  'https://blue-pebble-080603f0f.3.azurestaticapps.net',
+  'https://wonderful-coast-0c074260f.7.azurestaticapps.net'
+];
+
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
+// Orígenes locales solo permitidos en desarrollo o si se habilitan explícitamente
+if (!isProduction || process.env.ALLOW_LOCALHOST_CORS === 'true') {
+  allowedOrigins.push('http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000');
+}
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Permitir peticiones sin origen (ej. curl, tareas programadas, llamadas de servidor a servidor)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`Acceso denegado por CORS para el origen: ${origin}`));
+  },
   credentials: true,
   optionsSuccessStatus: 200
 };
 
-// Configuración de Rate Limiting
+// Configuración de Rate Limiting general para la API
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutos
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '1000'),     // 1000 peticiones por ventana
@@ -59,13 +77,24 @@ const limiter = rateLimit({
   }
 });
 
-// Middlewares globales
-app.use(helmet()); // Seguridad
-app.use(cors(corsOptions)); // CORS
+// Middlewares globales de seguridad
+app.use(helmet({
+  contentSecurityPolicy: false, // Gestionado por headers del reverse proxy / frontend
+  crossOriginEmbedderPolicy: false,
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  },
+  frameguard: {
+    action: 'sameorigin'
+  }
+}));
+app.use(cors(corsOptions)); // CORS controlado
 app.use(compression()); // Compresión
 app.use(morgan('combined')); // Logging
 if (process.env.NODE_ENV === 'production') {
-  app.use(limiter); // Rate limiting solo en producción
+  app.use(limiter); // Rate limiting en producción
 }
 app.use(cookieParser()); // Cookies
 app.use(express.json({ limit: '10mb' })); // JSON parser
@@ -95,17 +124,6 @@ app.get('/health', skipLogging, (req, res) => {
     message: 'Servidor funcionando correctamente',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
-  });
-});
-
-// Test route for debugging Azure deployment
-app.get('/api/test/permissions', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Test route working',
-    data: [
-      { id: 1, name: 'test_permission', description: 'Test permission' }
-    ]
   });
 });
 

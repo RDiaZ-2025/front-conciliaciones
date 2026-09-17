@@ -69,7 +69,6 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
 export const requirePermission = (permission: string) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-
       if (!req.user) {
         res.status(401).json({
           success: false,
@@ -78,15 +77,14 @@ export const requirePermission = (permission: string) => {
         return;
       }
 
-      // Bypass for admin users or specific email
-      if (req.user.role?.toLowerCase() === 'admin' || req.user.email?.toLowerCase() === 'ener28@hotmail.com') {
+      // Bypass for admin users
+      if (req.user.role?.toLowerCase() === 'admin') {
         next();
         return;
       }
 
       // Obtener permisos del usuario desde la base de datos
       const userPermissions = await authService.getUserPermissions(req.user.userId);
-
 
       // Comparar directamente con los permisos de la base de datos
       if (!userPermissions.includes(permission)) {
@@ -117,6 +115,11 @@ export const requireAnyPermission = (permissions: string[]) => {
           success: false,
           message: 'Token de acceso requerido'
         });
+        return;
+      }
+
+      if (req.user.role?.toLowerCase() === 'admin') {
+        next();
         return;
       }
 
@@ -156,6 +159,11 @@ export const requireAllPermissions = (permissions: string[]) => {
         return;
       }
 
+      if (req.user.role?.toLowerCase() === 'admin') {
+        next();
+        return;
+      }
+
       // Obtener permisos del usuario desde la base de datos
       const userPermissions = await authService.getUserPermissions(req.user.userId);
 
@@ -179,4 +187,51 @@ export const requireAllPermissions = (permissions: string[]) => {
       });
     }
   };
+};
+
+// Middleware para permitir tanto usuarios autenticados como webhooks automatizados autorizados (ej. n8n)
+export const authenticateTokenOrWebhook = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const webhookSecret = process.env.N8N_WEBHOOK_SECRET || process.env.WEBHOOK_SECRET;
+  const providedSecret = (req.headers['x-webhook-secret'] as string) || (req.headers['x-api-key'] as string);
+
+  // 1. Validar si coincide con el secreto de webhook configurado
+  if (webhookSecret && providedSecret && providedSecret === webhookSecret) {
+    return next();
+  }
+
+  // 2. Validar cabecera de autorización Bearer
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    res.status(401).json({
+      success: false,
+      message: 'Autenticación requerida (Token JWT o cabecera X-Webhook-Secret válida)'
+    });
+    return;
+  }
+
+  // Si se envió el secreto como Bearer token
+  if (webhookSecret && token === webhookSecret) {
+    return next();
+  }
+
+  try {
+    const decoded = await authService.verifyToken(token);
+    if (!decoded) {
+      res.status(403).json({
+        success: false,
+        message: 'Token inválido o expirado'
+      });
+      return;
+    }
+
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(403).json({
+      success: false,
+      message: 'Token inválido o expirado'
+    });
+  }
 };

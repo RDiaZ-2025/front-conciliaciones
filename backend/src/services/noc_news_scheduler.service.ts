@@ -646,7 +646,10 @@ export class NocNewsSchedulerService {
             console.log(`📡 [N8N Request][AI Adjust Paragraph] Sending to: ${n8nAdjustParagraphUrl}`);
             console.log(`📦 [N8N Payload][AI Adjust Paragraph]:`, JSON.stringify(payload, null, 2));
             const startTime = Date.now();
-            const response = await axios.post(n8nAdjustParagraphUrl, payload, { timeout: 45000 });
+            const response = await axios.post(n8nAdjustParagraphUrl, payload, { 
+                timeout: 45000,
+                headers: this.getN8nHeaders()
+            });
             const duration = Date.now() - startTime;
             console.log(`✅ [N8N Response][AI Adjust Paragraph] (${duration}ms) Status: ${response.status}`);
             console.log(`📥 [N8N Response Data][AI Adjust Paragraph]:`, JSON.stringify(response.data, null, 2));
@@ -693,7 +696,10 @@ export class NocNewsSchedulerService {
             console.log(`📡 [N8N Request][AI Adjust Article] Sending to: ${n8nAdjustArticleUrl}`);
             console.log(`📦 [N8N Payload][AI Adjust Article]:`, JSON.stringify(payload, null, 2));
             const startTime = Date.now();
-            const response = await axios.post(n8nAdjustArticleUrl, payload, { timeout: 60000 });
+            const response = await axios.post(n8nAdjustArticleUrl, payload, { 
+                timeout: 60000,
+                headers: this.getN8nHeaders()
+            });
             const duration = Date.now() - startTime;
             console.log(`✅ [N8N Response][AI Adjust Article] (${duration}ms) Status: ${response.status}`);
             console.log(`📥 [N8N Response Data][AI Adjust Article]:`, JSON.stringify(response.data, null, 2));
@@ -744,7 +750,10 @@ export class NocNewsSchedulerService {
             console.log(`📡 [N8N Request][AI Regenerate Image] Sending to: ${n8nRegenerateImageUrl}`);
             console.log(`📦 [N8N Payload][AI Regenerate Image]:`, JSON.stringify(payload, null, 2));
             const startTime = Date.now();
-            const response = await axios.post(n8nRegenerateImageUrl, payload, { timeout: 120000 });
+            const response = await axios.post(n8nRegenerateImageUrl, payload, { 
+                timeout: 120000,
+                headers: this.getN8nHeaders()
+            });
             const duration = Date.now() - startTime;
             console.log(`✅ [N8N Response][AI Regenerate Image] (${duration}ms) Status: ${response.status}`);
             console.log(`📥 [N8N Response Data][AI Regenerate Image]:`, JSON.stringify(response.data, null, 2));
@@ -821,6 +830,17 @@ export class NocNewsSchedulerService {
 
     // --- Pipeline Modular de Inteligencia Artificial (Microservicios) ---
 
+    private getN8nHeaders(): Record<string, string> {
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json'
+        };
+        const secret = process.env.N8N_WEBHOOK_SECRET || process.env.WEBHOOK_SECRET;
+        if (secret) {
+            headers['X-Webhook-Secret'] = secret;
+        }
+        return headers;
+    }
+
     private async step1_extractNews(topic: string, userInstructions: string | null, sources: string[]): Promise<any> {
         if (!this.extractNewsUrl) {
             throw new Error('La variable de entorno N8N_AI_EXTRACT_NEWS_URL no está configurada en el servidor');
@@ -839,7 +859,10 @@ export class NocNewsSchedulerService {
             console.log(`📡 [N8N Request][Pipeline Step 1 - Extract News] Sending to: ${this.extractNewsUrl}`);
             console.log(`📦 [N8N Payload][Pipeline Step 1]:`, JSON.stringify(payload, null, 2));
             const startTime = Date.now();
-            const response = await axios.post(this.extractNewsUrl, payload, { timeout: 180000 });
+            const response = await axios.post(this.extractNewsUrl, payload, { 
+                timeout: 180000,
+                headers: this.getN8nHeaders()
+            });
             const duration = Date.now() - startTime;
             console.log(`✅ [N8N Response][Pipeline Step 1] (${duration}ms) Status: ${response.status}`);
             console.log(`📥 [N8N Response Data][Pipeline Step 1]:`, JSON.stringify(response.data, null, 2));
@@ -879,7 +902,10 @@ export class NocNewsSchedulerService {
             console.log(`📡 [N8N Request][Pipeline Step 2 - Draft Article] Sending to: ${this.draftArticleUrl}`);
             console.log(`📦 [N8N Payload][Pipeline Step 2]:`, JSON.stringify(payload, null, 2));
             const startTime = Date.now();
-            const response = await axios.post(this.draftArticleUrl, payload, { timeout: 180000 });
+            const response = await axios.post(this.draftArticleUrl, payload, { 
+                timeout: 180000,
+                headers: this.getN8nHeaders()
+            });
             const duration = Date.now() - startTime;
             console.log(`✅ [N8N Response][Pipeline Step 2] (${duration}ms) Status: ${response.status}`);
             console.log(`📥 [N8N Response Data][Pipeline Step 2]:`, JSON.stringify(response.data, null, 2));
@@ -890,12 +916,45 @@ export class NocNewsSchedulerService {
             }
             throw new Error('La respuesta de n8n no contiene la estructura esperada del artículo (title/blocks)');
         } catch (err: any) {
-            console.error(`❌ [N8N Error][Pipeline Step 2 - Draft Article] Webhook call failed:`, {
+            console.error('❌ [AI Pipeline] Error en paso 2 (Periodista IA):', {
                 message: err.message,
                 status: err.response?.status,
                 data: err.response?.data
             });
             throw new Error(`Error en el Paso 2 (Redacción Periodística con IA): ${err.response?.data?.message || err.message}`);
+        }
+    }
+
+    private isSafeImageUrl(urlStr: string): boolean {
+        try {
+            const parsed = new URL(urlStr);
+            if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+                return false;
+            }
+
+            const hostname = parsed.hostname.toLowerCase();
+
+            // Bloquear localhost, loopback y cero
+            if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '0.0.0.0') {
+                return false;
+            }
+
+            // Bloquear servicio de metadatos de la nube (169.254.169.254) y link-local
+            if (hostname.startsWith('169.254.') || hostname.endsWith('.internal') || hostname.endsWith('.local')) {
+                return false;
+            }
+
+            // Bloquear rangos de IP privadas (RFC 1918)
+            if (hostname.startsWith('10.') || hostname.startsWith('192.168.')) {
+                return false;
+            }
+            if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)) {
+                return false;
+            }
+
+            return true;
+        } catch {
+            return false;
         }
     }
 
@@ -909,14 +968,21 @@ export class NocNewsSchedulerService {
             return imageUrl;
         }
 
+        // Protección anti-SSRF
+        if (!this.isSafeImageUrl(imageUrl)) {
+            console.warn(`⚠️ [Security Alert] Rechazada URL sospechosa de SSRF en persistImage: ${imageUrl}`);
+            return imageUrl;
+        }
+
         try {
             console.log(`📥 [Storage Persistence] Downloading image from: ${imageUrl.substring(0, 80)}...`);
             const response = await axios.get(imageUrl, {
                 responseType: 'arraybuffer',
                 timeout: 45000,
                 headers: {
-                    'User-Agent': 'Mozilla/5.0'
-                }
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                },
+                maxContentLength: 20 * 1024 * 1024 // Limitar a 20MB máximo
             });
 
             const buffer = Buffer.from(response.data);
@@ -1004,7 +1070,10 @@ export class NocNewsSchedulerService {
             console.log(`📡 [N8N Request][Pipeline Step 3 - Generate Image] Sending to: ${this.generateImageUrl}`);
             console.log(`📦 [N8N Payload][Pipeline Step 3]:`, JSON.stringify(payload, null, 2));
             const startTime = Date.now();
-            const response = await axios.post(this.generateImageUrl, payload, { timeout: 120000 });
+            const response = await axios.post(this.generateImageUrl, payload, { 
+                timeout: 120000,
+                headers: this.getN8nHeaders()
+            });
             const duration = Date.now() - startTime;
             console.log(`✅ [N8N Response][Pipeline Step 3] (${duration}ms) Status: ${response.status}`);
             console.log(`📥 [N8N Response Data][Pipeline Step 3]:`, JSON.stringify(response.data, null, 2));

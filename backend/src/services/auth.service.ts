@@ -8,7 +8,7 @@ import { LoginRequest, LoginResponse, JWTPayload } from '../types';
 
 export class AuthService {
   private readonly SALT_ROUNDS = 12;
-  private readonly JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
+  private readonly JWT_SECRET: string;
   private readonly JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
   async login(credentials: LoginRequest): Promise<LoginResponse> {
@@ -65,7 +65,7 @@ export class AuthService {
     let permissions = Array.from(new Set([...dbPermissions, ...colPermissions]));
 
     // Interceptar para compatibilidad de desarrollo / demo / admin
-    if (user.email?.toLowerCase() === 'ener28@hotmail.com' || user.role?.toLowerCase() === 'admin') {
+    if (user.role?.toLowerCase() === 'admin') {
       permissions = Array.from(new Set([
         ...permissions,
         'dashboard',
@@ -150,7 +150,7 @@ export class AuthService {
 
     let permissions = Array.from(new Set([...dbPermissions, ...colPermissions]));
 
-    if (user && (user.email?.toLowerCase() === 'ener28@hotmail.com' || user.role?.toLowerCase() === 'admin')) {
+    if (user && user.role?.toLowerCase() === 'admin') {
       permissions = Array.from(new Set([
         ...permissions,
         'dashboard',
@@ -229,6 +229,10 @@ export class AuthService {
   }
 
   async initializeUsers(): Promise<string[]> {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Operación no permitida: la inicialización de usuarios de prueba está deshabilitada en producción');
+    }
+
     if (!AppDataSource.isInitialized) {
       throw new Error('Base de datos no disponible');
     }
@@ -313,11 +317,15 @@ export class AuthService {
   }
 
   constructor() {
-
-    // Debug: verificar que JWT_SECRET esté cargado
-    if (!process.env.JWT_SECRET) {
-      console.warn('⚠️ JWT_SECRET no encontrado en variables de entorno, usando fallback');
+    const secret = process.env.JWT_SECRET;
+    if (!secret || secret === 'fallback-secret-key-for-development') {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('FATAL SECURITY ERROR: JWT_SECRET must be securely set in environment variables in production.');
+      }
+      console.warn('⚠️ ADVERTENCIA DE SEGURIDAD: JWT_SECRET no configurado, utilizando clave de desarrollo.');
+      this.JWT_SECRET = 'fallback-secret-key-for-development';
+    } else {
+      this.JWT_SECRET = secret;
     }
-
   }
 }

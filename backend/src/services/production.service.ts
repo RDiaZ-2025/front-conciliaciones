@@ -1415,64 +1415,69 @@ export class ProductionService {
 
     async adminDeleteForm(id: number, physicalDelete: boolean = false) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+
+        const numericId = Number(id);
+        if (!Number.isInteger(numericId) || numericId <= 0) {
+            throw new Error('ID de formulario inválido');
+        }
         
         if (physicalDelete) {
             return await AppDataSource.transaction(async (manager) => {
                 // 1. Unlink form from any workflow stage pointing to it as form to fill
-                await manager.query(`UPDATE DynamicWorkflowStages SET FormIdToFill = NULL WHERE FormIdToFill = ${id};`);
+                await manager.query(`UPDATE DynamicWorkflowStages SET FormIdToFill = NULL WHERE FormIdToFill = @0;`, [numericId]);
 
                 // 2. Unlink any submission parent/children and clear currentStageId
                 await manager.query(`
                     UPDATE DynamicFormSubmissions 
                     SET ParentSubmissionId = NULL, CurrentStageId = NULL 
-                    WHERE FormId = ${id} OR ParentSubmissionId IN (SELECT Id FROM DynamicFormSubmissions WHERE FormId = ${id});
-                `);
+                    WHERE FormId = @0 OR ParentSubmissionId IN (SELECT Id FROM DynamicFormSubmissions WHERE FormId = @0);
+                `, [numericId]);
 
                 // 3. Nullify WorkflowStateId on DynamicFormFieldValues if column exists
                 await manager.query(`
                     IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('DynamicFormFieldValues') AND name = 'WorkflowStateId')
                     BEGIN
                         UPDATE DynamicFormFieldValues SET WorkflowStateId = NULL 
-                        WHERE FieldId IN (SELECT Id FROM DynamicFormFields WHERE FormId = ${id})
-                           OR SubmissionId IN (SELECT Id FROM DynamicFormSubmissions WHERE FormId = ${id});
+                        WHERE FieldId IN (SELECT Id FROM DynamicFormFields WHERE FormId = @0)
+                           OR SubmissionId IN (SELECT Id FROM DynamicFormSubmissions WHERE FormId = @0);
                     END
-                `);
+                `, [numericId]);
 
                 // 4. Delete DynamicFormFieldValues
                 await manager.query(`
                     DELETE FROM DynamicFormFieldValues 
-                    WHERE FieldId IN (SELECT Id FROM DynamicFormFields WHERE FormId = ${id})
-                       OR SubmissionId IN (SELECT Id FROM DynamicFormSubmissions WHERE FormId = ${id});
-                `);
+                    WHERE FieldId IN (SELECT Id FROM DynamicFormFields WHERE FormId = @0)
+                       OR SubmissionId IN (SELECT Id FROM DynamicFormSubmissions WHERE FormId = @0);
+                `, [numericId]);
 
                 // 5. Delete DynamicSubmissionWorkflowState
                 await manager.query(`
                     DELETE FROM DynamicSubmissionWorkflowState 
-                    WHERE SubmissionId IN (SELECT Id FROM DynamicFormSubmissions WHERE FormId = ${id})
-                       OR StageId IN (SELECT Id FROM DynamicWorkflowStages WHERE FormId = ${id});
-                `);
+                    WHERE SubmissionId IN (SELECT Id FROM DynamicFormSubmissions WHERE FormId = @0)
+                       OR StageId IN (SELECT Id FROM DynamicWorkflowStages WHERE FormId = @0);
+                `, [numericId]);
 
                 // 6. Delete DynamicFormSubmissions
-                await manager.query(`DELETE FROM DynamicFormSubmissions WHERE FormId = ${id};`);
+                await manager.query(`DELETE FROM DynamicFormSubmissions WHERE FormId = @0;`, [numericId]);
 
                 // 7. Delete DynamicFormFields
-                await manager.query(`DELETE FROM DynamicFormFields WHERE FormId = ${id};`);
+                await manager.query(`DELETE FROM DynamicFormFields WHERE FormId = @0;`, [numericId]);
 
                 // 8. Delete DynamicWorkflowStages where FormId is this form
-                await manager.query(`DELETE FROM DynamicWorkflowStages WHERE FormId = ${id};`);
+                await manager.query(`DELETE FROM DynamicWorkflowStages WHERE FormId = @0;`, [numericId]);
 
                 // 9. Unlink workflowId on this form
-                await manager.query(`UPDATE DynamicForms SET WorkflowId = NULL WHERE Id = ${id};`);
+                await manager.query(`UPDATE DynamicForms SET WorkflowId = NULL WHERE Id = @0;`, [numericId]);
 
                 // 10. Delete the form
-                await manager.query(`DELETE FROM DynamicForms WHERE Id = ${id};`);
+                await manager.query(`DELETE FROM DynamicForms WHERE Id = @0;`, [numericId]);
 
-                return { id, deleted: true };
+                return { id: numericId, deleted: true };
             });
         } else {
             const repo = AppDataSource.getRepository(DynamicForm);
-            await repo.update({ id }, { isActive: false });
-            return await repo.findOne({ where: { id } });
+            await repo.update({ id: numericId }, { isActive: false });
+            return await repo.findOne({ where: { id: numericId } });
         }
     }
 

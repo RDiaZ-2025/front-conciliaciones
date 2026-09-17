@@ -64,7 +64,7 @@ export class StorageController {
       const sasOptions = {
         services: AccountSASServices.parse("f").toString(),
         resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
-        permissions: AccountSASPermissions.parse("racwdl"),
+        permissions: AccountSASPermissions.parse("rcw"), // Read, Create, Write (sin borrado 'd')
         startsOn: startDate,
         expiresOn: expiryDate,
         protocol: SASProtocol.Https,
@@ -93,7 +93,8 @@ export class StorageController {
     const expiryDate = new Date();
     expiryDate.setMinutes(expiryDate.getMinutes() + 60);
 
-    const permissions = ContainerSASPermissions.parse("racwdl");
+    // Permisos restringidos: Lectura, Adición, Creación, Escritura, Listado (sin borrado 'd')
+    const permissions = ContainerSASPermissions.parse("racwl");
 
     const sasOptions = {
       containerName,
