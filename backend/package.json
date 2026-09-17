@@ -54,6 +54,10 @@
     "reflect-metadata": "^0.2.2",
     "tsyringe": "^4.10.0",
     "typeorm": "^0.3.27",
+    "ws": "^8.21.3",
     "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1"
   }
 }
