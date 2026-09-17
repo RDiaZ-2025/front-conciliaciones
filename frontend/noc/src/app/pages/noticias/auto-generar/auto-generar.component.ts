@@ -100,16 +100,22 @@ export class AutoGenerarComponent implements OnInit {
     this.loadSchedules();
   }
 
+  private toLocalDatetimeInput(dateInput: string | Date | null | undefined): string {
+    if (!dateInput) return '';
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return '';
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  }
+
   private initForm(): void {
-    const now = new Date();
-    const nowISO = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    const nowLocal = this.toLocalDatetimeInput(new Date());
 
     this.scheduleForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(3)]],
       topic: ['', [Validators.required, Validators.minLength(3)]],
       userInstructions: [''],
       sources: this.fb.array([this.fb.control('', [Validators.required])]),
-      startAt: [nowISO, [Validators.required]],
+      startAt: [nowLocal, [Validators.required]],
       // Unified inputs
       intervalMinutes: [0, [Validators.required]], // 0 = weekly day/time rules, >0 = regular intervals
       endAt: [''],
@@ -177,14 +183,13 @@ export class AutoGenerarComponent implements OnInit {
   openNew(): void {
     this.isEditMode = false;
     this.currentScheduleId = null;
-    const now = new Date();
-    const nowISO = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    const nowLocal = this.toLocalDatetimeInput(new Date());
 
     this.scheduleForm.reset({
       name: '',
       topic: '',
       userInstructions: '',
-      startAt: nowISO,
+      startAt: nowLocal,
       intervalMinutes: 0,
       endAt: '',
       isActive: true,
@@ -202,10 +207,7 @@ export class AutoGenerarComponent implements OnInit {
     this.isEditMode = true;
     this.currentScheduleId = schedule.id;
 
-    let formattedStartAt = schedule.startAt;
-    if (formattedStartAt && formattedStartAt.length > 16) {
-      formattedStartAt = formattedStartAt.slice(0, 16);
-    }
+    const formattedStartAt = this.toLocalDatetimeInput(schedule.startAt);
 
     const config = schedule.scheduleConfig || {};
     const intervalMin = config.intervalMinutes || 0;
@@ -216,7 +218,7 @@ export class AutoGenerarComponent implements OnInit {
       userInstructions: schedule.userInstructions || '',
       startAt: formattedStartAt,
       intervalMinutes: intervalMin,
-      endAt: config.endAt ? config.endAt.slice(0, 16) : '',
+      endAt: this.toLocalDatetimeInput(config.endAt),
       isActive: schedule.isActive,
       publishAutomatically: schedule.publishAutomatically || false
     });
