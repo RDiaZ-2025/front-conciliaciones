@@ -61,15 +61,6 @@ export class AuthController {
     return;
   });
 
-  initializeUsers = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const users = await this.authService.initializeUsers();
-    res.status(200).json({
-      success: true,
-      message: 'Usuarios inicializados exitosamente',
-      users
-    });
-  });
-
   async logout(req: Request, res: Response): Promise<void> {
     res.status(200).json({
       success: true,

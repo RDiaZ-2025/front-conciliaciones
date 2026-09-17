@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { AuthController } from '../controllers/auth.controller';
-import { authenticateToken, requirePermission } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 const authController = new AuthController();
@@ -29,8 +29,5 @@ router.get('/me', authenticateToken, authController.me);
 
 // Ruta de logout
 router.post('/logout', authController.logout);
-
-// Ruta para inicializar usuarios (solo para desarrollo) - requiere permisos de administrador
-router.post('/initialize-users', authenticateToken, requirePermission('admin_panel'), authController.initializeUsers);
 
 export default router;

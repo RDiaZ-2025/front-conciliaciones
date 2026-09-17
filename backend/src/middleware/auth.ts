@@ -28,7 +28,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     const decoded = await authService.verifyToken(token);
 
     if (!decoded) {
-      res.status(403).json({
+      res.status(401).json({
         success: false,
         message: 'Token inválido o expirado'
       });
@@ -38,7 +38,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     req.user = decoded;
     next();
   } catch (error) {
-    res.status(403).json({
+    res.status(401).json({
       success: false,
       message: 'Token inválido o expirado'
     });
@@ -65,7 +65,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
   next();
 };
 
-// Middleware para verificar permisos específicos
+// Middleware para verificar permisos específicos contra la base de datos
 export const requirePermission = (permission: string) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -77,7 +77,7 @@ export const requirePermission = (permission: string) => {
         return;
       }
 
-      // Bypass for admin users
+      // Bypass para administradores
       if (req.user.role?.toLowerCase() === 'admin') {
         next();
         return;
@@ -85,9 +85,9 @@ export const requirePermission = (permission: string) => {
 
       // Obtener permisos del usuario desde la base de datos
       const userPermissions = await authService.getUserPermissions(req.user.userId);
+      const hasPermission = userPermissions.some(p => p.toLowerCase() === permission.toLowerCase());
 
-      // Comparar directamente con los permisos de la base de datos
-      if (!userPermissions.includes(permission)) {
+      if (!hasPermission) {
         res.status(403).json({
           success: false,
           message: `Permiso requerido: ${permission}`
@@ -125,8 +125,8 @@ export const requireAnyPermission = (permissions: string[]) => {
 
       // Obtener permisos del usuario desde la base de datos
       const userPermissions = await authService.getUserPermissions(req.user.userId);
-
-      const hasPermission = permissions.some(permission => userPermissions.includes(permission));
+      const lowerUserPerms = userPermissions.map(p => p.toLowerCase());
+      const hasPermission = permissions.some(p => lowerUserPerms.includes(p.toLowerCase()));
 
       if (!hasPermission) {
         res.status(403).json({
@@ -166,11 +166,11 @@ export const requireAllPermissions = (permissions: string[]) => {
 
       // Obtener permisos del usuario desde la base de datos
       const userPermissions = await authService.getUserPermissions(req.user.userId);
-
-      const hasAllPermissions = permissions.every(permission => userPermissions.includes(permission));
+      const lowerUserPerms = userPermissions.map(p => p.toLowerCase());
+      const hasAllPermissions = permissions.every(p => lowerUserPerms.includes(p.toLowerCase()));
 
       if (!hasAllPermissions) {
-        const missingPermissions = permissions.filter(permission => !userPermissions.includes(permission));
+        const missingPermissions = permissions.filter(p => !lowerUserPerms.includes(p.toLowerCase()));
         res.status(403).json({
           success: false,
           message: `Permisos faltantes: ${missingPermissions.join(', ')}`
@@ -219,7 +219,7 @@ export const authenticateTokenOrWebhook = async (req: Request, res: Response, ne
   try {
     const decoded = await authService.verifyToken(token);
     if (!decoded) {
-      res.status(403).json({
+      res.status(401).json({
         success: false,
         message: 'Token inválido o expirado'
       });
@@ -229,7 +229,7 @@ export const authenticateTokenOrWebhook = async (req: Request, res: Response, ne
     req.user = decoded;
     next();
   } catch (error) {
-    res.status(403).json({
+    res.status(401).json({
       success: false,
       message: 'Token inválido o expirado'
     });
