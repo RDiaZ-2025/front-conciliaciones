@@ -108,6 +108,54 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 // Middleware de logging de acciones de usuario
 app.use(actionLogger);
 
+import { AppDataSource } from './config/typeorm.config';
+
+const formatUptime = (seconds: number): string => {
+  const d = Math.floor(seconds / (3600 * 24));
+  const h = Math.floor((seconds % (3600 * 24)) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const parts: string[] = [];
+  if (d > 0) parts.push(`${d}d`);
+  if (h > 0) parts.push(`${h}h`);
+  if (m > 0) parts.push(`${m}m`);
+  parts.push(`${s}s`);
+  return parts.join(' ');
+};
+
+const getHealthPayload = () => {
+  const mem = process.memoryUsage();
+  const uptimeSec = Math.floor(process.uptime());
+  const sbStatus = azureServiceBusSchedulerService.getStatus();
+  const dbConnected = AppDataSource.isInitialized;
+
+  return {
+    success: true,
+    status: (dbConnected && (!sbStatus.hasConnectionString || sbStatus.receiverListening)) ? 'healthy' : 'degraded',
+    message: 'Servidor funcionando correctamente',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    uptime: {
+      seconds: uptimeSec,
+      formatted: formatUptime(uptimeSec)
+    },
+    database: {
+      status: dbConnected ? 'connected' : 'disconnected',
+      name: process.env.DB_DATABASE || 'voc_db'
+    },
+    serviceBus: sbStatus,
+    system: {
+      nodeVersion: process.version,
+      platform: process.platform,
+      memory: {
+        rssMB: Math.round(mem.rss / 1024 / 1024 * 100) / 100,
+        heapUsedMB: Math.round(mem.heapUsed / 1024 / 1024 * 100) / 100,
+        heapTotalMB: Math.round(mem.heapTotal / 1024 / 1024 * 100) / 100
+      }
+    }
+  };
+};
+
 // Ruta raíz para Azure App Service / IIS Health Check / Ping
 app.get('/', skipLogging, (req, res) => {
   res.status(200).json({
@@ -118,15 +166,9 @@ app.get('/', skipLogging, (req, res) => {
   });
 });
 
-// Ruta de salud (sin logging para evitar spam en los logs)
-app.get('/health', skipLogging, (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Servidor funcionando correctamente',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    serviceBus: azureServiceBusSchedulerService.getStatus()
-  });
+// Ruta de salud enriquecida (disponible en /health y /api/health sin logging)
+app.get(['/health', '/api/health'], skipLogging, (req, res) => {
+  res.status(200).json(getHealthPayload());
 });
 
 // Rutas de la API

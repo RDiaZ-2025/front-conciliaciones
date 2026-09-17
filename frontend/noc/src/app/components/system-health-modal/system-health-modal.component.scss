@@ -1,0 +1,15 @@
+:host ::ng-deep {
+  .system-health-dialog {
+    .p-dialog-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--surface-border, #e2e8f0);
+    }
+    .p-dialog-content {
+      padding: 1.25rem 1.5rem;
+    }
+    .p-dialog-footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--surface-border, #e2e8f0);
+    }
+  }
+}
