@@ -44,7 +44,8 @@ export class Permission {
    * Check if this is an admin permission
    */
   isAdminPermission(): boolean {
-    return this.name === 'ADMIN_PANEL' || this.name === 'manage_users';
+    const lower = this.name ? this.name.toLowerCase() : '';
+    return lower.includes('admin') || lower === 'usuarios';
   }
 
   /**

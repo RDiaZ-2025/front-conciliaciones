@@ -3,8 +3,7 @@ import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, OnDestroy, Cha
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { CommonModule } from '@angular/common';
-import { catchError } from 'rxjs/operators';
-import { of } from 'rxjs';
+
 import Chart from 'chart.js/auto';
 
 import { FormsModule } from '@angular/forms';
@@ -58,7 +57,6 @@ export class Ingresos implements OnInit, AfterViewInit, OnDestroy {
   private apiUrl = environment.apiUrl;
   private chart: Chart | null = null;
   
-  // Data Structure
   activeTab: 'admanager' | 'youtube' | 'facebook' | 'chat' = 'chat';
   rawDataAdmanager: IngresosData | null = null;
   rawDataYoutube: RedesData | null = null;
@@ -69,18 +67,16 @@ export class Ingresos implements OnInit, AfterViewInit, OnDestroy {
   hasError: boolean = false;
   errorMessage: string = '';
   
-  // General KPIs (Active)
   kpiFilter: '7D' | '30D' | 'TOTAL' | 'CUSTOM' | 'YTD' = 'YTD';
   channelFilter: 'TOTAL' | 'RED+ TV' | 'RED+NOTICIAS' | '15 MINUTOS' | 'RADIOLATV' = 'TOTAL';
   customStartDate: string = '';
   customEndDate: string = '';
   
-  totalRevenue: number = 0; // Se usa para Total Neto en Redes
-  avgECPM: number = 0;      // En Redes será Retención
-  totalImpressions: number = 0; // En redes será Total Bruto
-  unfilledImpressions: number = 0; // Oculto o usado en GAM
+  totalRevenue: number = 0;
+  avgECPM: number = 0;
+  totalImpressions: number = 0;
+  unfilledImpressions: number = 0;
   
-  // Chat state
   chatMessages: {role: 'ai' | 'user', text: string}[] = [];
   chatInput: string = '';
   isChatLoading: boolean = false;
@@ -93,13 +89,11 @@ export class Ingresos implements OnInit, AfterViewInit, OnDestroy {
     '¿Cuánto ingresó Ad Manager este mes?',
   ];
 
-  // Chart calculation caches
   avgRevenueCache: number = 0;
   
   constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
-    // Inicia requerimiento de datos de inmediato al entrar
     this.cargarDatos();
   }
 
@@ -118,7 +112,6 @@ export class Ingresos implements OnInit, AfterViewInit, OnDestroy {
     }
     this.hasError = false;
     
-    // Multiple API calls logic
     const reqs = 4;
     let completed = 0;
     
@@ -130,7 +123,6 @@ export class Ingresos implements OnInit, AfterViewInit, OnDestroy {
             this.cdr.detectChanges();
             setTimeout(() => this.renderizarGrafico(), 200);
 
-            // Mensaje de bienvenida del agente
             if (this.chatMessages.length === 0) {
                 this.chatMessages.push({
                     role: 'ai',
@@ -141,7 +133,6 @@ export class Ingresos implements OnInit, AfterViewInit, OnDestroy {
     };
     
     const errorHandler = (err: any) => {
-        console.error('Error al cargar datos:', err);
         if (!isSilent && !this.hasError) {
           this.isLoading = false;
           this.hasError = true;
@@ -154,89 +145,22 @@ export class Ingresos implements OnInit, AfterViewInit, OnDestroy {
         checkComplete();
     };
 
-    // 1. AdManager
     this.http.get<IngresosData>(`${this.apiUrl}/ingresos/datos-grafico`)
-      .pipe(
-        catchError(err => {
-          console.warn("FastAPI offline, using mock AdManager data.", err);
-          return of({
-            fechas: ["2026-05-28", "2026-05-29", "2026-05-30", "2026-05-31", "2026-06-01", "2026-06-02", "2026-06-03"],
-            datasets: {
-              revenue: [1200, 1350, 1100, 1250, 1420, 1380, 1550],
-              ecpm: [1.5, 1.6, 1.45, 1.55, 1.65, 1.6, 1.7],
-              impresiones: [800000, 843000, 758000, 806000, 860000, 862000, 911000],
-              impresiones_sin_rellenar: [5000, 4800, 6200, 5100, 4200, 4500, 3900]
-            }
-          });
-        })
-      )
       .subscribe({ next: (data) => { this.rawDataAdmanager = data; checkComplete(); }, error: errorHandler });
       
-    // 2. Youtube
     this.http.get<RedesData>(`${this.apiUrl}/ingresos/datos-redes/youtube`)
-      .pipe(
-        catchError(err => {
-          console.warn("FastAPI offline, using mock YouTube data.", err);
-          return of({
-            fechas: ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"],
-            datasets: {
-              total_bruto: [15000, 16200, 17500, 15800, 18200, 19500],
-              retencion: [4500, 4860, 5250, 4740, 5460, 5850],
-              total_neto: [10500, 11340, 12250, 11060, 12740, 13650],
-              canales: {
-                red_mas_tv: [5000, 5200, 5800, 5100, 6000, 6400],
-                red_mas_noticias: [3000, 3240, 3450, 3160, 3640, 3950],
-                quince_minutos: [1500, 1700, 1800, 1600, 1850, 2000],
-                radiola_tv: [1000, 1200, 1200, 1200, 1250, 1300]
-              }
-            }
-          });
-        })
-      )
       .subscribe({ next: (data) => { this.rawDataYoutube = data; checkComplete(); }, error: errorHandler });
 
-    // 3. Facebook
     this.http.get<RedesData>(`${this.apiUrl}/ingresos/datos-redes/facebook`)
-      .pipe(
-        catchError(err => {
-          console.warn("FastAPI offline, using mock Facebook data.", err);
-          return of({
-            fechas: ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"],
-            datasets: {
-              total_bruto: [8000, 8500, 9200, 8800, 9500, 10200],
-              retencion: [2400, 2550, 2760, 2640, 2850, 3060],
-              total_neto: [5600, 5950, 6440, 6160, 6650, 7140],
-              canales: {
-                red_mas_tv: [2500, 2600, 2900, 2700, 2950, 3200],
-                red_mas_noticias: [1800, 1950, 2100, 2060, 2150, 2300],
-                quince_minutos: [800, 900, 940, 900, 1000, 1140],
-                radiola_tv: [500, 500, 500, 500, 550, 500]
-              }
-            }
-          });
-        })
-      )
       .subscribe({ next: (data) => { this.rawDataFacebook = data; checkComplete(); }, error: errorHandler });
       
-    // 4. Resumen Chat
     this.http.get<ResumenData>(`${this.apiUrl}/ingresos/resumen-general`)
-      .pipe(
-        catchError(err => {
-          console.warn("FastAPI offline, using mock Resumen data.", err);
-          return of({
-            admanager_total: 9250,
-            youtube_total_neto: 71540,
-            facebook_total: 37940,
-            total_global_usd: 118730
-          });
-        })
-      )
       .subscribe({ next: (data) => { this.resumenData = data; checkComplete(); }, error: errorHandler });
   }
 
   setTab(tab: 'admanager' | 'youtube' | 'facebook' | 'chat') {
       this.activeTab = tab;
-      this.channelFilter = 'TOTAL'; // reset filter entirely
+      this.channelFilter = 'TOTAL';
       this.calcularKPIs();
       this.cdr.detectChanges();
       if (tab !== 'chat') {
@@ -283,28 +207,11 @@ export class Ingresos implements OnInit, AfterViewInit, OnDestroy {
       this.chatInput = '';
       this.isChatLoading = true;
 
-      // Scroll al final
       setTimeout(() => this.scrollChatToBottom(), 50);
 
       this.http.post<{response: string}>(
           `${this.apiUrl}/api/agent/chat`,
           { message: texto, history: this.chatHistory.slice(-10) }
-      ).pipe(
-          catchError(err => {
-              console.warn("FastAPI offline, fallback to offline chatbot response.", err);
-              let mockResponse = "Lo siento, el backend de IA no está conectado actualmente. Sin embargo, puedo confirmarte que el total global acumulado estimado para Red+ es de $118,730 USD distribuidos entre YouTube ($71,540 USD), Facebook ($37,940 USD) y Ad Manager ($9,250 USD).";
-              const query = (texto || '').toLowerCase();
-              if (query.includes('resumen') || query.includes('día') || query.includes('dia')) {
-                  mockResponse = "Resumen del día (Offline Mode): Las campañas digitales muestran un rendimiento óptimo. Ad Manager acumuló $1,550 USD ayer con un eCPM promedio saludable de $1.70. Las fuentes principales de ingresos son estables y no presentan anomalías.";
-              } else if (query.includes('youtube')) {
-                  mockResponse = "Youtube (Offline Mode): En lo que va del año, YouTube ha generado $71,540 USD netos. La retención promedio de la red se mantiene alrededor de un 30% del bruto total ($19,500 USD brutos en el mes actual).";
-              } else if (query.includes('facebook')) {
-                  mockResponse = "Facebook (Offline Mode): Los ingresos netos de Facebook rondan los $37,940 USD totales. El canal de mayor rendimiento sigue siendo RED+ TV.";
-              } else if (query.includes('presupuesto')) {
-                  mockResponse = "Presupuesto (Offline Mode): El cumplimiento anual acumulado de la red se encuentra en un 98.6%, indicando un ahorro global de $12,000 USD contra el presupuesto original de $865,000 USD.";
-              }
-              return of({ response: mockResponse });
-          })
       ).subscribe({
           next: (res) => {
               this.chatMessages.push({ role: 'ai', text: res.response });
@@ -316,7 +223,7 @@ export class Ingresos implements OnInit, AfterViewInit, OnDestroy {
           error: (err) => {
               this.chatMessages.push({
                   role: 'ai',
-                  text: 'Lo siento, ocurrió un error al procesar tu pregunta. Por favor intenta de nuevo.',
+                  text: err.error?.message || err.message || 'Lo siento, ocurrió un error al procesar tu pregunta. Por favor intenta de nuevo.',
               });
               this.isChatLoading = false;
               this.cdr.detectChanges();
@@ -347,16 +254,16 @@ export class Ingresos implements OnInit, AfterViewInit, OnDestroy {
       } else if (this.kpiFilter === 'YTD') {
           const currentYear = new Date().getFullYear().toString();
           let start = fechas.findIndex(f => f.startsWith(currentYear));
-          if (start === -1) start = fechas.length; // No data for current year
+          if (start === -1) start = fechas.length;
           return {start, end: fechas.length};
       } else {
           let limit = fechas.length;
           if (this.activeTab === 'admanager') {
-              if (this.kpiFilter === '7D') limit = Math.min(limit, 30); // Ultimo mes
-              if (this.kpiFilter === '30D') limit = Math.min(limit, 90); // 3 meses
+              if (this.kpiFilter === '7D') limit = Math.min(limit, 30);
+              if (this.kpiFilter === '30D') limit = Math.min(limit, 90);
           } else {
-              if (this.kpiFilter === '7D') limit = Math.min(limit, 1); // Ultimo mes
-              if (this.kpiFilter === '30D') limit = Math.min(limit, 3); // 3 meses
+              if (this.kpiFilter === '7D') limit = Math.min(limit, 1);
+              if (this.kpiFilter === '30D') limit = Math.min(limit, 3);
           }
           return {start: fechas.length - Math.max(limit, 0), end: fechas.length};
       }
@@ -535,7 +442,6 @@ export class Ingresos implements OnInit, AfterViewInit, OnDestroy {
         }
     ];
     
-    // Only show "Total Bruto" line for Youtube globally, not for Facebook or individual channels (where bruto = neto anyway)
     if (this.activeTab === 'youtube' && this.channelFilter === 'TOTAL') {
         datasetsList.push({
           label: 'Total Bruto ($)',

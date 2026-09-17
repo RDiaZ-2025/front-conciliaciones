@@ -31,11 +31,11 @@ export class StorageController {
 
     if (containerName === 'autoconsumoshared') {
       const user = req.user;
-      const hasCommercialAccess = user && user.permissions && (
-        user.permissions.includes('Repositorio Comercial') ||
-        user.permissions.includes('repositorioComercial') ||
-        user.permissions.includes('view_commercial') ||
-        user.permissions.includes('admin_panel')
+      const hasCommercialAccess = user && (
+        user.role?.toLowerCase() === 'admin' ||
+        (user.permissions && user.permissions.some((p: string) =>
+          ['repositorio comercial', 'repositoriocomercial', 'view_commercial', 'historial_carga_archivos_comerciales'].includes(p.toLowerCase())
+        ))
       );
       if (!hasCommercialAccess) {
         return res.status(403).json({
@@ -64,7 +64,7 @@ export class StorageController {
       const sasOptions = {
         services: AccountSASServices.parse("f").toString(),
         resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
-        permissions: AccountSASPermissions.parse("rcw"), // Read, Create, Write (sin borrado 'd')
+        permissions: AccountSASPermissions.parse("rcw"),
         startsOn: startDate,
         expiresOn: expiryDate,
         protocol: SASProtocol.Https,
@@ -93,7 +93,6 @@ export class StorageController {
     const expiryDate = new Date();
     expiryDate.setMinutes(expiryDate.getMinutes() + 60);
 
-    // Permisos restringidos: Lectura, Adición, Creación, Escritura, Listado (sin borrado 'd')
     const permissions = ContainerSASPermissions.parse("racwl");
 
     const sasOptions = {
@@ -121,11 +120,11 @@ export class StorageController {
 
   listCommercialFiles = asyncHandler(async (req: Request, res: Response) => {
     const user = req.user;
-    const hasCommercialAccess = user && user.permissions && (
-      user.permissions.includes('Repositorio Comercial') ||
-      user.permissions.includes('repositorioComercial') ||
-      user.permissions.includes('view_commercial') ||
-      user.permissions.includes('admin_panel')
+    const hasCommercialAccess = user && (
+      user.role?.toLowerCase() === 'admin' ||
+      (user.permissions && user.permissions.some((p: string) =>
+        ['repositorio comercial', 'repositoriocomercial', 'view_commercial', 'historial_carga_archivos_comerciales'].includes(p.toLowerCase())
+      ))
     );
     if (!hasCommercialAccess) {
       return res.status(403).json({ success: false, message: 'Access denied: Repositorio Comercial permission required' });
@@ -145,9 +144,7 @@ export class StorageController {
     const folderPath = req.query.path as string || '';
 
     const directoryClient = folderPath ? shareClient.getDirectoryClient(folderPath) : shareClient.rootDirectoryClient;
-    console.log('Directory client created:', directoryClient);
 
-    console.log('Checking if directory exists:', folderPath);
     if (folderPath && !await directoryClient.exists()) {
       return res.json({ success: true, data: [] });
     }
@@ -167,11 +164,11 @@ export class StorageController {
 
   downloadCommercialFile = asyncHandler(async (req: Request, res: Response) => {
     const user = req.user;
-    const hasCommercialAccess = user && user.permissions && (
-      user.permissions.includes('Repositorio Comercial') ||
-      user.permissions.includes('repositorioComercial') ||
-      user.permissions.includes('view_commercial') ||
-      user.permissions.includes('admin_panel')
+    const hasCommercialAccess = user && (
+      user.role?.toLowerCase() === 'admin' ||
+      (user.permissions && user.permissions.some((p: string) =>
+        ['repositorio comercial', 'repositoriocomercial', 'view_commercial', 'historial_carga_archivos_comerciales'].includes(p.toLowerCase())
+      ))
     );
     if (!hasCommercialAccess) {
       return res.status(403).json({ success: false, message: 'Access denied: Repositorio Comercial permission required' });

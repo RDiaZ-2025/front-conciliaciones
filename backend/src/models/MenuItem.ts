@@ -154,24 +154,11 @@ export class MenuItem {
       return false;
     }
 
-    // Basic permission mapping based on routes
-    if (userPermissions) {
-      switch (this.route) {
-        case '/admin':
-          return userPermissions.includes('manage_users') || userPermissions.includes('ADMIN_PANEL');
-        case '/upload':
-          return userPermissions.includes('view_upload') || userPermissions.includes('DOCUMENT_UPLOAD');
-        case '/dashboard':
-          return userPermissions.includes('view_dashboard') || userPermissions.includes('MANAGEMENT_DASHBOARD');
-        case '/historial':
-          return userPermissions.includes('HISTORY_LOAD_COMMERCIAL_FILES');
-        case '/production':
-          return userPermissions.includes('view_dashboard') || userPermissions.includes('MANAGEMENT_DASHBOARD');
-        default:
-          return true;
-      }
+    const permName = this.permission?.name;
+    if (!userPermissions || !permName) {
+      return true;
     }
 
-    return true;
+    return userPermissions.some(p => p.toLowerCase() === permName.toLowerCase());
   }
 }

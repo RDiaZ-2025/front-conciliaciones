@@ -122,7 +122,7 @@ export class AuthService extends BaseApiService {
 
   isAdmin(): boolean {
     const user = this.currentUser();
-    return user?.role?.toLowerCase() === 'admin' || user?.permissions?.includes('admin_panel') || false;
+    return user?.role?.toLowerCase() === 'admin' || false;
   }
 
   getPermissions(): string[] {

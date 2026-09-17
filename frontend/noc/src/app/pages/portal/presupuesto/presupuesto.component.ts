@@ -3,8 +3,7 @@ import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, OnDestroy, Cha
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { CommonModule } from '@angular/common';
-import { catchError } from 'rxjs/operators';
-import { of } from 'rxjs';
+
 import Chart from 'chart.js/auto';
 
 import { PageHeaderComponent } from '../../../components/page-header/page-header.component';
@@ -64,7 +63,6 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
   activeTab: 'director' | 'analitico' = 'director';
   periodFilter: 'TOTAL' | 'LAST_MONTH' | 'LAST_3_MONTHS' | 'YTD' = 'YTD';
 
-  // "Por Qué" analysis
   mejorFuente: ResumenFuente | null = null;
   peorFuente: ResumenFuente | null = null;
 
@@ -75,7 +73,6 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    // Graficos se renderizan si hay data y estamos en director
     if (this.data && this.activeTab === 'director') {
         this.renderizarGraficas();
     }
@@ -105,31 +102,6 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
     this.hasError = false;
     
     this.http.get<DashboardResponse>(`${this.apiUrl}/portal-presupuesto/dashboard?year=2026&filter_type=${this.periodFilter}`)
-      .pipe(
-        catchError(err => {
-          console.warn('FastAPI offline, using mock dashboard response for budget.', err);
-          return of({
-            resumen_mensual: [
-              { mes: "2026-01", total_ppto: 120000, total_ejecucion: 115000, diferencia: 5000, porcentaje_cumplimiento: 95.8 },
-              { mes: "2026-02", total_ppto: 125000, total_ejecucion: 128000, diferencia: -3000, porcentaje_cumplimiento: 102.4 },
-              { mes: "2026-03", total_ppto: 130000, total_ejecucion: 125000, diferencia: 5000, porcentaje_cumplimiento: 96.1 },
-              { mes: "2026-04", total_ppto: 115000, total_ejecucion: 110000, diferencia: 5000, porcentaje_cumplimiento: 95.6 },
-              { mes: "2026-05", total_ppto: 140000, total_ejecucion: 145000, diferencia: -5000, porcentaje_cumplimiento: 103.5 },
-              { mes: "2026-06", total_ppto: 135000, total_ejecucion: 130000, diferencia: 5000, porcentaje_cumplimiento: 96.3 }
-            ],
-            desglose_fuentes: [
-              { fuente: "Ad Exchange", seccion: "Digital", total_ppto: 350000, total_ejecucion: 342000, diferencia: 8000, porcentaje_cumplimiento: 97.7 },
-              { fuente: "Direct Sales", seccion: "Digital", total_ppto: 250000, total_ejecucion: 260000, diferencia: -10000, porcentaje_cumplimiento: 104.0 },
-              { fuente: "YouTube Red+", seccion: "Redes Sociales", total_ppto: 120000, total_ejecucion: 115000, diferencia: 5000, porcentaje_cumplimiento: 95.8 },
-              { fuente: "Facebook Mon", seccion: "Redes Sociales", total_ppto: 45000, total_ejecucion: 48000, diferencia: -3000, porcentaje_cumplimiento: 106.6 }
-            ],
-            total_anual_ppto: 865000,
-            total_anual_ejecucion: 853000,
-            diferencia_anual: 12000,
-            porcentaje_anual: 98.6
-          });
-        })
-      )
       .subscribe({
         next: (res) => {
           this.data = res;
@@ -142,13 +114,12 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
           }
         },
         error: (err) => {
-          console.error('Error cargando presupuesto:', err);
           this.isLoading = false;
           this.hasError = true;
           if (err.status === 403) {
             this.errorMessage = 'Módulo protegido: No tienes permisos para visualizar el presupuesto.';
           } else {
-            this.errorMessage = 'Error al cargar los datos del presupuesto.';
+            this.errorMessage = err.error?.message || err.message || 'Error al cargar los datos del presupuesto.';
           }
           this.cdr.detectChanges();
         }
@@ -162,12 +133,6 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
     this.hasError = false;
     
     this.http.post<any>(`${this.apiUrl}/portal-presupuesto/importar`, {})
-      .pipe(
-        catchError(err => {
-          console.warn('FastAPI offline, using mock import response.', err);
-          return of({ mensaje: 'Presupuesto importado exitosamente (Offline Mode).' });
-        })
-      )
       .subscribe({
         next: (res) => {
           this.importSuccess = res.mensaje || 'Presupuesto importado exitosamente.';
@@ -175,10 +140,9 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
           this.cargarDatos();
         },
         error: (err) => {
-          console.error('Error importando presupuesto:', err);
           this.isImporting = false;
           this.hasError = true;
-          this.errorMessage = 'Error al importar los datos desde el archivo Excel.';
+          this.errorMessage = err.error?.message || err.message || 'Error al importar los datos del presupuesto.';
           this.cdr.detectChanges();
         }
       });
@@ -186,11 +150,6 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
 
   private analizarFuentes(): void {
       if (!this.data || !this.data.desglose_fuentes.length) return;
-      
-      // Ordenar por diferencia absoluta (para encontrar los extremos)
-      // diferencia = ppto - ejecucion. 
-      // Positiva alta = Mayor ahorro. 
-      // Negativa baja = Mayor déficit/gasto excesivo.
       
       let mejor: ResumenFuente | null = null;
       let peor: ResumenFuente | null = null;
@@ -218,7 +177,6 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
       this.destruirGraficas();
       if (!this.data) return;
 
-      // 1. Gráfica de Velocímetro (Total Ppto vs Ejecución)
       if (this.chartDonaCanvas && this.chartDonaCanvas.nativeElement) {
           const ctxDona = this.chartDonaCanvas.nativeElement.getContext('2d');
           if (ctxDona) {
@@ -226,7 +184,7 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
               const execVal = Math.min(this.data.total_anual_ejecucion, this.data.total_anual_ppto);
               const remVal = Math.max(0, this.data.total_anual_ppto - this.data.total_anual_ejecucion);
               
-              const color = isOverBudget ? 'rgba(239, 68, 68, 1)' : 'rgba(16, 185, 129, 1)'; // Red or Emerald
+              const color = isOverBudget ? 'rgba(239, 68, 68, 1)' : 'rgba(16, 185, 129, 1)';
               const bgColor = 'rgba(255, 255, 255, 0.1)';
 
               this.donaChart = new Chart(ctxDona, {
@@ -243,7 +201,7 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
                   options: {
                       responsive: true,
                       maintainAspectRatio: false,
-                      circumference: 180, // Media dona (Velocimetro)
+                      circumference: 180,
                       rotation: 270,
                       cutout: '80%',
                       plugins: {
@@ -265,7 +223,6 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
           }
       }
 
-      // 2. Gráfica de Barras (Variación por Fuente)
       if (this.chartBarrasCanvas && this.chartBarrasCanvas.nativeElement) {
           const ctxBarras = this.chartBarrasCanvas.nativeElement.getContext('2d');
           if (ctxBarras) {
@@ -279,10 +236,9 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
 
               const labels = topFuentes.map(f => f.fuente);
               const variaciones = topFuentes.map(f => f.diferencia);
-              const porcentajes = topFuentes.map(f => f.porcentaje_cumplimiento); // Extract percentages
-              const colores = variaciones.map(v => v >= 0 ? 'rgba(16, 185, 129, 0.8)' : 'rgba(239, 68, 68, 0.8)'); // Verde ahorro, Rojo deficit
+              const porcentajes = topFuentes.map(f => f.porcentaje_cumplimiento);
+              const colores = variaciones.map(v => v >= 0 ? 'rgba(16, 185, 129, 0.8)' : 'rgba(239, 68, 68, 0.8)');
 
-              // Custom plugin for data labels on bars
               const barLabelsPlugin = {
                   id: 'barLabels',
                   afterDatasetsDraw(chart: any) {
@@ -296,10 +252,6 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
                           const prefix = value > 0 ? '+' : '';
                           const moneyStr = `${prefix}${new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD', maximumFractionDigits: 0}).format(value)}`;
                           
-                          // Ahorro (Verde): < 100%. Sobrecosto (Rojo): > 100%
-                          // Queremos mostrar el porcentaje de ahorro real (ej. si cumplimiento es 80%, ahorró 20%)
-                          // O simplemente mostrar el % de cumplimiento. El usuario pidio "% que ahorramos".
-                          // Ahorro = 100 - cumplimiento (si es positivo). Si es deficit, sobregiro = cumplimiento - 100.
                           let porcentajeTexto = "";
                           if (value >= 0) {
                               porcentajeTexto = `(Ahorro: ${(100 - percent).toFixed(1)}%)`;
@@ -313,8 +265,6 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
                           ctx.fillStyle = '#cbd5e1';
                           ctx.textBaseline = 'middle';
                           
-                          // Posicionar texto fuera de la barra para mayor legibilidad
-                          // Usamos la posicion de valor 0 para alinear a la derecha y no pisar los textos del eje Y
                           const zeroX = chart.scales.x.getPixelForValue(0);
                           
                           ctx.textAlign = 'left';
@@ -342,11 +292,11 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
                   plugins: [barLabelsPlugin],
                   options: {
                       layout: {
-                          padding: { left: 130, right: 130 } // Espacio para que quepa el texto
+                          padding: { left: 130, right: 130 }
                       },
                       responsive: true,
                       maintainAspectRatio: false,
-                      indexAxis: 'y', // Barras horizontales
+                      indexAxis: 'y',
                       plugins: {
                           legend: { display: false },
                           tooltip: {
@@ -368,7 +318,6 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
           }
       }
 
-      // 3. Gráfico Mixto (Evolución Mensual Burn-Rate)
       if (this.chartEvolucionCanvas && this.chartEvolucionCanvas.nativeElement) {
           const ctxEvo = this.chartEvolucionCanvas.nativeElement.getContext('2d');
           if (ctxEvo && this.data.resumen_mensual.length > 0) {
@@ -379,18 +328,15 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
               const pptos = this.data.resumen_mensual.map(m => m.total_ppto);
               const ejecs = this.data.resumen_mensual.map(m => m.total_ejecucion);
 
-              // Lógica de colores por punto: si la ejecución superó al presupuesto, el punto se pinta de rojo
               const pointColors = ejecs.map((ejec, i) => ejec > pptos[i] ? 'rgba(239, 68, 68, 1)' : 'rgba(16, 185, 129, 1)');
-              const pointSizes = ejecs.map((ejec, i) => ejec > pptos[i] ? 7 : 4); // Punto más grande si es rojo
+              const pointSizes = ejecs.map((ejec, i) => ejec > pptos[i] ? 7 : 4);
 
-              // Plugin para escribir valores encima de los puntos
               const evoLabelsPlugin = {
                   id: 'evoLabels',
                   afterDatasetsDraw(chart: any) {
                       const { ctx } = chart;
                       ctx.save();
                       
-                      // Solo queremos dibujar sobre la linea (dataset 0)
                       chart.getDatasetMeta(0).data.forEach((datapoint: any, index: number) => {
                           const ejec = ejecs[index];
                           const ppto = pptos[index];
@@ -399,7 +345,7 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
                           if (ppto > 0) {
                               percentage = (ejec / ppto) * 100;
                           } else if (ejec > 0) {
-                              percentage = 200; // Fake > 100% para forzar logica de sobregiro
+                              percentage = 100;
                           }
 
                           let porcentajeTexto = "";
@@ -409,11 +355,11 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
                           if (ejec <= ppto) {
                               const ahorro = ppto > 0 ? 100 - percentage : 0;
                               porcentajeTexto = `Ahorro ${ahorro.toFixed(1)}%`;
-                              textColor = 'rgba(16, 185, 129, 1)'; // Verde
+                              textColor = 'rgba(16, 185, 129, 1)';
                           } else {
                               const sobregiro = ppto > 0 ? percentage - 100 : 100;
                               porcentajeTexto = `Déficit ${sobregiro.toFixed(1)}%`;
-                              textColor = 'rgba(239, 68, 68, 1)'; // Rojo
+                              textColor = 'rgba(239, 68, 68, 1)';
                           }
                           
                           const prefix = diferencia > 0 ? '+' : '';
@@ -423,11 +369,9 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
                           ctx.textAlign = 'center';
                           ctx.textBaseline = 'bottom';
                           
-                          // Dibujar dinero arriba
                           ctx.fillStyle = '#cbd5e1';
                           ctx.fillText(moneyStr, datapoint.x, datapoint.y - 18);
                           
-                          // Dibujar porcentaje con color dinamico
                           ctx.fillStyle = textColor;
                           ctx.fillText(porcentajeTexto, datapoint.x, datapoint.y - 6);
                       });
@@ -470,7 +414,7 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
                   plugins: [evoLabelsPlugin],
                   options: {
                       layout: {
-                          padding: { top: 40 } // Espacio arriba para que quepa el texto de los puntos
+                          padding: { top: 40 }
                       },
                       responsive: true,
                       maintainAspectRatio: false,
