@@ -25,6 +25,7 @@ import nocRoutes from './routes/noc.routes';
 import customerRoutes from './routes/customer.routes';
 
 import { actionLogger, skipLogging } from './middleware/actionLogger';
+import { azureServiceBusSchedulerService } from './services/azure_service_bus_scheduler.service';
 
 dotenv.config();
 
@@ -123,7 +124,8 @@ app.get('/health', skipLogging, (req, res) => {
     success: true,
     message: 'Servidor funcionando correctamente',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    serviceBus: azureServiceBusSchedulerService.getStatus()
   });
 });
 
