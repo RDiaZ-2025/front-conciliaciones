@@ -2,14 +2,14 @@ import 'reflect-metadata';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-import { AppDataSource } from './config/typeorm.config';
-import { DynamicFormSubmission } from './models/DynamicFormSubmission';
+import { AppDataSource } from '../config/typeorm.config';
+import { DynamicFormSubmission } from '../models/DynamicFormSubmission';
 
 async function run() {
     try {
         await AppDataSource.initialize();
         const sub = await AppDataSource.getRepository(DynamicFormSubmission).findOne({
-            where: { id: 110 },
+            where: { id: 40 },
             relations: ['form', 'values', 'values.field'],
         });
         if (sub) {
@@ -19,7 +19,7 @@ async function run() {
                 console.log(`- Field Name: ${val.field?.name}, Label: ${val.field?.label}, Type: ${val.field?.type}, Value: ${val.value}`);
             }
         } else {
-            console.log("Submission 110 not found!");
+            console.log("Submission 40 not found!");
         }
         await AppDataSource.destroy();
     } catch (e) {
