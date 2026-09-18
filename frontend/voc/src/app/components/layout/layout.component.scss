@@ -37,6 +37,13 @@
 /* Override PrimeNG Drawer shadow/border if needed */
 ::ng-deep .p-drawer {
     border-right: none;
+
+    .p-drawer-content {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+    }
 }
 
 /* Custom Scrollbar for Menu */

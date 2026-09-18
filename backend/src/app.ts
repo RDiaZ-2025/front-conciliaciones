@@ -151,7 +151,7 @@ const getHealthPayload = () => {
 app.get('/', skipLogging, (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'VOC & NOC Backend API is running',
+    message: 'VOC Backend API is running',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
   });
