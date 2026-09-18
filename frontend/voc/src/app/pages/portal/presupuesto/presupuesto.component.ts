@@ -1,39 +1,11 @@
 import { LucideIconComponent } from '../../../components/lucide-icon/lucide-icon.component';
-import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, OnDestroy, ChangeDetectorRef } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../../environments/environment';
+import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
 import Chart from 'chart.js/auto';
 
 import { PageHeaderComponent } from '../../../components/page-header/page-header.component';
 import { ButtonModule } from 'primeng/button';
-
-export interface ResumenMensual {
-  mes: string;
-  total_ppto: number;
-  total_ejecucion: number;
-  diferencia: number;
-  porcentaje_cumplimiento: number;
-}
-
-export interface ResumenFuente {
-  fuente: string;
-  seccion: string;
-  total_ppto: number;
-  total_ejecucion: number;
-  diferencia: number;
-  porcentaje_cumplimiento: number;
-}
-
-export interface DashboardResponse {
-  resumen_mensual: ResumenMensual[];
-  desglose_fuentes: ResumenFuente[];
-  total_anual_ppto: number;
-  total_anual_ejecucion: number;
-  diferencia_anual: number;
-  porcentaje_anual: number;
-}
+import { PresupuestoService, type DashboardResponse, type ResumenFuente } from '../../../services/presupuesto.service';
 
 @Component({
   selector: 'app-presupuesto',
@@ -48,7 +20,7 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('chartBarras') chartBarrasCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('chartEvolucion') chartEvolucionCanvas!: ElementRef<HTMLCanvasElement>;
 
-  private apiUrl = environment.apiUrl;
+  private presupuestoService = inject(PresupuestoService);
   private donaChart: Chart | null = null;
   private barrasChart: Chart | null = null;
   private evolucionChart: Chart | null = null;
@@ -66,7 +38,7 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
   mejorFuente: ResumenFuente | null = null;
   peorFuente: ResumenFuente | null = null;
 
-  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
+  constructor(private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.cargarDatos();
@@ -101,29 +73,29 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
     this.isLoading = true;
     this.hasError = false;
     
-    this.http.get<DashboardResponse>(`${this.apiUrl}/portal-presupuesto/dashboard?year=2026&filter_type=${this.periodFilter}`)
-      .subscribe({
-        next: (res) => {
-          this.data = res;
-          this.analizarFuentes();
-          this.isLoading = false;
-          this.cdr.detectChanges();
-          
-          if (this.activeTab === 'director') {
-              setTimeout(() => this.renderizarGraficas(), 100);
-          }
-        },
-        error: (err) => {
-          this.isLoading = false;
-          this.hasError = true;
-          if (err.status === 403) {
-            this.errorMessage = 'Módulo protegido: No tienes permisos para visualizar el presupuesto.';
-          } else {
-            this.errorMessage = err.error?.message || err.message || 'Error al cargar los datos del presupuesto.';
-          }
-          this.cdr.detectChanges();
+    this.presupuestoService.getDashboard(2026, this.periodFilter).subscribe({
+      next: (res) => {
+        this.data = res;
+        this.analizarFuentes();
+        this.isLoading = false;
+        this.cdr.detectChanges();
+        
+        if (this.activeTab === 'director') {
+            setTimeout(() => this.renderizarGraficas(), 100);
         }
-      });
+      },
+      error: (err) => {
+        console.error('Error cargando presupuesto:', err);
+        this.isLoading = false;
+        this.hasError = true;
+        if (err.status === 403) {
+          this.errorMessage = 'Módulo protegido: No tienes permisos para visualizar el presupuesto.';
+        } else {
+          this.errorMessage = 'Error al cargar los datos del presupuesto.';
+        }
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   importarPresupuesto(): void {
@@ -132,20 +104,20 @@ export class Presupuesto implements OnInit, AfterViewInit, OnDestroy {
     this.importSuccess = '';
     this.hasError = false;
     
-    this.http.post<any>(`${this.apiUrl}/portal-presupuesto/importar`, {})
-      .subscribe({
-        next: (res) => {
-          this.importSuccess = res.mensaje || 'Presupuesto importado exitosamente.';
-          this.isImporting = false;
-          this.cargarDatos();
-        },
-        error: (err) => {
-          this.isImporting = false;
-          this.hasError = true;
-          this.errorMessage = err.error?.message || err.message || 'Error al importar los datos del presupuesto.';
-          this.cdr.detectChanges();
-        }
-      });
+    this.presupuestoService.importarPresupuesto().subscribe({
+      next: (res) => {
+        this.importSuccess = res.mensaje || 'Presupuesto importado exitosamente.';
+        this.isImporting = false;
+        this.cargarDatos();
+      },
+      error: (err) => {
+        console.error('Error importando presupuesto:', err);
+        this.isImporting = false;
+        this.hasError = true;
+        this.errorMessage = 'Error al importar los datos desde el archivo Excel.';
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   private analizarFuentes(): void {

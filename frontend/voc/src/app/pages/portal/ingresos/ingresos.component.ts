@@ -1,47 +1,12 @@
 import { LucideIconComponent } from '../../../components/lucide-icon/lucide-icon.component';
-import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, OnDestroy, ChangeDetectorRef } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../../environments/environment';
+import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
-import Chart from 'chart.js/auto';
-
 import { FormsModule } from '@angular/forms';
-
-interface IngresosData {
-  fechas: string[];
-  datasets: {
-    revenue: number[];
-    ecpm: number[];
-    impresiones: number[];
-    impresiones_sin_rellenar: number[];
-  };
-}
-
-interface RedesData {
-  fechas: string[];
-  datasets: {
-    total_bruto: number[];
-    retencion: number[];
-    total_neto: number[];
-    canales: {
-      red_mas_tv: number[];
-      red_mas_noticias: number[];
-      quince_minutos: number[];
-      radiola_tv: number[];
-    };
-  };
-}
-
-interface ResumenData {
-    admanager_total: number;
-    youtube_total_neto: number;
-    facebook_total: number;
-    total_global_usd: number;
-}
+import Chart from 'chart.js/auto';
 
 import { PageHeaderComponent } from '../../../components/page-header/page-header.component';
 import { ButtonModule } from 'primeng/button';
+import { IngresosService, type IngresosData, type RedesData, type ResumenData } from '../../../services/ingresos.service';
 
 @Component({
   selector: 'app-ingresos',
@@ -54,7 +19,7 @@ import { ButtonModule } from 'primeng/button';
 export class Ingresos implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('tradingChart') chartCanvas!: ElementRef<HTMLCanvasElement>;
   
-  private apiUrl = environment.apiUrl;
+  private ingresosService = inject(IngresosService);
   private chart: Chart | null = null;
   
   activeTab: 'admanager' | 'youtube' | 'facebook' | 'chat' = 'chat';
@@ -91,7 +56,7 @@ export class Ingresos implements OnInit, AfterViewInit, OnDestroy {
 
   avgRevenueCache: number = 0;
   
-  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
+  constructor(private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.cargarDatos();
@@ -118,7 +83,7 @@ export class Ingresos implements OnInit, AfterViewInit, OnDestroy {
     const checkComplete = () => {
         completed++;
         if (completed === reqs) {
-            if (!isSilent) this.isLoading = false;
+            this.isLoading = false;
             this.calcularKPIs();
             this.cdr.detectChanges();
             setTimeout(() => this.renderizarGrafico(), 200);
@@ -145,16 +110,20 @@ export class Ingresos implements OnInit, AfterViewInit, OnDestroy {
         checkComplete();
     };
 
-    this.http.get<IngresosData>(`${this.apiUrl}/ingresos/datos-grafico`)
+    // 1. AdManager
+    this.ingresosService.getDatosGrafico()
       .subscribe({ next: (data) => { this.rawDataAdmanager = data; checkComplete(); }, error: errorHandler });
       
-    this.http.get<RedesData>(`${this.apiUrl}/ingresos/datos-redes/youtube`)
+    // 2. Youtube
+    this.ingresosService.getDatosRedes('youtube')
       .subscribe({ next: (data) => { this.rawDataYoutube = data; checkComplete(); }, error: errorHandler });
 
-    this.http.get<RedesData>(`${this.apiUrl}/ingresos/datos-redes/facebook`)
+    // 3. Facebook
+    this.ingresosService.getDatosRedes('facebook')
       .subscribe({ next: (data) => { this.rawDataFacebook = data; checkComplete(); }, error: errorHandler });
       
-    this.http.get<ResumenData>(`${this.apiUrl}/ingresos/resumen-general`)
+    // 4. Resumen Chat
+    this.ingresosService.getResumenGeneral()
       .subscribe({ next: (data) => { this.resumenData = data; checkComplete(); }, error: errorHandler });
   }
 
@@ -209,10 +178,7 @@ export class Ingresos implements OnInit, AfterViewInit, OnDestroy {
 
       setTimeout(() => this.scrollChatToBottom(), 50);
 
-      this.http.post<{response: string}>(
-          `${this.apiUrl}/api/agent/chat`,
-          { message: texto, history: this.chatHistory.slice(-10) }
-      ).subscribe({
+      this.ingresosService.sendAgentChat(texto, this.chatHistory.slice(-10)).subscribe({
           next: (res) => {
               this.chatMessages.push({ role: 'ai', text: res.response });
               this.chatHistory.push({ role: 'assistant', content: res.response });
@@ -523,4 +489,3 @@ export class Ingresos implements OnInit, AfterViewInit, OnDestroy {
       };
   }
 }
-
