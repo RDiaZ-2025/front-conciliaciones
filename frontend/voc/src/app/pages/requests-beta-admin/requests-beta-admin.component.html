@@ -239,6 +239,23 @@
                                     <p-select [options]="teams()" [(ngModel)]="stage.assigneeTeamId" optionLabel="name" optionValue="id" placeholder="Seleccione equipo..." class="w-full"></p-select>
                                 </div>
 
+                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'subteam_random'">
+                                    <label class="font-semibold text-sm">Equipo *</label>
+                                    <p-select [options]="teams()" [(ngModel)]="stage.assigneeTeamId" (onChange)="onStageTeamChange(stage)" optionLabel="name" optionValue="id" placeholder="Seleccione equipo..." class="w-full"></p-select>
+                                </div>
+
+                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'subteam_random'">
+                                    <label class="font-semibold text-sm">Subequipo (Al Azar) *</label>
+                                    <p-select [options]="getSubteamsForTeam(stage.assigneeTeamId)" [(ngModel)]="stage.assigneeSubteamId" optionLabel="name" optionValue="id" [placeholder]="stage.assigneeTeamId ? 'Seleccione subequipo...' : 'Primero seleccione un equipo'" [disabled]="!stage.assigneeTeamId" class="w-full">
+                                        <ng-template let-sub pTemplate="item">
+                                            <div class="flex align-items-center justify-content-between w-full">
+                                                <span>{{ sub.name }}</span>
+                                                <span class="text-xs text-500 font-normal">({{ (sub.subteamUsers?.length || 0) }} integrantes)</span>
+                                            </div>
+                                        </ng-template>
+                                    </p-select>
+                                </div>
+
                                 <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'subflow'">
                                     <label class="font-semibold text-sm">Flujo a Invocar (Sub-Flujo) *</label>
                                     <p-select [options]="availableSubflows()" [(ngModel)]="stage.formIdToFill" optionLabel="name" optionValue="id" placeholder="Seleccione sub-flujo..." class="w-full"></p-select>
@@ -350,14 +367,15 @@
                                     <p-select [options]="teams()" [(ngModel)]="stage.rejectionTargetTeamId" optionLabel="name" optionValue="id" placeholder="Seleccione equipo..." class="w-full"></p-select>
                                 </div>
 
-                                <div class="col-12 md:col-4 flex align-items-center gap-2 mt-4 pt-1">
-                                    <p-checkbox [(ngModel)]="stage.requireCommentOnApprove" [binary]="true" [id]="'req-comm-' + i"></p-checkbox>
-                                    <label [for]="'req-comm-' + i" class="font-semibold text-sm cursor-pointer">Requerir comentario al aprobar</label>
-                                </div>
-
-                                <div class="col-12 md:col-4 flex align-items-center gap-2 mt-4 pt-1" *ngIf="stage.assigneeType === 'team_random' || stage.assigneeType === 'previous_stage_team_random' || stage.assigneeType === 'team_workload'">
-                                    <p-checkbox [(ngModel)]="stage.excludeTeamLeader" [binary]="true" [id]="'excl-lead-' + i"></p-checkbox>
-                                    <label [for]="'excl-lead-' + i" class="font-semibold text-sm cursor-pointer text-700">Excluir al Líder del Equipo al asignar</label>
+                                <div class="col-12 flex flex-wrap align-items-center gap-4 mt-3 pt-3 border-top-1 surface-border">
+                                    <div class="flex align-items-center gap-2">
+                                        <p-checkbox [(ngModel)]="stage.requireCommentOnApprove" [binary]="true" [id]="'req-comm-' + i"></p-checkbox>
+                                        <label [for]="'req-comm-' + i" class="font-semibold text-sm cursor-pointer select-none">Requerir comentario al aprobar</label>
+                                    </div>
+                                    <div class="flex align-items-center gap-2" *ngIf="stage.assigneeType === 'team_random' || stage.assigneeType === 'previous_stage_team_random' || stage.assigneeType === 'team_workload' || stage.assigneeType === 'subteam_random'">
+                                        <p-checkbox [(ngModel)]="stage.excludeTeamLeader" [binary]="true" [id]="'excl-lead-' + i"></p-checkbox>
+                                        <label [for]="'excl-lead-' + i" class="font-semibold text-sm cursor-pointer text-700 select-none">Excluir al Líder del Equipo / Subequipo al asignar</label>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -645,9 +663,10 @@
                                              Formato
                                          </p-button>
                                          
-                                         <p-button [outlined]="true" severity="help" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openDependencyConfigDialog(field)" [disabled]="!field.isActive">
+                                         <p-button [outlined]="!field.metadata?.dependency?.fieldName" severity="help" size="small" styleClass="p-button-sm py-1 px-2" (onClick)="openDependencyConfigDialog(field)" [disabled]="!field.isActive" [pTooltip]="field.metadata?.dependency?.fieldName ? 'Condición configurada' : 'Configurar condición'">
                                              <lucide-icon name="eye" class="mr-2" style="width: 0.9rem; height: 0.9rem;"></lucide-icon>
-                                             Condición
+                                             <span>Condición</span>
+                                             <i *ngIf="field.metadata?.dependency?.fieldName" class="pi pi-check ml-1 text-xs font-bold text-green-400"></i>
                                          </p-button>
                                      </div>
                                  </div>
@@ -1040,7 +1059,7 @@
 
     <!-- Dialog: Visibilidad Condicional (Dependencia) -->
     <p-dialog [header]="'Condición de Visibilidad para: ' + (selectedFieldForDependencyConfig()?.label || '')" [(visible)]="showDependencyConfigDialog"
-              [modal]="true" [style]="{width: '500px'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
+              [modal]="true" [style]="{width: '520px'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
         <div class="flex flex-column gap-3 py-2 px-3">
             <span class="text-600 text-sm">Configura cuándo debe mostrarse este campo basado en el valor de otro campo del mismo formulario.</span>
             
@@ -1051,21 +1070,32 @@
             </div>
 
             <div class="flex flex-column gap-1" *ngIf="tempDependencyFieldName()">
+                <label for="depOperator" class="font-semibold text-900 text-sm">Condición / Operador:</label>
+                <p-select id="depOperator" [options]="dependencyOperatorOptions" [(ngModel)]="tempDependencyOperator"
+                          optionLabel="label" optionValue="value" placeholder="Selecciona la condición..." appendTo="body"></p-select>
+            </div>
+
+            <div class="flex flex-column gap-1" *ngIf="tempDependencyFieldName() && tempDependencyOperator() !== 'is_empty' && tempDependencyOperator() !== 'is_not_empty'">
                 <label for="depValue" class="font-semibold text-900 text-sm">Valor requerido para mostrarse:</label>
                 
-                <!-- Si el campo padre tiene opciones (select o multiselect) -->
-                <p-multiSelect *ngIf="getParentFieldOptions().length > 0"
+                <!-- Si el campo padre tiene opciones (select o multiselect) y el operador es de selección/igualdad -->
+                <p-multiSelect *ngIf="getParentFieldOptions().length > 0 && ['eq', 'neq', 'contains'].includes(tempDependencyOperator())"
                                [options]="getParentFieldOptions()"
                                [(ngModel)]="tempDependencySelectedOptions"
                                placeholder="Selecciona una o más opciones..."
                                appendTo="body"></p-multiSelect>
 
-                <!-- Si no tiene opciones (ej. campos de texto/número) -->
-                <input *ngIf="getParentFieldOptions().length === 0"
+                <!-- Si no tiene opciones o es un operador numérico (gt, gte, lt, lte) -->
+                <input *ngIf="getParentFieldOptions().length === 0 || ['gt', 'gte', 'lt', 'lte'].includes(tempDependencyOperator())"
                        type="text" pInputText id="depValue" [(ngModel)]="tempDependencyValue"
-                       placeholder="Ingresa el valor requerido (ej: Sí)" />
+                       [placeholder]="['gt', 'gte', 'lt', 'lte'].includes(tempDependencyOperator()) ? 'Ej: 50000000' : 'Ingresa el valor requerido (ej: Sí)'" />
                        
-                <span class="text-xs text-500 mt-1">Si deseas múltiples valores de coincidencia separados por coma, ingrésalos así: Valor1, Valor2.</span>
+                <span class="text-xs text-500 mt-1" *ngIf="['gt', 'gte', 'lt', 'lte'].includes(tempDependencyOperator())">
+                    El campo se mostrará cuando el valor numérico del campo padre cumpla con esta comparación (ej: mayor a 50000000).
+                </span>
+                <span class="text-xs text-500 mt-1" *ngIf="!['gt', 'gte', 'lt', 'lte'].includes(tempDependencyOperator()) && getParentFieldOptions().length === 0">
+                    Si deseas múltiples valores de coincidencia separados por coma, ingrésalos así: Valor1, Valor2.
+                </span>
             </div>
         </div>
         <ng-template pTemplate="footer">

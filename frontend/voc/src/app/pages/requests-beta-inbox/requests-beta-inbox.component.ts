@@ -859,6 +859,36 @@ export class RequestsBetaInboxComponent implements OnInit {
     }
   }
 
+  parseNumericValue(val: any): number {
+    if (typeof val === 'number') return isNaN(val) ? NaN : val;
+    if (val === undefined || val === null) return NaN;
+    let str = String(val).trim().replace(/[^0-9.,-]/g, '');
+    if (!str) return NaN;
+
+    if (str.includes('.') && str.includes(',')) {
+      const lastDot = str.lastIndexOf('.');
+      const lastComma = str.lastIndexOf(',');
+      if (lastComma > lastDot) {
+        str = str.replace(/\./g, '').replace(',', '.');
+      } else {
+        str = str.replace(/,/g, '');
+      }
+    } else if ((str.match(/\./g) || []).length > 1) {
+      str = str.replace(/\./g, '');
+    } else if ((str.match(/,/g) || []).length > 1) {
+      str = str.replace(/,/g, '');
+    } else if (str.includes(',')) {
+      const parts = str.split(',');
+      if (parts[1] && parts[1].length === 3 && parts[0].length <= 3) {
+        str = str.replace(',', '');
+      } else {
+        str = str.replace(',', '.');
+      }
+    }
+    const n = Number(str);
+    return isNaN(n) ? NaN : n;
+  }
+
   isFieldVisible(field: any, allFields: any[], formValues: Record<string, any>, formId?: number): boolean {
     if (!field) return false;
     if (field.isActive === false) return false;
@@ -870,38 +900,106 @@ export class RequestsBetaInboxComponent implements OnInit {
 
     const parentName = dependency.fieldName;
     const parentKey = formId ? `${formId}_${parentName}` : parentName;
-    const parentValue = formValues[parentKey];
+    let parentValue = formValues ? formValues[parentKey] : undefined;
+    if (parentValue === undefined && formValues && formId) {
+      parentValue = formValues[parentName];
+    }
+    if (parentValue === undefined && formValues && !formId) {
+      const matchKey = Object.keys(formValues).find(k => k === parentName || k.endsWith(`_${parentName}`));
+      if (matchKey) {
+        parentValue = formValues[matchKey];
+      }
+    }
 
-    if (parentValue === undefined || parentValue === null || parentValue === '') {
+    let op = dependency.operator;
+    const requiredVal = dependency.value;
+
+    if (!op) {
+      if (typeof requiredVal === 'string') {
+        const trimmed = requiredVal.trim();
+        if (trimmed.startsWith('>=')) op = 'gte';
+        else if (trimmed.startsWith('>')) op = 'gt';
+        else if (trimmed.startsWith('<=')) op = 'lte';
+        else if (trimmed.startsWith('<')) op = 'lt';
+        else if (trimmed.startsWith('!=')) op = 'neq';
+        else op = 'eq';
+      } else {
+        op = 'eq';
+      }
+    }
+
+    if (op === 'is_empty') {
+      return parentValue === undefined || parentValue === null || String(parentValue).trim() === '' || String(parentValue) === '[]';
+    }
+
+    if (op === 'is_not_empty') {
+      return parentValue !== undefined && parentValue !== null && String(parentValue).trim() !== '' && String(parentValue) !== '[]';
+    }
+
+    if (parentValue === undefined || parentValue === null || String(parentValue).trim() === '') {
       return false;
     }
 
-    const parentField = allFields.find(f => f.name === parentName);
-    const requiredVal = dependency.value;
+    if (['gt', 'gte', 'lt', 'lte'].includes(op)) {
+      const numParent = this.parseNumericValue(parentValue);
+      const numTarget = this.parseNumericValue(requiredVal);
+      if (isNaN(numParent) || isNaN(numTarget)) {
+        return false;
+      }
+      if (op === 'gt') return numParent > numTarget;
+      if (op === 'gte') return numParent >= numTarget;
+      if (op === 'lt') return numParent < numTarget;
+      if (op === 'lte') return numParent <= numTarget;
+    }
+
+    const parentField = allFields ? allFields.find(f => f.name === parentName) : null;
 
     if (parentField && (parentField.type === 'multiselect' || parentField.type === 'dynamic_list')) {
       let selectedList: string[] = [];
       try {
-        const parsed = JSON.parse(parentValue);
+        const parsed = typeof parentValue === 'string' ? JSON.parse(parentValue) : parentValue;
         if (Array.isArray(parsed)) {
-          selectedList = parsed.map(i => typeof i === 'object' ? (i.item || i.product) : i).filter(Boolean);
+          selectedList = parsed.map(i => typeof i === 'object' && i !== null ? (i.item || i.product || i.name || i.value || JSON.stringify(i)) : String(i)).filter(Boolean);
+        } else {
+          selectedList = [String(parentValue)];
         }
       } catch(e) {
         selectedList = String(parentValue).split(',').map(s => s.trim()).filter(Boolean);
       }
 
-      if (Array.isArray(requiredVal)) {
-        const cleanReq = requiredVal.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null' && v !== '_null');
-        return cleanReq.some(val => selectedList.includes(val));
+      const cleanReqList = Array.isArray(requiredVal) 
+        ? requiredVal.map(v => String(v).trim()).filter(v => v && v !== 'null' && v !== '_null')
+        : (requiredVal !== undefined && requiredVal !== null ? [String(requiredVal).trim()] : []);
+
+      if (op === 'neq') {
+        return !cleanReqList.some(val => selectedList.includes(val));
       }
-      return selectedList.includes(requiredVal);
+      return cleanReqList.some(val => selectedList.includes(val));
     }
 
+    const parentStr = String(parentValue).trim().toLowerCase();
+
     if (Array.isArray(requiredVal)) {
-      const cleanReq = requiredVal.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null' && v !== '_null');
-      return cleanReq.includes(String(parentValue));
+      const cleanReq = requiredVal
+        .map(v => String(v).trim().toLowerCase())
+        .filter(v => v && v !== 'null' && v !== '_null');
+      if (op === 'neq') {
+        return !cleanReq.includes(parentStr);
+      }
+      if (op === 'contains') {
+        return cleanReq.some(val => parentStr.includes(val));
+      }
+      return cleanReq.includes(parentStr);
     }
-    return String(parentValue) === String(requiredVal);
+
+    const targetStr = String(requiredVal ?? '').trim().toLowerCase();
+    if (op === 'neq') {
+      return parentStr !== targetStr;
+    }
+    if (op === 'contains') {
+      return parentStr.includes(targetStr);
+    }
+    return parentStr === targetStr;
   }
 
   initDynamicListField(key: string, rawVal: string) {

@@ -26,7 +26,7 @@ export const createTeam = asyncHandler(async (req: Request, res: Response): Prom
     description,
     leaderId: leaderId ? Number(leaderId) : null,
     defaultWorkflowId: defaultWorkflowId ? Number(defaultWorkflowId) : null,
-    metadata: metadata !== undefined ? (typeof metadata === 'string' ? metadata : JSON.stringify(metadata)) : null
+    metadata: metadata !== undefined ? (metadata === null ? null : (typeof metadata === 'string' ? metadata : JSON.stringify(metadata))) : null
   });
 
   res.status(201).json({
@@ -72,7 +72,7 @@ export const updateTeam = asyncHandler(async (req: Request, res: Response): Prom
     description,
     leaderId: leaderId !== undefined ? (leaderId ? Number(leaderId) : null) : undefined,
     defaultWorkflowId: defaultWorkflowId !== undefined ? (defaultWorkflowId ? Number(defaultWorkflowId) : null) : undefined,
-    metadata: metadata !== undefined ? (typeof metadata === 'string' ? metadata : JSON.stringify(metadata)) : undefined
+    metadata: metadata !== undefined ? (metadata === null ? null : (typeof metadata === 'string' ? metadata : JSON.stringify(metadata))) : undefined
   });
 
   if (!updatedTeam) {

@@ -14,18 +14,26 @@
   </app-page-header>
 
   <div class="card">
-    <p-table [value]="teams()" [loading]="loading()" [paginator]="true" [rows]="10" styleClass="p-datatable-sm" responsiveLayout="scroll">
+    <p-table [value]="teams()" [loading]="loading()" [paginator]="true" [rows]="10" dataKey="id" styleClass="p-datatable-sm" responsiveLayout="scroll">
       <ng-template pTemplate="header">
         <tr>
+          <th style="width: 3rem"></th>
           <th>Nombre del Equipo</th>
           <th>Líder de Equipo</th>
           <th>Descripción</th>
           <th class="text-center">Miembros</th>
-          <th style="width: 10rem" class="text-center">Acciones</th>
+          <th class="text-center">Subequipos</th>
+          <th class="text-center">Condiciones</th>
+          <th style="width: 12rem" class="text-center">Acciones</th>
         </tr>
       </ng-template>
-      <ng-template pTemplate="body" let-team>
+      <ng-template pTemplate="body" let-team let-expanded="expanded">
         <tr>
+          <td>
+            <button type="button" pButton pRipple [pRowToggler]="team" class="p-button-text p-button-rounded p-button-plain p-button-sm p-0 w-2rem h-2rem">
+              <i [class]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></i>
+            </button>
+          </td>
           <td class="font-bold text-900">{{ team.name }}</td>
           <td>
             <div *ngIf="team.leader" class="flex align-items-center gap-2">
@@ -42,16 +50,154 @@
             <p-badge [value]="(team.users?.length || 0).toString()" severity="secondary"></p-badge>
           </td>
           <td class="text-center">
-            <div class="flex justify-content-center gap-2">
-              <p-button (onClick)="editTeam(team)" [rounded]="true" [text]="true" severity="info" pTooltip="Editar"><lucide-icon name="pencil"></lucide-icon></p-button>
-              <p-button (onClick)="deleteTeam(team)" [rounded]="true" [text]="true" severity="danger" pTooltip="Eliminar"><lucide-icon name="trash-2"></lucide-icon></p-button>
+            <div class="flex align-items-center justify-content-center gap-2">
+              <p-badge 
+                [value]="(team.subteams?.length || 0).toString()" 
+                [severity]="(team.subteams?.length || 0) > 0 ? 'info' : 'secondary'"></p-badge>
+              <button 
+                pButton 
+                pRipple 
+                type="button" 
+                icon="pi pi-plus" 
+                class="p-button-rounded p-button-text p-button-sm w-1.5rem h-1.5rem" 
+                pTooltip="Crear Subequipo" 
+                (click)="openNewSubteam(team); $event.stopPropagation()">
+              </button>
+            </div>
+          </td>
+          <td class="text-center">
+            <span *ngIf="getConditionCount(team) > 0" class="inline-flex align-items-center gap-1 px-2 py-1 border-round text-xs font-semibold bg-orange-50 text-orange-700 border-1 border-orange-200">
+              <i class="pi pi-sliders-h text-xs"></i>
+              {{ getConditionCount(team) }} {{ getConditionCount(team) === 1 ? 'regla' : 'reglas' }}
+            </span>
+            <span *ngIf="getConditionCount(team) === 0" class="text-xs text-400 italic">
+              Siempre habilitado
+            </span>
+          </td>
+          <td class="text-center">
+            <div class="flex justify-content-center gap-1">
+              <p-button (onClick)="openNewSubteam(team)" [rounded]="true" [text]="true" severity="help" pTooltip="Agregar Subequipo">
+                <lucide-icon name="plus-circle"></lucide-icon>
+              </p-button>
+              <p-button (onClick)="editTeam(team)" [rounded]="true" [text]="true" severity="info" pTooltip="Editar Equipo">
+                <lucide-icon name="pencil"></lucide-icon>
+              </p-button>
+              <p-button (onClick)="deleteTeam(team)" [rounded]="true" [text]="true" severity="danger" pTooltip="Eliminar Equipo">
+                <lucide-icon name="trash-2"></lucide-icon>
+              </p-button>
             </div>
           </td>
         </tr>
       </ng-template>
+
+      <!-- Fila Expandible con Subequipos -->
+      <ng-template pTemplate="rowexpansion" let-team>
+        <tr>
+          <td colspan="7" class="p-3 bg-bluegray-50 border-round-bottom">
+            <div class="flex flex-column gap-3 p-3 surface-card border-round-xl border-1 surface-border shadow-1">
+              <div class="flex align-items-center justify-content-between flex-wrap gap-2 border-bottom-1 surface-border pb-2">
+                <div class="flex align-items-center gap-2">
+                  <lucide-icon name="layers" class="text-primary" style="width: 1.25rem; height: 1.25rem;"></lucide-icon>
+                  <div>
+                    <span class="font-bold text-sm text-900">Subequipos de "{{ team.name }}"</span>
+                    <span class="text-xs text-500 ml-2">({{ team.subteams?.length || 0 }} subequipos registrados)</span>
+                  </div>
+                </div>
+                <p-button 
+                  label="Nuevo Subequipo" 
+                  icon="pi pi-plus" 
+                  size="small" 
+                  [outlined]="true"
+                  (onClick)="openNewSubteam(team)">
+                </p-button>
+              </div>
+
+              <!-- Lista / Tabla de Subequipos -->
+              <div *ngIf="team.subteams && team.subteams.length > 0; else emptySubteams">
+                <p-table [value]="team.subteams" styleClass="p-datatable-sm" responsiveLayout="scroll">
+                  <ng-template pTemplate="header">
+                    <tr>
+                      <th>Nombre del Subequipo</th>
+                      <th>Líder</th>
+                      <th>Descripción</th>
+                      <th class="text-center">Miembros Asignados</th>
+                      <th style="width: 8rem" class="text-center">Acciones</th>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="body" let-subteam>
+                    <tr>
+                      <td class="font-semibold text-sm text-900">
+                        <div class="flex align-items-center gap-2">
+                          <i class="pi pi-angle-right text-primary text-xs"></i>
+                          <span>{{ subteam.name }}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div *ngIf="subteam.leader" class="flex align-items-center gap-1">
+                          <lucide-icon name="user-check" class="text-primary text-xs"></lucide-icon>
+                          <span class="text-xs font-medium">{{ subteam.leader.name }}</span>
+                        </div>
+                        <span *ngIf="!subteam.leader" class="text-xs text-400 italic">Sin líder</span>
+                      </td>
+                      <td class="text-xs text-600">{{ subteam.description || 'Sin descripción' }}</td>
+                      <td class="text-center">
+                        <div class="flex align-items-center justify-content-center gap-1 flex-wrap">
+                          <p-badge 
+                            [value]="(subteam.subteamUsers?.length || 0).toString()" 
+                            [severity]="(subteam.subteamUsers?.length || 0) > 0 ? 'success' : 'secondary'"></p-badge>
+                          <span class="text-xs text-500" *ngIf="subteam.subteamUsers && subteam.subteamUsers.length > 0">
+                            ({{ subteam.subteamUsers.length }} usuarios)
+                          </span>
+                        </div>
+                      </td>
+                      <td class="text-center">
+                        <div class="flex justify-content-center gap-1">
+                          <p-button 
+                            (onClick)="editSubteam(team, subteam)" 
+                            [rounded]="true" 
+                            [text]="true" 
+                            severity="info" 
+                            pTooltip="Editar Subequipo">
+                            <lucide-icon name="pencil"></lucide-icon>
+                          </p-button>
+                          <p-button 
+                            (onClick)="deleteSubteam(subteam)" 
+                            [rounded]="true" 
+                            [text]="true" 
+                            severity="danger" 
+                            pTooltip="Eliminar Subequipo">
+                            <lucide-icon name="trash-2"></lucide-icon>
+                          </p-button>
+                        </div>
+                      </td>
+                    </tr>
+                  </ng-template>
+                </p-table>
+              </div>
+
+              <ng-template #emptySubteams>
+                <div class="flex flex-column align-items-center justify-content-center p-4 border-round-lg border-1 border-dashed surface-border text-center">
+                  <lucide-icon name="layers" class="text-400 mb-2" style="width: 2rem; height: 2rem;"></lucide-icon>
+                  <span class="text-sm font-semibold text-700">No hay subequipos en este equipo</span>
+                  <span class="text-xs text-500 mt-1">Crea un subequipo para poder asignar usuarios flexibles y recibir solicitudes aleatorias.</span>
+                  <p-button 
+                    label="Agregar Primer Subequipo" 
+                    icon="pi pi-plus" 
+                    size="small" 
+                    [text]="true" 
+                    class="mt-2"
+                    (onClick)="openNewSubteam(team)">
+                  </p-button>
+                </div>
+              </ng-template>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="5" class="text-center p-4">No hay equipos registrados</td>
+          <td colspan="7" class="text-center p-4">No hay equipos registrados</td>
         </tr>
       </ng-template>
     </p-table>
@@ -63,3 +209,10 @@
   [team]="editingTeam()"
   (save)="onSave()">
 </app-team-dialog>
+
+<app-subteam-dialog
+  [(visible)]="subteamDialogVisible"
+  [team]="selectedTeamForSubteam()"
+  [subteam]="editingSubteam()"
+  (save)="onSubteamSave()">
+</app-subteam-dialog>

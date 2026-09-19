@@ -62,21 +62,34 @@ export class DynamicFormService {
     }
 
     if (obj.dependency) {
-      if (Array.isArray(obj.dependency.value)) {
-        obj.dependency.value = obj.dependency.value
-          .map((v: any) => typeof v === 'object' && v !== null ? (v.value ?? v.label ?? '') : String(v ?? ''))
-          .map((s: string) => s.trim())
-          .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
-        if (obj.dependency.value.length === 1) obj.dependency.value = obj.dependency.value[0];
-        else if (obj.dependency.value.length === 0) obj.dependency.value = '';
-      } else if (typeof obj.dependency.value === 'string') {
-        const clean = obj.dependency.value
-          .split(',')
-          .map((s: string) => s.trim())
-          .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
-        obj.dependency.value = clean.length > 1 ? clean : (clean[0] || '');
-      } else if (obj.dependency.value === null || obj.dependency.value === undefined) {
+      const op = obj.dependency.operator || 'eq';
+      obj.dependency.operator = op;
+
+      if (op === 'is_empty' || op === 'is_not_empty') {
         obj.dependency.value = '';
+      } else if (['gt', 'gte', 'lt', 'lte'].includes(op)) {
+        if (typeof obj.dependency.value === 'string') {
+          obj.dependency.value = obj.dependency.value.trim();
+        } else if (obj.dependency.value === null || obj.dependency.value === undefined) {
+          obj.dependency.value = '';
+        }
+      } else {
+        if (Array.isArray(obj.dependency.value)) {
+          obj.dependency.value = obj.dependency.value
+            .map((v: any) => typeof v === 'object' && v !== null ? (v.value ?? v.label ?? '') : String(v ?? ''))
+            .map((s: string) => s.trim())
+            .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+          if (obj.dependency.value.length === 1) obj.dependency.value = obj.dependency.value[0];
+          else if (obj.dependency.value.length === 0) obj.dependency.value = '';
+        } else if (typeof obj.dependency.value === 'string') {
+          const clean = obj.dependency.value
+            .split(',')
+            .map((s: string) => s.trim())
+            .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+          obj.dependency.value = clean.length > 1 ? clean : (clean[0] || '');
+        } else if (obj.dependency.value === null || obj.dependency.value === undefined) {
+          obj.dependency.value = '';
+        }
       }
     }
     return obj;

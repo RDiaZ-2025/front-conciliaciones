@@ -11,8 +11,10 @@ import { MessageService, ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { PageHeaderComponent } from '../../components/page-header/page-header.component';
 import { TeamDialogComponent } from './team-dialog/team-dialog.component';
+import { SubteamDialogComponent } from './subteam-dialog/subteam-dialog.component';
 import { TeamService } from '../../services/team.service';
 import { Team } from '../../models/common/team';
+import { Subteam } from '../../models/common/subteam';
 
 @Component({
   selector: 'app-teams',
@@ -28,7 +30,8 @@ import { Team } from '../../models/common/team';
     BadgeModule,
     ConfirmDialogModule,
     PageHeaderComponent,
-    TeamDialogComponent
+    TeamDialogComponent,
+    SubteamDialogComponent
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './teams.component.html',
@@ -43,6 +46,11 @@ export class TeamsComponent implements OnInit {
   loading = signal<boolean>(false);
   dialogVisible = signal<boolean>(false);
   editingTeam = signal<Team | null>(null);
+
+  // Subequipos
+  subteamDialogVisible = signal<boolean>(false);
+  selectedTeamForSubteam = signal<Team | null>(null);
+  editingSubteam = signal<Subteam | null>(null);
 
   ngOnInit() {
     this.loadTeams();
@@ -64,6 +72,16 @@ export class TeamsComponent implements OnInit {
     });
   }
 
+  getConditionCount(team: any): number {
+    if (!team || !team.metadata) return 0;
+    try {
+      const meta = typeof team.metadata === 'string' ? JSON.parse(team.metadata) : team.metadata;
+      return Array.isArray(meta?.enableConditions) ? meta.enableConditions.length : 0;
+    } catch {
+      return 0;
+    }
+  }
+
   openNew() {
     this.editingTeam.set(null);
     this.dialogVisible.set(true);
@@ -76,8 +94,8 @@ export class TeamsComponent implements OnInit {
 
   deleteTeam(team: Team) {
     this.confirmationService.confirm({
-      message: '¿Está seguro de eliminar este equipo?',
-      header: 'Confirmar',
+      message: '¿Está seguro de eliminar este equipo? Se eliminarán también sus subequipos asociados.',
+      header: 'Confirmar Eliminación',
       icon: 'alert-triangle',
       accept: () => {
         this.loading.set(true);
@@ -97,6 +115,45 @@ export class TeamsComponent implements OnInit {
 
   onSave() {
     this.dialogVisible.set(false);
+    this.loadTeams();
+  }
+
+  // Métodos de Subequipos
+  openNewSubteam(team: Team) {
+    this.selectedTeamForSubteam.set(team);
+    this.editingSubteam.set(null);
+    this.subteamDialogVisible.set(true);
+  }
+
+  editSubteam(team: Team, subteam: Subteam) {
+    this.selectedTeamForSubteam.set(team);
+    this.editingSubteam.set(subteam);
+    this.subteamDialogVisible.set(true);
+  }
+
+  deleteSubteam(subteam: Subteam) {
+    this.confirmationService.confirm({
+      message: `¿Está seguro de eliminar el subequipo "${subteam.name}"?`,
+      header: 'Confirmar Eliminación',
+      icon: 'alert-triangle',
+      accept: () => {
+        this.loading.set(true);
+        this.teamService.deleteSubteam(subteam.id).subscribe({
+          next: () => {
+            this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Subequipo eliminado' });
+            this.loadTeams();
+          },
+          error: (err) => {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Error al eliminar subequipo' });
+            this.loading.set(false);
+          }
+        });
+      }
+    });
+  }
+
+  onSubteamSave() {
+    this.subteamDialogVisible.set(false);
     this.loadTeams();
   }
 }

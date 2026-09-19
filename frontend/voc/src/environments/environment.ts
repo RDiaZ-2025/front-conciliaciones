@@ -1,6 +1,8 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:22741/api',
+  apiUrl: (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+    ? `${window.location.origin}/api`
+    : 'http://localhost:22741/api',
   festivosApiKey: 'fs_3mNHbhSyjhJyTtdhiKhQjtAC6LWj1MAc',
   festivosApiUrl: 'https://festivos.com.co/api/v1/festivos',
   uploadNotifyUrl: 'https://renediaz2025.app.n8n.cloud/webhook/a4784977-134a-4f09-9ea3-04c85c5ba3b7',

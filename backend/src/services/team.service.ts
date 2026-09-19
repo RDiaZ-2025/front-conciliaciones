@@ -9,7 +9,15 @@ export class TeamService {
 
   async getAllTeams(): Promise<Team[]> {
     return await this.teamRepository.find({
-      relations: ['leader', 'defaultWorkflow', 'users'],
+      relations: [
+        'leader',
+        'defaultWorkflow',
+        'users',
+        'subteams',
+        'subteams.leader',
+        'subteams.subteamUsers',
+        'subteams.subteamUsers.user'
+      ],
       order: {
         name: 'ASC'
       }
@@ -19,7 +27,15 @@ export class TeamService {
   async getTeamById(id: number): Promise<Team | null> {
     return await this.teamRepository.findOne({
       where: { id },
-      relations: ['leader', 'defaultWorkflow', 'users']
+      relations: [
+        'leader',
+        'defaultWorkflow',
+        'users',
+        'subteams',
+        'subteams.leader',
+        'subteams.subteamUsers',
+        'subteams.subteamUsers.user'
+      ]
     });
   }
 

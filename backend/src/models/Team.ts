@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from './User';
 import { DynamicWorkflow } from './DynamicWorkflow';
+import { Subteam } from './Subteam';
 
 @Entity('Teams')
 export class Team {
@@ -33,4 +34,7 @@ export class Team {
 
   @OneToMany(() => User, user => user.team)
   users!: User[];
+
+  @OneToMany(() => Subteam, subteam => subteam.team)
+  subteams!: Subteam[];
 }

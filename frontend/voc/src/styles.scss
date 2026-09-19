@@ -167,3 +167,53 @@ html, body {
 svg {
     display: block;
 }
+
+/* Modal Nueva Solicitud - Grid de Equipos */
+.teams-selection-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.85rem !important;
+    width: 100% !important;
+    align-items: stretch !important;
+}
+
+@media (max-width: 680px) {
+    .teams-selection-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+.team-selection-card {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 4.5rem !important;
+    box-sizing: border-box !important;
+}
+
+/* ==========================================================================
+   PrimeFlex Grid Compatibility with Tailwind CSS
+   --------------------------------------------------------------------------
+   Tailwind's .grid utility sets `display: grid;`, which overrides and breaks
+   PrimeFlex 12-column flexbox grid system (`.grid > .col-*`).
+   This restores `display: flex; flex-wrap: wrap;` for any `.grid` container
+   that does NOT explicitly specify a Tailwind column utility (`grid-cols-*`).
+   ========================================================================== */
+.grid:not([class*="grid-cols-"]) {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    margin-right: -0.5rem;
+    margin-left: -0.5rem;
+    margin-top: -0.5rem;
+    box-sizing: border-box;
+}
+
+.grid:not([class*="grid-cols-"]) > [class*="col-"],
+.grid:not([class*="grid-cols-"]) > .col {
+    box-sizing: border-box;
+    padding: 0.5rem;
+}
+
+.formgrid.grid {
+    margin-top: 0 !important;
+}
+

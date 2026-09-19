@@ -1,3 +1,5 @@
+import { Subteam } from './subteam';
+
 export interface Team {
   id: number;
   name: string;
@@ -16,4 +18,5 @@ export interface Team {
   } | null;
   metadata?: string | any | null;
   users?: any[];
+  subteams?: Subteam[];
 }

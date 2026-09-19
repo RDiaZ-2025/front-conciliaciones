@@ -143,7 +143,7 @@ export class ProductionService extends BaseApiService {
     targetFormIds?: number[],
     submissions?: any[],
     targetTeamIds?: number[],
-    targetTeams?: Array<{ teamId: number; assignmentMode?: string }>,
+    targetTeams?: Array<{ teamId: number; subteamId?: number | null; assignmentMode?: string }>,
     closingConfig?: { formId?: number | null; workflowId?: number | null }
   ): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/submissions`, {

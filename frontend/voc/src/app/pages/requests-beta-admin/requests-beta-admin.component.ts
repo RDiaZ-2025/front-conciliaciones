@@ -53,9 +53,10 @@ interface WorkflowStageItem {
   name: string;
   description: string;
   stepOrder: number;
-  assigneeType: 'specific_user' | 'requester' | 'requester_boss' | 'team' | 'team_random' | 'team_workload' | 'team_leader' | 'subflow' | 'multiple_users' | 'previous_stage_actioner' | 'previous_stage_team_random';
+  assigneeType: 'specific_user' | 'requester' | 'requester_boss' | 'team' | 'team_random' | 'team_workload' | 'team_leader' | 'subflow' | 'multiple_users' | 'previous_stage_actioner' | 'previous_stage_team_random' | 'subteam_random';
   assigneeUserId: number | null;
   assigneeTeamId: number | null;
+  assigneeSubteamId?: number | null;
   formIdToFill: number | null;
   rejectionTargetType: 'previous_sender' | 'specific_user' | 'team_random';
   rejectionTargetUserId: number | null;
@@ -206,8 +207,21 @@ export class RequestsBetaAdminComponent implements OnInit {
   showDependencyConfigDialog = signal<boolean>(false);
   selectedFieldForDependencyConfig = signal<any>(null);
   tempDependencyFieldName = signal<string>('');
+  tempDependencyOperator = signal<string>('eq');
   tempDependencyValue = signal<string>('');
   tempDependencySelectedOptions = signal<string[]>([]);
+
+  dependencyOperatorOptions = [
+    { label: 'Igual a (=)', value: 'eq' },
+    { label: 'Diferente de (≠)', value: 'neq' },
+    { label: 'Mayor que (>)', value: 'gt' },
+    { label: 'Mayor o igual que (≥)', value: 'gte' },
+    { label: 'Menor que (<)', value: 'lt' },
+    { label: 'Menor o igual que (≤)', value: 'lte' },
+    { label: 'Contiene', value: 'contains' },
+    { label: 'Tiene algún valor (No vacío)', value: 'is_not_empty' },
+    { label: 'Está vacío', value: 'is_empty' }
+  ];
 
   showNumberConfigDialog = signal<boolean>(false);
   selectedFieldForNumberConfig = signal<any | null>(null);
@@ -269,6 +283,7 @@ export class RequestsBetaAdminComponent implements OnInit {
     { label: 'Usuario Específico', value: 'specific_user' },
     { label: '👔 Líder de Equipo', value: 'team_leader' },
     { label: 'Equipo / Rol (Al Azar)', value: 'team_random' },
+    { label: '👥 Subequipo (Al Azar)', value: 'subteam_random' },
     { label: 'Equipo / Rol (Menor Carga)', value: 'team_workload' },
     { label: 'Equipo / Rol (Todos en Paralelo)', value: 'team' },
     { label: '🎲 Al Azar del Equipo del Aprobador Anterior', value: 'previous_stage_team_random' },
@@ -543,21 +558,33 @@ export class RequestsBetaAdminComponent implements OnInit {
               .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
           }
           if (meta.dependency) {
-            if (Array.isArray(meta.dependency.value)) {
-              meta.dependency.value = meta.dependency.value
-                .map((v: any) => typeof v === 'object' && v !== null ? (v.value ?? v.label ?? '') : String(v ?? ''))
-                .map((s: string) => s.trim())
-                .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
-              if (meta.dependency.value.length === 1) meta.dependency.value = meta.dependency.value[0];
-              else if (meta.dependency.value.length === 0) meta.dependency.value = '';
-            } else if (typeof meta.dependency.value === 'string') {
-              const clean = meta.dependency.value
-                .split(',')
-                .map((s: string) => s.trim())
-                .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
-              meta.dependency.value = clean.length > 1 ? clean : (clean[0] || '');
-            } else if (meta.dependency.value === null || meta.dependency.value === undefined) {
+            const op = meta.dependency.operator || 'eq';
+            meta.dependency.operator = op;
+            if (op === 'is_empty' || op === 'is_not_empty') {
               meta.dependency.value = '';
+            } else if (['gt', 'gte', 'lt', 'lte'].includes(op)) {
+              if (typeof meta.dependency.value === 'string') {
+                meta.dependency.value = meta.dependency.value.trim();
+              } else if (meta.dependency.value === null || meta.dependency.value === undefined) {
+                meta.dependency.value = '';
+              }
+            } else {
+              if (Array.isArray(meta.dependency.value)) {
+                meta.dependency.value = meta.dependency.value
+                  .map((v: any) => typeof v === 'object' && v !== null ? (v.value ?? v.label ?? '') : String(v ?? ''))
+                  .map((s: string) => s.trim())
+                  .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+                if (meta.dependency.value.length === 1) meta.dependency.value = meta.dependency.value[0];
+                else if (meta.dependency.value.length === 0) meta.dependency.value = '';
+              } else if (typeof meta.dependency.value === 'string') {
+                const clean = meta.dependency.value
+                  .split(',')
+                  .map((s: string) => s.trim())
+                  .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+                meta.dependency.value = clean.length > 1 ? clean : (clean[0] || '');
+              } else if (meta.dependency.value === null || meta.dependency.value === undefined) {
+                meta.dependency.value = '';
+              }
             }
           }
           return {
@@ -757,27 +784,52 @@ export class RequestsBetaAdminComponent implements OnInit {
       try { field.metadata = JSON.parse(field.metadata); } catch(e){}
     }
     if (!field.metadata.dependency) {
-      field.metadata.dependency = { fieldName: '', value: '' };
+      field.metadata.dependency = { fieldName: '', operator: 'eq', value: '' };
     }
 
     this.selectedFieldForDependencyConfig.set(field);
     this.tempDependencyFieldName.set(field.metadata.dependency.fieldName || '');
 
-    const val = field.metadata.dependency.value;
-    let arrVal: string[] = [];
-    if (Array.isArray(val)) {
-      arrVal = val
-        .map((v: any) => typeof v === 'object' && v !== null ? (v.value ?? v.label ?? '') : String(v ?? ''))
-        .map((v: string) => v.trim())
-        .filter((v: string) => v && v !== 'null' && v !== '_null' && v !== 'undefined');
-    } else if (val !== undefined && val !== null && val !== '') {
-      arrVal = String(val)
-        .split(',')
-        .map(s => s.trim())
-        .filter(s => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+    let op = field.metadata.dependency.operator;
+    const rawVal = field.metadata.dependency.value;
+
+    if (!op) {
+      if (typeof rawVal === 'string') {
+        const trimmed = rawVal.trim();
+        if (trimmed.startsWith('>=')) op = 'gte';
+        else if (trimmed.startsWith('>')) op = 'gt';
+        else if (trimmed.startsWith('<=')) op = 'lte';
+        else if (trimmed.startsWith('<')) op = 'lt';
+        else if (trimmed.startsWith('!=')) op = 'neq';
+        else op = 'eq';
+      } else {
+        op = 'eq';
+      }
     }
-    this.tempDependencySelectedOptions.set(arrVal);
-    this.tempDependencyValue.set(arrVal.join(', '));
+    this.tempDependencyOperator.set(op);
+
+    const isNumericOp = ['gt', 'gte', 'lt', 'lte'].includes(op);
+
+    if (isNumericOp) {
+      const cleanVal = (rawVal !== undefined && rawVal !== null) ? String(rawVal).replace(/^[><=!]+/, '').trim() : '';
+      this.tempDependencyValue.set(cleanVal);
+      this.tempDependencySelectedOptions.set([]);
+    } else {
+      let arrVal: string[] = [];
+      if (Array.isArray(rawVal)) {
+        arrVal = rawVal
+          .map((v: any) => typeof v === 'object' && v !== null ? (v.value ?? v.label ?? '') : String(v ?? ''))
+          .map((v: string) => v.trim())
+          .filter((v: string) => v && v !== 'null' && v !== '_null' && v !== 'undefined');
+      } else if (rawVal !== undefined && rawVal !== null && rawVal !== '') {
+        arrVal = String(rawVal)
+          .split(',')
+          .map(s => s.trim())
+          .filter(s => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+      }
+      this.tempDependencySelectedOptions.set(arrVal);
+      this.tempDependencyValue.set(arrVal.join(', '));
+    }
 
     this.showDependencyConfigDialog.set(true);
   }
@@ -820,38 +872,47 @@ export class RequestsBetaAdminComponent implements OnInit {
       if (!parentName) {
         delete field.metadata.dependency;
       } else {
-        const parentField = this.formFields().find(f => f.name === parentName);
-        let hasOptions = false;
-        if (parentField) {
-          let meta = parentField.metadata;
-          if (typeof meta === 'string') {
-            try { meta = JSON.parse(meta); } catch(e){}
-          }
-          if (meta && Array.isArray(meta.options)) {
-            hasOptions = true;
-          }
-        }
+        const op = this.tempDependencyOperator() || 'eq';
+        let val: any = '';
 
-        let val: any;
-        if (hasOptions) {
-          const selected = this.tempDependencySelectedOptions()
-            .map((s: string) => s.trim())
-            .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
-          val = selected.length === 1 ? selected[0] : (selected.length === 0 ? '' : selected);
+        if (op === 'is_empty' || op === 'is_not_empty') {
+          val = '';
+        } else if (['gt', 'gte', 'lt', 'lte'].includes(op)) {
+          val = this.tempDependencyValue().trim();
         } else {
-          const raw = this.tempDependencyValue().trim();
-          const cleanList = raw.split(',').map(s => s.trim()).filter(s => s && s !== 'null' && s !== '_null' && s !== 'undefined');
-          if (cleanList.length === 1) {
-            val = cleanList[0];
-          } else if (cleanList.length === 0) {
-            val = '';
+          const parentField = this.formFields().find(f => f.name === parentName);
+          let hasOptions = false;
+          if (parentField) {
+            let meta = parentField.metadata;
+            if (typeof meta === 'string') {
+              try { meta = JSON.parse(meta); } catch(e){}
+            }
+            if (meta && Array.isArray(meta.options)) {
+              hasOptions = true;
+            }
+          }
+
+          if (hasOptions && ['eq', 'neq', 'contains'].includes(op)) {
+            const selected = this.tempDependencySelectedOptions()
+              .map((s: string) => s.trim())
+              .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+            val = selected.length === 1 ? selected[0] : (selected.length === 0 ? '' : selected);
           } else {
-            val = cleanList;
+            const raw = this.tempDependencyValue().trim();
+            const cleanList = raw.split(',').map(s => s.trim()).filter(s => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+            if (cleanList.length === 1) {
+              val = cleanList[0];
+            } else if (cleanList.length === 0) {
+              val = '';
+            } else {
+              val = cleanList;
+            }
           }
         }
 
         field.metadata.dependency = {
           fieldName: parentName,
+          operator: op,
           value: val
         };
       }
@@ -1156,6 +1217,15 @@ export class RequestsBetaAdminComponent implements OnInit {
               }
             } catch(e) {}
           }
+          let assigneeTeamId = s.assigneeTeamId;
+          if (!assigneeTeamId && s.assigneeSubteamId) {
+            for (const team of this.teams()) {
+              if (team.subteams && team.subteams.some((st: any) => st.id === s.assigneeSubteamId)) {
+                assigneeTeamId = team.id;
+                break;
+              }
+            }
+          }
           return {
             id: s.id,
             name: s.name,
@@ -1163,7 +1233,8 @@ export class RequestsBetaAdminComponent implements OnInit {
             stepOrder: s.stepOrder,
             assigneeType: s.assigneeType,
             assigneeUserId: s.assigneeUserId,
-            assigneeTeamId: s.assigneeTeamId,
+            assigneeTeamId: assigneeTeamId,
+            assigneeSubteamId: s.assigneeSubteamId || null,
             formIdToFill: s.formIdToFill,
             rejectionTargetType: s.rejectionTargetType || 'previous_sender',
             rejectionTargetUserId: s.rejectionTargetUserId,
@@ -1190,6 +1261,16 @@ export class RequestsBetaAdminComponent implements OnInit {
     return u ? u.name : `Usuario #${userId}`;
   }
 
+  getSubteamsForTeam(teamId: number | null | undefined): any[] {
+    if (!teamId) return [];
+    const team = this.teams().find(t => t.id === teamId);
+    return team && team.subteams ? team.subteams.filter((st: any) => st.isActive !== false) : [];
+  }
+
+  onStageTeamChange(stage: WorkflowStageItem) {
+    stage.assigneeSubteamId = null;
+  }
+
   addStage() {
     const current = this.workflowStages();
     this.workflowStages.set([
@@ -1201,6 +1282,7 @@ export class RequestsBetaAdminComponent implements OnInit {
         assigneeType: 'specific_user',
         assigneeUserId: null,
         assigneeTeamId: null,
+        assigneeSubteamId: null,
         formIdToFill: null,
         rejectionTargetType: 'previous_sender',
         rejectionTargetUserId: null,
@@ -1300,6 +1382,16 @@ export class RequestsBetaAdminComponent implements OnInit {
         this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere asociar un equipo aprobador.` });
         return;
       }
+      if (s.assigneeType === 'subteam_random') {
+        if (!s.assigneeTeamId) {
+          this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere asociar un equipo.` });
+          return;
+        }
+        if (!s.assigneeSubteamId) {
+          this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere asociar un subequipo.` });
+          return;
+        }
+      }
       if (s.assigneeType === 'subflow' && !s.formIdToFill) {
         this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere seleccionar el flujo de trabajo a invocar.` });
         return;
@@ -1360,6 +1452,7 @@ export class RequestsBetaAdminComponent implements OnInit {
         assigneeType: s.assigneeType,
         assigneeUserId: s.assigneeUserId,
         assigneeTeamId: s.assigneeTeamId,
+        assigneeSubteamId: s.assigneeType === 'subteam_random' ? (s.assigneeSubteamId || null) : null,
         formIdToFill: s.formIdToFill,
         rejectionTargetType: s.rejectionTargetType,
         rejectionTargetUserId: s.rejectionTargetUserId,

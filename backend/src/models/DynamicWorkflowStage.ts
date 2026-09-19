@@ -3,6 +3,7 @@ import { DynamicForm } from './DynamicForm';
 import { DynamicWorkflow } from './DynamicWorkflow';
 import { User } from './User';
 import { Team } from './Team';
+import { Subteam } from './Subteam';
 
 @Entity('DynamicWorkflowStages')
 export class DynamicWorkflowStage {
@@ -35,6 +36,9 @@ export class DynamicWorkflowStage {
 
   @Column({ name: 'AssigneeTeamId', type: 'int', nullable: true })
   assigneeTeamId!: number | null;
+
+  @Column({ name: 'AssigneeSubteamId', type: 'int', nullable: true })
+  assigneeSubteamId!: number | null;
 
   @Column({ name: 'FormIdToFill', type: 'int', nullable: true })
   formIdToFill!: number | null;
@@ -72,6 +76,10 @@ export class DynamicWorkflowStage {
   @ManyToOne(() => Team)
   @JoinColumn({ name: 'AssigneeTeamId' })
   assigneeTeam!: Team | null;
+
+  @ManyToOne(() => Subteam)
+  @JoinColumn({ name: 'AssigneeSubteamId' })
+  assigneeSubteam!: Subteam | null;
 
   @ManyToOne(() => DynamicForm)
   @JoinColumn({ name: 'FormIdToFill' })

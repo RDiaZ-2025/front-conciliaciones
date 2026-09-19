@@ -32,6 +32,8 @@ export * from './DynamicFormFieldValue';
 export * from './DynamicWorkflowStage';
 export * from './DynamicSubmissionWorkflowState';
 export * from './Customer';
+export * from './Subteam';
+export * from './SubteamUser';
 
 export { MenuItem } from './MenuItem';
 export { UserActionLog } from './UserActionLog';
@@ -82,6 +84,8 @@ import { DynamicFormFieldValue } from './DynamicFormFieldValue';
 import { DynamicWorkflowStage } from './DynamicWorkflowStage';
 import { DynamicSubmissionWorkflowState } from './DynamicSubmissionWorkflowState';
 import { Customer } from './Customer';
+import { Subteam } from './Subteam';
+import { SubteamUser } from './SubteamUser';
 
 export const entities = [
   User,
@@ -98,6 +102,8 @@ export const entities = [
   UserActionLog,
   Cover15Minute,
   Team,
+  Subteam,
+  SubteamUser,
   Product,
   CampaignProduct,
   Campaign,

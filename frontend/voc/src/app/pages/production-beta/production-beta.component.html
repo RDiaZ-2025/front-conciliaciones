@@ -167,7 +167,7 @@
 
     <!-- Modal: Nueva Solicitud (Formulario Inicial Dinámico + Selección de Áreas) -->
     <p-dialog header="Nueva Solicitud" [(visible)]="showTypeSelectionDialog" [modal]="true"
-        [style]="{width: '650px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false"
+        [style]="{width: '780px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false"
         styleClass="p-fluid border-round-xl">
         <div class="flex flex-column gap-3 px-4 py-2">
             
@@ -455,45 +455,123 @@
                         <span class="text-600 font-medium text-xs">Selecciona el o los equipos que deben procesar esta solicitud (la primera etapa llegará al líder del equipo):</span>
                     </div>
 
-                    <div class="grid mt-1">
-                        <div *ngFor="let team of teams()" class="col-12 md:col-6">
-                            <div class="flex align-items-center p-3 border-round-lg border-1 surface-border hover:surface-100 transition-colors gap-3 h-full"
-                                [class.surface-100]="team.selected"
-                                [class.border-primary]="team.selected"
-                                [class.opacity-50]="!isTeamEnabled(team)"
-                                [class.cursor-not-allowed]="!isTeamEnabled(team)"
-                                [class.cursor-pointer]="isTeamEnabled(team)"
-                                [pTooltip]="getTeamDisabledReason(team)"
-                                [tooltipDisabled]="isTeamEnabled(team)"
-                                tooltipPosition="top"
-                                (click)="isTeamEnabled(team) ? (team.selected = !team.selected) : null">
-                                <p-checkbox [(ngModel)]="team.selected" [binary]="true" [inputId]="'team-' + team.id"
-                                    [disabled]="!isTeamEnabled(team)"
-                                    (click)="$event.stopPropagation()"></p-checkbox>
-                                <div class="flex flex-column flex-1">
-                                    <div class="flex align-items-center justify-content-between gap-2 flex-wrap">
-                                        <label [for]="'team-' + team.id" [class.cursor-pointer]="isTeamEnabled(team)" [class.cursor-not-allowed]="!isTeamEnabled(team)" class="font-bold text-sm text-900 mb-0">{{ team.name }}</label>
-                                        
-                                        <!-- Botón Interactivo para Ciclar el Modo de Asignación de la Etapa 1 -->
-                                        <button type="button"
-                                                *ngIf="isTeamEnabled(team)"
-                                                (click)="cycleTeamAssignmentMode(team, $event)"
-                                                [pTooltip]="getTeamAssignmentBadge(team).tooltip"
-                                                tooltipPosition="left"
-                                                class="border-round-lg border-1 px-2 py-1 text-xs font-semibold flex align-items-center gap-1 cursor-pointer transition-all shadow-none"
-                                                [ngClass]="[getTeamAssignmentBadge(team).bgClass, getTeamAssignmentBadge(team).textClass, getTeamAssignmentBadge(team).borderClass]"
-                                                style="outline: none;">
-                                            <lucide-icon [name]="getTeamAssignmentBadge(team).icon" style="width: 0.9rem; height: 0.9rem;"></lucide-icon>
-                                            <span>{{ getTeamAssignmentBadge(team).label }}</span>
-                                            <i class="pi pi-refresh text-xs opacity-60 ml-1"></i>
-                                        </button>
-                                    </div>
+                    <div class="teams-selection-grid mt-2" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; width: 100%; align-items: stretch;">
+                        <div *ngFor="let team of teams()"
+                            class="team-selection-card flex align-items-start p-3 border-round-xl border-1 surface-border hover:surface-100 transition-colors gap-3"
+                            style="width: 100%; height: auto; min-height: 4.5rem; box-sizing: border-box;"
+                            [class.surface-100]="team.selected"
+                            [class.border-primary]="team.selected"
+                            [class.shadow-1]="team.selected"
+                            [class.opacity-50]="!isTeamEnabled(team)"
+                            [class.cursor-not-allowed]="!isTeamEnabled(team)"
+                            [class.cursor-pointer]="isTeamEnabled(team)"
+                            [pTooltip]="getTeamDisabledReason(team)"
+                            [tooltipDisabled]="isTeamEnabled(team)"
+                            tooltipPosition="top"
+                            (click)="isTeamEnabled(team) ? (team.selected = !team.selected) : null">
+                            
+                            <p-checkbox [(ngModel)]="team.selected" [binary]="true" [inputId]="'team-' + team.id"
+                                [disabled]="!isTeamEnabled(team)"
+                                class="mt-1 flex-shrink-0"
+                                (click)="$event.stopPropagation()"></p-checkbox>
 
-                                    <div class="mt-1 flex flex-wrap gap-1 align-items-center" *ngIf="!isTeamConditionMet(team)">
-                                        <span class="text-xs text-orange-700 bg-orange-50 border-1 border-orange-200 px-2 py-1 border-round font-semibold flex align-items-center gap-1">
-                                            <i class="pi pi-ban text-xs"></i> No cumple condiciones
+                            <div class="flex flex-column flex-1 w-full" style="min-width: 0;">
+                                <div class="flex align-items-center justify-content-between gap-2 flex-wrap">
+                                    <div class="flex align-items-center gap-1 flex-wrap">
+                                        <label [for]="'team-' + team.id" [class.cursor-pointer]="isTeamEnabled(team)" [class.cursor-not-allowed]="!isTeamEnabled(team)" class="font-bold text-sm text-900 mb-0">{{ team.name }}</label>
+                                        <span *ngIf="team.subteams && team.subteams.length > 0" class="text-xs text-purple-700 bg-purple-50 border-1 border-purple-200 px-1.5 py-0.5 border-round font-medium flex align-items-center gap-1">
+                                            <lucide-icon name="layers" style="width: 0.75rem; height: 0.75rem;"></lucide-icon>
+                                            <span>{{ team.subteams.length }} {{ team.subteams.length === 1 ? 'subequipo' : 'subequipos' }}</span>
                                         </span>
                                     </div>
+                                    
+                                    <!-- Botón Interactivo para Ciclar el Modo de Asignación de la Etapa 1 -->
+                                    <button type="button"
+                                            *ngIf="isTeamEnabled(team)"
+                                            (click)="cycleTeamAssignmentMode(team, $event)"
+                                            [pTooltip]="getTeamAssignmentBadge(team).tooltip"
+                                            tooltipPosition="top"
+                                            class="border-round-lg border-1 px-2 py-1 text-xs font-semibold flex align-items-center gap-1 cursor-pointer transition-all shadow-none"
+                                            [ngClass]="[getTeamAssignmentBadge(team).bgClass, getTeamAssignmentBadge(team).textClass, getTeamAssignmentBadge(team).borderClass]"
+                                            style="outline: none;">
+                                        <lucide-icon [name]="getTeamAssignmentBadge(team).icon" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                        <span>{{ getTeamAssignmentBadge(team).label }}</span>
+                                        <i class="pi pi-refresh text-xs opacity-60 ml-1"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Selector opcional de Ámbito Aleatorio (Equipo Principal o Subequipo) SOLO si assignmentMode === 'random' y el equipo tiene subequipos -->
+                                <div *ngIf="team.selected && team.assignmentMode === 'random' && team.subteams && team.subteams.length > 0" 
+                                     class="mt-2 pt-2 border-top-1 surface-border flex flex-column gap-1 w-full" 
+                                     (click)="$event.stopPropagation()">
+                                    <div class="flex align-items-center justify-content-between">
+                                        <span class="text-xs font-bold text-700 flex align-items-center gap-1">
+                                            <lucide-icon name="shuffle" style="width: 0.8rem; height: 0.8rem;" class="text-purple-600"></lucide-icon>
+                                            <span>Asignación aleatoria entre:</span>
+                                        </span>
+                                        <span class="text-xs text-purple-700 bg-purple-50 px-2 py-0.5 border-round font-semibold">
+                                            🎲 Sorteo al azar
+                                        </span>
+                                    </div>
+                                    <p-select 
+                                        [(ngModel)]="team.selectedSubteamId" 
+                                        [options]="getSubteamOptionsForTeam(team)" 
+                                        optionLabel="label" 
+                                        optionValue="value" 
+                                        placeholder="Seleccionar ámbito..." 
+                                        appendTo="body"
+                                        styleClass="w-full text-xs">
+                                        <ng-template #selectedItem let-selected>
+                                            <div *ngIf="selected" class="flex align-items-center gap-2">
+                                                <lucide-icon [name]="selected.isMain ? 'users' : 'layers'" class="text-purple-600 text-xs"></lucide-icon>
+                                                <span class="font-medium text-xs">{{ selected.label }}</span>
+                                            </div>
+                                        </ng-template>
+                                        <ng-template #item let-opt>
+                                            <div class="flex align-items-center justify-content-between w-full">
+                                                <div class="flex align-items-center gap-2">
+                                                    <lucide-icon [name]="opt.isMain ? 'users' : 'layers'" class="text-purple-600 text-xs"></lucide-icon>
+                                                    <span class="text-xs font-medium">{{ opt.label }}</span>
+                                                </div>
+                                            </div>
+                                        </ng-template>
+                                    </p-select>
+                                    <span *ngIf="team.selectedSubteamId && team.selectedSubteamId > 0" class="text-xs text-500 italic mt-1">
+                                        La solicitud se asignará a un miembro al azar del subequipo seleccionado.
+                                    </span>
+                                    <span *ngIf="!team.selectedSubteamId || team.selectedSubteamId === 0" class="text-xs text-500 italic mt-1">
+                                        La solicitud se asignará a un miembro al azar del equipo principal.
+                                    </span>
+                                </div>
+
+                                <!-- Indicador si está en modo aleatorio pero el equipo no tiene subequipos -->
+                                <div *ngIf="team.selected && team.assignmentMode === 'random' && (!team.subteams || team.subteams.length === 0)" class="mt-2 pt-1 border-top-1 surface-border w-full">
+                                    <span class="text-xs text-500 italic flex align-items-center gap-1">
+                                        <i class="pi pi-shuffle text-xs text-purple-600"></i>
+                                        <span>Se asignará al azar entre los {{ team.users?.length || 0 }} miembros del equipo principal.</span>
+                                    </span>
+                                </div>
+
+                                <!-- Indicador si está en modo Líder -->
+                                <div *ngIf="team.selected && team.assignmentMode === 'leader'" class="mt-2 pt-1 border-top-1 surface-border w-full">
+                                    <span class="text-xs text-500 italic flex align-items-center gap-1">
+                                        <i class="pi pi-user text-xs text-blue-600"></i>
+                                        <span>Se asignará al líder del equipo{{ team.leader ? ': ' + team.leader.name : ' (sin líder asignado)' }}.</span>
+                                    </span>
+                                </div>
+
+                                <!-- Indicador si está en modo Según Flujo -->
+                                <div *ngIf="team.selected && team.assignmentMode === 'workflow'" class="mt-2 pt-1 border-top-1 surface-border w-full">
+                                    <span class="text-xs text-500 italic flex align-items-center gap-1">
+                                        <i class="pi pi-sitemap text-xs text-orange-600"></i>
+                                        <span>Se asignará según las reglas configuradas en la Etapa 1 del Flujo de Trabajo.</span>
+                                    </span>
+                                </div>
+
+                                <div class="mt-2 flex flex-wrap gap-1 align-items-center w-full" *ngIf="!isTeamConditionMet(team)">
+                                    <span class="text-xs text-orange-700 bg-orange-50 border-1 border-orange-200 px-2 py-0.5 border-round font-semibold flex align-items-center gap-1">
+                                        <i class="pi pi-ban text-xs"></i> No cumple condiciones
+                                    </span>
                                 </div>
                             </div>
                         </div>

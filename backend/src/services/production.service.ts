@@ -1,4 +1,4 @@
-import { ProductionRequest, Product, User, FormatType, RightsDuration, Team, ProductionRequestType, DynamicWorkflow, DynamicForm, DynamicFormField, DynamicFormSubmission, DynamicFormFieldValue, DynamicWorkflowStage, DynamicSubmissionWorkflowState } from "../models";
+import { ProductionRequest, Product, User, FormatType, RightsDuration, Team, Subteam, SubteamUser, ProductionRequestType, DynamicWorkflow, DynamicForm, DynamicFormField, DynamicFormSubmission, DynamicFormFieldValue, DynamicWorkflowStage, DynamicSubmissionWorkflowState } from "../models";
 import { AppDataSource } from "../config/typeorm.config";
 import { NotificationService } from './notification.service';
 import { ProductionRequestHistoryService } from './production_request_history.service';
@@ -81,7 +81,7 @@ export class ProductionService {
         targetFormIds?: number[],
         submissions?: { formId: number; values: Record<string, string> }[],
         targetTeamIds?: number[],
-        targetTeams?: Array<{ teamId: number; assignmentMode?: 'leader' | 'random' | 'workflow' }>,
+        targetTeams?: Array<{ teamId: number; subteamId?: number | null; assignmentMode?: 'leader' | 'random' | 'workflow' | 'subteam_random' }>,
         closingConfig?: { formId?: number | null; workflowId?: number | null }
     ) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
@@ -168,15 +168,20 @@ export class ProductionService {
                     }
                 }
 
-                let teamsToDispatch: Array<{ teamId: number; assignmentMode: 'leader' | 'random' | 'workflow' }> = [];
+                let teamsToDispatch: Array<{ teamId: number; subteamId?: number | null; assignmentMode: 'leader' | 'random' | 'workflow' | 'subteam_random' }> = [];
                 if (targetTeams && targetTeams.length > 0) {
-                    teamsToDispatch = targetTeams.map(t => ({
-                        teamId: t.teamId,
-                        assignmentMode: t.assignmentMode || 'leader'
-                    }));
+                    teamsToDispatch = targetTeams.map(t => {
+                        const isSubteam = (t.assignmentMode === 'subteam_random' || t.assignmentMode === 'random') && !!t.subteamId;
+                        return {
+                            teamId: t.teamId,
+                            subteamId: isSubteam ? t.subteamId : null,
+                            assignmentMode: isSubteam ? 'subteam_random' : (t.assignmentMode || 'leader')
+                        };
+                    });
                 } else if (targetTeamIds && targetTeamIds.length > 0) {
                     teamsToDispatch = targetTeamIds.map(id => ({
                         teamId: id,
+                        subteamId: null,
                         assignmentMode: 'leader'
                     }));
                 }
@@ -204,6 +209,8 @@ export class ProductionService {
                         let targetWfId = formWfId;
                         if (rootFormMeta.teamWorkflows && rootFormMeta.teamWorkflows[teamTarget.teamId]) {
                             targetWfId = rootFormMeta.teamWorkflows[teamTarget.teamId];
+                        } else if (!targetWfId && team.defaultWorkflowId) {
+                            targetWfId = team.defaultWorkflowId;
                         }
 
                         const childSub = subRepo.create({
@@ -241,13 +248,31 @@ export class ProductionService {
                                 const mode = teamTarget.assignmentMode || 'leader';
 
                                 if (mode === 'workflow') {
-
                                     await this.createStageStates(transactionManager, savedChildSub, firstStage);
                                 } else {
                                     let assignedUserId: number | null = null;
 
-                                    if (mode === 'leader') {
+                                    if (mode === 'subteam_random' || (mode === 'random' && teamTarget.subteamId)) {
+                                        const subteamUserRepo = transactionManager.getRepository(SubteamUser);
+                                        const subteamUsers = await subteamUserRepo.find({
+                                            where: { subteamId: teamTarget.subteamId || undefined },
+                                            relations: ['user']
+                                        });
+                                        const activeMembers = subteamUsers
+                                            .map(su => su.user)
+                                            .filter((u): u is User => !!u && (u.status === 1 || u.status === undefined || u.status === null));
+                                        const pool = activeMembers.length > 0 ? activeMembers : subteamUsers.map(su => su.user).filter(Boolean);
 
+                                        if (pool.length > 0) {
+                                            const randomIndex = Math.floor(Math.random() * pool.length);
+                                            assignedUserId = pool[randomIndex].id;
+                                        } else {
+                                            const subteam = await transactionManager.getRepository(Subteam).findOne({
+                                                where: { id: teamTarget.subteamId || undefined }
+                                            });
+                                            assignedUserId = subteam?.leaderId || team.leaderId || null;
+                                        }
+                                    } else if (mode === 'leader') {
                                         assignedUserId = team.leaderId || null;
                                         if (!assignedUserId) {
                                             const teamMembers = await transactionManager.getRepository(User).find({
@@ -261,7 +286,6 @@ export class ProductionService {
                                             }
                                         }
                                     } else if (mode === 'random') {
-
                                         const teamMembers = await transactionManager.getRepository(User).find({
                                             where: { teamId: team.id }
                                         });
@@ -285,18 +309,27 @@ export class ProductionService {
                                         });
                                         await stateRepo.save(nextState);
 
+                                        let notifTarget = `el equipo ${team.name}`;
+                                        if (teamTarget.subteamId && (mode === 'subteam_random' || mode === 'random')) {
+                                            const subteam = await transactionManager.getRepository(Subteam).findOne({
+                                                where: { id: teamTarget.subteamId }
+                                            });
+                                            if (subteam) {
+                                                notifTarget = `el subequipo ${subteam.name} (${team.name})`;
+                                            }
+                                        }
+
                                         try {
                                             await notificationService.createNotification(
                                                 assignedUserId,
                                                 'Nueva Solicitud Asignada a tu Equipo',
-                                                `Se ha asignado la tarea "${firstStage.name}" para el equipo ${team.name}.`,
+                                                `Se ha asignado la tarea "${firstStage.name}" para ${notifTarget}.`,
                                                 'info'
                                             );
                                         } catch (err) {
                                             console.error('Error sending notification to assigned user:', err);
                                         }
                                     } else {
-
                                         await this.createStageStates(transactionManager, savedChildSub, firstStage);
                                     }
                                 }
@@ -501,6 +534,39 @@ export class ProductionService {
                     }
                 } else if (firstStage.assigneeType === 'team_leader' && firstStage.assigneeTeamId) {
                     assigneeUserId = await this.resolveTeamUser(AppDataSource.manager, firstStage.assigneeTeamId, 'leader');
+                } else if (firstStage.assigneeType === 'subteam_random' && firstStage.assigneeSubteamId) {
+                    const subteamUserRepo = AppDataSource.manager.getRepository(SubteamUser);
+                    const subteamUsers = await subteamUserRepo.find({
+                        where: { subteamId: firstStage.assigneeSubteamId },
+                        relations: ['user']
+                    });
+                    const activeUsers = subteamUsers
+                        .map((su: any) => su.user)
+                        .filter((u: any) => !!u && (u.status === 1 || u.status === undefined || u.status === null));
+                    
+                    let candidates = activeUsers;
+                    if (firstStage.excludeTeamLeader) {
+                        const subteam = await AppDataSource.manager.getRepository(Subteam).findOne({ where: { id: firstStage.assigneeSubteamId } });
+                        const team = firstStage.assigneeTeamId ? await AppDataSource.manager.getRepository(Team).findOne({ where: { id: firstStage.assigneeTeamId } }) : null;
+                        const leadersToExclude = new Set([subteam?.leaderId, team?.leaderId].filter(Boolean));
+                        const nonLeaders = activeUsers.filter((u: any) => !leadersToExclude.has(u.id));
+                        if (nonLeaders.length > 0) candidates = nonLeaders;
+                    }
+
+                    if (candidates.length > 0) {
+                        const randomIndex = Math.floor(Math.random() * candidates.length);
+                        assigneeUserId = candidates[randomIndex].id;
+                    } else {
+                        const subteam = await AppDataSource.manager.getRepository(Subteam).findOne({
+                            where: { id: firstStage.assigneeSubteamId },
+                            relations: ['leader']
+                        });
+                        if (subteam?.leader && (subteam.leader.status === 1 || subteam.leader.status === undefined)) {
+                            assigneeUserId = subteam.leader.id;
+                        } else if (firstStage.assigneeTeamId) {
+                            assigneeUserId = await this.resolveTeamUser(AppDataSource.manager, firstStage.assigneeTeamId, 'random', !!firstStage.excludeTeamLeader, requesterUserId);
+                        }
+                    }
                 } else if (firstStage.assigneeType === 'team' && firstStage.assigneeTeamId) {
 
                     const teamUsers = await userRepo.find({
@@ -1281,7 +1347,7 @@ export class ProductionService {
             where: [
                 { workflowId, isDeleted: false }
             ],
-            relations: ['assigneeUser', 'assigneeTeam', 'formToFill', 'rejectionTargetUser', 'rejectionTargetTeam'],
+            relations: ['assigneeUser', 'assigneeTeam', 'assigneeSubteam', 'formToFill', 'rejectionTargetUser', 'rejectionTargetTeam'],
             order: { stepOrder: 'ASC' }
         });
         return stages.map(s => {
@@ -1336,6 +1402,7 @@ export class ProductionService {
                         assigneeType: s.assigneeType || 'specific_user',
                         assigneeUserId: s.assigneeUserId || null,
                         assigneeTeamId: s.assigneeTeamId || null,
+                        assigneeSubteamId: s.assigneeSubteamId || null,
                         formIdToFill: dbFormIdToFill,
                         rejectionTargetType: s.rejectionTargetType || 'previous_sender',
                         rejectionTargetUserId: s.rejectionTargetUserId || null,
@@ -1354,6 +1421,7 @@ export class ProductionService {
                     if (s.assigneeType !== undefined) stageEntity.assigneeType = s.assigneeType;
                     if (s.assigneeUserId !== undefined) stageEntity.assigneeUserId = s.assigneeUserId;
                     if (s.assigneeTeamId !== undefined) stageEntity.assigneeTeamId = s.assigneeTeamId;
+                    if (s.assigneeSubteamId !== undefined) stageEntity.assigneeSubteamId = s.assigneeSubteamId;
                     if (s.formIdToFill !== undefined) stageEntity.formIdToFill = dbFormIdToFill;
                     if (s.rejectionTargetType !== undefined) stageEntity.rejectionTargetType = s.rejectionTargetType;
                     if (s.rejectionTargetUserId !== undefined) stageEntity.rejectionTargetUserId = s.rejectionTargetUserId;
@@ -1886,6 +1954,39 @@ return productionAssignmentService.resolveTeamUser(manager, teamId, strategy, ex
                 }
             } else if (targetStage.assigneeType === 'team_leader' && targetStage.assigneeTeamId) {
                 assigneeUserId = await this.resolveTeamUser(manager, targetStage.assigneeTeamId, 'leader');
+            } else if (targetStage.assigneeType === 'subteam_random' && targetStage.assigneeSubteamId) {
+                const subteamUserRepo = manager.getRepository(SubteamUser);
+                const subteamUsers = await subteamUserRepo.find({
+                    where: { subteamId: targetStage.assigneeSubteamId },
+                    relations: ['user']
+                });
+                const activeUsers = subteamUsers
+                    .map((su: any) => su.user)
+                    .filter((u: any) => !!u && (u.status === 1 || u.status === undefined || u.status === null));
+                
+                let candidates = activeUsers;
+                if (targetStage.excludeTeamLeader) {
+                    const subteam = await manager.getRepository(Subteam).findOne({ where: { id: targetStage.assigneeSubteamId } });
+                    const team = targetStage.assigneeTeamId ? await manager.getRepository(Team).findOne({ where: { id: targetStage.assigneeTeamId } }) : null;
+                    const leadersToExclude = new Set([subteam?.leaderId, team?.leaderId].filter(Boolean));
+                    const nonLeaders = activeUsers.filter((u: any) => !leadersToExclude.has(u.id));
+                    if (nonLeaders.length > 0) candidates = nonLeaders;
+                }
+
+                if (candidates.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * candidates.length);
+                    assigneeUserId = candidates[randomIndex].id;
+                } else {
+                    const subteam = await manager.getRepository(Subteam).findOne({
+                        where: { id: targetStage.assigneeSubteamId },
+                        relations: ['leader']
+                    });
+                    if (subteam?.leader && (subteam.leader.status === 1 || subteam.leader.status === undefined)) {
+                        assigneeUserId = subteam.leader.id;
+                    } else if (targetStage.assigneeTeamId) {
+                        assigneeUserId = await this.resolveTeamUser(manager, targetStage.assigneeTeamId, 'random', !!targetStage.excludeTeamLeader);
+                    }
+                }
             } else if (targetStage.assigneeType === 'team_random' && targetStage.assigneeTeamId) {
                 assigneeUserId = await this.resolveTeamUser(manager, targetStage.assigneeTeamId, 'random', !!targetStage.excludeTeamLeader);
             } else if (targetStage.assigneeType === 'team_workload' && targetStage.assigneeTeamId) {

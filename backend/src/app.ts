@@ -51,9 +51,19 @@ if (!isProduction || process.env.ALLOW_LOCALHOST_CORS === 'true') {
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    if (!isProduction && (
+      origin.endsWith('.app.github.dev') ||
+      origin.endsWith('.trycloudflare.com') ||
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1') ||
+      origin.startsWith('http://192.168.') ||
+      origin.startsWith('http://10.') ||
+      origin.startsWith('http://172.')
+    )) {
       return callback(null, true);
     }
     return callback(new Error(`Acceso denegado por CORS para el origen: ${origin}`));

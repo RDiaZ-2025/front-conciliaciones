@@ -554,7 +554,8 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
             return {
               ...t,
               selected: false,
-              assignmentMode: defaultMode
+              assignmentMode: defaultMode,
+              selectedSubteamId: 0
             };
           }));
         }
@@ -647,10 +648,15 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     }
 
-    const targetTeams = selectedTeams.map(t => ({
-      teamId: t.id,
-      assignmentMode: t.assignmentMode || 'leader'
-    }));
+    const targetTeams = selectedTeams.map(t => {
+      const isRandom = t.assignmentMode === 'random';
+      const hasSubteam = isRandom && t.selectedSubteamId && t.selectedSubteamId > 0;
+      return {
+        teamId: t.id,
+        subteamId: hasSubteam ? t.selectedSubteamId : null,
+        assignmentMode: hasSubteam ? 'subteam_random' : (t.assignmentMode || 'leader')
+      };
+    });
     const targetTeamIds = selectedTeams.map(t => t.id);
 
     let closingConfig: any = {
@@ -2187,6 +2193,36 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }
   }
 
+  parseNumericValue(val: any): number {
+    if (typeof val === 'number') return isNaN(val) ? NaN : val;
+    if (val === undefined || val === null) return NaN;
+    let str = String(val).trim().replace(/[^0-9.,-]/g, '');
+    if (!str) return NaN;
+
+    if (str.includes('.') && str.includes(',')) {
+      const lastDot = str.lastIndexOf('.');
+      const lastComma = str.lastIndexOf(',');
+      if (lastComma > lastDot) {
+        str = str.replace(/\./g, '').replace(',', '.');
+      } else {
+        str = str.replace(/,/g, '');
+      }
+    } else if ((str.match(/\./g) || []).length > 1) {
+      str = str.replace(/\./g, '');
+    } else if ((str.match(/,/g) || []).length > 1) {
+      str = str.replace(/,/g, '');
+    } else if (str.includes(',')) {
+      const parts = str.split(',');
+      if (parts[1] && parts[1].length === 3 && parts[0].length <= 3) {
+        str = str.replace(',', '');
+      } else {
+        str = str.replace(',', '.');
+      }
+    }
+    const n = Number(str);
+    return isNaN(n) ? NaN : n;
+  }
+
   isFieldVisible(field: any, allFields: any[], formValues: Record<string, any>, formId?: number): boolean {
     if (!field) return false;
     if (field.isActive === false) return false;
@@ -2198,38 +2234,106 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
     const parentName = dependency.fieldName;
     const parentKey = formId ? `${formId}_${parentName}` : parentName;
-    const parentValue = formValues[parentKey];
+    let parentValue = formValues ? formValues[parentKey] : undefined;
+    if (parentValue === undefined && formValues && formId) {
+      parentValue = formValues[parentName];
+    }
+    if (parentValue === undefined && formValues && !formId) {
+      const matchKey = Object.keys(formValues).find(k => k === parentName || k.endsWith(`_${parentName}`));
+      if (matchKey) {
+        parentValue = formValues[matchKey];
+      }
+    }
 
-    if (parentValue === undefined || parentValue === null || parentValue === '') {
+    let op = dependency.operator;
+    const requiredVal = dependency.value;
+
+    if (!op) {
+      if (typeof requiredVal === 'string') {
+        const trimmed = requiredVal.trim();
+        if (trimmed.startsWith('>=')) op = 'gte';
+        else if (trimmed.startsWith('>')) op = 'gt';
+        else if (trimmed.startsWith('<=')) op = 'lte';
+        else if (trimmed.startsWith('<')) op = 'lt';
+        else if (trimmed.startsWith('!=')) op = 'neq';
+        else op = 'eq';
+      } else {
+        op = 'eq';
+      }
+    }
+
+    if (op === 'is_empty') {
+      return parentValue === undefined || parentValue === null || String(parentValue).trim() === '' || String(parentValue) === '[]';
+    }
+
+    if (op === 'is_not_empty') {
+      return parentValue !== undefined && parentValue !== null && String(parentValue).trim() !== '' && String(parentValue) !== '[]';
+    }
+
+    if (parentValue === undefined || parentValue === null || String(parentValue).trim() === '') {
       return false;
     }
 
-    const parentField = allFields.find(f => f.name === parentName);
-    const requiredVal = dependency.value;
+    if (['gt', 'gte', 'lt', 'lte'].includes(op)) {
+      const numParent = this.parseNumericValue(parentValue);
+      const numTarget = this.parseNumericValue(requiredVal);
+      if (isNaN(numParent) || isNaN(numTarget)) {
+        return false;
+      }
+      if (op === 'gt') return numParent > numTarget;
+      if (op === 'gte') return numParent >= numTarget;
+      if (op === 'lt') return numParent < numTarget;
+      if (op === 'lte') return numParent <= numTarget;
+    }
+
+    const parentField = allFields ? allFields.find(f => f.name === parentName) : null;
 
     if (parentField && (parentField.type === 'multiselect' || parentField.type === 'dynamic_list')) {
       let selectedList: string[] = [];
       try {
-        const parsed = JSON.parse(parentValue);
+        const parsed = typeof parentValue === 'string' ? JSON.parse(parentValue) : parentValue;
         if (Array.isArray(parsed)) {
-          selectedList = parsed.map(i => typeof i === 'object' ? (i.item || i.product) : i).filter(Boolean);
+          selectedList = parsed.map(i => typeof i === 'object' && i !== null ? (i.item || i.product || i.name || i.value || JSON.stringify(i)) : String(i)).filter(Boolean);
+        } else {
+          selectedList = [String(parentValue)];
         }
       } catch(e) {
         selectedList = String(parentValue).split(',').map(s => s.trim()).filter(Boolean);
       }
 
-      if (Array.isArray(requiredVal)) {
-        const cleanReq = requiredVal.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null' && v !== '_null');
-        return cleanReq.some(val => selectedList.includes(val));
+      const cleanReqList = Array.isArray(requiredVal) 
+        ? requiredVal.map(v => String(v).trim()).filter(v => v && v !== 'null' && v !== '_null')
+        : (requiredVal !== undefined && requiredVal !== null ? [String(requiredVal).trim()] : []);
+
+      if (op === 'neq') {
+        return !cleanReqList.some(val => selectedList.includes(val));
       }
-      return selectedList.includes(requiredVal);
+      return cleanReqList.some(val => selectedList.includes(val));
     }
 
+    const parentStr = String(parentValue).trim().toLowerCase();
+
     if (Array.isArray(requiredVal)) {
-      const cleanReq = requiredVal.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null' && v !== '_null');
-      return cleanReq.includes(String(parentValue));
+      const cleanReq = requiredVal
+        .map(v => String(v).trim().toLowerCase())
+        .filter(v => v && v !== 'null' && v !== '_null');
+      if (op === 'neq') {
+        return !cleanReq.includes(parentStr);
+      }
+      if (op === 'contains') {
+        return cleanReq.some(val => parentStr.includes(val));
+      }
+      return cleanReq.includes(parentStr);
     }
-    return String(parentValue) === String(requiredVal);
+
+    const targetStr = String(requiredVal ?? '').trim().toLowerCase();
+    if (op === 'neq') {
+      return parentStr !== targetStr;
+    }
+    if (op === 'contains') {
+      return parentStr.includes(targetStr);
+    }
+    return parentStr === targetStr;
   }
 
   initDynamicListField(key: string, rawVal: string) {
@@ -2418,10 +2522,54 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       nextMode = 'leader';
     }
     team.assignmentMode = nextMode;
+    if (nextMode !== 'random') {
+      team.selectedSubteamId = 0;
+    }
+  }
+
+  getSubteamOptionsForTeam(team: any): { label: string; value: number; memberCount: number; isMain: boolean }[] {
+    const mainCount = Array.isArray(team?.users) ? team.users.length : 0;
+    const options: Array<{ label: string; value: number; memberCount: number; isMain: boolean }> = [
+      {
+        label: `Equipo Principal (${mainCount} ${mainCount === 1 ? 'miembro' : 'miembros'})`,
+        value: 0,
+        memberCount: mainCount,
+        isMain: true
+      }
+    ];
+
+    if (team && Array.isArray(team.subteams)) {
+      for (const s of team.subteams) {
+        if (s.isActive !== false) {
+          const count = Array.isArray(s.subteamUsers) ? s.subteamUsers.length : 0;
+          options.push({
+            label: `Subequipo: ${s.name} (${count} ${count === 1 ? 'miembro' : 'miembros'})`,
+            value: s.id,
+            memberCount: count,
+            isMain: false
+          });
+        }
+      }
+    }
+
+    return options;
   }
 
   getTeamAssignmentBadge(team: any): { label: string; icon: string; severity: 'info' | 'success' | 'warn' | 'danger' | 'secondary' | 'contrast'; tooltip: string; bgClass: string; textClass: string; borderClass: string } {
     const mode = team.assignmentMode || 'leader';
+
+    if (mode === 'workflow') {
+      return {
+        label: 'Según Flujo (Etapa 1)',
+        icon: 'git-branch',
+        severity: 'warn',
+        tooltip: 'Asignación según Flujo: La etapa 1 se asignará según la regla configurada en la Etapa 1 del Flujo de Trabajo. Haz clic para alternar modo.',
+        bgClass: 'bg-orange-50',
+        textClass: 'text-orange-800',
+        borderClass: 'border-orange-200'
+      };
+    }
+
     if (mode === 'leader') {
       if (team.leader) {
         return {
@@ -2438,34 +2586,41 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           label: 'Líder (Sin asignar)',
           icon: 'user-check',
           severity: 'warn',
-          tooltip: 'Asignar a Líder: Este equipo no tiene líder asignado (se intentará miembro aleatorio o flujo). Haz clic para alternar modo.',
+          tooltip: 'Asignar a Líder: Este equipo no tiene líder asignado. Haz clic para alternar modo.',
           bgClass: 'bg-amber-50',
           textClass: 'text-amber-800',
           borderClass: 'border-amber-200'
         };
       }
-    } else if (mode === 'random') {
-      const count = team.users?.length || 0;
-      return {
-        label: `Aleatorio (${count} miembros)`,
-        icon: 'shuffle',
-        severity: 'success',
-        tooltip: `Asignación Aleatoria: La etapa 1 se asignará al azar entre los ${count} miembros del equipo. Haz clic para alternar modo.`,
-        bgClass: 'bg-purple-50',
-        textClass: 'text-purple-700',
-        borderClass: 'border-purple-200'
-      };
-    } else {
-      return {
-        label: 'Según Flujo (Etapa 1)',
-        icon: 'git-branch',
-        severity: 'warn',
-        tooltip: 'Asignación según Flujo: La etapa 1 se asignará según la regla configurada en la Etapa 1 del Flujo de Trabajo. Haz clic para alternar modo.',
-        bgClass: 'bg-orange-50',
-        textClass: 'text-orange-800',
-        borderClass: 'border-orange-200'
-      };
     }
+
+    // Modo 'random'
+    if (team.selectedSubteamId && team.selectedSubteamId > 0 && Array.isArray(team.subteams)) {
+      const sub = team.subteams.find((s: any) => s.id === team.selectedSubteamId);
+      if (sub) {
+        const count = Array.isArray(sub.subteamUsers) ? sub.subteamUsers.length : 0;
+        return {
+          label: `Azar en Subequipo: ${sub.name} (${count})`,
+          icon: 'shuffle',
+          severity: 'success',
+          tooltip: `Asignación Aleatoria al Subequipo: La etapa 1 se asignará al azar entre los ${count} miembros de "${sub.name}". Haz clic para alternar modo.`,
+          bgClass: 'bg-purple-50',
+          textClass: 'text-purple-700',
+          borderClass: 'border-purple-200'
+        };
+      }
+    }
+
+    const mainCount = Array.isArray(team.users) ? team.users.length : 0;
+    return {
+      label: `Azar en Equipo Principal (${mainCount})`,
+      icon: 'shuffle',
+      severity: 'success',
+      tooltip: `Asignación Aleatoria: La etapa 1 se asignará al azar entre los ${mainCount} miembros del equipo principal. Haz clic para alternar modo.`,
+      bgClass: 'bg-purple-50',
+      textClass: 'text-purple-700',
+      borderClass: 'border-purple-200'
+    };
   }
 
   getTeamDisabledReason(team: any): string | undefined {
@@ -2584,27 +2739,27 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           return false;
         }
       } else if (op === 'gt') {
-        const numVal = Number(String(val).replace(/[^0-9.-]/g, ''));
-        const numCond = Number(condVal);
-        if (isNaN(numVal) || numVal <= numCond) {
+        const numVal = this.parseNumericValue(val);
+        const numCond = this.parseNumericValue(condVal);
+        if (isNaN(numVal) || isNaN(numCond) || numVal <= numCond) {
           return false;
         }
       } else if (op === 'lt') {
-        const numVal = Number(String(val).replace(/[^0-9.-]/g, ''));
-        const numCond = Number(condVal);
-        if (isNaN(numVal) || numVal >= numCond) {
+        const numVal = this.parseNumericValue(val);
+        const numCond = this.parseNumericValue(condVal);
+        if (isNaN(numVal) || isNaN(numCond) || numVal >= numCond) {
           return false;
         }
       } else if (op === 'gte') {
-        const numVal = Number(String(val).replace(/[^0-9.-]/g, ''));
-        const numCond = Number(condVal);
-        if (isNaN(numVal) || numVal < numCond) {
+        const numVal = this.parseNumericValue(val);
+        const numCond = this.parseNumericValue(condVal);
+        if (isNaN(numVal) || isNaN(numCond) || numVal < numCond) {
           return false;
         }
       } else if (op === 'lte') {
-        const numVal = Number(String(val).replace(/[^0-9.-]/g, ''));
-        const numCond = Number(condVal);
-        if (isNaN(numVal) || numVal > numCond) {
+        const numVal = this.parseNumericValue(val);
+        const numCond = this.parseNumericValue(condVal);
+        if (isNaN(numVal) || isNaN(numCond) || numVal > numCond) {
           return false;
         }
       }
