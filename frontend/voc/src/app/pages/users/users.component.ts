@@ -249,6 +249,22 @@ export class UsersComponent implements OnInit {
     return severityMap[color] || 'info';
   }
 
+  getRoleLabel(role?: string): string {
+    switch ((role || '').toLowerCase()) {
+      case 'admin': return 'Administrador';
+      case 'health_checker': return 'Health Checker';
+      default: return 'Usuario';
+    }
+  }
+
+  getRoleSeverity(role?: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
+    switch ((role || '').toLowerCase()) {
+      case 'admin': return 'danger';
+      case 'health_checker': return 'success';
+      default: return 'secondary';
+    }
+  }
+
   private showToast(severity: 'success' | 'error' | 'info', summary: string, detail: string) {
     this.messageService.add({ severity, summary, detail });
   }

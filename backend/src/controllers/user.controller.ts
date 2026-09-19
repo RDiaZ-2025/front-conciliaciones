@@ -36,7 +36,7 @@ export class UserController {
   });
 
   createUser = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const { name, email, password, permissions = [], teamId, bossId } = req.body;
+    const { name, email, password, permissions = [], teamId, bossId, role } = req.body;
 
     if (!name || !email || !password) {
       res.status(400).json({ success: false, message: 'Nombre, email y contraseña son requeridos' });
@@ -55,7 +55,8 @@ export class UserController {
       password,
       permissions,
       teamId,
-      bossId
+      bossId,
+      role: role || 'user'
     });
 
     if (result.success) {
@@ -67,7 +68,7 @@ export class UserController {
 
   updateUser = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
-    const { name, email, password, permissions, teamId, bossId } = req.body;
+    const { name, email, password, permissions, teamId, bossId, role } = req.body;
 
     const result = await this.userService.updateUser(parseInt(id), {
       name,
@@ -75,7 +76,8 @@ export class UserController {
       password,
       permissions,
       teamId,
-      bossId
+      bossId,
+      role
     });
 
     if (result.success) {

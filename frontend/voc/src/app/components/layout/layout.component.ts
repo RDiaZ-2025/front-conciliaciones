@@ -23,7 +23,6 @@ import { NotificationService, Notification } from '../../services/notification.s
 ;
 import { ProductionService } from '../../services/production.service';
 import { ProductionDialogComponent } from '../../pages/production_2/production-dialog/production-dialog.component';
-import { SystemHealthModalComponent } from '../system-health-modal/system-health-modal.component';
 
 @Component({
   selector: 'app-layout',
@@ -41,8 +40,7 @@ import { SystemHealthModalComponent } from '../system-health-modal/system-health
     StyleClassModule,
     PopoverModule,
     BadgeModule,
-    MenuModule,
-    SystemHealthModalComponent
+    MenuModule
   ],
   providers: [DialogService],
   templateUrl: './layout.component.html',
@@ -68,7 +66,6 @@ export class LayoutComponent implements OnInit {
   expandedItems = signal<Set<number>>(new Set());
 
   isDrawerOpen = false;
-  showHealthModal = signal(false);
 
   isDarkMode = signal(false);
 
@@ -160,10 +157,6 @@ export class LayoutComponent implements OnInit {
 
   toggleDrawer() {
     this.isDrawerOpen = !this.isDrawerOpen;
-  }
-
-  openHealthModal() {
-    this.showHealthModal.set(true);
   }
 
   onDrawerVisibleChange(isVisible: boolean) {

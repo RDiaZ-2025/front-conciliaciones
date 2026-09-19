@@ -6,7 +6,8 @@ export const PERMISSIONS = {
   MANAGEMENT_DASHBOARD: 'management_dashboard',
   HISTORY_LOAD_COMMERCIAL_FILES: 'historial_carga_archivos_comerciales',
   VIEW_HISTORY: 'view_history',
-  PRODUCTION_MANAGEMENT: 'production_management'
+  PRODUCTION_MANAGEMENT: 'production_management',
+  HEALTH_CHECKER: 'health_checker'
 } as const;
 
 export type PermissionType = typeof PERMISSIONS[keyof typeof PERMISSIONS];
@@ -19,7 +20,8 @@ export const PERMISSION_LABELS = {
   [PERMISSIONS.MANAGEMENT_DASHBOARD]: 'Dashboard Gerencial',
   [PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES]: 'Historial de Carga',
   [PERMISSIONS.VIEW_HISTORY]: 'Ver Historial',
-  [PERMISSIONS.PRODUCTION_MANAGEMENT]: 'Gestión de Producción'
+  [PERMISSIONS.PRODUCTION_MANAGEMENT]: 'Gestión de Producción',
+  [PERMISSIONS.HEALTH_CHECKER]: 'Monitor de Salud del Sistema'
 };
 
 export const PERMISSION_DESCRIPTIONS = {
@@ -28,7 +30,8 @@ export const PERMISSION_DESCRIPTIONS = {
   [PERMISSIONS.MANAGEMENT_DASHBOARD]: 'Acceso al dashboard gerencial con reportes y estadísticas',
   [PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES]: 'Permite ver el historial de carga de archivos comerciales',
   [PERMISSIONS.VIEW_HISTORY]: 'Permite ver el historial de actividades',
-  [PERMISSIONS.PRODUCTION_MANAGEMENT]: 'Permite gestionar solicitudes de producción'
+  [PERMISSIONS.PRODUCTION_MANAGEMENT]: 'Permite gestionar solicitudes de producción',
+  [PERMISSIONS.HEALTH_CHECKER]: 'Permite visualizar el estado y salud del sistema (Health Check)'
 };
 
 export const PERMISSION_COLORS = {
@@ -37,5 +40,6 @@ export const PERMISSION_COLORS = {
   [PERMISSIONS.MANAGEMENT_DASHBOARD]: 'info',
   [PERMISSIONS.HISTORY_LOAD_COMMERCIAL_FILES]: 'secondary',
   [PERMISSIONS.VIEW_HISTORY]: 'success',
-  [PERMISSIONS.PRODUCTION_MANAGEMENT]: 'warning'
+  [PERMISSIONS.PRODUCTION_MANAGEMENT]: 'warning',
+  [PERMISSIONS.HEALTH_CHECKER]: 'help'
 };

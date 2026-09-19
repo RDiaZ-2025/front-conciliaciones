@@ -23,13 +23,14 @@
   <div class="card border-round-2xl shadow-1 surface-card overflow-hidden">
     <!-- Table -->
     <p-table #dt [value]="users" [loading]="loading()" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[5, 10, 25]"
-      [globalFilterFields]="['name', 'email', 'teamName']" [filterDelay]="0" styleClass="p-datatable-lg"
+      [globalFilterFields]="['name', 'email', 'teamName', 'role']" [filterDelay]="0" styleClass="p-datatable-lg"
       responsiveLayout="scroll">
 
       <ng-template pTemplate="header">
         <tr>
           <th pSortableColumn="name">Usuario <p-sortIcon field="name"></p-sortIcon></th>
           <th pSortableColumn="email">Email <p-sortIcon field="email"></p-sortIcon></th>
+          <th pSortableColumn="role">Rol <p-sortIcon field="role"></p-sortIcon></th>
           <th pSortableColumn="teamName">Equipo <p-sortIcon field="teamName"></p-sortIcon></th>
           <th>Permisos</th>
           <th pSortableColumn="status" class="text-center">Estado <p-sortIcon field="status"></p-sortIcon></th>
@@ -48,6 +49,9 @@
             </div>
           </td>
           <td class="text-600">{{ user.email }}</td>
+          <td>
+            <p-tag [value]="getRoleLabel(user.role)" [severity]="getRoleSeverity(user.role)" [rounded]="true"></p-tag>
+          </td>
           <td>
             <span *ngIf="user.teamName" class="font-medium text-900">{{ user.teamName }}</span>
             <span *ngIf="!user.teamName" class="text-500 italic text-sm">Sin equipo</span>
@@ -85,7 +89,7 @@
 
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="6" class="text-center p-4 text-600">
+          <td colspan="7" class="text-center p-4 text-600">
             No se encontraron usuarios que coincidan con la búsqueda.
           </td>
         </tr>

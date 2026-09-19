@@ -9,6 +9,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  role?: string;
   permissions: string[];
   teams?: string[];
   teamId?: number;
@@ -63,10 +64,12 @@ export class AuthService extends BaseApiService {
               : (userData.permissions ? this.normalizePermissions(userData.permissions) : []);
 
             let teamId = rawData.teamId;
-            if (teamId == null && storedUser) {
+            let role = rawData.role;
+            if (storedUser) {
               try {
                 const parsedUser = JSON.parse(storedUser);
-                teamId = parsedUser.teamId;
+                if (teamId == null) teamId = parsedUser.teamId;
+                if (!role) role = parsedUser.role;
               } catch (e) { }
             }
 
@@ -74,6 +77,7 @@ export class AuthService extends BaseApiService {
               id: rawData.id,
               name: rawData.name,
               email: rawData.email,
+              role: role || 'user',
               permissions: permissions,
               teams: rawData.teams || [],
               teamId: teamId
@@ -105,6 +109,7 @@ export class AuthService extends BaseApiService {
               id: rawUser.id,
               name: rawUser.name,
               email: rawUser.email,
+              role: rawUser.role || 'user',
               permissions: permissions,
               teams: rawUser.teams || [],
               teamId: rawUser.teamId

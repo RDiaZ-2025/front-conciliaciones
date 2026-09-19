@@ -3,7 +3,7 @@ export interface User {
   username: string;
   email: string;
   fullName: string;
-  role: 'admin' | 'user' | 'editor';
+  role: 'admin' | 'user' | 'editor' | 'health_checker';
   enabled: boolean;
   modules: string[];
   password?: string; 

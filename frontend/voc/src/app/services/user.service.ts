@@ -17,6 +17,7 @@ export interface User {
   id: number;
   name: string;
   email: string;
+  role?: string;
   permissions: string[];
   status: number;
   teamId?: number;
@@ -35,6 +36,7 @@ export interface CreateUserDto {
   name: string;
   email: string;
   password?: string;
+  role?: string;
   permissions: string[];
   teamId?: number;
   bossId?: number;
@@ -44,6 +46,7 @@ export interface UpdateUserDto {
   name?: string;
   email?: string;
   password?: string;
+  role?: string;
   permissions?: string[];
   teamId?: number | null;
   bossId?: number | null;

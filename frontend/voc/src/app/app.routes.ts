@@ -82,6 +82,15 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/teams/teams.component').then(m => m.TeamsComponent)
       },
       {
+        path: 'system-health',
+        loadComponent: () => import('./pages/system-health/system-health.component').then(m => m.SystemHealthComponent)
+      },
+      {
+        path: 'health',
+        redirectTo: 'system-health',
+        pathMatch: 'full'
+      },
+      {
         path: 'portada',
         redirectTo: 'cover15minutes',
         pathMatch: 'full'

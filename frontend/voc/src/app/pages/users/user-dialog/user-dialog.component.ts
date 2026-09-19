@@ -40,6 +40,11 @@ export class UserDialogComponent implements OnInit {
   availablePermissions: Permission[] = [];
   teams: Team[] = [];
   users: User[] = [];
+  availableRoles = [
+    { label: 'Usuario', value: 'user' },
+    { label: 'Administrador', value: 'admin' },
+    { label: 'Health Checker', value: 'health_checker' }
+  ];
   userService = inject(UserService);
   teamService = inject(TeamService);
   cd = inject(ChangeDetectorRef);
@@ -54,6 +59,7 @@ export class UserDialogComponent implements OnInit {
       name: [data.user?.name || '', Validators.required],
       email: [{ value: data.user?.email || '', disabled: data.isEdit }, [Validators.required, Validators.email]],
       password: ['', data.isEdit ? [] : [Validators.required]],
+      role: [data.user?.role || 'user'],
       permissions: [data.user?.permissions || []],
       teamId: [data.user?.teamId || null],
       bossId: [data.user?.bossId || null]

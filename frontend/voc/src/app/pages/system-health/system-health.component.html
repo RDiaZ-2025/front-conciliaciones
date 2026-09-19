@@ -1,0 +1,186 @@
+<div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
+  <app-page-header 
+    title="Estado del Sistema" 
+    subtitle="Monitoreo en vivo de telemetría y salud del servidor (Azure Cloud)" 
+    icon="activity">
+    <div class="flex align-items-center gap-2">
+      <p-tag [severity]="statusSeverity()" [value]="statusLabel()"></p-tag>
+      <p-button (onClick)="refresh()" [loading]="loading()" severity="secondary" [outlined]="true">
+        <lucide-icon name="refresh-cw" class="mr-2"></lucide-icon>Actualizar
+      </p-button>
+    </div>
+  </app-page-header>
+
+  <!-- Banner Informativo -->
+  <div class="surface-card border-1 border-200 border-round-xl p-3 flex align-items-center justify-content-between shadow-1">
+    <div class="flex align-items-center gap-3">
+      <span class="inline-flex align-items-center justify-content-center border-circle w-3rem h-3rem bg-blue-100 text-blue-700 flex-shrink-0">
+        <lucide-icon name="info" class="text-xl"></lucide-icon>
+      </span>
+      <div>
+        <span class="font-bold text-900 block">Sonda de Salud Activa (Keep-Alive)</span>
+        <span class="text-sm text-600">
+          El endpoint <code class="surface-100 px-2 py-1 border-round text-primary font-bold">/health</code> es monitoreado 24/7 por Azure App Service y las sondas de balanceo.
+        </span>
+      </div>
+    </div>
+    <span *ngIf="lastChecked()" class="text-xs text-500 hidden sm:inline">
+      Última consulta: {{ lastChecked() | date:'shortTime' }}
+    </span>
+  </div>
+
+  <!-- Spinner de carga inicial -->
+  <div *ngIf="loading() && !healthData()" class="flex flex-column align-items-center justify-content-center py-8 gap-3">
+    <lucide-icon name="loader-2" class="text-4xl text-primary animate-spin"></lucide-icon>
+    <span class="text-base text-600 font-medium">Consultando estado de los servicios...</span>
+  </div>
+
+  <!-- Tarjetas de Telemetría -->
+  <div *ngIf="healthData() as healthData" class="grid m-0">
+
+    <!-- Tarjeta 1: Servidor Web / API -->
+    <div class="col-12 md:col-6 p-2">
+      <div class="surface-card border-1 border-200 border-round-xl p-4 h-full flex flex-column justify-content-between shadow-1">
+        <div>
+          <div class="flex align-items-center justify-content-between mb-3">
+            <span class="font-bold text-base text-900 flex align-items-center gap-2">
+              <lucide-icon name="server" class="text-primary"></lucide-icon> Servidor Web & API
+            </span>
+            <span class="text-xs text-green-700 font-bold bg-green-100 px-2 py-1 border-round">
+              HTTP 200 OK
+            </span>
+          </div>
+          <div class="flex flex-column gap-2 text-sm text-700">
+            <div class="flex justify-content-between pb-2 border-bottom-1 surface-border">
+              <span class="text-500">Entorno:</span>
+              <span class="font-semibold uppercase text-900">{{ healthData.environment }}</span>
+            </div>
+            <div class="flex justify-content-between pb-2 border-bottom-1 surface-border">
+              <span class="text-500">Tiempo Activo (Uptime):</span>
+              <span class="font-semibold text-primary">{{ healthData.uptime.formatted }}</span>
+            </div>
+            <div class="flex justify-content-between pb-2 border-bottom-1 surface-border">
+              <span class="text-500">Node Runtime:</span>
+              <span class="font-medium text-900">{{ healthData.system.nodeVersion }} ({{ healthData.system.platform }})</span>
+            </div>
+            <div class="flex justify-content-between">
+              <span class="text-500">Timestamp:</span>
+              <span class="text-500 text-xs">{{ healthData.timestamp | date:'medium' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tarjeta 2: Base de Datos SQL -->
+    <div class="col-12 md:col-6 p-2">
+      <div class="surface-card border-1 border-200 border-round-xl p-4 h-full flex flex-column justify-content-between shadow-1">
+        <div>
+          <div class="flex align-items-center justify-content-between mb-3">
+            <span class="font-bold text-base text-900 flex align-items-center gap-2">
+              <lucide-icon name="database" class="text-blue-500"></lucide-icon> Base de Datos SQL Server
+            </span>
+            <span [class]="healthData.database.status === 'connected' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+              class="text-xs font-bold px-2 py-1 border-round">
+              {{ healthData.database.status === 'connected' ? 'Conectado' : 'Desconectado' }}
+            </span>
+          </div>
+          <div class="flex flex-column gap-2 text-sm text-700">
+            <div class="flex justify-content-between pb-2 border-bottom-1 surface-border">
+              <span class="text-500">Motor de Base de Datos:</span>
+              <span class="font-semibold text-900">Azure SQL Database</span>
+            </div>
+            <div class="flex justify-content-between pb-2 border-bottom-1 surface-border">
+              <span class="text-500">Catálogo:</span>
+              <span class="font-semibold text-900">{{ healthData.database.name }}</span>
+            </div>
+            <div class="flex justify-content-between pb-2 border-bottom-1 surface-border">
+              <span class="text-500">Capa ORM:</span>
+              <span class="font-medium text-900">TypeORM 0.3.x</span>
+            </div>
+            <div class="flex justify-content-between">
+              <span class="text-500">Estado de Pool:</span>
+              <span class="font-semibold text-green-600">Activo y Respondiendo</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tarjeta 3: Azure Service Bus -->
+    <div class="col-12 md:col-6 p-2">
+      <div class="surface-card border-1 border-200 border-round-xl p-4 h-full flex flex-column justify-content-between shadow-1">
+        <div>
+          <div class="flex align-items-center justify-content-between mb-3">
+            <span class="font-bold text-base text-900 flex align-items-center gap-2">
+              <lucide-icon name="radio" class="text-purple-500"></lucide-icon> Azure Service Bus (Noticias)
+            </span>
+            <span [class]="healthData.serviceBus.receiverListening ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'"
+              class="text-xs font-bold px-2 py-1 border-round">
+              {{ healthData.serviceBus.receiverListening ? 'Escuchando Cola' : 'En Espera' }}
+            </span>
+          </div>
+          <div class="flex flex-column gap-2 text-sm text-700">
+            <div class="flex justify-content-between pb-2 border-bottom-1 surface-border">
+              <span class="text-500">Cola Destino:</span>
+              <code class="font-semibold text-purple-700 surface-100 px-2 py-1 border-round">{{ healthData.serviceBus.queueName }}</code>
+            </div>
+            <div class="flex justify-content-between pb-2 border-bottom-1 surface-border">
+              <span class="text-500">Cliente Inicializado:</span>
+              <span class="font-semibold" [class.text-green-600]="healthData.serviceBus.clientInitialized">
+                {{ healthData.serviceBus.clientInitialized ? 'Sí' : 'No' }}
+              </span>
+            </div>
+            <div class="flex justify-content-between pb-2 border-bottom-1 surface-border">
+              <span class="text-500">Emisor de Mensajes (Sender):</span>
+              <span class="font-semibold" [class.text-green-600]="healthData.serviceBus.senderReady">
+                {{ healthData.serviceBus.senderReady ? 'Listo' : 'No Listo' }}
+              </span>
+            </div>
+            <div class="flex justify-content-between">
+              <span class="text-500">Receptor Activo (Listener):</span>
+              <span class="font-semibold" [class.text-green-600]="healthData.serviceBus.receiverListening">
+                {{ healthData.serviceBus.receiverListening ? 'Conectado (Background)' : 'Detenido' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tarjeta 4: Uso de Memoria -->
+    <div class="col-12 md:col-6 p-2">
+      <div class="surface-card border-1 border-200 border-round-xl p-4 h-full flex flex-column justify-content-between shadow-1">
+        <div>
+          <div class="flex align-items-center justify-content-between mb-3">
+            <span class="font-bold text-base text-900 flex align-items-center gap-2">
+              <lucide-icon name="cpu" class="text-teal-500"></lucide-icon> Consumo de Memoria
+            </span>
+            <span class="text-xs text-teal-700 font-bold bg-teal-100 px-2 py-1 border-round">
+              V8 Engine
+            </span>
+          </div>
+          <div class="flex flex-column gap-2 text-sm text-700">
+            <div class="flex justify-content-between pb-2 border-bottom-1 surface-border">
+              <span class="text-500">RSS (Memoria Residente):</span>
+              <span class="font-semibold text-900">{{ healthData.system.memory.rssMB }} MB</span>
+            </div>
+            <div class="flex justify-content-between pb-2 border-bottom-1 surface-border">
+              <span class="text-500">Heap Usado:</span>
+              <span class="font-semibold text-teal-600">{{ healthData.system.memory.heapUsedMB }} MB</span>
+            </div>
+            <div class="flex justify-content-between pb-2 border-bottom-1 surface-border">
+              <span class="text-500">Heap Total Reservado:</span>
+              <span class="font-semibold text-900">{{ healthData.system.memory.heapTotalMB }} MB</span>
+            </div>
+            <div class="flex justify-content-between">
+              <span class="text-500">Estado de Memoria:</span>
+              <span class="font-semibold text-green-600">Saludable (Uso &lt; 70%)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

@@ -7,6 +7,7 @@ export interface CreateUserRequest {
   name: string;
   email: string;
   password: string;
+  role?: string;
   permissions?: string[];
   teamId?: number;
   bossId?: number;
@@ -18,6 +19,7 @@ export interface CreateUserResponse {
     id: number;
     name: string;
     email: string;
+    role?: string;
     permissions: string[];
     teamId?: number;
     bossId?: number;
@@ -29,6 +31,7 @@ export interface UpdateUserRequest {
   name?: string;
   email?: string;
   password?: string;
+  role?: string;
   permissions?: string[];
   status?: number;
   teamId?: number | null;
@@ -122,6 +125,7 @@ export class UserService {
         id: savedUser.id,
         name: savedUser.name,
         email: savedUser.email,
+        role: savedUser.role || 'user',
         permissions: assignedPermissions,
         teamId: savedUser.teamId || undefined,
         bossId: savedUser.bossId || undefined
@@ -157,7 +161,8 @@ export class UserService {
         teamId: user.teamId,
         teamName: user.team?.name,
         bossId: user.bossId,
-        bossName: user.boss?.name
+        bossName: user.boss?.name,
+        role: user.role || 'user'
       };
     });
 
@@ -192,7 +197,8 @@ export class UserService {
       teamId: user.teamId,
       teamName: user.team?.name || null,
       bossId: user.bossId,
-      bossName: user.boss?.name || null
+      bossName: user.boss?.name || null,
+      role: user.role || 'user'
     };
   }
 
