@@ -23,6 +23,8 @@ import { NotificationService, Notification } from '../../services/notification.s
 ;
 import { ProductionService } from '../../services/production.service';
 import { ProductionDialogComponent } from '../../pages/production_2/production-dialog/production-dialog.component';
+import { SystemHealthModalComponent } from '../system-health-modal/system-health-modal.component';
+import { PERMISSIONS } from '../../constants/permissions';
 
 @Component({
   selector: 'app-layout',
@@ -40,7 +42,8 @@ import { ProductionDialogComponent } from '../../pages/production_2/production-d
     StyleClassModule,
     PopoverModule,
     BadgeModule,
-    MenuModule
+    MenuModule,
+    SystemHealthModalComponent
   ],
   providers: [DialogService],
   templateUrl: './layout.component.html',
@@ -59,6 +62,10 @@ export class LayoutComponent implements OnInit {
   error = signal<string | null>(null);
 
   currentUser = this.authService.currentUser;
+  isAdmin = computed(() => this.authService.isAdmin());
+  canViewHealthBottom = computed(() => 
+    this.authService.isAdmin() && this.authService.hasPermission(PERMISSIONS.HEALTH_CHECKER)
+  );
 
   notifications = this.notificationService.notifications;
   unreadCount = this.notificationService.unreadCount;
@@ -66,6 +73,7 @@ export class LayoutComponent implements OnInit {
   expandedItems = signal<Set<number>>(new Set());
 
   isDrawerOpen = false;
+  showHealthModal = signal(false);
 
   isDarkMode = signal(false);
 
@@ -157,6 +165,10 @@ export class LayoutComponent implements OnInit {
 
   toggleDrawer() {
     this.isDrawerOpen = !this.isDrawerOpen;
+  }
+
+  openHealthModal() {
+    this.showHealthModal.set(true);
   }
 
   onDrawerVisibleChange(isVisible: boolean) {

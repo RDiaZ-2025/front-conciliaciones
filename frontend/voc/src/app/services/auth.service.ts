@@ -143,4 +143,11 @@ export class AuthService extends BaseApiService {
     if (!user || !user.permissions) return false;
     return user.permissions.includes(permission.toLowerCase());
   }
+
+  isAdmin(): boolean {
+    const user = this.currentUser();
+    if (!user) return false;
+    const role = (user.role || '').toLowerCase();
+    return role === 'admin' || this.hasPermission('admin') || this.hasPermission('admin_panel');
+  }
 }

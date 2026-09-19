@@ -88,6 +88,7 @@
                      pInputText
                      type="text"
                      [(ngModel)]="cond.value"
+                     (ngModelChange)="cond.selectedValues = []"
                      [ngModelOptions]="{standalone: true}"
                      placeholder="Escriba el valor esperado..."
                      class="w-full condition-input"

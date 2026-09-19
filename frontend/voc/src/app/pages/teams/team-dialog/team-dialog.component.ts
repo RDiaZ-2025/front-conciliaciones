@@ -18,6 +18,7 @@ import { forkJoin } from 'rxjs';
 
 export interface ConditionItem {
   fieldKey: string;
+  fieldKeys?: string[];
   operator: string;
   value: any;
   selectedValues?: string[];
@@ -94,7 +95,7 @@ export class TeamDialogComponent implements OnInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['visible'] && this.visible) {
+    if (this.visible && (changes['visible'] || changes['team'])) {
       this.resetForm();
     }
   }
@@ -149,12 +150,29 @@ export class TeamDialogComponent implements OnInit, OnChanges {
               });
             });
             this.availableFields.set(options);
+            this.syncConditionSelectedValues();
           },
           error: () => {}
         });
       },
       error: () => {}
     });
+  }
+
+  private syncConditionSelectedValues() {
+    this.conditionsList.update(list => list.map(c => {
+      if (this.hasFieldOptions(c.fieldKey)) {
+        if ((!c.selectedValues || c.selectedValues.length === 0) && c.value !== undefined && c.value !== null && c.value !== '') {
+          const sVals = Array.isArray(c.value) ? c.value.map(String) : [String(c.value)];
+          return { ...c, selectedValues: sVals };
+        }
+      } else {
+        if (c.selectedValues && c.selectedValues.length > 0) {
+          return { ...c, selectedValues: [] };
+        }
+      }
+      return c;
+    }));
   }
 
   getFieldByKey(fieldKey: string): FormFieldOption | undefined {
@@ -172,6 +190,7 @@ export class TeamDialogComponent implements OnInit, OnChanges {
   }
 
   onFieldChange(cond: ConditionItem) {
+    cond.fieldKeys = [cond.fieldKey];
     cond.selectedValues = [];
     cond.value = '';
   }
@@ -179,6 +198,36 @@ export class TeamDialogComponent implements OnInit, OnChanges {
   onMultiValuesChange(cond: ConditionItem, values: string[]) {
     cond.selectedValues = values || [];
     cond.value = values && values.length === 1 ? values[0] : (values || []);
+  }
+
+  private parseNumericValue(val: any): number | null {
+    if (typeof val === 'number') return isNaN(val) ? null : val;
+    if (val === undefined || val === null) return null;
+    let str = String(val).trim().replace(/[^0-9.,-]/g, '');
+    if (!str) return null;
+
+    if (str.includes('.') && str.includes(',')) {
+      const lastDot = str.lastIndexOf('.');
+      const lastComma = str.lastIndexOf(',');
+      if (lastComma > lastDot) {
+        str = str.replace(/\./g, '').replace(',', '.');
+      } else {
+        str = str.replace(/,/g, '');
+      }
+    } else if ((str.match(/\./g) || []).length > 1) {
+      str = str.replace(/\./g, '');
+    } else if ((str.match(/,/g) || []).length > 1) {
+      str = str.replace(/,/g, '');
+    } else if (str.includes(',')) {
+      const parts = str.split(',');
+      if (parts[1] && parts[1].length === 3 && parts[0].length <= 3) {
+        str = str.replace(',', '');
+      } else {
+        str = str.replace(',', '.');
+      }
+    }
+    const num = Number(str);
+    return isNaN(num) ? null : num;
   }
 
   resetForm() {
@@ -196,6 +245,7 @@ export class TeamDialogComponent implements OnInit, OnChanges {
           if (meta.enableConditions && Array.isArray(meta.enableConditions)) {
             conds = meta.enableConditions.map((c: any) => {
               const val = c.value ?? '';
+              const fieldKey = c.fieldKey || (c.fieldKeys && c.fieldKeys[0]) || '';
               let selectedVals: string[] = [];
               if (Array.isArray(val)) {
                 selectedVals = val.map(String);
@@ -206,11 +256,12 @@ export class TeamDialogComponent implements OnInit, OnChanges {
                 } catch(e) {
                   selectedVals = [val];
                 }
-              } else if (val !== '') {
+              } else if (this.hasFieldOptions(fieldKey) && val !== '') {
                 selectedVals = [String(val)];
               }
               return {
-                fieldKey: c.fieldKey || (c.fieldKeys && c.fieldKeys[0]) || '',
+                fieldKey: fieldKey,
+                fieldKeys: c.fieldKeys || (c.fieldKey ? [c.fieldKey] : (fieldKey ? [fieldKey] : [])),
                 operator: c.operator || 'contains',
                 value: val,
                 selectedValues: selectedVals
@@ -234,7 +285,7 @@ export class TeamDialogComponent implements OnInit, OnChanges {
     const firstKey = this.availableFields()[0]?.fieldKey || '';
     this.conditionsList.update(list => [
       ...list,
-      { fieldKey: firstKey, operator: 'contains', value: '', selectedValues: [] }
+      { fieldKey: firstKey, fieldKeys: firstKey ? [firstKey] : [], operator: 'contains', value: '', selectedValues: [] }
     ]);
   }
 
@@ -251,15 +302,31 @@ export class TeamDialogComponent implements OnInit, OnChanges {
       if (validConds.length > 0) {
         formData.metadata = JSON.stringify({
           enableConditions: validConds.map(c => {
-            let finalVal = c.value;
-            if (c.selectedValues && c.selectedValues.length > 0) {
-              finalVal = c.selectedValues.length === 1 ? c.selectedValues[0] : c.selectedValues;
+            let finalVal: any = c.value;
+            if (this.hasFieldOptions(c.fieldKey)) {
+              if (c.selectedValues && c.selectedValues.length > 0) {
+                finalVal = c.selectedValues.length === 1 ? c.selectedValues[0] : c.selectedValues;
+              } else {
+                finalVal = c.value ?? '';
+              }
+            } else {
+              finalVal = c.value ?? '';
+              if (['gt', 'gte', 'lt', 'lte'].includes(c.operator)) {
+                const parsedNum = this.parseNumericValue(c.value);
+                if (parsedNum !== null) {
+                  finalVal = parsedNum;
+                }
+              }
             }
-            return {
+            const item: any = {
               fieldKey: c.fieldKey,
               operator: c.operator,
               value: finalVal
             };
+            if (c.fieldKeys && c.fieldKeys.length > 1 && c.fieldKeys.includes(c.fieldKey)) {
+              item.fieldKeys = c.fieldKeys;
+            }
+            return item;
           })
         });
       } else {
