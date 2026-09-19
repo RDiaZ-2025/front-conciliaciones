@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "1.0.0",
+  "version": "1.7.4",
   "description": "VOC Backend API",
   "main": "dist/server.js",
   "type": "commonjs",

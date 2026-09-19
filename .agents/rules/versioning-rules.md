@@ -8,39 +8,55 @@ Esta regla define el protocolo estricto y obligatorio de incremento y control de
 
 ## Formato de Versión
 El proyecto sigue el estándar **Semantic Versioning (SemVer)** con tres niveles:
-`MAJOR.MINOR.PATCH` (por ejemplo: `1.7.3`)
+`MAJOR.MINOR.PATCH` (por ejemplo: `1.7.4`)
 
-* **MAJOR (Primer número - X.0.0):** Reestructuraciones muy grandes, cambios estructurales profundos o incompatibilidades arquitectónicas.
-* **MINOR (Segundo número - 1.Y.0):** Nuevas funcionalidades completas, releases o preparaciones previas a enviar cambios al remoto (`git push`).
-* **PATCH (Tercer número - 1.7.Z):** Correcciones de errores (bug fixes), ajustes visuales, modificaciones puntuales y cada commit individual.
+* **MAJOR (Primer número - X.0.0):** Reingenierías completas, reestructuraciones estructurales profundas o incompatibilidades arquitectónicas masivas.
+* **MINOR (Segundo número - 1.Y.0):** Cambios mayores, nuevas funcionalidades completas, adición de módulos o flujos de trabajo relevantes. Reinicia `PATCH` a 0.
+* **PATCH (Tercer número / Último dígito - 1.7.Z):** Cambios menores, correcciones de errores (bug fixes), ajustes visuales, refinamientos y modificaciones puntuales.
 
 ---
 
-## Protocolo Obligatorio de Incremento
+## Protocolo Obligatorio de Decisión Autónoma de la IA
 
-1. **Por cada Commit (`git commit`):**
-   * Cada vez que se prepare o solicite un commit, la IA debe incrementar el **último número (`PATCH`)**.
+La IA tiene la responsabilidad y autonomía de **evaluar y actualizar directamente la versión** en cada tarea o intervención que realice en el código (sin requerir ni esperar comandos de `git commit` o `git push`):
+
+1. **Ante un Cambio Menor:**
+   * La IA debe incrementar el **último dígito (`PATCH`)**.
+   * Aplica para: corrección de errores (bug fixes), ajustes visuales/UI, textos, limpiezas de código, micro-ajustes y modificaciones secundarias.
    * Ejemplo: `1.7.3` $\rightarrow$ `1.7.4`.
 
-2. **Por cada Push (`git push`):**
-   * Cuando se vaya a realizar o solicitar un `git push` hacia el repositorio remoto, la IA debe incrementar el **segundo número (`MINOR`)** y reiniciar el `PATCH` en 0.
+2. **Ante un Cambio Mayor:**
+   * La IA debe incrementar el **segundo dígito (`MINOR`)** y reiniciar el `PATCH` en 0.
+   * Aplica para: desarrollo de nuevas funcionalidades completas, pantallas o módulos nuevos, cambios sustanciales en la lógica de negocio o requerimientos de gran alcance.
    * Ejemplo: `1.7.4` $\rightarrow$ `1.8.0`.
 
-3. **Por Reestructuración Mayor:**
-   * Solamente cuando se realice una reestructuración muy grande o breaking change arquitectónico, se debe incrementar el **primer número (`MAJOR`)** y reiniciar `MINOR` y `PATCH` en 0.
+3. **Ante una Reingeniería Completa:**
+   * La IA debe incrementar el **primer dígito (`MAJOR`)** y reiniciar `MINOR` y `PATCH` en 0.
+   * Aplica para: reestructuración arquitectónica radical, migración total de frameworks/bases de datos o rediseño estructural de todo el sistema.
    * Ejemplo: `1.8.0` $\rightarrow$ `2.0.0`.
 
-4. **Autonomía y Pregunta Obligatoria ante Dudas:**
-   * La IA tiene la facultad de actualizar automáticamente la versión en el código y configuración del proyecto.
-   * **REGLA DE CONSULTA:** Si en algún escenario la IA no está completamente segura de qué posición de la versión corresponde cambiar (por ejemplo, si el alcance de una tarea amerita considerarse PATCH, MINOR o MAJOR), **la IA debe preguntar explícitamente al usuario** antes de modificarla para confirmar qué posición debe actualizar.
+4. **Registro Obligatorio de la Fecha de Versión:**
+   * **En cada actualización de versión, debe quedar registrada la fecha en que se subió o actualizó dicha versión** en formato `YYYY-MM-DD` (ejemplo: `2026-09-19`).
+   * La fecha debe reflejarse en las variables y fallbacks de salud del sistema (`APP_VERSION_DATE` / `versionDate`) y en las vistas de telemetría/salud.
+
+5. **Consulta ante Incertidumbre:**
+   * Si la IA no está 100% segura de si el alcance de una tarea corresponde a un cambio menor (PATCH) o mayor (MINOR), debe consultar explícitamente al usuario antes de modificarla para confirmar la posición a incrementar.
 
 ---
 
-## Archivos que deben mantenerse sincronizados con la versión
-Al actualizar la versión, la IA debe reflejar el cambio en:
-1. `backend/src/app.ts` (`const APP_VERSION = 'X.Y.Z';` para la ruta `/health`).
-2. `frontend/voc/src/app/services/system-health.service.ts` (campo `version: 'X.Y.Z'` en el fallback del health).
-3. `frontend/voc/src/app/components/layout/layout.component.html` (badge de versión en el botón de estado del sistema).
-4. `package.json` (raíz): `"version": "X.Y.Z"`.
-5. `backend/package.json`: `"version": "X.Y.Z"`.
-6. `frontend/package.json`: `"version": "X.Y.Z"`.
+## Archivos a Sincronizar en cada cambio de versión
+Al actualizar la versión, la IA debe sincronizar simultáneamente:
+1. `backend/src/app.ts`:
+   - `const APP_VERSION = 'X.Y.Z';`
+   - `const APP_VERSION_DATE = 'YYYY-MM-DD';` (incluido en el payload de `/health`).
+2. `frontend/voc/src/app/services/system-health.service.ts`:
+   - `version: 'X.Y.Z'` y `versionDate: 'YYYY-MM-DD'` en el objeto de fallback.
+3. `frontend/voc/src/app/components/layout/layout.component.html`:
+   - Badge de versión (`vX.Y.Z`).
+4. `frontend/voc/src/app/components/system-health-modal/system-health-modal.component.html`:
+   - Versión y fecha de versión (`vX.Y.Z (YYYY-MM-DD)`).
+5. `frontend/voc/src/app/pages/system-health/system-health.component.html`:
+   - Versión y fecha de versión (`vX.Y.Z (YYYY-MM-DD)`).
+6. `package.json` (raíz): `"version": "X.Y.Z"`.
+7. `backend/package.json`: `"version": "X.Y.Z"`.
+8. `frontend/package.json`: `"version": "X.Y.Z"`.

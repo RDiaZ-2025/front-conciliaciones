@@ -148,6 +148,19 @@ export class AuthService extends BaseApiService {
     const user = this.currentUser();
     if (!user) return false;
     const role = (user.role || '').toLowerCase();
-    return role === 'admin' || this.hasPermission('admin') || this.hasPermission('admin_panel');
+    const isTeamAdmin = user.teamId === 7 || (user.teams || []).some(t => ['administración', 'administracion', 'admin'].includes(t.toLowerCase()));
+    return role === 'admin' || role === 'administrador' || isTeamAdmin || this.hasPermission('admin') || this.hasPermission('admin_panel') || this.hasPermission('production_admin');
+  }
+
+  isCommercial(): boolean {
+    const user = this.currentUser();
+    if (!user) return false;
+    const role = (user.role || '').toLowerCase();
+    const isTeamCommercial = user.teamId === 6 || (user.teams || []).some(t => ['comercial', 'commercial'].includes(t.toLowerCase()));
+    return role === 'comercial' || role === 'commercial' || isTeamCommercial;
+  }
+
+  isCommercialOrAdmin(): boolean {
+    return this.isAdmin() || this.isCommercial();
   }
 }

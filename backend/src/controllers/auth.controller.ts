@@ -56,6 +56,7 @@ export class AuthController {
         role: user.role || 'user',
         permissions: permissions,
         teams: teams,
+        teamId: user.teamId,
         lastAccess: user.lastAccess
       }
     });

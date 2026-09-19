@@ -17,7 +17,7 @@
           <div class="flex align-items-center gap-2">
             <span class="font-bold text-lg text-900 line-height-1">Estado del Sistema</span>
             <span class="text-xs px-2 py-0.5 border-round font-bold bg-blue-50 text-blue-700 border-1 border-blue-200">
-              v{{ healthData()?.version || '1.7.3' }}
+              v{{ healthData()?.version || '1.7.4' }}
             </span>
           </div>
           <span class="text-xs text-500">Telemetría y sonda de salud en vivo (Azure Cloud)</span>
@@ -64,7 +64,7 @@
             <div class="flex flex-column gap-1 text-xs text-700">
               <div class="flex justify-content-between">
                 <span class="text-500">Versión del Sistema:</span>
-                <span class="font-bold text-primary">v{{ healthData.version || '1.7.3' }}</span>
+                <span class="font-bold text-primary">v{{ healthData.version || '1.7.4' }} <span *ngIf="healthData.versionDate" class="text-xs font-normal text-500">({{ healthData.versionDate }})</span></span>
               </div>
               <div class="flex justify-content-between">
                 <span class="text-500">Entorno:</span>
@@ -180,7 +180,7 @@
   <ng-template pTemplate="footer">
     <div class="flex justify-content-between align-items-center w-full">
       <span class="text-xs text-500">
-        VOC Sistema v{{ healthData()?.version || '1.7.3' }} • {{ healthData()?.timestamp ? (healthData()?.timestamp | date:'yyyy-MM-dd HH:mm:ss') : '' }}
+        VOC Sistema v{{ healthData()?.version || '1.7.4' }}<span *ngIf="healthData()?.versionDate"> ({{ healthData()?.versionDate }})</span> • {{ healthData()?.timestamp ? (healthData()?.timestamp | date:'yyyy-MM-dd HH:mm:ss') : '' }}
       </span>
       <div class="flex gap-2">
         <p-button 

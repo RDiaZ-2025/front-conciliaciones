@@ -22,6 +22,7 @@ import { ProductionService } from '../../services/production.service';
 import { UserService, User } from '../../services/user.service';
 import { TeamService } from '../../services/team.service';
 import { AuthService } from '../../services/auth.service';
+import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
 interface FormFieldItem {
@@ -115,6 +116,7 @@ export class RequestsBetaAdminComponent implements OnInit {
   private authService = inject(AuthService);
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
+  private router = inject(Router);
 
   currentUser = computed(() => this.authService.currentUser());
 
@@ -330,10 +332,24 @@ export class RequestsBetaAdminComponent implements OnInit {
   ];
 
   ngOnInit() {
+    if (!this.authService.isCommercialOrAdmin()) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Acceso Restringido',
+        detail: 'No tienes permisos para administrar formularios.'
+      });
+      this.router.navigate(['/requests-beta']);
+      return;
+    }
+
     this.loadForms();
     this.loadUsersAndTeams();
     this.loadInitialFormsFields();
     this.loadWorkflows();
+  }
+
+  goToProduction() {
+    this.router.navigate(['/requests-beta']);
   }
 
   loadForms() {

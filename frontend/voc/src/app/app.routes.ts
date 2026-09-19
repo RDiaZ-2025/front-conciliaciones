@@ -39,7 +39,8 @@ export const routes: Routes = [
       },
       {
         path: 'requests-beta/inbox',
-        loadComponent: () => import('./pages/requests-beta-inbox/requests-beta-inbox.component').then(m => m.RequestsBetaInboxComponent)
+        redirectTo: 'requests-beta',
+        pathMatch: 'full'
       },
       {
         path: 'campaign-scheduling',

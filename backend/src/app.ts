@@ -125,7 +125,8 @@ const formatUptime = (seconds: number): string => {
   return parts.join(' ');
 };
 
-const APP_VERSION = '1.7.3';
+const APP_VERSION = '1.7.4';
+const APP_VERSION_DATE = '2026-09-19';
 
 const getHealthPayload = () => {
   const mem = process.memoryUsage();
@@ -137,6 +138,7 @@ const getHealthPayload = () => {
     success: true,
     status: (dbConnected && (!sbStatus.hasConnectionString || sbStatus.receiverListening)) ? 'healthy' : 'degraded',
     version: APP_VERSION,
+    versionDate: APP_VERSION_DATE,
     message: 'Servidor funcionando correctamente',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',

@@ -6,6 +6,7 @@ export interface SystemHealthResponse {
   success: boolean;
   status: 'healthy' | 'degraded' | 'down';
   version?: string;
+  versionDate?: string;
   message: string;
   timestamp: string;
   environment: string;
@@ -55,7 +56,8 @@ export class SystemHealthService extends BaseApiService {
         return of({
           success: false,
           status: 'down' as const,
-          version: '1.7.3',
+          version: '1.7.4',
+          versionDate: '2026-09-19',
           message: err.message || 'No se pudo contactar al servidor',
           timestamp: new Date().toISOString(),
           environment: 'desconocido',
