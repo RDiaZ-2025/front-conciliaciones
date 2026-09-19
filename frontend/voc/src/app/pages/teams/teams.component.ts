@@ -1,5 +1,5 @@
 import { LucideIconComponent } from '../../components/lucide-icon/lucide-icon.component';
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -12,6 +12,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { PageHeaderComponent } from '../../components/page-header/page-header.component';
 import { TeamDialogComponent } from './team-dialog/team-dialog.component';
 import { SubteamDialogComponent } from './subteam-dialog/subteam-dialog.component';
+import { SubteamMembersDialogComponent } from './subteam-members-dialog/subteam-members-dialog.component';
 import { TeamService } from '../../services/team.service';
 import { Team } from '../../models/common/team';
 import { Subteam } from '../../models/common/subteam';
@@ -31,7 +32,8 @@ import { Subteam } from '../../models/common/subteam';
     ConfirmDialogModule,
     PageHeaderComponent,
     TeamDialogComponent,
-    SubteamDialogComponent
+    SubteamDialogComponent,
+    SubteamMembersDialogComponent
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './teams.component.html',
@@ -47,10 +49,30 @@ export class TeamsComponent implements OnInit {
   dialogVisible = signal<boolean>(false);
   editingTeam = signal<Team | null>(null);
 
+  // Tabs de navegación
+  activeTab = signal<'teams' | 'subteams'>('teams');
+
+  // Listado plano de todos los subequipos con su equipo padre
+  allSubteams = computed(() => {
+    const result: Array<Subteam & { parentTeam: Team }> = [];
+    for (const team of this.teams()) {
+      if (team.subteams && team.subteams.length > 0) {
+        for (const sub of team.subteams) {
+          result.push({ ...sub, parentTeam: team });
+        }
+      }
+    }
+    return result;
+  });
+
   // Subequipos
   subteamDialogVisible = signal<boolean>(false);
   selectedTeamForSubteam = signal<Team | null>(null);
   editingSubteam = signal<Subteam | null>(null);
+
+  // Integrantes de Subequipo
+  subteamMembersDialogVisible = signal<boolean>(false);
+  selectedSubteamForMembers = signal<Subteam | null>(null);
 
   ngOnInit() {
     this.loadTeams();
@@ -154,6 +176,16 @@ export class TeamsComponent implements OnInit {
 
   onSubteamSave() {
     this.subteamDialogVisible.set(false);
+    this.loadTeams();
+  }
+
+  openSubteamMembers(team: Team, subteam: Subteam) {
+    this.selectedTeamForSubteam.set(team);
+    this.selectedSubteamForMembers.set(subteam);
+    this.subteamMembersDialogVisible.set(true);
+  }
+
+  onSubteamMembersSaved() {
     this.loadTeams();
   }
 }

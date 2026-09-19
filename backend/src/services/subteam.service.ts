@@ -83,7 +83,7 @@ export class SubteamService {
   async getSubteamUsers(subteamId: number): Promise<User[]> {
     const relations = await this.subteamUserRepo.find({
       where: { subteamId },
-      relations: ['user']
+      relations: ['user', 'user.team']
     });
     return relations.map(r => r.user).filter(Boolean);
   }
