@@ -118,6 +118,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   loadingAction = signal<boolean>(false);
   selectedTask = signal<any>(null);
   comments = signal<string>('');
+  chosenNextAssignee: any = null;
   stageFormFields = signal<any[]>([]);
   stageFormValues: Record<string, string> = {};
   loadingStageFields = signal<boolean>(false);
@@ -1502,6 +1503,10 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     console.log('Task selected in dashboard inbox:', task);
     this.selectedTask.set(task);
     this.comments.set('');
+    this.chosenNextAssignee = null;
+    if (task?.allowChooseNextStageAssignee && task?.nextStageAssigneeOptions?.length === 1) {
+      this.chosenNextAssignee = task.nextStageAssigneeOptions[0];
+    }
     this.stageFormFields.set([]);
     this.stageFormValues = {};
     this.showActionDialog.set(true);
@@ -1769,6 +1774,17 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     }
 
+    if (action === 'approve' && !this.isCorrection(task) && task.allowChooseNextStageAssignee && task.nextStageAssigneeOptions?.length > 0 && !task.isFinalStage) {
+      if (!this.chosenNextAssignee) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Validación',
+          detail: 'Debes seleccionar a quién se le asignará la siguiente etapa.'
+        });
+        return;
+      }
+    }
+
     if (action === 'reject') {
       this.loadingAction.set(true);
       this.productionService.actionApproval(task.stateId, action, notes, undefined).subscribe({
@@ -1976,9 +1992,17 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     }
 
-    this.productionService.actionApproval(task.stateId, action, notes, action === 'approve' ? this.stageFormValues : undefined).subscribe({
+    this.productionService.actionApproval(
+      task.stateId,
+      action,
+      notes,
+      action === 'approve' ? this.stageFormValues : undefined,
+      undefined,
+      action === 'approve' ? this.chosenNextAssignee : undefined
+    ).subscribe({
       next: (res) => {
         this.stageTempFiles = {};
+        this.chosenNextAssignee = null;
         this.showActionDialog.set(false);
         this.loadPendingTasks();
         this.loadRequests();

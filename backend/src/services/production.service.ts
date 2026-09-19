@@ -1357,12 +1357,20 @@ export class ProductionService {
                     parsedIds = JSON.parse(s.assigneeUserIds);
                 } catch(e) {}
             }
+            let parsedNextAssigneeOptions: any = [];
+            if (s.nextStageAssigneeOptions) {
+                try {
+                    parsedNextAssigneeOptions = typeof s.nextStageAssigneeOptions === 'string' ? JSON.parse(s.nextStageAssigneeOptions) : s.nextStageAssigneeOptions;
+                } catch(e) {}
+            }
             const isMultiForms = (parsedIds && !Array.isArray(parsedIds) && parsedIds.multiFormsConfig && parsedIds.multiFormsConfig.length > 0)
                 || (Array.isArray(parsedIds) && parsedIds.length > 0 && (parsedIds[0].sourceFormId !== undefined || parsedIds[0].targetFormIdToFill !== undefined || parsedIds[0].targetSubflowFormId !== undefined || parsedIds[0].targetSubflowWorkflowId !== undefined));
             return {
                 ...s,
                 formIdToFill: isMultiForms ? -1 : s.formIdToFill,
-                assigneeUserIds: parsedIds
+                assigneeUserIds: parsedIds,
+                allowChooseNextStageAssignee: !!s.allowChooseNextStageAssignee,
+                nextStageAssigneeOptions: parsedNextAssigneeOptions
             };
         });
     }
@@ -1409,7 +1417,9 @@ export class ProductionService {
                         rejectionTargetTeamId: s.rejectionTargetTeamId || null,
                         requireCommentOnApprove: !!s.requireCommentOnApprove,
                         excludeTeamLeader: !!s.excludeTeamLeader,
-                        assigneeUserIds: s.assigneeUserIds ? JSON.stringify(s.assigneeUserIds) : null
+                        assigneeUserIds: s.assigneeUserIds ? JSON.stringify(s.assigneeUserIds) : null,
+                        allowChooseNextStageAssignee: !!s.allowChooseNextStageAssignee,
+                        nextStageAssigneeOptions: s.nextStageAssigneeOptions ? (typeof s.nextStageAssigneeOptions === 'string' ? s.nextStageAssigneeOptions : JSON.stringify(s.nextStageAssigneeOptions)) : null
                     });
                 } else {
                     stageEntity.isDeleted = false;
@@ -1429,6 +1439,10 @@ export class ProductionService {
                     if (s.requireCommentOnApprove !== undefined) stageEntity.requireCommentOnApprove = s.requireCommentOnApprove;
                     if (s.excludeTeamLeader !== undefined) stageEntity.excludeTeamLeader = !!s.excludeTeamLeader;
                     if (s.assigneeUserIds !== undefined) stageEntity.assigneeUserIds = s.assigneeUserIds ? JSON.stringify(s.assigneeUserIds) : null;
+                    if (s.allowChooseNextStageAssignee !== undefined) stageEntity.allowChooseNextStageAssignee = !!s.allowChooseNextStageAssignee;
+                    if (s.nextStageAssigneeOptions !== undefined) {
+                        stageEntity.nextStageAssigneeOptions = s.nextStageAssigneeOptions ? (typeof s.nextStageAssigneeOptions === 'string' ? s.nextStageAssigneeOptions : JSON.stringify(s.nextStageAssigneeOptions)) : null;
+                    }
                 }
 
                 savedStages.push(await stageRepo.save(stageEntity));
@@ -1457,6 +1471,9 @@ export class ProductionService {
         });
 
         states = states.filter(s => s.submission && (s.submission.status === 'In Progress' || s.submission.status === 'Rejected'));
+
+        const allTeams = await AppDataSource.getRepository(Team).find({ relations: ['subteams'] });
+        const allUsers = await AppDataSource.getRepository(User).find({ select: ['id', 'name', 'email'] });
 
         const valRepo = AppDataSource.getRepository(DynamicFormFieldValue);
         const results = [];
@@ -1825,6 +1842,52 @@ export class ProductionService {
                 }),
                 submittedValuesRaw,
                 requireCommentOnApprove: state.stage ? !!state.stage.requireCommentOnApprove : false,
+                allowChooseNextStageAssignee: state.stage ? !!state.stage.allowChooseNextStageAssignee : false,
+                nextStageAssigneeOptions: (() => {
+                    if (!state.stage?.allowChooseNextStageAssignee || !state.stage?.nextStageAssigneeOptions) return [];
+                    try {
+                        const raw = typeof state.stage.nextStageAssigneeOptions === 'string'
+                            ? JSON.parse(state.stage.nextStageAssigneeOptions)
+                            : state.stage.nextStageAssigneeOptions;
+                        if (!Array.isArray(raw)) return [];
+                        return raw.map((opt: any) => {
+                            let defaultLabel = '';
+                            if (opt.type === 'specific_user') {
+                                const u = allUsers.find(u => u.id === opt.userId);
+                                defaultLabel = u ? `👤 ${u.name}` : `👤 Usuario #${opt.userId}`;
+                            } else if (opt.type === 'team_random') {
+                                const t = allTeams.find(t => t.id === opt.teamId);
+                                defaultLabel = t ? `🎲 Al azar de: ${t.name}` : `🎲 Equipo #${opt.teamId}`;
+                            } else if (opt.type === 'team_leader') {
+                                const t = allTeams.find(t => t.id === opt.teamId);
+                                defaultLabel = t ? `👔 Líder de: ${t.name}` : `👔 Líder de equipo #${opt.teamId}`;
+                            } else if (opt.type === 'team_workload') {
+                                const t = allTeams.find(t => t.id === opt.teamId);
+                                defaultLabel = t ? `⚖️ Menor carga de: ${t.name}` : `⚖️ Equipo #${opt.teamId}`;
+                            } else if (opt.type === 'subteam_random') {
+                                let subName = `Subequipo #${opt.subteamId}`;
+                                for (const t of allTeams) {
+                                    const st = (t.subteams || []).find((s: any) => s.id === opt.subteamId);
+                                    if (st) {
+                                        subName = `${st.name} (${t.name})`;
+                                        break;
+                                    }
+                                }
+                                defaultLabel = `👥 Al azar de subequipo: ${subName}`;
+                            } else if (opt.type === 'requester') {
+                                defaultLabel = '👤 Solicitante Original';
+                            } else if (opt.type === 'requester_boss') {
+                                defaultLabel = '👔 Jefe del Solicitante';
+                            }
+                            return {
+                                ...opt,
+                                displayLabel: opt.label && opt.label.trim() ? opt.label.trim() : (defaultLabel || 'Opción de asignación')
+                            };
+                        });
+                    } catch (e) {
+                        return [];
+                    }
+                })(),
                 historyStages
             });
         }
@@ -1839,7 +1902,119 @@ export class ProductionService {
         excludeLeader: boolean = false,
         previousActionerId?: number
     ): Promise<number> {
-return productionAssignmentService.resolveTeamUser(manager, teamId, strategy, excludeLeader, previousActionerId);
+        return productionAssignmentService.resolveTeamUser(manager, teamId, strategy, excludeLeader, previousActionerId);
+    }
+
+    async resolveChosenAssignee(manager: any, submission: any, currentStage: any, nextStage: any, chosenOption: any): Promise<number | undefined> {
+        if (!chosenOption) return undefined;
+
+        let opt = chosenOption;
+        if (typeof opt === 'string') {
+            try {
+                opt = JSON.parse(opt);
+            } catch (e) {
+                const num = Number(opt);
+                if (!isNaN(num) && num > 0) return num;
+                return undefined;
+            }
+        }
+
+        // If currentStage has configured nextStageAssigneeOptions, enforce that the option matches the DB configuration
+        if (currentStage?.nextStageAssigneeOptions) {
+            try {
+                const parsedOptions = typeof currentStage.nextStageAssigneeOptions === 'string'
+                    ? JSON.parse(currentStage.nextStageAssigneeOptions)
+                    : currentStage.nextStageAssigneeOptions;
+                if (Array.isArray(parsedOptions) && parsedOptions.length > 0) {
+                    const optionId = typeof opt === 'object' && opt !== null ? opt.id : opt;
+                    const matched = parsedOptions.find((o: any) => o.id === optionId || (opt && o.id === opt.id));
+                    if (matched) {
+                        opt = matched; // Strictly use the trusted database record
+                    } else if (currentStage?.allowChooseNextStageAssignee) {
+                        throw new Error('La opción de destinatario seleccionada no es válida o no está configurada para esta etapa.');
+                    }
+                }
+            } catch (e: any) {
+                if (e.message && e.message.includes('La opción de destinatario')) throw e;
+            }
+        }
+
+        const userRepo = manager.getRepository(User);
+
+        if (opt.type === 'specific_user' && opt.userId) {
+            return Number(opt.userId);
+        }
+
+        if (opt.type === 'requester') {
+            return submission.requesterUserId;
+        }
+
+        if (opt.type === 'requester_boss') {
+            const requester = await userRepo.findOne({ where: { id: submission.requesterUserId } });
+            return requester?.bossId || submission.requesterUserId;
+        }
+
+        if (opt.type === 'previous_stage_actioner') {
+            const stateRepo = manager.getRepository(DynamicSubmissionWorkflowState);
+            const prevApproved = await stateRepo.findOne({
+                where: { submissionId: submission.id, status: 'Approved' },
+                order: { updatedAt: 'DESC' }
+            });
+            return prevApproved?.actionedByUserId || prevApproved?.assignedUserId || submission.requesterUserId;
+        }
+
+        if (opt.type === 'team_leader' && opt.teamId) {
+            return await this.resolveTeamUser(manager, Number(opt.teamId), 'leader');
+        }
+
+        if (opt.type === 'team_workload' && opt.teamId) {
+            return await this.resolveTeamUser(manager, Number(opt.teamId), 'workload', !!nextStage.excludeTeamLeader);
+        }
+
+        if (opt.type === 'team_random' && opt.teamId) {
+            return await this.resolveTeamUser(manager, Number(opt.teamId), 'random', !!nextStage.excludeTeamLeader);
+        }
+
+        if (opt.type === 'subteam_random' && opt.subteamId) {
+            const subteamUserRepo = manager.getRepository(SubteamUser);
+            const subteamUsers = await subteamUserRepo.find({
+                where: { subteamId: Number(opt.subteamId) },
+                relations: ['user']
+            });
+            const activeUsers = subteamUsers
+                .map((su: any) => su.user)
+                .filter((u: any) => !!u && (u.status === 1 || u.status === undefined || u.status === null));
+
+            let candidates = activeUsers;
+            if (nextStage.excludeTeamLeader) {
+                const subteam = await manager.getRepository(Subteam).findOne({ where: { id: Number(opt.subteamId) } });
+                const team = opt.teamId ? await manager.getRepository(Team).findOne({ where: { id: Number(opt.teamId) } }) : null;
+                const leadersToExclude = new Set([subteam?.leaderId, team?.leaderId].filter(Boolean));
+                const nonLeaders = activeUsers.filter((u: any) => !leadersToExclude.has(u.id));
+                if (nonLeaders.length > 0) candidates = nonLeaders;
+            }
+
+            if (candidates.length > 0) {
+                const randomIndex = Math.floor(Math.random() * candidates.length);
+                return candidates[randomIndex].id;
+            } else {
+                const subteam = await manager.getRepository(Subteam).findOne({
+                    where: { id: Number(opt.subteamId) },
+                    relations: ['leader']
+                });
+                if (subteam?.leader && (subteam.leader.status === 1 || subteam.leader.status === undefined)) {
+                    return subteam.leader.id;
+                } else if (opt.teamId) {
+                    return await this.resolveTeamUser(manager, Number(opt.teamId), 'random', !!nextStage.excludeTeamLeader);
+                }
+            }
+        }
+
+        if (opt.userId) {
+            return Number(opt.userId);
+        }
+
+        return undefined;
     }
 
     async createStageStates(manager: any, submission: any, targetStage: any, preferredAssigneeUserId?: number) {
@@ -1991,7 +2166,7 @@ return productionAssignmentService.resolveTeamUser(manager, teamId, strategy, ex
                 assigneeUserId = await this.resolveTeamUser(manager, targetStage.assigneeTeamId, 'random', !!targetStage.excludeTeamLeader);
             } else if (targetStage.assigneeType === 'team_workload' && targetStage.assigneeTeamId) {
                 assigneeUserId = await this.resolveTeamUser(manager, targetStage.assigneeTeamId, 'workload', !!targetStage.excludeTeamLeader);
-            } else if (targetStage.assigneeType === 'subflow') {
+            } else if (targetStage.assigneeType === 'subflow' || targetStage.assigneeType === 'chosen_by_previous_stage') {
                 assigneeUserId = targetStage.assigneeUserId || submission.requesterUserId || 1;
             }
             if (!assigneeUserId) assigneeUserId = 1;
@@ -2141,7 +2316,7 @@ return productionAssignmentService.resolveTeamUser(manager, teamId, strategy, ex
         }
     }
 
-    async actionApproval(stateId: number, userId: number, action: 'approve' | 'reject', notes: string, formValues?: Record<string, string>, consecutive?: string) {
+    async actionApproval(stateId: number, userId: number, action: 'approve' | 'reject', notes: string, formValues?: Record<string, string>, consecutive?: string, chosenNextAssignee?: any) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         return await AppDataSource.transaction(async (manager) => {
             const stateRepo = manager.getRepository(DynamicSubmissionWorkflowState);
@@ -2480,7 +2655,19 @@ return productionAssignmentService.resolveTeamUser(manager, teamId, strategy, ex
                         submission.currentStageId = nextStageInCurrentWf.id;
                         submission.status = 'In Progress';
                         await subRepo.save(submission);
-                        await this.createStageStates(manager, submission, nextStageInCurrentWf);
+
+                        let preferredAssigneeUserId: number | undefined = undefined;
+                        if (stage?.allowChooseNextStageAssignee) {
+                            if (!chosenNextAssignee) {
+                                throw new Error('Debe seleccionar el destinatario para la siguiente etapa.');
+                            }
+                            preferredAssigneeUserId = await this.resolveChosenAssignee(manager, submission, stage, nextStageInCurrentWf, chosenNextAssignee);
+                            if (!preferredAssigneeUserId) {
+                                throw new Error('No se pudo determinar el destinatario para la siguiente etapa a partir de la opción seleccionada.');
+                            }
+                        }
+
+                        await this.createStageStates(manager, submission, nextStageInCurrentWf, preferredAssigneeUserId);
                         advanced = true;
                         break;
                     }

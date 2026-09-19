@@ -170,96 +170,116 @@
                                     <input pInputText [(ngModel)]="stage.description" placeholder="Instrucciones para el aprobador" class="w-full" />
                                 </div>
 
-                                <!-- Regla de Asignación -->
-                                <div class="col-12 md:col-4 flex flex-column gap-2">
-                                    <label class="font-semibold text-sm">Asignar a (Tipo) *</label>
-                                    <p-select [options]="assigneeTypeOptions" [(ngModel)]="stage.assigneeType" class="w-full"></p-select>
-                                </div>
-
-                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'requester'">
-                                    <label class="font-semibold text-sm">Usuario Aprobador *</label>
-                                    <input pInputText [disabled]="true" [value]="currentUser()?.name || 'Creador de la Solicitud'" class="w-full font-semibold bg-gray-100" />
-                                </div>
-
-                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'requester_boss'">
-                                    <label class="font-semibold text-sm">Usuario Aprobador *</label>
-                                    <input pInputText [disabled]="true" value="👔 Jefe Directo del Solicitante" class="w-full font-semibold bg-gray-100" />
-                                </div>
-
-                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'previous_stage_actioner'">
-                                    <label class="font-semibold text-sm">Usuario Aprobador *</label>
-                                    <input pInputText [disabled]="true" value="👤 Aprobador de la Etapa Anterior" class="w-full font-semibold bg-gray-100" />
-                                </div>
-
-                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'previous_stage_team_random'">
-                                    <label class="font-semibold text-sm">Usuario Aprobador *</label>
-                                    <input pInputText [disabled]="true" value="🎲 Al Azar del Equipo del Aprobador Anterior" class="w-full font-semibold bg-gray-100" />
-                                </div>
-
-                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'specific_user'">
-                                    <label class="font-semibold text-sm">Usuario Aprobador *</label>
-                                    <p-select [options]="users()" [(ngModel)]="stage.assigneeUserId" optionLabel="name" optionValue="id" placeholder="Seleccione usuario..." filter="true" class="w-full">
-                                        <ng-template let-user pTemplate="item">
-                                            <div class="flex flex-column gap-1">
-                                                <span class="font-semibold text-sm">{{ user.name }}</span>
-                                                <span class="text-xs text-500">{{ user.teamName || 'Sin equipo' }} | {{ user.email }}</span>
-                                            </div>
-                                        </ng-template>
-                                    </p-select>
-                                </div>
-
-                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'multiple_users'">
-                                    <label class="font-semibold text-sm">Usuarios Aprobadores *</label>
-                                    <p-multiSelect [options]="users()" [(ngModel)]="stage.selectedUserIds" optionLabel="name" optionValue="id" placeholder="Seleccione usuarios..." filter="true" class="w-full">
-                                        <ng-template let-user pTemplate="item">
-                                            <div class="flex flex-column gap-1">
-                                                <span class="font-semibold text-sm">{{ user.name }}</span>
-                                                <span class="text-xs text-500">{{ user.teamName || 'Sin equipo' }} | {{ user.email }}</span>
-                                            </div>
-                                        </ng-template>
-                                    </p-multiSelect>
-                                </div>
-
-                                <div class="col-12 flex flex-column gap-2 mt-2 bg-50 p-3 border-round border-1 surface-border" *ngIf="stage.assigneeType === 'multiple_users' && stage.selectedUserIds && stage.selectedUserIds.length > 0">
-                                    <span class="font-bold text-xs uppercase tracking-wider text-600 block mb-2">Formularios Personalizados por Aprobador</span>
-                                    <div class="grid">
-                                        <ng-container *ngFor="let userId of stage.selectedUserIds">
-                                            <div class="col-12 md:col-6 flex align-items-center justify-content-between gap-3 bg-white p-2 border-round border-1 surface-border mb-2" *ngIf="stage.customForms">
-                                                <span class="font-semibold text-sm text-800"><lucide-icon name="user" class="mr-2" style="width: 1rem; height: 1rem;"></lucide-icon>{{ getUserName(userId) }}</span>
-                                                <div style="width: 18rem;">
-                                                    <p-select [options]="activeForms()" [(ngModel)]="stage.customForms[userId]" optionLabel="name" optionValue="id" [showClear]="true" placeholder="Heredar formulario general" class="w-full"></p-select>
-                                                </div>
-                                            </div>
-                                        </ng-container>
+                                <!-- Regla de Asignación Dinámica (Bloqueada / Controlada por la etapa anterior) -->
+                                <div class="col-12 md:col-8 flex flex-column gap-2" *ngIf="isStageAssigneeDynamic(i)">
+                                    <label class="font-semibold text-sm text-indigo-700">Asignación de esta Etapa</label>
+                                    <div class="flex align-items-center gap-3 p-3 bg-indigo-50 border-1 border-indigo-200 border-round">
+                                        <div class="flex align-items-center justify-content-center bg-indigo-100 text-indigo-700 border-circle" style="width: 2.5rem; height: 2.5rem; min-width: 2.5rem;">
+                                            <i class="pi pi-lock text-lg"></i>
+                                        </div>
+                                        <div class="flex flex-column gap-1">
+                                            <span class="font-bold text-sm text-indigo-950">
+                                                Destinatario elegido dinámicamente por la etapa anterior
+                                            </span>
+                                            <span class="text-xs text-indigo-800">
+                                                La asignación estática está deshabilitada porque el aprobador de la <strong>{{ getPrecedingStageName(i) }}</strong> elegirá al destinatario de esta etapa entre las opciones preconfiguradas al momento de aprobar.
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'team' || stage.assigneeType === 'team_random' || stage.assigneeType === 'team_workload' || stage.assigneeType === 'team_leader'">
-                                    <label class="font-semibold text-sm">Equipo Aprobador *</label>
-                                    <p-select [options]="teams()" [(ngModel)]="stage.assigneeTeamId" optionLabel="name" optionValue="id" placeholder="Seleccione equipo..." class="w-full"></p-select>
-                                </div>
+                                <ng-container *ngIf="!isStageAssigneeDynamic(i)">
+                                    <!-- Regla de Asignación Estándar -->
+                                    <div class="col-12 md:col-4 flex flex-column gap-2">
+                                        <label class="font-semibold text-sm">Asignar a (Tipo) *</label>
+                                        <p-select [options]="assigneeTypeOptions" [(ngModel)]="stage.assigneeType" class="w-full"></p-select>
+                                    </div>
 
-                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'subteam_random'">
-                                    <label class="font-semibold text-sm">Equipo *</label>
-                                    <p-select [options]="teams()" [(ngModel)]="stage.assigneeTeamId" (onChange)="onStageTeamChange(stage)" optionLabel="name" optionValue="id" placeholder="Seleccione equipo..." class="w-full"></p-select>
-                                </div>
+                                    <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'requester'">
+                                        <label class="font-semibold text-sm">Usuario Aprobador *</label>
+                                        <input pInputText [disabled]="true" [value]="currentUser()?.name || 'Creador de la Solicitud'" class="w-full font-semibold bg-gray-100" />
+                                    </div>
 
-                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'subteam_random'">
-                                    <label class="font-semibold text-sm">Subequipo (Al Azar) *</label>
-                                    <p-select [options]="getSubteamsForTeam(stage.assigneeTeamId)" [(ngModel)]="stage.assigneeSubteamId" optionLabel="name" optionValue="id" [placeholder]="stage.assigneeTeamId ? 'Seleccione subequipo...' : 'Primero seleccione un equipo'" [disabled]="!stage.assigneeTeamId" class="w-full">
-                                        <ng-template let-sub pTemplate="item">
-                                            <div class="flex align-items-center justify-content-between w-full">
-                                                <span>{{ sub.name }}</span>
-                                                <span class="text-xs text-500 font-normal">({{ (sub.subteamUsers?.length || 0) }} integrantes)</span>
-                                            </div>
-                                        </ng-template>
-                                    </p-select>
-                                </div>
+                                    <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'requester_boss'">
+                                        <label class="font-semibold text-sm">Usuario Aprobador *</label>
+                                        <input pInputText [disabled]="true" value="👔 Jefe Directo del Solicitante" class="w-full font-semibold bg-gray-100" />
+                                    </div>
 
-                                <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'subflow'">
-                                    <label class="font-semibold text-sm">Flujo a Invocar (Sub-Flujo) *</label>
-                                    <p-select [options]="availableSubflows()" [(ngModel)]="stage.formIdToFill" optionLabel="name" optionValue="id" placeholder="Seleccione sub-flujo..." class="w-full"></p-select>
-                                </div>
+                                    <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'previous_stage_actioner'">
+                                        <label class="font-semibold text-sm">Usuario Aprobador *</label>
+                                        <input pInputText [disabled]="true" value="👤 Aprobador de la Etapa Anterior" class="w-full font-semibold bg-gray-100" />
+                                    </div>
+
+                                    <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'previous_stage_team_random'">
+                                        <label class="font-semibold text-sm">Usuario Aprobador *</label>
+                                        <input pInputText [disabled]="true" value="🎲 Al Azar del Equipo del Aprobador Anterior" class="w-full font-semibold bg-gray-100" />
+                                    </div>
+
+                                    <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'specific_user'">
+                                        <label class="font-semibold text-sm">Usuario Aprobador *</label>
+                                        <p-select [options]="users()" [(ngModel)]="stage.assigneeUserId" optionLabel="name" optionValue="id" placeholder="Seleccione usuario..." filter="true" class="w-full">
+                                            <ng-template let-user pTemplate="item">
+                                                <div class="flex flex-column gap-1">
+                                                    <span class="font-semibold text-sm">{{ user.name }}</span>
+                                                    <span class="text-xs text-500">{{ user.teamName || 'Sin equipo' }} | {{ user.email }}</span>
+                                                </div>
+                                            </ng-template>
+                                        </p-select>
+                                    </div>
+
+                                    <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'multiple_users'">
+                                        <label class="font-semibold text-sm">Usuarios Aprobadores *</label>
+                                        <p-multiSelect [options]="users()" [(ngModel)]="stage.selectedUserIds" optionLabel="name" optionValue="id" placeholder="Seleccione usuarios..." filter="true" class="w-full">
+                                            <ng-template let-user pTemplate="item">
+                                                <div class="flex flex-column gap-1">
+                                                    <span class="font-semibold text-sm">{{ user.name }}</span>
+                                                    <span class="text-xs text-500">{{ user.teamName || 'Sin equipo' }} | {{ user.email }}</span>
+                                                </div>
+                                            </ng-template>
+                                        </p-multiSelect>
+                                    </div>
+
+                                    <div class="col-12 flex flex-column gap-2 mt-2 bg-50 p-3 border-round border-1 surface-border" *ngIf="stage.assigneeType === 'multiple_users' && stage.selectedUserIds && stage.selectedUserIds.length > 0">
+                                        <span class="font-bold text-xs uppercase tracking-wider text-600 block mb-2">Formularios Personalizados por Aprobador</span>
+                                        <div class="grid">
+                                            <ng-container *ngFor="let userId of stage.selectedUserIds">
+                                                <div class="col-12 md:col-6 flex align-items-center justify-content-between gap-3 bg-white p-2 border-round border-1 surface-border mb-2" *ngIf="stage.customForms">
+                                                    <span class="font-semibold text-sm text-800"><lucide-icon name="user" class="mr-2" style="width: 1rem; height: 1rem;"></lucide-icon>{{ getUserName(userId) }}</span>
+                                                    <div style="width: 18rem;">
+                                                        <p-select [options]="activeForms()" [(ngModel)]="stage.customForms[userId]" optionLabel="name" optionValue="id" [showClear]="true" placeholder="Heredar formulario general" class="w-full"></p-select>
+                                                    </div>
+                                                </div>
+                                            </ng-container>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'team' || stage.assigneeType === 'team_random' || stage.assigneeType === 'team_workload' || stage.assigneeType === 'team_leader'">
+                                        <label class="font-semibold text-sm">Equipo Aprobador *</label>
+                                        <p-select [options]="teams()" [(ngModel)]="stage.assigneeTeamId" optionLabel="name" optionValue="id" placeholder="Seleccione equipo..." class="w-full"></p-select>
+                                    </div>
+
+                                    <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'subteam_random'">
+                                        <label class="font-semibold text-sm">Equipo *</label>
+                                        <p-select [options]="teams()" [(ngModel)]="stage.assigneeTeamId" (onChange)="onStageTeamChange(stage)" optionLabel="name" optionValue="id" placeholder="Seleccione equipo..." class="w-full"></p-select>
+                                    </div>
+
+                                    <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'subteam_random'">
+                                        <label class="font-semibold text-sm">Subequipo (Al Azar) *</label>
+                                        <p-select [options]="getSubteamsForTeam(stage.assigneeTeamId)" [(ngModel)]="stage.assigneeSubteamId" optionLabel="name" optionValue="id" [placeholder]="stage.assigneeTeamId ? 'Seleccione subequipo...' : 'Primero seleccione un equipo'" [disabled]="!stage.assigneeTeamId" class="w-full">
+                                            <ng-template let-sub pTemplate="item">
+                                                <div class="flex align-items-center justify-content-between w-full">
+                                                    <span>{{ sub.name }}</span>
+                                                    <span class="text-xs text-500 font-normal">({{ (sub.subteamUsers?.length || 0) }} integrantes)</span>
+                                                </div>
+                                            </ng-template>
+                                        </p-select>
+                                    </div>
+
+                                    <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType === 'subflow'">
+                                        <label class="font-semibold text-sm">Flujo a Invocar (Sub-Flujo) *</label>
+                                        <p-select [options]="availableSubflows()" [(ngModel)]="stage.formIdToFill" optionLabel="name" optionValue="id" placeholder="Seleccione sub-flujo..." class="w-full"></p-select>
+                                    </div>
+                                </ng-container>
 
                                 <div class="col-12 md:col-4 flex flex-column gap-2" *ngIf="stage.assigneeType !== 'subflow'">
                                     <label class="font-semibold text-sm">Formulario a Rellenar (Opcional)</label>
@@ -372,9 +392,99 @@
                                         <p-checkbox [(ngModel)]="stage.requireCommentOnApprove" [binary]="true" [id]="'req-comm-' + i"></p-checkbox>
                                         <label [for]="'req-comm-' + i" class="font-semibold text-sm cursor-pointer select-none">Requerir comentario al aprobar</label>
                                     </div>
-                                    <div class="flex align-items-center gap-2" *ngIf="stage.assigneeType === 'team_random' || stage.assigneeType === 'previous_stage_team_random' || stage.assigneeType === 'team_workload' || stage.assigneeType === 'subteam_random'">
+                                    <div class="flex align-items-center gap-2" *ngIf="!isStageAssigneeDynamic(i) && (stage.assigneeType === 'team_random' || stage.assigneeType === 'previous_stage_team_random' || stage.assigneeType === 'team_workload' || stage.assigneeType === 'subteam_random')">
                                         <p-checkbox [(ngModel)]="stage.excludeTeamLeader" [binary]="true" [id]="'excl-lead-' + i"></p-checkbox>
                                         <label [for]="'excl-lead-' + i" class="font-semibold text-sm cursor-pointer text-700 select-none">Excluir al Líder del Equipo / Subequipo al asignar</label>
+                                    </div>
+                                    <div class="flex align-items-center gap-2" *ngIf="i < workflowStages().length - 1">
+                                        <p-checkbox [(ngModel)]="stage.allowChooseNextStageAssignee" (onChange)="onAllowChooseNextStageAssigneeChange(stage, i)" [binary]="true" [id]="'allow-choose-next-' + i"></p-checkbox>
+                                        <label [for]="'allow-choose-next-' + i" class="font-semibold text-sm cursor-pointer select-none text-indigo-700">
+                                            Permitir al aprobador escoger a quién asignar la siguiente etapa
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Panel de Configuración de Opciones de Destinatario de la Siguiente Etapa -->
+                                <div class="col-12 flex flex-column gap-2 mt-3 bg-indigo-50 border-1 border-indigo-200 border-round p-3" *ngIf="stage.allowChooseNextStageAssignee && i < workflowStages().length - 1">
+                                    <div class="flex justify-content-between align-items-center mb-2">
+                                        <div class="flex flex-column gap-1">
+                                            <div class="flex align-items-center gap-2">
+                                                <i class="pi pi-users text-indigo-600 font-bold"></i>
+                                                <span class="font-bold text-sm text-900">Opciones de Destinatarios para la Siguiente Etapa</span>
+                                            </div>
+                                            <span class="text-xs text-600">Configura la lista de opciones entre las cuales el aprobador podrá elegir quién gestionará la siguiente etapa del flujo.</span>
+                                        </div>
+                                        <p-button label="Agregar Opción de Destinatario" icon="pi pi-plus" size="small" [outlined]="true" severity="primary" (onClick)="addNextStageAssigneeOption(stage)"></p-button>
+                                    </div>
+
+                                    <div *ngIf="!stage.nextStageAssigneeOptions || stage.nextStageAssigneeOptions.length === 0" class="text-center p-3 text-500 text-xs italic bg-white border-round border-1 surface-border">
+                                        No hay opciones configuradas. Haz clic en "Agregar Opción de Destinatario" para configurar las alternativas disponibles al aprobar esta etapa.
+                                    </div>
+
+                                    <div class="flex flex-column gap-2" *ngIf="stage.nextStageAssigneeOptions && stage.nextStageAssigneeOptions.length > 0">
+                                        <div *ngFor="let opt of stage.nextStageAssigneeOptions; let optIdx = index" class="grid align-items-center bg-white p-3 border-round border-1 surface-border shadow-1 m-0">
+                                            <!-- 1. Tipo de Asignación -->
+                                            <div class="col-12 md:col-3 flex flex-column gap-1">
+                                                <label class="text-xs font-bold text-700">1. Tipo de Asignación *</label>
+                                                <p-select [options]="nextStageAssigneeTypes" [(ngModel)]="opt.type" (onChange)="onNextStageOptionTypeChange(opt)" optionLabel="label" optionValue="value" class="w-full"></p-select>
+                                            </div>
+
+                                            <!-- 2. Detalle según el tipo -->
+                                            <!-- Usuario Específico -->
+                                            <div class="col-12 md:col-4 flex flex-column gap-1" *ngIf="opt.type === 'specific_user'">
+                                                <label class="text-xs font-bold text-700">2. Usuario Destinatario *</label>
+                                                <p-select [options]="users()" [(ngModel)]="opt.userId" optionLabel="name" optionValue="id" placeholder="Seleccione usuario..." filter="true" class="w-full">
+                                                    <ng-template let-user pTemplate="item">
+                                                        <div class="flex flex-column gap-1">
+                                                            <span class="font-semibold text-sm">{{ user.name }}</span>
+                                                            <span class="text-xs text-500">{{ user.teamName || 'Sin equipo' }} | {{ user.email }}</span>
+                                                        </div>
+                                                    </ng-template>
+                                                </p-select>
+                                            </div>
+
+                                            <!-- Equipo (Al azar, Líder, Menor carga) -->
+                                            <div class="col-12 md:col-4 flex flex-column gap-1" *ngIf="opt.type === 'team_random' || opt.type === 'team_leader' || opt.type === 'team_workload'">
+                                                <label class="text-xs font-bold text-700">2. Equipo *</label>
+                                                <p-select [options]="teams()" [(ngModel)]="opt.teamId" optionLabel="name" optionValue="id" placeholder="Seleccione equipo..." class="w-full"></p-select>
+                                            </div>
+
+                                            <!-- Subequipo (Al azar): Equipo + Subequipo -->
+                                            <div class="col-12 md:col-2 flex flex-column gap-1" *ngIf="opt.type === 'subteam_random'">
+                                                <label class="text-xs font-bold text-700">2. Equipo *</label>
+                                                <p-select [options]="teams()" [(ngModel)]="opt.teamId" (onChange)="onNextStageOptionTeamChange(opt)" optionLabel="name" optionValue="id" placeholder="Seleccione equipo..." class="w-full"></p-select>
+                                            </div>
+                                            <div class="col-12 md:col-2 flex flex-column gap-1" *ngIf="opt.type === 'subteam_random'">
+                                                <label class="text-xs font-bold text-700">3. Subequipo (Al Azar) *</label>
+                                                <p-select [options]="getSubteamsForTeam(opt.teamId)" [(ngModel)]="opt.subteamId" optionLabel="name" optionValue="id" [placeholder]="opt.teamId ? 'Seleccione subequipo...' : 'Elija equipo primero'" [disabled]="!opt.teamId" class="w-full">
+                                                    <ng-template let-sub pTemplate="item">
+                                                        <div class="flex align-items-center justify-content-between w-full">
+                                                            <span>{{ sub.name }}</span>
+                                                            <span class="text-xs text-500 font-normal">({{ (sub.subteamUsers?.length || 0) }} int.)</span>
+                                                        </div>
+                                                    </ng-template>
+                                                </p-select>
+                                            </div>
+
+                                            <!-- Solicitante / Jefe del Solicitante -->
+                                            <div class="col-12 md:col-4 flex flex-column gap-1" *ngIf="opt.type === 'requester' || opt.type === 'requester_boss'">
+                                                <label class="text-xs font-bold text-700">2. Destinatario Dinámico</label>
+                                                <input pInputText [disabled]="true" [value]="opt.type === 'requester' ? '👤 Solicitante original' : '👔 Jefe directo del solicitante'" class="w-full font-semibold bg-gray-100 text-xs" />
+                                            </div>
+
+                                            <!-- 3/4. Nombre visible / Etiqueta personalizada -->
+                                            <div [ngClass]="opt.type === 'subteam_random' ? 'col-12 md:col-4' : 'col-12 md:col-4'" class="flex flex-column gap-1">
+                                                <label class="text-xs font-bold text-700">Nombre Visible / Etiqueta (Opcional)</label>
+                                                <input pInputText [(ngModel)]="opt.label" [placeholder]="getNextStageOptionPlaceholder(opt)" class="w-full text-xs" />
+                                            </div>
+
+                                            <!-- Botón eliminar -->
+                                            <div class="col-12 md:col-1 flex justify-content-center align-items-center pt-3">
+                                                <p-button severity="danger" [text]="true" size="small" (onClick)="removeNextStageAssigneeOption(stage, optIdx)" pTooltip="Eliminar opción" tooltipPosition="top">
+                                                    <lucide-icon name="trash-2" class="text-red-500"></lucide-icon>
+                                                </p-button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

@@ -997,7 +997,23 @@
                     </ng-container>
                 </div>
             </div>
- 
+            <!-- Section: Chosen Next Stage Assignee -->
+            <div class="flex flex-column gap-2 mt-2 bg-indigo-50 border-1 border-indigo-200 border-round p-3" 
+                 *ngIf="!isCorrection(selectedTask()) && selectedTask()?.allowChooseNextStageAssignee && selectedTask()?.nextStageAssigneeOptions?.length > 0 && !selectedTask()?.isFinalStage">
+                <label class="font-bold text-sm text-indigo-900 flex align-items-center gap-2">
+                    <i class="pi pi-user-plus text-indigo-600"></i>
+                    <span>Destinatario de la siguiente etapa *</span>
+                </label>
+                <p-select [options]="selectedTask()?.nextStageAssigneeOptions" 
+                          [(ngModel)]="chosenNextAssignee" 
+                          optionLabel="displayLabel" 
+                          placeholder="Seleccione a quién asignar la siguiente etapa..." 
+                          class="w-full"
+                          [appendTo]="'body'">
+                </p-select>
+                <small class="text-xs text-indigo-700">Esta etapa requiere que selecciones quién recibirá y gestionará la siguiente etapa del flujo.</small>
+            </div>
+
             <!-- Section 3: Comments -->
             <div class="flex flex-column gap-2 mt-2">
                 <label for="comments" class="font-bold text-sm text-900">{{ isCorrection(selectedTask()) ? 'Notas de la Corrección (Opcional)' : 'Comentarios / Observaciones' }}</label>

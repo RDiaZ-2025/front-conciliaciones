@@ -61,6 +61,7 @@ export class RequestsBetaInboxComponent implements OnInit {
   selectedTask = signal<any>(null);
   parentFormGroups = signal<any[]>([]);
   comments = signal<string>('');
+  chosenNextAssignee: any = null;
 
   submissions = signal<any[]>([]);
   filteredSubmissions = computed(() => {
@@ -253,6 +254,10 @@ export class RequestsBetaInboxComponent implements OnInit {
     console.log('Task selected in inbox:', task);
     this.selectedTask.set(task);
     this.comments.set('');
+    this.chosenNextAssignee = null;
+    if (task?.allowChooseNextStageAssignee && task?.nextStageAssigneeOptions?.length === 1) {
+      this.chosenNextAssignee = task.nextStageAssigneeOptions[0];
+    }
     this.stageFormFields.set([]);
     this.stageFormValues = {};
     this.showActionDialog.set(true);
@@ -520,6 +525,17 @@ export class RequestsBetaInboxComponent implements OnInit {
       }
     }
 
+    if (action === 'approve' && !this.isCorrection(task) && task.allowChooseNextStageAssignee && task.nextStageAssigneeOptions?.length > 0 && !task.isFinalStage) {
+      if (!this.chosenNextAssignee) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Validación',
+          detail: 'Debes seleccionar a quién se le asignará la siguiente etapa.'
+        });
+        return;
+      }
+    }
+
     if (action === 'reject') {
       this.loadingAction.set(true);
       this.productionService.actionApproval(task.stateId, action, notes, undefined).subscribe({
@@ -729,9 +745,17 @@ export class RequestsBetaInboxComponent implements OnInit {
       }
     }
 
-    this.productionService.actionApproval(task.stateId, action, notes, action === 'approve' ? this.stageFormValues : undefined).subscribe({
+    this.productionService.actionApproval(
+      task.stateId,
+      action,
+      notes,
+      action === 'approve' ? this.stageFormValues : undefined,
+      undefined,
+      action === 'approve' ? this.chosenNextAssignee : undefined
+    ).subscribe({
       next: (res) => {
         this.tempFiles = {};
+        this.chosenNextAssignee = null;
         this.showActionDialog.set(false);
         this.loadPendingTasks();
         this.loadingAction.set(false);

@@ -223,7 +223,7 @@ export class ProductionService extends BaseApiService {
     return this.http.get<any[]>(`${this.apiUrl}/approvals/pending`);
   }
 
-  actionApproval(stateId: number, action: 'approve' | 'reject', notes: string, formValues?: any, consecutive?: string): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/approvals/${stateId}/action`, { action, notes, formValues, consecutive });
+  actionApproval(stateId: number, action: 'approve' | 'reject', notes: string, formValues?: any, consecutive?: string, chosenNextAssignee?: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/approvals/${stateId}/action`, { action, notes, formValues, consecutive, chosenNextAssignee });
   }
 }

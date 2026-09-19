@@ -61,6 +61,12 @@ export class DynamicWorkflowStage {
   @Column({ name: 'AssigneeUserIds', type: 'nvarchar', length: 'max', nullable: true })
   assigneeUserIds!: string | null;
 
+  @Column({ name: 'AllowChooseNextStageAssignee', type: 'bit', default: false, nullable: true })
+  allowChooseNextStageAssignee!: boolean;
+
+  @Column({ name: 'NextStageAssigneeOptions', type: 'nvarchar', length: 'max', nullable: true })
+  nextStageAssigneeOptions!: string | null;
+
   @ManyToOne(() => DynamicWorkflow, (workflow) => workflow.stages)
   @JoinColumn({ name: 'WorkflowId' })
   workflow!: DynamicWorkflow | null;

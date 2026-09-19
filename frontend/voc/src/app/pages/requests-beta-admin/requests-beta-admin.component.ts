@@ -48,12 +48,21 @@ interface MultiFormOptionConfig {
   targetFormIdToFill: number | null;
 }
 
+interface NextStageAssigneeOptionConfig {
+  id?: string;
+  type: 'specific_user' | 'team_random' | 'subteam_random' | 'team_leader' | 'team_workload' | 'requester' | 'requester_boss';
+  userId?: number | null;
+  teamId?: number | null;
+  subteamId?: number | null;
+  label?: string;
+}
+
 interface WorkflowStageItem {
   id?: number;
   name: string;
   description: string;
   stepOrder: number;
-  assigneeType: 'specific_user' | 'requester' | 'requester_boss' | 'team' | 'team_random' | 'team_workload' | 'team_leader' | 'subflow' | 'multiple_users' | 'previous_stage_actioner' | 'previous_stage_team_random' | 'subteam_random';
+  assigneeType: 'specific_user' | 'requester' | 'requester_boss' | 'team' | 'team_random' | 'team_workload' | 'team_leader' | 'subflow' | 'multiple_users' | 'previous_stage_actioner' | 'previous_stage_team_random' | 'subteam_random' | 'chosen_by_previous_stage';
   assigneeUserId: number | null;
   assigneeTeamId: number | null;
   assigneeSubteamId?: number | null;
@@ -68,6 +77,8 @@ interface WorkflowStageItem {
   customForms?: { [userId: number]: number | null };
   multiFormsConfig?: MultiFormOptionConfig[];
   maxSelectedForms?: number | null;
+  allowChooseNextStageAssignee?: boolean;
+  nextStageAssigneeOptions?: NextStageAssigneeOptionConfig[];
 }
 
 @Component({
@@ -280,6 +291,7 @@ export class RequestsBetaAdminComponent implements OnInit {
   ];
 
   assigneeTypeOptions = [
+    { label: '⚡ Dinámico (Escogido en la etapa anterior)', value: 'chosen_by_previous_stage' },
     { label: 'Usuario Específico', value: 'specific_user' },
     { label: '👔 Líder de Equipo', value: 'team_leader' },
     { label: 'Equipo / Rol (Al Azar)', value: 'team_random' },
@@ -305,6 +317,16 @@ export class RequestsBetaAdminComponent implements OnInit {
     { label: 'Anterior Remitente', value: 'previous_sender' },
     { label: 'Usuario Específico', value: 'specific_user' },
     { label: 'Integrante al Azar del Equipo', value: 'team_random' }
+  ];
+
+  nextStageAssigneeTypes = [
+    { label: '👤 Usuario Específico', value: 'specific_user' },
+    { label: '🎲 Al Azar de un Equipo', value: 'team_random' },
+    { label: '👔 Líder del Equipo', value: 'team_leader' },
+    { label: '⚖️ Menor Carga del Equipo', value: 'team_workload' },
+    { label: '👥 Al Azar de un Subequipo', value: 'subteam_random' },
+    { label: '👤 Creador de la Solicitud (Solicitante)', value: 'requester' },
+    { label: '👔 Jefe Directo del Solicitante', value: 'requester_boss' }
   ];
 
   ngOnInit() {
@@ -1157,7 +1179,7 @@ export class RequestsBetaAdminComponent implements OnInit {
     this.loadingStages.set(true);
     this.productionService.adminGetWorkflowStages(workflowId).subscribe({
       next: (data) => {
-        this.workflowStages.set(data.map(s => {
+        const loadedStages: WorkflowStageItem[] = data.map(s => {
           let selectedUserIds: number[] = [];
           let customForms: Record<number, number | null> = {};
           let multiFormsConfig: MultiFormOptionConfig[] = [];
@@ -1226,6 +1248,20 @@ export class RequestsBetaAdminComponent implements OnInit {
               }
             }
           }
+          let nextStageAssigneeOptions: NextStageAssigneeOptionConfig[] = [];
+          if (s.nextStageAssigneeOptions) {
+            try {
+              nextStageAssigneeOptions = typeof s.nextStageAssigneeOptions === 'string'
+                ? JSON.parse(s.nextStageAssigneeOptions)
+                : s.nextStageAssigneeOptions;
+              if (!Array.isArray(nextStageAssigneeOptions)) {
+                nextStageAssigneeOptions = [];
+              }
+            } catch(e) {
+              nextStageAssigneeOptions = [];
+            }
+          }
+
           return {
             id: s.id,
             name: s.name,
@@ -1244,9 +1280,13 @@ export class RequestsBetaAdminComponent implements OnInit {
             selectedUserIds,
             customForms,
             multiFormsConfig,
-            maxSelectedForms
+            maxSelectedForms,
+            allowChooseNextStageAssignee: !!s.allowChooseNextStageAssignee,
+            nextStageAssigneeOptions
           };
-        }));
+        });
+        this.refreshDynamicAssignees(loadedStages);
+        this.workflowStages.set(loadedStages);
         this.loadingStages.set(false);
       },
       error: () => {
@@ -1261,6 +1301,75 @@ export class RequestsBetaAdminComponent implements OnInit {
     return u ? u.name : `Usuario #${userId}`;
   }
 
+  getTeamName(teamId: number | null | undefined): string {
+    if (!teamId) return '';
+    const team = this.teams().find(t => t.id === teamId);
+    return team ? team.name : `Equipo #${teamId}`;
+  }
+
+  getSubteamName(teamId: number | null | undefined, subteamId: number | null | undefined): string {
+    if (!subteamId) return '';
+    const subteams = this.getSubteamsForTeam(teamId);
+    const sub = subteams.find((st: any) => st.id === subteamId);
+    return sub ? sub.name : `Subequipo #${subteamId}`;
+  }
+
+  getNextStageOptionPlaceholder(opt: NextStageAssigneeOptionConfig): string {
+    if (opt.type === 'specific_user' && opt.userId) {
+      return this.getUserName(opt.userId);
+    }
+    if (opt.type === 'team_random' && opt.teamId) {
+      return `Al azar de ${this.getTeamName(opt.teamId)}`;
+    }
+    if (opt.type === 'team_leader' && opt.teamId) {
+      return `Líder de ${this.getTeamName(opt.teamId)}`;
+    }
+    if (opt.type === 'team_workload' && opt.teamId) {
+      return `Menor carga de ${this.getTeamName(opt.teamId)}`;
+    }
+    if (opt.type === 'subteam_random' && opt.subteamId) {
+      return `Al azar de ${this.getSubteamName(opt.teamId, opt.subteamId)}`;
+    }
+    if (opt.type === 'requester') {
+      return 'Creador de la Solicitud';
+    }
+    if (opt.type === 'requester_boss') {
+      return 'Jefe del Solicitante';
+    }
+    return 'Ej: Asignar a Analista Senior';
+  }
+
+  addNextStageAssigneeOption(stage: WorkflowStageItem) {
+    if (!stage.nextStageAssigneeOptions) {
+      stage.nextStageAssigneeOptions = [];
+    }
+    const id = 'opt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+    stage.nextStageAssigneeOptions.push({
+      id,
+      type: 'specific_user',
+      userId: null,
+      teamId: null,
+      subteamId: null,
+      label: ''
+    });
+  }
+
+  removeNextStageAssigneeOption(stage: WorkflowStageItem, index: number) {
+    if (stage.nextStageAssigneeOptions) {
+      stage.nextStageAssigneeOptions.splice(index, 1);
+    }
+  }
+
+  onNextStageOptionTypeChange(opt: NextStageAssigneeOptionConfig) {
+    opt.userId = null;
+    opt.teamId = null;
+    opt.subteamId = null;
+  }
+
+  onNextStageOptionTeamChange(opt: NextStageAssigneeOptionConfig) {
+    opt.subteamId = null;
+  }
+
   getSubteamsForTeam(teamId: number | null | undefined): any[] {
     if (!teamId) return [];
     const team = this.teams().find(t => t.id === teamId);
@@ -1271,29 +1380,74 @@ export class RequestsBetaAdminComponent implements OnInit {
     stage.assigneeSubteamId = null;
   }
 
+  isStageAssigneeDynamic(index: number): boolean {
+    if (index <= 0) return false;
+    const stages = this.workflowStages();
+    const prevStage = stages[index - 1];
+    return !!(prevStage && prevStage.allowChooseNextStageAssignee);
+  }
+
+  getPrecedingStageName(index: number): string {
+    if (index <= 0) return '';
+    const stages = this.workflowStages();
+    const prevStage = stages[index - 1];
+    return prevStage ? (prevStage.name || `Etapa ${prevStage.stepOrder}`) : '';
+  }
+
+  onAllowChooseNextStageAssigneeChange(stage: WorkflowStageItem, index: number) {
+    const stages = [...this.workflowStages()];
+    if (stage.allowChooseNextStageAssignee) {
+      if (!stage.nextStageAssigneeOptions || stage.nextStageAssigneeOptions.length === 0) {
+        this.addNextStageAssigneeOption(stage);
+      }
+    }
+    this.refreshDynamicAssignees(stages);
+    this.workflowStages.set(stages);
+  }
+
+  refreshDynamicAssignees(stages: WorkflowStageItem[]) {
+    if (stages.length > 0) {
+      stages[stages.length - 1].allowChooseNextStageAssignee = false;
+    }
+    for (let idx = 0; idx < stages.length; idx++) {
+      const isDynamic = idx > 0 && !!stages[idx - 1]?.allowChooseNextStageAssignee;
+      if (isDynamic) {
+        stages[idx].assigneeType = 'chosen_by_previous_stage';
+        stages[idx].assigneeUserId = null;
+        stages[idx].assigneeTeamId = null;
+        stages[idx].assigneeSubteamId = null;
+        stages[idx].selectedUserIds = [];
+      } else if (stages[idx].assigneeType === 'chosen_by_previous_stage') {
+        stages[idx].assigneeType = 'specific_user';
+      }
+    }
+  }
+
   addStage() {
     const current = this.workflowStages();
-    this.workflowStages.set([
-      ...current,
-      {
-        name: `Etapa ${current.length + 1}`,
-        description: '',
-        stepOrder: current.length + 1,
-        assigneeType: 'specific_user',
-        assigneeUserId: null,
-        assigneeTeamId: null,
-        assigneeSubteamId: null,
-        formIdToFill: null,
-        rejectionTargetType: 'previous_sender',
-        rejectionTargetUserId: null,
-        rejectionTargetTeamId: null,
-        requireCommentOnApprove: true,
-        excludeTeamLeader: false,
-        selectedUserIds: [],
-        customForms: {},
-        multiFormsConfig: []
-      }
-    ]);
+    const newStage: WorkflowStageItem = {
+      name: `Etapa ${current.length + 1}`,
+      description: '',
+      stepOrder: current.length + 1,
+      assigneeType: 'specific_user',
+      assigneeUserId: null,
+      assigneeTeamId: null,
+      assigneeSubteamId: null,
+      formIdToFill: null,
+      rejectionTargetType: 'previous_sender',
+      rejectionTargetUserId: null,
+      rejectionTargetTeamId: null,
+      requireCommentOnApprove: true,
+      excludeTeamLeader: false,
+      selectedUserIds: [],
+      customForms: {},
+      multiFormsConfig: [],
+      allowChooseNextStageAssignee: false,
+      nextStageAssigneeOptions: []
+    };
+    const updated = [...current, newStage];
+    this.refreshDynamicAssignees(updated);
+    this.workflowStages.set(updated);
   }
 
   addMultiFormOption(stage: WorkflowStageItem) {
@@ -1334,6 +1488,7 @@ export class RequestsBetaAdminComponent implements OnInit {
     const current = [...this.workflowStages()];
     current.splice(index, 1);
     current.forEach((s, i) => s.stepOrder = i + 1);
+    this.refreshDynamicAssignees(current);
     this.workflowStages.set(current);
   }
 
@@ -1345,6 +1500,7 @@ export class RequestsBetaAdminComponent implements OnInit {
     current[index - 1] = temp;
 
     current.forEach((s, i) => s.stepOrder = i + 1);
+    this.refreshDynamicAssignees(current);
     this.workflowStages.set(current);
   }
 
@@ -1356,6 +1512,7 @@ export class RequestsBetaAdminComponent implements OnInit {
     current[index + 1] = temp;
 
     current.forEach((s, i) => s.stepOrder = i + 1);
+    this.refreshDynamicAssignees(current);
     this.workflowStages.set(current);
   }
 
@@ -1364,59 +1521,65 @@ export class RequestsBetaAdminComponent implements OnInit {
     if (!workflowId) return;
 
     const stages = this.workflowStages();
+    this.refreshDynamicAssignees(stages);
 
-    for (const s of stages) {
+    for (let idx = 0; idx < stages.length; idx++) {
+      const s = stages[idx];
+      const isDynamic = this.isStageAssigneeDynamic(idx);
+
       if (!s.name.trim()) {
         this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'Todas las etapas deben tener un nombre.' });
         return;
       }
-      if (s.assigneeType === 'specific_user' && !s.assigneeUserId) {
-        this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere un aprobador específico.` });
-        return;
-      }
-      if (s.assigneeType === 'multiple_users' && (!s.selectedUserIds || s.selectedUserIds.length === 0)) {
-        this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere seleccionar al menos un aprobador en Usuarios Múltiples.` });
-        return;
-      }
-      if ((s.assigneeType === 'team' || s.assigneeType === 'team_random' || s.assigneeType === 'team_workload' || s.assigneeType === 'team_leader') && !s.assigneeTeamId) {
-        this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere asociar un equipo aprobador.` });
-        return;
-      }
-      if (s.assigneeType === 'subteam_random') {
-        if (!s.assigneeTeamId) {
-          this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere asociar un equipo.` });
+      if (!isDynamic) {
+        if (s.assigneeType === 'specific_user' && !s.assigneeUserId) {
+          this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere un aprobador específico.` });
           return;
         }
-        if (!s.assigneeSubteamId) {
-          this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere asociar un subequipo.` });
+        if (s.assigneeType === 'multiple_users' && (!s.selectedUserIds || s.selectedUserIds.length === 0)) {
+          this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere seleccionar al menos un aprobador en Usuarios Múltiples.` });
           return;
         }
-      }
-      if (s.assigneeType === 'subflow' && !s.formIdToFill) {
-        this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere seleccionar el flujo de trabajo a invocar.` });
-        return;
+        if ((s.assigneeType === 'team' || s.assigneeType === 'team_random' || s.assigneeType === 'team_workload' || s.assigneeType === 'team_leader') && !s.assigneeTeamId) {
+          this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere asociar un equipo aprobador.` });
+          return;
+        }
+        if (s.assigneeType === 'subteam_random') {
+          if (!s.assigneeTeamId) {
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere asociar un equipo.` });
+            return;
+          }
+          if (!s.assigneeSubteamId) {
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere asociar un subequipo.` });
+            return;
+          }
+        }
+        if (s.assigneeType === 'subflow' && !s.formIdToFill) {
+          this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere seleccionar el flujo de trabajo a invocar.` });
+          return;
+        }
       }
       if (s.formIdToFill === -1) {
         if (!s.multiFormsConfig || s.multiFormsConfig.length === 0) {
           this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" está configurada con múltiples formularios pero no tiene ninguna opción agregada.` });
           return;
         }
-        for (let idx = 0; idx < s.multiFormsConfig.length; idx++) {
-          const opt = s.multiFormsConfig[idx];
+        for (let optIdx = 0; optIdx < s.multiFormsConfig.length; optIdx++) {
+          const opt = s.multiFormsConfig[optIdx];
           if (!opt.sourceFormId) {
-            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${idx + 1} de formularios múltiples debe tener seleccionado el formulario inicial.` });
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${optIdx + 1} de formularios múltiples debe tener seleccionado el formulario inicial.` });
             return;
           }
           if (opt.targetType === 'subflow' && !opt.targetSubflowFormId) {
-            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${idx + 1} debe seleccionar el sub-flujo a disparar.` });
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${optIdx + 1} debe seleccionar el sub-flujo a disparar.` });
             return;
           }
           if (opt.targetType === 'user' && !opt.assignedUserId) {
-            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${idx + 1} debe seleccionar el usuario destinatario.` });
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${optIdx + 1} debe seleccionar el usuario destinatario.` });
             return;
           }
           if ((opt.targetType === 'team_random' || opt.targetType === 'team_leader') && !opt.assignedTeamId) {
-            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${idx + 1} debe seleccionar el equipo destinatario.` });
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${optIdx + 1} debe seleccionar el equipo destinatario.` });
             return;
           }
         }
@@ -1429,37 +1592,70 @@ export class RequestsBetaAdminComponent implements OnInit {
         this.messageService.add({ severity: 'error', summary: 'Validación', detail: `El rechazo de la etapa "${s.name}" requiere un equipo de retorno.` });
         return;
       }
+      if (s.allowChooseNextStageAssignee && idx < stages.length - 1) {
+        if (!s.nextStageAssigneeOptions || s.nextStageAssigneeOptions.length === 0) {
+          this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" tiene habilitada la selección de destinatario pero no tiene opciones configuradas.` });
+          return;
+        }
+        for (let optIdx = 0; optIdx < s.nextStageAssigneeOptions.length; optIdx++) {
+          const opt = s.nextStageAssigneeOptions[optIdx];
+          if (opt.type === 'specific_user' && !opt.userId) {
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${optIdx + 1} de destinatario requiere un usuario específico.` });
+            return;
+          }
+          if ((opt.type === 'team_random' || opt.type === 'team_leader' || opt.type === 'team_workload') && !opt.teamId) {
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${optIdx + 1} de destinatario requiere un equipo.` });
+            return;
+          }
+          if (opt.type === 'subteam_random') {
+            if (!opt.teamId) {
+              this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${optIdx + 1} de destinatario requiere un equipo.` });
+              return;
+            }
+            if (!opt.subteamId) {
+              this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${optIdx + 1} de destinatario requiere un subequipo.` });
+              return;
+            }
+          }
+        }
+      }
     }
 
-    const payload = stages.map(s => {
+    const payload = stages.map((s, idx) => {
+      const isDynamic = this.isStageAssigneeDynamic(idx);
+      const isLastStage = (idx === stages.length - 1);
       let assigneeUserIdsObj: any = null;
-      if (s.formIdToFill === -1) {
-        assigneeUserIdsObj = {
-          multiFormsConfig: s.multiFormsConfig || [],
-          maxSelectedForms: s.maxSelectedForms || null
-        };
-      } else if (s.assigneeType === 'multiple_users' && s.selectedUserIds) {
-        assigneeUserIdsObj = s.selectedUserIds.map((uid: number) => ({
-          userId: uid,
-          formId: s.customForms ? s.customForms[uid] || null : null
-        }));
+      if (!isDynamic) {
+        if (s.formIdToFill === -1) {
+          assigneeUserIdsObj = {
+            multiFormsConfig: s.multiFormsConfig || [],
+            maxSelectedForms: s.maxSelectedForms || null
+          };
+        } else if (s.assigneeType === 'multiple_users' && s.selectedUserIds) {
+          assigneeUserIdsObj = s.selectedUserIds.map((uid: number) => ({
+            userId: uid,
+            formId: s.customForms ? s.customForms[uid] || null : null
+          }));
+        }
       }
       return {
         id: s.id,
         name: s.name,
         description: s.description,
         stepOrder: s.stepOrder,
-        assigneeType: s.assigneeType,
-        assigneeUserId: s.assigneeUserId,
-        assigneeTeamId: s.assigneeTeamId,
-        assigneeSubteamId: s.assigneeType === 'subteam_random' ? (s.assigneeSubteamId || null) : null,
+        assigneeType: isDynamic ? 'chosen_by_previous_stage' : s.assigneeType,
+        assigneeUserId: isDynamic ? null : s.assigneeUserId,
+        assigneeTeamId: isDynamic ? null : s.assigneeTeamId,
+        assigneeSubteamId: isDynamic ? null : (s.assigneeType === 'subteam_random' ? (s.assigneeSubteamId || null) : null),
         formIdToFill: s.formIdToFill,
         rejectionTargetType: s.rejectionTargetType,
         rejectionTargetUserId: s.rejectionTargetUserId,
         rejectionTargetTeamId: s.rejectionTargetTeamId,
         requireCommentOnApprove: !!s.requireCommentOnApprove,
-        excludeTeamLeader: !!s.excludeTeamLeader,
-        assigneeUserIds: assigneeUserIdsObj
+        excludeTeamLeader: isDynamic ? false : !!s.excludeTeamLeader,
+        assigneeUserIds: assigneeUserIdsObj,
+        allowChooseNextStageAssignee: !isLastStage && !!s.allowChooseNextStageAssignee,
+        nextStageAssigneeOptions: !isLastStage && s.allowChooseNextStageAssignee && s.nextStageAssigneeOptions ? JSON.stringify(s.nextStageAssigneeOptions) : null
       };
     });
 
