@@ -4,6 +4,9 @@
     subtitle="Monitoreo en vivo de telemetría y salud del servidor (Azure Cloud)" 
     icon="activity">
     <div class="flex align-items-center gap-2">
+      <span class="text-xs px-2.5 py-1 border-round-lg font-bold bg-blue-50 text-blue-700 border-1 border-blue-200">
+        v{{ healthData()?.version || '1.7.3' }}
+      </span>
       <p-tag [severity]="statusSeverity()" [value]="statusLabel()"></p-tag>
       <p-button (onClick)="refresh()" [loading]="loading()" severity="secondary" [outlined]="true">
         <lucide-icon name="refresh-cw" class="mr-2"></lucide-icon>Actualizar
@@ -51,6 +54,10 @@
             </span>
           </div>
           <div class="flex flex-column gap-2 text-sm text-700">
+            <div class="flex justify-content-between pb-2 border-bottom-1 surface-border">
+              <span class="text-500">Versión del Sistema:</span>
+              <span class="font-bold text-primary">v{{ healthData.version || '1.7.3' }}</span>
+            </div>
             <div class="flex justify-content-between pb-2 border-bottom-1 surface-border">
               <span class="text-500">Entorno:</span>
               <span class="font-semibold uppercase text-900">{{ healthData.environment }}</span>

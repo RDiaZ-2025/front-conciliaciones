@@ -5,6 +5,7 @@ import { BaseApiService } from './base-api.service';
 export interface SystemHealthResponse {
   success: boolean;
   status: 'healthy' | 'degraded' | 'down';
+  version?: string;
   message: string;
   timestamp: string;
   environment: string;
@@ -54,6 +55,7 @@ export class SystemHealthService extends BaseApiService {
         return of({
           success: false,
           status: 'down' as const,
+          version: '1.7.3',
           message: err.message || 'No se pudo contactar al servidor',
           timestamp: new Date().toISOString(),
           environment: 'desconocido',
