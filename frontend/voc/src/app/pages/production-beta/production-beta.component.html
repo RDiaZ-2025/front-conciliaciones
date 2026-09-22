@@ -183,6 +183,7 @@
                         <span>1. Formulario de Solicitud Inicial *</span>
                     </label>
                     <p-select id="initialFormSelect" [options]="initialForms()" [(ngModel)]="selectedInitialFormId"
+                              (onChange)="onInitialFormChange()"
                               optionLabel="name" optionValue="id" optionDisabled="disabled"
                               placeholder="Seleccione el formulario inicial a diligenciar..."
                               class="w-full" styleClass="w-full" [appendTo]="'body'">

@@ -2652,9 +2652,13 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
   getTeamDisabledReason(team: any): string | undefined {
     if (!this.isTeamConditionMet(team)) {
-      return 'No cumple con las condiciones configuradas en el formulario inicial.';
+      return 'No cumple con las condiciones configuradas para este formulario inicial.';
     }
     return undefined;
+  }
+
+  onInitialFormChange() {
+    this.recalculateInitialFormulas();
   }
 
   isTeamEnabled(team: any): boolean {
@@ -2671,10 +2675,68 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       return true;
     }
 
+    const currentFormId = this.selectedInitialFormId();
+    if (!currentFormId) {
+      return true;
+    }
+
+    const currentForm = this.selectedInitialForm();
+    const currentFormFields = currentForm?.fields || [];
+    const currentFormFieldNames = new Set<string>(currentFormFields.map((f: any) => f.name));
+
+    // Filtrar únicamente las condiciones que pertenecen al formulario inicial que se está llenando
+    const applicableConditions = meta.enableConditions.filter((cond: any) => {
+      if (!cond) return false;
+
+      const keys: string[] = cond.fieldKeys && Array.isArray(cond.fieldKeys) && cond.fieldKeys.length > 0
+        ? cond.fieldKeys
+        : (cond.fieldKey ? [cond.fieldKey] : []);
+
+      // 1. Detección por prefijo numérico en fieldKey (ej: "42_campo_...").
+      // Este prefijo es la fuente de verdad definitiva sobre a qué formulario pertenece el campo configurado.
+      let condFormId: number | null = null;
+      for (const key of keys) {
+        if (typeof key === 'string') {
+          const match = key.match(/^(\d+)_(.+)$/);
+          if (match) {
+            condFormId = Number(match[1]);
+            break;
+          }
+        }
+      }
+
+      // 2. Si no tenía prefijo numérico en la key, verificar por formId explícito
+      if (condFormId === null && cond.formId !== undefined && cond.formId !== null && cond.formId !== '') {
+        condFormId = Number(cond.formId);
+      }
+
+      // Si se determinó un formId (por prefijo o explícito), comparar estrictamente con el formulario activo
+      if (condFormId !== null) {
+        return Number(condFormId) === Number(currentFormId);
+      }
+
+      // 3. Fallback: verificar si el nombre del campo sin prefijo existe en el formulario actual
+      for (const key of keys) {
+        if (typeof key === 'string') {
+          const cleanKey = key.includes('_') ? key.split('_').slice(1).join('_') : key;
+          if (currentFormFieldNames.has(key) || currentFormFieldNames.has(cleanKey)) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    });
+
+    // Si el formulario actual no tiene filtros configurados para este equipo, no se restringe
+    if (applicableConditions.length === 0) {
+      return true;
+    }
+
     const values = this.initialFormValues();
     const removeAccents = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-    for (const cond of meta.enableConditions) {
+    for (const cond of applicableConditions) {
       let val: any = undefined;
       const keys = cond.fieldKeys || (cond.fieldKey ? [cond.fieldKey] : []);
       for (const key of keys) {

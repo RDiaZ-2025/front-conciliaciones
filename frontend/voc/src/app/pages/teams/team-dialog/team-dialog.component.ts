@@ -19,6 +19,7 @@ import { forkJoin } from 'rxjs';
 export interface ConditionItem {
   fieldKey: string;
   fieldKeys?: string[];
+  formId?: number | null;
   operator: string;
   value: any;
   selectedValues?: string[];
@@ -27,6 +28,7 @@ export interface ConditionItem {
 export interface FormFieldOption {
   label: string;
   fieldKey: string;
+  formId?: number;
   formName: string;
   type: string;
   options?: { label: string; value: string }[];
@@ -142,6 +144,7 @@ export class TeamDialogComponent implements OnInit, OnChanges {
                   options.push({
                     label: `${form.name} ➔ ${field.label}`,
                     fieldKey: `${form.id}_${field.name}`,
+                    formId: form.id,
                     formName: form.name,
                     type: field.type,
                     options: fieldOpts
@@ -193,6 +196,18 @@ export class TeamDialogComponent implements OnInit, OnChanges {
     cond.fieldKeys = [cond.fieldKey];
     cond.selectedValues = [];
     cond.value = '';
+    let condFormId: number | null = null;
+    if (typeof cond.fieldKey === 'string') {
+      const match = cond.fieldKey.match(/^(\d+)_(.+)$/);
+      if (match) {
+        condFormId = Number(match[1]);
+      }
+    }
+    if (!condFormId) {
+      const matched = this.getFieldByKey(cond.fieldKey);
+      condFormId = matched?.formId || null;
+    }
+    cond.formId = condFormId;
   }
 
   onMultiValuesChange(cond: ConditionItem, values: string[]) {
@@ -259,9 +274,26 @@ export class TeamDialogComponent implements OnInit, OnChanges {
               } else if (this.hasFieldOptions(fieldKey) && val !== '') {
                 selectedVals = [String(val)];
               }
+              let condFormId: number | null = null;
+              if (typeof fieldKey === 'string') {
+                const match = fieldKey.match(/^(\d+)_(.+)$/);
+                if (match) {
+                  condFormId = Number(match[1]);
+                }
+              }
+              if (!condFormId && c.formId) {
+                condFormId = Number(c.formId);
+              }
+              if (!condFormId) {
+                const matched = this.getFieldByKey(fieldKey);
+                if (matched && matched.formId) {
+                  condFormId = matched.formId;
+                }
+              }
               return {
                 fieldKey: fieldKey,
                 fieldKeys: c.fieldKeys || (c.fieldKey ? [c.fieldKey] : (fieldKey ? [fieldKey] : [])),
+                formId: condFormId || null,
                 operator: c.operator || 'contains',
                 value: val,
                 selectedValues: selectedVals
@@ -282,10 +314,25 @@ export class TeamDialogComponent implements OnInit, OnChanges {
   }
 
   addCondition() {
-    const firstKey = this.availableFields()[0]?.fieldKey || '';
+    const firstField = this.availableFields()[0];
+    const firstKey = firstField?.fieldKey || '';
+    let firstFormId: number | null = firstField?.formId || null;
+    if (!firstFormId && typeof firstKey === 'string') {
+      const match = firstKey.match(/^(\d+)_(.+)$/);
+      if (match) {
+        firstFormId = Number(match[1]);
+      }
+    }
     this.conditionsList.update(list => [
       ...list,
-      { fieldKey: firstKey, fieldKeys: firstKey ? [firstKey] : [], operator: 'contains', value: '', selectedValues: [] }
+      {
+        fieldKey: firstKey,
+        fieldKeys: firstKey ? [firstKey] : [],
+        formId: firstFormId,
+        operator: 'contains',
+        value: '',
+        selectedValues: []
+      }
     ]);
   }
 
@@ -318,8 +365,26 @@ export class TeamDialogComponent implements OnInit, OnChanges {
                 }
               }
             }
+            let condFormId: number | null = null;
+            if (typeof c.fieldKey === 'string') {
+              const match = c.fieldKey.match(/^(\d+)_(.+)$/);
+              if (match) {
+                condFormId = Number(match[1]);
+              }
+            }
+            if (!condFormId && c.formId) {
+              condFormId = Number(c.formId);
+            }
+            if (!condFormId) {
+              const matchedField = this.availableFields().find(f => f.fieldKey === c.fieldKey);
+              if (matchedField && matchedField.formId) {
+                condFormId = matchedField.formId;
+              }
+            }
+
             const item: any = {
               fieldKey: c.fieldKey,
+              formId: condFormId,
               operator: c.operator,
               value: finalVal
             };
