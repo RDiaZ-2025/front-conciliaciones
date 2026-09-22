@@ -692,10 +692,23 @@
     <!-- Dialog 2: Fields Configurator -->
     <p-dialog [header]="'Configurar Campos: ' + (editingFormForFields()?.name || '')" [(visible)]="showFieldsDialog" 
               [modal]="true" [style]="{width: '950px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
-        <div class="flex flex-column gap-3 py-2 px-3">
+        
+        <!-- Spinner mientras cargan los campos -->
+        <div *ngIf="loadingFields()" class="flex flex-column align-items-center justify-content-center p-6 gap-3">
+            <p-progressSpinner></p-progressSpinner>
+            <span class="text-600 font-medium">Cargando campos del formulario...</span>
+        </div>
+
+        <div class="flex flex-column gap-3 py-2 px-3 relative" *ngIf="!loadingFields()">
+            <!-- Overlay con spinner mientras guarda -->
+            <div *ngIf="savingFields()" class="absolute top-0 left-0 w-full h-full flex flex-column align-items-center justify-content-center bg-white-alpha-80 border-round-xl gap-3 z-5" style="backdrop-filter: blur(2px);">
+                <p-progressSpinner></p-progressSpinner>
+                <span class="text-900 font-bold text-base">Guardando configuración de campos...</span>
+            </div>
+
             <div class="flex justify-content-between align-items-center">
                 <span class="text-600 font-medium">Define los campos de entrada de datos para esta plantilla</span>
-                <p-button [outlined]="true" size="small" (onClick)="addField()">
+                <p-button [outlined]="true" size="small" (onClick)="addField()" [disabled]="savingFields()">
                     <lucide-icon name="plus" class="mr-2"></lucide-icon>
                     Añadir Campo
                 </p-button>
@@ -831,13 +844,13 @@
             </div>
         </div>
         <ng-template pTemplate="footer">
-            <p-button [text]="true" severity="secondary" (onClick)="showFieldsDialog.set(false)">
+            <p-button [text]="true" severity="secondary" (onClick)="showFieldsDialog.set(false)" [disabled]="savingFields()">
                 <lucide-icon name="x" class="mr-2"></lucide-icon>
                 Cancelar
             </p-button>
-            <p-button severity="primary" (onClick)="saveFields()">
-                <lucide-icon name="save" class="mr-2"></lucide-icon>
-                Guardar Configuración
+            <p-button severity="primary" (onClick)="saveFields()" [disabled]="savingFields() || loadingFields()" [loading]="savingFields()">
+                <lucide-icon name="save" class="mr-2" *ngIf="!savingFields()"></lucide-icon>
+                <span>{{ savingFields() ? 'Guardando...' : 'Guardar Configuración' }}</span>
             </p-button>
         </ng-template>
     </p-dialog>

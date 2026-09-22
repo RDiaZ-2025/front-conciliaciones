@@ -14,6 +14,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TagModule } from 'primeng/tag';
 import { BadgeModule } from 'primeng/badge';
 import { TooltipModule } from 'primeng/tooltip';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { PageHeaderComponent } from '../../components/page-header/page-header.component';
@@ -103,6 +104,7 @@ interface WorkflowStageItem {
     TagModule,
     BadgeModule,
     TooltipModule,
+    ProgressSpinnerModule,
     PageHeaderComponent,
     LucideIconComponent
   ],
@@ -200,6 +202,8 @@ export class RequestsBetaAdminComponent implements OnInit {
   ];
 
   showFieldsDialog = signal<boolean>(false);
+  loadingFields = signal<boolean>(false);
+  savingFields = signal<boolean>(false);
   editingFormForFields = signal<any>(null);
   formFields = signal<FormFieldItem[]>([]);
 
@@ -606,10 +610,12 @@ export class RequestsBetaAdminComponent implements OnInit {
   openFieldsConfigurator(form: any) {
     this.editingFormForFields.set(form);
     this.formFields.set([]);
+    this.loadingFields.set(true);
     this.showFieldsDialog.set(true);
 
     this.productionService.getDynamicFormFields(form.id, true).subscribe({
       next: (data) => {
+        this.loadingFields.set(false);
         this.formFields.set(data.map(f => {
           let meta = f.metadata ? (typeof f.metadata === 'string' ? JSON.parse(f.metadata) : f.metadata) : {};
           if (meta.options && Array.isArray(meta.options)) {
@@ -665,7 +671,10 @@ export class RequestsBetaAdminComponent implements OnInit {
           };
         }));
       },
-      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los campos del formulario.' })
+      error: () => {
+        this.loadingFields.set(false);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los campos del formulario.' });
+      }
     });
   }
 
@@ -1106,12 +1115,17 @@ export class RequestsBetaAdminComponent implements OnInit {
       f.metadata.showInCard = !!f.showInCard;
     }
 
+    this.savingFields.set(true);
     this.productionService.adminSaveFields(form.id, fields).subscribe({
       next: () => {
+        this.savingFields.set(false);
         this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Campos guardados y actualizados exitosamente.' });
         this.showFieldsDialog.set(false);
       },
-      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron guardar los campos.' })
+      error: () => {
+        this.savingFields.set(false);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron guardar los campos.' });
+      }
     });
   }
 
