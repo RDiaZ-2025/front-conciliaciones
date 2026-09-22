@@ -706,21 +706,52 @@
                 <span class="text-900 font-bold text-base">Guardando configuración de campos...</span>
             </div>
 
-            <div class="flex justify-content-between align-items-center">
-                <span class="text-600 font-medium">Define los campos de entrada de datos para esta plantilla</span>
-                <p-button [outlined]="true" size="small" (onClick)="addField()" [disabled]="savingFields()">
-                    <lucide-icon name="plus" class="mr-2"></lucide-icon>
-                    Añadir Campo
-                </p-button>
+            <div class="flex flex-column sm:flex-row justify-content-between align-items-start sm:align-items-center gap-2">
+                <div>
+                    <span class="text-600 font-medium">Define los campos de entrada de datos para esta plantilla</span>
+                    <span class="text-xs text-500 block" *ngIf="formFields().length > 0">
+                        Total: {{ formFields().length }} campo(s)
+                        <span *ngIf="fieldFilterText().trim() && filteredFormFields().length !== formFields().length" class="text-primary font-semibold">
+                            (mostrando {{ filteredFormFields().length }})
+                        </span>
+                    </span>
+                </div>
+
+                <div class="flex align-items-center gap-2 w-full sm:w-auto">
+                    <!-- Buscador / filtro de campos -->
+                    <div class="relative w-full sm:w-18rem flex align-items-center">
+                        <lucide-icon name="search" class="text-400 absolute ml-3" style="width: 1rem; height: 1rem; pointer-events: none;"></lucide-icon>
+                        <input 
+                            pInputText 
+                            [(ngModel)]="fieldFilterText" 
+                            placeholder="Buscar campo por nombre o tipo..." 
+                            class="w-full text-sm p-inputtext-sm pl-6 pr-6" />
+                        <button 
+                            *ngIf="fieldFilterText()" 
+                            pButton 
+                            [text]="true" 
+                            [rounded]="true" 
+                            severity="secondary" 
+                            class="w-2rem h-2rem p-0 flex align-items-center justify-content-center absolute right-0 mr-1" 
+                            (click)="fieldFilterText.set('')"
+                            pTooltip="Limpiar filtro">
+                            <lucide-icon name="x" style="width: 0.9rem; height: 0.9rem;"></lucide-icon>
+                        </button>
+                    </div>
+
+                    <p-button [outlined]="true" size="small" (onClick)="addField()" [disabled]="savingFields()">
+                        <lucide-icon name="plus" class="mr-2"></lucide-icon>
+                        Añadir Campo
+                    </p-button>
+                </div>
             </div>
 
             <div class="overflow-y-auto" style="max-height: 60vh;">
-                <p-table [value]="formFields()" responsiveLayout="scroll" styleClass="p-datatable-striped p-datatable-sm">
+                <p-table [value]="filteredFormFields()" responsiveLayout="scroll" styleClass="p-datatable-striped p-datatable-sm">
                     <ng-template pTemplate="header">
                         <tr>
-                            <th style="width: 6rem;" class="text-center">Posición</th>
+                            <th style="width: 3.5rem;" class="text-center px-1" pTooltip="Posición / Reordenar" tooltipPosition="top">Pos.</th>
                             <th style="width: 15rem;">Etiqueta (Label) *</th>
-                            <th style="width: 10rem;">Clave/Key (Técnico)</th>
                             <th style="width: 15rem;">Descripción explicativa</th>
                             <th style="width: 10rem;">Tipo</th>
                             <th>
@@ -741,13 +772,13 @@
                     </ng-template>
                     <ng-template pTemplate="body" let-field let-rowIndex="rowIndex">
                         <tr>
-                            <td class="text-center" [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
-                                <div class="flex justify-content-center gap-1">
-                                    <p-button [text]="true" severity="secondary" size="small" [disabled]="rowIndex === 0 || !field.isActive" (onClick)="moveFieldUp(rowIndex)" pTooltip="Subir" tooltipPosition="top">
-                                        <lucide-icon name="arrow-up" style="width: 0.9rem; height: 0.9rem;"></lucide-icon>
+                            <td class="text-center px-1" [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
+                                <div class="flex flex-column align-items-center justify-content-center">
+                                    <p-button [text]="true" severity="secondary" size="small" styleClass="p-0 w-1.5rem h-1.5rem min-w-0 flex align-items-center justify-content-center" [disabled]="isFirstField(field) || !field.isActive || fieldFilterText().trim() !== ''" (onClick)="moveFieldUp(field)" [pTooltip]="fieldFilterText().trim() !== '' ? 'Limpia el filtro para reordenar' : 'Subir'" tooltipPosition="top">
+                                        <lucide-icon name="arrow-up" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
                                     </p-button>
-                                    <p-button [text]="true" severity="secondary" size="small" [disabled]="rowIndex === formFields().length - 1 || !field.isActive" (onClick)="moveFieldDown(rowIndex)" pTooltip="Bajar" tooltipPosition="top">
-                                        <lucide-icon name="arrow-down" style="width: 0.9rem; height: 0.9rem;"></lucide-icon>
+                                    <p-button [text]="true" severity="secondary" size="small" styleClass="p-0 w-1.5rem h-1.5rem min-w-0 flex align-items-center justify-content-center" [disabled]="isLastField(field) || !field.isActive || fieldFilterText().trim() !== ''" (onClick)="moveFieldDown(field)" [pTooltip]="fieldFilterText().trim() !== '' ? 'Limpia el filtro para reordenar' : 'Bajar'" tooltipPosition="top">
+                                        <lucide-icon name="arrow-down" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
                                     </p-button>
                                 </div>
                             </td>
@@ -759,9 +790,6 @@
                                         Desactivado (Oculto)
                                     </span>
                                 </div>
-                            </td>
-                            <td [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
-                                <input pInputText [(ngModel)]="field.name" placeholder="Ej: clientName" class="p-inputtext-sm" [disabled]="!field.isActive" />
                             </td>
                             <td [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
                                 <input pInputText [(ngModel)]="field.description" placeholder="Texto de ayuda" class="p-inputtext-sm" [disabled]="!field.isActive" />
@@ -828,7 +856,7 @@
                                     </p-button>
                                     <p-button *ngIf="!field.isActive" [text]="true" [rounded]="true" severity="danger" size="small"
                                               [pTooltip]="'Eliminar Definitivamente'" tooltipPosition="top"
-                                              (onClick)="confirmPhysicalDeleteField(rowIndex)">
+                                              (onClick)="confirmPhysicalDeleteField(field)">
                                         <lucide-icon name="trash-2"></lucide-icon>
                                     </p-button>
                                 </div>
@@ -837,7 +865,12 @@
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="8" class="text-center p-4 text-500">Este formulario no tiene campos asignados. Añade uno para comenzar.</td>
+                            <td colspan="9" class="text-center p-4 text-500">
+                                <span *ngIf="formFields().length === 0">Este formulario no tiene campos asignados. Añade uno para comenzar.</span>
+                                <span *ngIf="formFields().length > 0 && filteredFormFields().length === 0">
+                                    No se encontraron campos que coincidan con <strong>"{{ fieldFilterText() }}"</strong>.
+                                </span>
+                            </td>
                         </tr>
                     </ng-template>
                 </p-table>

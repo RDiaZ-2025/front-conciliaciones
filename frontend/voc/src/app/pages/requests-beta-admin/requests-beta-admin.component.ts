@@ -206,6 +206,19 @@ export class RequestsBetaAdminComponent implements OnInit {
   savingFields = signal<boolean>(false);
   editingFormForFields = signal<any>(null);
   formFields = signal<FormFieldItem[]>([]);
+  fieldFilterText = signal<string>('');
+
+  filteredFormFields = computed(() => {
+    const query = this.fieldFilterText().toLowerCase().trim();
+    const fields = this.formFields();
+    if (!query) return fields;
+    return fields.filter(f => 
+      (f.label && f.label.toLowerCase().includes(query)) ||
+      (f.name && f.name.toLowerCase().includes(query)) ||
+      (f.type && f.type.toLowerCase().includes(query)) ||
+      (f.description && f.description.toLowerCase().includes(query))
+    );
+  });
 
   showFileConfigDialog = signal<boolean>(false);
   selectedFieldForFileConfig = signal<any>(null);
@@ -610,6 +623,7 @@ export class RequestsBetaAdminComponent implements OnInit {
   openFieldsConfigurator(form: any) {
     this.editingFormForFields.set(form);
     this.formFields.set([]);
+    this.fieldFilterText.set('');
     this.loadingFields.set(true);
     this.showFieldsDialog.set(true);
 
@@ -679,6 +693,7 @@ export class RequestsBetaAdminComponent implements OnInit {
   }
 
   addField() {
+    this.fieldFilterText.set('');
     const currentFields = this.formFields();
     this.formFields.set([
       ...currentFields,
@@ -1050,8 +1065,11 @@ export class RequestsBetaAdminComponent implements OnInit {
     });
   }
 
-  confirmPhysicalDeleteField(index: number) {
-    const field = this.formFields()[index];
+  confirmPhysicalDeleteField(fieldOrIndex: any) {
+    const fields = this.formFields();
+    const index = typeof fieldOrIndex === 'number' ? fieldOrIndex : fields.indexOf(fieldOrIndex);
+    if (index < 0) return;
+    const field = fields[index];
     this.confirmationService.confirm({
       message: `¡CUIDADO! Esta acción eliminará FÍSICAMENTE el campo "${field.label}" de la base de datos y BORRARÁ permanentemente todos los datos históricos llenados para este campo en solicitudes anteriores de forma irreversible. ¿Deseas continuar?`,
       header: 'Confirmar eliminación definitiva',
@@ -1071,9 +1089,19 @@ export class RequestsBetaAdminComponent implements OnInit {
     this.formFields.set(currentFields);
   }
 
-  moveFieldUp(index: number) {
-    if (index <= 0) return;
+  isFirstField(field: FormFieldItem): boolean {
+    return this.formFields().indexOf(field) === 0;
+  }
+
+  isLastField(field: FormFieldItem): boolean {
+    const fields = this.formFields();
+    return fields.indexOf(field) === fields.length - 1;
+  }
+
+  moveFieldUp(fieldOrIndex: any) {
     const fields = [...this.formFields()];
+    const index = typeof fieldOrIndex === 'number' ? fieldOrIndex : fields.indexOf(fieldOrIndex);
+    if (index <= 0) return;
     const temp = fields[index];
     fields[index] = fields[index - 1];
     fields[index - 1] = temp;
@@ -1085,9 +1113,10 @@ export class RequestsBetaAdminComponent implements OnInit {
     this.formFields.set(fields);
   }
 
-  moveFieldDown(index: number) {
+  moveFieldDown(fieldOrIndex: any) {
     const fields = [...this.formFields()];
-    if (index >= fields.length - 1) return;
+    const index = typeof fieldOrIndex === 'number' ? fieldOrIndex : fields.indexOf(fieldOrIndex);
+    if (index < 0 || index >= fields.length - 1) return;
     const temp = fields[index];
     fields[index] = fields[index + 1];
     fields[index + 1] = temp;
@@ -1103,16 +1132,63 @@ export class RequestsBetaAdminComponent implements OnInit {
     const form = this.editingFormForFields();
     const fields = this.formFields();
 
+    // 1. Validar que todos los campos tengan una etiqueta visible válida
     for (const f of fields) {
-      if (!f.label.trim()) {
+      if (!f.label || !f.label.trim()) {
         this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'Todos los campos deben tener una etiqueta válida.' });
         return;
       }
-      if (!f.name.trim()) {
-        f.name = f.label.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    }
+
+    // Helper para normalizar y generar un slug técnico limpio
+    const generateSlug = (label: string): string => {
+      const normalized = (label || '')
+        .toLowerCase()
+        .trim()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Quitar tildes / diacríticos
+        .replace(/[^a-z0-9]+/g, '_')     // Reemplazar caracteres no alfanuméricos por guiones bajos
+        .replace(/^_+|_+$/g, '');       // Quitar guiones bajos al inicio o al final
+      return normalized || 'campo';
+    };
+
+    // 2. Registrar nombres técnicos de campos existentes para no colisionar ni alterar campos históricos
+    const usedNames = new Set<string>();
+    for (const f of fields) {
+      if (f.id && f.name && f.name.trim() && !f.name.startsWith('campo_')) {
+        usedNames.add(f.name.trim());
       }
+    }
+
+    // 3. Procesar campos: asignar o preservar name y actualizar dependencias si cambió el identificador temporal
+    for (const f of fields) {
       if (!f.metadata) f.metadata = {};
       f.metadata.showInCard = !!f.showInCard;
+
+      const hasEstablishedName = f.id && f.name && f.name.trim() && !f.name.startsWith('campo_');
+      if (hasEstablishedName) {
+        f.name = f.name.trim();
+      } else {
+        const oldName = f.name;
+        const baseSlug = generateSlug(f.label);
+        let candidate = baseSlug;
+        let counter = 1;
+        while (usedNames.has(candidate)) {
+          counter++;
+          candidate = `${baseSlug}_${counter}`;
+        }
+        usedNames.add(candidate);
+        f.name = candidate;
+
+        // Si el campo tenía un identificador temporal previo y otras dependencias apuntaban a él, actualizarlas
+        if (oldName && oldName !== candidate) {
+          for (const other of fields) {
+            if (other.metadata?.dependency?.fieldName === oldName) {
+              other.metadata.dependency.fieldName = candidate;
+            }
+          }
+        }
+      }
     }
 
     this.savingFields.set(true);
