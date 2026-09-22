@@ -1005,7 +1005,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     if (s === 'approved' || s === 'completed') return 'success';
     if (s === 'in progress') return 'info';
     if (s === 'pending') return 'warn';
-    if (s === 'rejected') return 'danger';
+    if (s === 'rejected' || s === 'blocked') return 'danger';
     return 'secondary';
   }
 
@@ -1019,6 +1019,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       case 'Approved': return 'Aprobado';
       case 'Draft': return 'Borrador';
       case 'Cancelled': return 'Cancelado';
+      case 'Blocked': return 'Bloqueada';
       default: return status;
     }
   }

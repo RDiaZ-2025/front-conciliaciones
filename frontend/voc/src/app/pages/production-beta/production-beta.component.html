@@ -1666,6 +1666,19 @@
                 </div>
             </div>
 
+            <!-- Banner de Solicitud Bloqueada -->
+            <div *ngIf="selectedDetails().status === 'Blocked'" class="bg-red-50 border-1 border-red-300 border-round p-3 flex align-items-start gap-3 shadow-1">
+                <span class="inline-flex align-items-center justify-content-center border-circle w-2rem h-2rem bg-red-100 text-red-700 flex-shrink-0">
+                    <lucide-icon name="alert-triangle" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+                </span>
+                <div class="flex flex-column gap-1">
+                    <span class="font-bold text-sm text-red-900">Solicitud Bloqueada</span>
+                    <span class="text-xs text-red-700 line-height-3">
+                        Esta solicitud fue bloqueada y cerrada automáticamente debido a que el flujo de trabajo original fue modificado o eliminado mientras la solicitud estaba en proceso. Para continuar con este requerimiento, debe iniciar una nueva solicitud.
+                    </span>
+                </div>
+            </div>
+
             <!-- Section 0: Datos del Requerimiento Inicial (Stacked initial forms values) -->
             <div class="flex flex-column gap-3" *ngIf="detailsParentFormGroups() && detailsParentFormGroups().length > 0">
                 <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">Datos del Requerimiento Inicial</span>

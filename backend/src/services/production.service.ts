@@ -236,8 +236,8 @@ export class ProductionService {
 
                         if (targetWfId) {
                             const firstStage = await stageRepo.findOne({
-                                where: { workflowId: targetWfId, stepOrder: 1, isDeleted: false },
-                                order: { stepOrder: 'ASC' }
+                                where: { workflowId: targetWfId, isDeleted: false },
+                                order: { stepOrder: 'ASC', id: 'ASC' }
                             });
 
                             if (firstStage) {
@@ -252,10 +252,13 @@ export class ProductionService {
                                 } else {
                                     let assignedUserId: number | null = null;
 
-                                    if (mode === 'subteam_random' || (mode === 'random' && teamTarget.subteamId)) {
+                                    const parsedSubteamId = Number(teamTarget.subteamId);
+                                    const hasValidSubteam = Number.isInteger(parsedSubteamId) && parsedSubteamId > 0;
+
+                                    if ((mode === 'subteam_random' || mode === 'random') && hasValidSubteam) {
                                         const subteamUserRepo = transactionManager.getRepository(SubteamUser);
                                         const subteamUsers = await subteamUserRepo.find({
-                                            where: { subteamId: teamTarget.subteamId || undefined },
+                                            where: { subteamId: parsedSubteamId },
                                             relations: ['user']
                                         });
                                         const activeMembers = subteamUsers
@@ -268,7 +271,7 @@ export class ProductionService {
                                             assignedUserId = pool[randomIndex].id;
                                         } else {
                                             const subteam = await transactionManager.getRepository(Subteam).findOne({
-                                                where: { id: teamTarget.subteamId || undefined }
+                                                where: { id: parsedSubteamId }
                                             });
                                             assignedUserId = subteam?.leaderId || team.leaderId || null;
                                         }
@@ -353,10 +356,10 @@ export class ProductionService {
 
                         const firstStage = await stageRepo.findOne({
                             where: [
-                                { workflowId: wfId || -1, stepOrder: 1, isDeleted: false },
-                                { formId: targetFormId, stepOrder: 1, isDeleted: false }
+                                { workflowId: wfId || -1, isDeleted: false },
+                                { formId: targetFormId, isDeleted: false }
                             ],
-                            order: { stepOrder: 'ASC' }
+                            order: { stepOrder: 'ASC', id: 'ASC' }
                         });
 
                         if (firstStage) {
@@ -436,7 +439,8 @@ export class ProductionService {
                         const savedChildSub = await subRepo.save(childSub);
 
                         const firstStage = await stageRepo.findOne({
-                            where: { formId: targetFormId, stepOrder: 1, isDeleted: false }
+                            where: { formId: targetFormId, isDeleted: false },
+                            order: { stepOrder: 'ASC', id: 'ASC' }
                         });
 
                         if (firstStage) {
@@ -507,7 +511,8 @@ export class ProductionService {
             }
 
             const firstStage = await stageRepo.findOne({
-                where: { formId, stepOrder: 1, isDeleted: false }
+                where: { formId, isDeleted: false },
+                order: { stepOrder: 'ASC', id: 'ASC' }
             });
 
             if (firstStage) {
@@ -1319,6 +1324,109 @@ export class ProductionService {
         return await repo.save(wf);
     }
 
+    /**
+     * Bloquea y cierra todas las solicitudes en curso asociadas a un flujo de trabajo
+     * cuando dicho flujo es modificado, desactivado o eliminado.
+     */
+    async blockActiveSubmissionsForWorkflow(manager: any, workflowId: number, reason: string): Promise<number> {
+        const subRepo = manager.getRepository(DynamicFormSubmission);
+        const stageRepo = manager.getRepository(DynamicWorkflowStage);
+        const stateRepo = manager.getRepository(DynamicSubmissionWorkflowState);
+
+        // 1. Obtener todas las etapas que pertenecen a este flujo
+        const stages = await stageRepo.find({
+            where: { workflowId },
+            select: ['id']
+        });
+        const stageIds = stages.map((s: any) => s.id);
+
+        // 2. Buscar submissions activas directamente asociadas a este workflow o a sus etapas
+        const query = subRepo.createQueryBuilder("sub")
+            .where("sub.status IN (:...statuses)", { statuses: ['In Progress', 'Pending', 'Rejected'] });
+
+        if (stageIds.length > 0) {
+            query.andWhere("(sub.workflowId = :workflowId OR sub.currentStageId IN (:...stageIds))", { workflowId, stageIds });
+        } else {
+            query.andWhere("sub.workflowId = :workflowId", { workflowId });
+        }
+
+        const directSubs = await query.getMany();
+
+        // 3. Buscar submissions que tengan estados pendientes en alguna etapa de este flujo
+        let stateSubs: DynamicFormSubmission[] = [];
+        if (stageIds.length > 0) {
+            const pendingStates = await stateRepo.find({
+                where: { stageId: In(stageIds), status: 'Pending' },
+                relations: ['submission']
+            });
+            stateSubs = pendingStates.map((ps: any) => ps.submission).filter((s: any) => s && ['In Progress', 'Pending', 'Rejected'].includes(s.status));
+        }
+
+        const candidateSubs = [...directSubs, ...stateSubs];
+        const uniqueSubMap = new Map<number, DynamicFormSubmission>();
+        candidateSubs.forEach(s => uniqueSubMap.set(s.id, s));
+
+        if (uniqueSubMap.size === 0) {
+            return 0;
+        }
+
+        // 4. Obtener árbol genealógico completo (padre e hijos) de las solicitudes afectadas
+        const allTreeSubIds = new Set<number>();
+        for (const sub of uniqueSubMap.values()) {
+            const tree = await this.getSubmissionTreeIds(sub.id);
+            tree.forEach(tid => allTreeSubIds.add(tid));
+        }
+
+        const allSubsToBlock = await subRepo.find({
+            where: {
+                id: In(Array.from(allTreeSubIds)),
+                status: In(['In Progress', 'Pending', 'Rejected'])
+            },
+            relations: ['form']
+        });
+
+        if (allSubsToBlock.length === 0) {
+            return 0;
+        }
+
+        // 5. Bloquear cada submission y sus estados pendientes
+        for (const subToBlock of allSubsToBlock) {
+            subToBlock.status = 'Blocked';
+            subToBlock.currentStageId = null;
+            await subRepo.save(subToBlock);
+
+            const pendingStatesToBlock = await stateRepo.find({
+                where: { submissionId: subToBlock.id, status: 'Pending' }
+            });
+
+            for (const pState of pendingStatesToBlock) {
+                pState.status = 'Blocked';
+                pState.notes = reason;
+                await stateRepo.save(pState);
+
+                try {
+                    await notificationService.createNotification(
+                        pState.assignedUserId,
+                        'Solicitud Bloqueada',
+                        `La solicitud de "${subToBlock.form?.name || 'Formulario'}" ha sido bloqueada porque el flujo de trabajo original fue modificado o eliminado. Debe iniciar una solicitud nueva.`,
+                        'warning'
+                    );
+                } catch (e) {}
+            }
+
+            try {
+                await notificationService.createNotification(
+                    subToBlock.requesterUserId,
+                    'Solicitud Bloqueada',
+                    `Tu solicitud de "${subToBlock.form?.name || 'Formulario'}" ha sido bloqueada porque el flujo de trabajo original fue modificado o eliminado. Debe iniciar una solicitud nueva.`,
+                    'warning'
+                );
+            } catch (e) {}
+        }
+
+        return allSubsToBlock.length;
+    }
+
     async adminUpdateWorkflow(id: number, data: Partial<DynamicWorkflow>) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const repo = AppDataSource.getRepository(DynamicWorkflow);
@@ -1327,18 +1435,69 @@ export class ProductionService {
         if (data.name !== undefined) wf.name = data.name;
         if (data.description !== undefined) wf.description = data.description;
         if (data.isActive !== undefined) wf.isActive = data.isActive;
-        return await repo.save(wf);
+        const saved = await repo.save(wf);
+
+        if (data.isActive === false) {
+            await AppDataSource.transaction(async (manager) => {
+                await this.blockActiveSubmissionsForWorkflow(
+                    manager,
+                    id,
+                    'Solicitud bloqueada: El flujo de trabajo original fue desactivado mientras la solicitud estaba en proceso. Debe iniciar una solicitud nueva.'
+                );
+            });
+        }
+        return saved;
     }
 
     async adminDeleteWorkflow(id: number) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
-        const repo = AppDataSource.getRepository(DynamicWorkflow);
-        const wf = await repo.findOne({ where: { id } });
-        if (!wf) throw new Error('Flujo de trabajo no encontrado');
+        return await AppDataSource.transaction(async (manager) => {
+            const repo = manager.getRepository(DynamicWorkflow);
+            const wf = await repo.findOne({ where: { id } });
+            if (!wf) throw new Error('Flujo de trabajo no encontrado');
 
-        await AppDataSource.getRepository(DynamicForm).update({ workflowId: id }, { workflowId: null });
-        await repo.update({ id }, { isActive: false });
-        return { id, deleted: true };
+            // 1. Bloquear y cerrar solicitudes en curso que dependían de este flujo
+            await this.blockActiveSubmissionsForWorkflow(
+                manager,
+                id,
+                'Solicitud bloqueada: El flujo de trabajo original fue eliminado mientras la solicitud estaba en proceso. Debe iniciar una solicitud nueva.'
+            );
+
+            // 2. Limpiar columna directa en DynamicForms
+            await manager.getRepository(DynamicForm).update({ workflowId: id }, { workflowId: null });
+
+            // 3. Limpiar referencias en metadatos de formularios (teamWorkflows y closingConfig)
+            const formRepo = manager.getRepository(DynamicForm);
+            const forms = await formRepo.find();
+            for (const f of forms) {
+                if (!f.metadata) continue;
+                try {
+                    let meta = typeof f.metadata === 'object' ? f.metadata : JSON.parse(f.metadata);
+                    let changed = false;
+                    if (meta.teamWorkflows && typeof meta.teamWorkflows === 'object') {
+                        for (const [tKey, wfVal] of Object.entries(meta.teamWorkflows)) {
+                            if (Number(wfVal) === id) {
+                                delete meta.teamWorkflows[tKey];
+                                changed = true;
+                            }
+                        }
+                    }
+                    if (meta.closingConfig && (Number(meta.closingConfig.closingWorkflowId) === id || Number(meta.closingConfig.workflowId) === id)) {
+                        meta.closingConfig.closingWorkflowId = null;
+                        meta.closingConfig.workflowId = null;
+                        changed = true;
+                    }
+                    if (changed) {
+                        f.metadata = JSON.stringify(meta);
+                        await formRepo.save(f);
+                    }
+                } catch(e) {}
+            }
+
+            // 4. Desactivar flujo
+            await repo.update({ id }, { isActive: false });
+            return { id, deleted: true };
+        });
     }
 
     async adminGetWorkflowStages(workflowId: number) {
@@ -1447,6 +1606,13 @@ export class ProductionService {
 
                 savedStages.push(await stageRepo.save(stageEntity));
             }
+
+            // Bloquear cualquier solicitud en curso que dependa de este flujo de trabajo modificado
+            await this.blockActiveSubmissionsForWorkflow(
+                manager,
+                workflowId,
+                'Solicitud bloqueada: El flujo de trabajo original fue modificado mientras la solicitud estaba en proceso. Debe iniciar una solicitud nueva.'
+            );
 
             return savedStages;
         });
@@ -2224,8 +2390,8 @@ export class ProductionService {
 
             if (isClosingRequired && closingWfId) {
                 const firstClosingStage = await stageRepo.findOne({
-                    where: { workflowId: closingWfId, stepOrder: 1, isDeleted: false },
-                    order: { stepOrder: 'ASC' }
+                    where: { workflowId: closingWfId, isDeleted: false },
+                    order: { stepOrder: 'ASC', id: 'ASC' }
                 });
                 if (firstClosingStage) {
                     submission.workflowId = closingWfId;
@@ -2301,6 +2467,7 @@ export class ProductionService {
                 .andWhere("stage.stepOrder > :stepOrder", { stepOrder: parentSub.currentStage.stepOrder })
                 .andWhere("stage.isDeleted = :isDeleted", { isDeleted: false })
                 .orderBy("stage.stepOrder", "ASC")
+                .addOrderBy("stage.id", "ASC")
                 .getOne();
         }
 
@@ -2648,6 +2815,7 @@ export class ProductionService {
                         .andWhere("stage.stepOrder > :stepOrder", { stepOrder: currentStepOrder })
                         .andWhere("stage.isDeleted = :isDeleted", { isDeleted: false })
                         .orderBy("stage.stepOrder", "ASC")
+                        .addOrderBy("stage.id", "ASC")
                         .getOne();
 
                     if (nextStageInCurrentWf) {

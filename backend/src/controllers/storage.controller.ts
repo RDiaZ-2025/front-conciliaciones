@@ -32,7 +32,9 @@ export class StorageController {
       return res.status(404).send('File not found or content not available');
     }
 
-    res.setHeader('Content-Disposition', `attachment; filename="${downloadResult.fileName}"`);
+    const asciiFallback = downloadResult.fileName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '');
+    const encodedUtf8 = encodeURIComponent(downloadResult.fileName);
+    res.setHeader('Content-Disposition', `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodedUtf8}`);
     res.setHeader('Content-Type', downloadResult.contentType);
 
     downloadResult.stream.pipe(res);
@@ -52,7 +54,9 @@ export class StorageController {
     }
 
     const finalFileName = requestedName || downloadResult.fileName;
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(finalFileName)}"`);
+    const asciiFallback = finalFileName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '');
+    const encodedUtf8 = encodeURIComponent(finalFileName);
+    res.setHeader('Content-Disposition', `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodedUtf8}`);
     res.setHeader('Content-Type', downloadResult.contentType);
 
     downloadResult.stream.pipe(res);

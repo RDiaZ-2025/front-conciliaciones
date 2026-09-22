@@ -1291,7 +1291,8 @@ export class RequestsBetaInboxComponent implements OnInit {
       case 'Completed': return 'success';
       case 'In Progress': return 'info';
       case 'Pending': return 'warn';
-      case 'Rejected': return 'danger';
+      case 'Rejected':
+      case 'Blocked': return 'danger';
       default: return 'secondary';
     }
   }
@@ -1305,6 +1306,7 @@ export class RequestsBetaInboxComponent implements OnInit {
       case 'Approved': return 'Aprobado';
       case 'Draft': return 'Borrador';
       case 'Cancelled': return 'Cancelado';
+      case 'Blocked': return 'Bloqueada';
       default: return status || 'Pendiente';
     }
   }
