@@ -1,5 +1,5 @@
-import { Injectable } from '@angular/core';
-import { Observable, catchError, of, timeout } from 'rxjs';
+import { Injectable, signal, computed } from '@angular/core';
+import { Observable, catchError, of, timeout, tap } from 'rxjs';
 import { BaseApiService } from './base-api.service';
 
 export interface SystemHealthResponse {
@@ -43,21 +43,23 @@ export interface SystemHealthResponse {
   providedIn: 'root'
 })
 export class SystemHealthService extends BaseApiService {
+  private _healthData = signal<SystemHealthResponse | null>(null);
+  public healthData = this._healthData.asReadonly();
+  public appVersion = computed(() => this._healthData()?.version || '');
+  public appVersionDate = computed(() => this._healthData()?.versionDate || '');
 
   getHealth(): Observable<SystemHealthResponse> {
-
     const rootUrl = this.baseApiUrl.replace(/\/api\/?$/, '');
     const healthUrl = `${rootUrl}/health`;
 
     return this.http.get<SystemHealthResponse>(healthUrl).pipe(
       timeout(10000),
+      tap(data => this._healthData.set(data)),
       catchError(err => {
         console.error('Error fetching system health:', err);
-        return of({
+        const fallbackResponse: SystemHealthResponse = {
           success: false,
           status: 'down' as const,
-          version: '1.7.9',
-          versionDate: '2026-09-22',
           message: err.message || 'No se pudo contactar al servidor',
           timestamp: new Date().toISOString(),
           environment: 'desconocido',
@@ -78,7 +80,9 @@ export class SystemHealthService extends BaseApiService {
             platform: 'N/A',
             memory: { rssMB: 0, heapUsedMB: 0, heapTotalMB: 0 }
           }
-        });
+        };
+        this._healthData.set(fallbackResponse);
+        return of(fallbackResponse);
       })
     );
   }

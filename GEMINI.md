@@ -24,20 +24,20 @@ La IA tiene la responsabilidad y autonomía de **evaluar y actualizar directamen
 
 4. **Registro Obligatorio de la Fecha de Versión:**
    - **En cada actualización de versión, debe quedar registrada la fecha en que se subió o actualizó dicha versión** en formato `YYYY-MM-DD` (ejemplo: `2026-09-19`).
-   - La fecha debe reflejarse en las variables y fallbacks de salud del sistema (`APP_VERSION_DATE` / `versionDate`) y en las vistas de telemetría/salud.
+   - La fecha debe reflejarse en la variable `APP_VERSION_DATE` en `backend/src/app.ts` (expuesta a través del endpoint `/health` y consumida dinámicamente en el frontend).
 
 5. **Consulta ante Incertidumbre:**
    - Si la IA no está 100% segura de si el alcance de una tarea corresponde a un cambio menor (PATCH) o mayor (MINOR), debe consultar explícitamente al usuario antes de modificarla para confirmar la posición a incrementar.
 
 ### Archivos a Sincronizar en cada cambio de versión:
-- `backend/src/app.ts` (`const APP_VERSION = 'X.Y.Z'`, `const APP_VERSION_DATE = 'YYYY-MM-DD'`)
-- `frontend/voc/src/app/services/system-health.service.ts` (`version: 'X.Y.Z'`, `versionDate: 'YYYY-MM-DD'`)
-- `frontend/voc/src/app/components/layout/layout.component.html` (badge de versión)
-- `frontend/voc/src/app/components/system-health-modal/system-health-modal.component.html` (versión y fecha de versión)
-- `frontend/voc/src/app/pages/system-health/system-health.component.html` (versión y fecha de versión)
-- `package.json` raíz (`"version": "X.Y.Z"`)
-- `backend/package.json` (`"version": "X.Y.Z"`)
-- `frontend/package.json` (`"version": "X.Y.Z"`)
+Al actualizar la versión, la modificación se realiza en **un único lugar en el código**, más los archivos de configuración `.json`:
+1. **En Código Fuente (Única Fuente de Verdad):**
+   - `backend/src/app.ts` (`const APP_VERSION = 'X.Y.Z'`, `const APP_VERSION_DATE = 'YYYY-MM-DD'`)
+   *(Nota: El frontend consume la versión y fecha dinámicamente a través de `SystemHealthService` desde `/health`. NO deben existir versiones hardcodeadas ni fallbacks en archivos `.ts` o `.html` del frontend).*
+2. **En Archivos de Configuración de Paquetes (`.json`):**
+   - `package.json` raíz (`"version": "X.Y.Z"`)
+   - `backend/package.json` (`"version": "X.Y.Z"`)
+   - `frontend/package.json` (`"version": "X.Y.Z"`)
 
 ---
 

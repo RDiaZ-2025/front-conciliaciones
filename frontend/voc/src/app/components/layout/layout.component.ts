@@ -20,10 +20,10 @@ import { MenuItem as PrimeMenuItem } from 'primeng/api';
 import { AuthService } from '../../services/auth.service';
 import { MenuService, MenuItem } from '../../services/menu.service';
 import { NotificationService, Notification } from '../../services/notification.service';
-;
 import { ProductionService } from '../../services/production.service';
 import { ProductionDialogComponent } from '../../pages/production_2/production-dialog/production-dialog.component';
 import { SystemHealthModalComponent } from '../system-health-modal/system-health-modal.component';
+import { SystemHealthService } from '../../services/system-health.service';
 import { PERMISSIONS } from '../../constants/permissions';
 
 @Component({
@@ -56,6 +56,9 @@ export class LayoutComponent implements OnInit {
   private productionService = inject(ProductionService);
   private dialogService = inject(CoreDialogService);
   private router = inject(Router);
+  private healthService = inject(SystemHealthService);
+
+  appVersion = this.healthService.appVersion;
 
   menuItems = signal<MenuItem[]>([]);
   loading = signal(true);
@@ -92,6 +95,7 @@ export class LayoutComponent implements OnInit {
   ngOnInit() {
     this.fetchMenuItems();
     this.notificationService.loadNotifications();
+    this.healthService.getHealth().subscribe();
   }
 
   logout() {
