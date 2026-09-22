@@ -603,6 +603,49 @@ export class AzureStorageService extends BaseApiService {
       }
     }
 
+    // Try backend proxy download first (avoids browser CORS & expired SAS tokens)
+    try {
+      const url = `${environment.apiUrl}/storage/download?path=${encodeURIComponent(blobName)}&name=${encodeURIComponent(fileName || '')}&container=${encodeURIComponent(containerName)}`;
+      let blob: Blob;
+      if (onProgress) {
+        const req = new HttpRequest('GET', url, {
+          reportProgress: true,
+          responseType: 'blob'
+        });
+        const response: any = await firstValueFrom(
+          this.http.request(req).pipe(
+            tap(event => {
+              if (event.type === HttpEventType.DownloadProgress) {
+                const total = event.total || fileSize;
+                const percentDone = total ? Math.round(100 * event.loaded / total) : 0;
+                onProgress(percentDone);
+              }
+            }),
+            filter(event => event.type === HttpEventType.Response)
+          )
+        );
+        blob = response.body;
+      } else {
+        blob = await firstValueFrom(
+          this.http.get(url, { responseType: 'blob' })
+        );
+      }
+
+      if (blob) {
+        const objectUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = objectUrl;
+        a.download = fileName || blobName.split('?')[0].split('/').pop() || 'download';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(objectUrl);
+        return;
+      }
+    } catch (proxyError) {
+      console.warn('Backend proxy download failed, falling back to direct Azure Storage client:', proxyError);
+    }
+
     try {
       const client = await this.getClient(containerName);
 
@@ -612,6 +655,9 @@ export class AzureStorageService extends BaseApiService {
         const parts = url.pathname.split('/').filter(Boolean);
 
         resolvedBlobName = decodeURIComponent(parts.slice(1).join('/'));
+      }
+      if (resolvedBlobName.includes('?')) {
+        resolvedBlobName = resolvedBlobName.split('?')[0];
       }
 
       let blobData: Blob | undefined;

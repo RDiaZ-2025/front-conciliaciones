@@ -38,4 +38,24 @@ export class StorageController {
     downloadResult.stream.pipe(res);
     return res;
   });
+
+  downloadFile = asyncHandler(async (req: Request, res: Response) => {
+    const filePath = req.query.path as string;
+    const requestedName = (req.query.name as string) || '';
+    const containerName = (req.query.container as string) || 'private';
+
+    if (!filePath) return res.status(400).json({ message: 'Path required' });
+
+    const downloadResult = await storageService.getBlobFileDownload(filePath, containerName);
+    if (!downloadResult) {
+      return res.status(404).send('File not found or content not available');
+    }
+
+    const finalFileName = requestedName || downloadResult.fileName;
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(finalFileName)}"`);
+    res.setHeader('Content-Type', downloadResult.contentType);
+
+    downloadResult.stream.pipe(res);
+    return res;
+  });
 }

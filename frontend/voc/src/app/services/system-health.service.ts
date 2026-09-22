@@ -56,8 +56,8 @@ export class SystemHealthService extends BaseApiService {
         return of({
           success: false,
           status: 'down' as const,
-          version: '1.7.6',
-          versionDate: '2026-09-21',
+          version: '1.7.8',
+          versionDate: '2026-09-22',
           message: err.message || 'No se pudo contactar al servidor',
           timestamp: new Date().toISOString(),
           environment: 'desconocido',

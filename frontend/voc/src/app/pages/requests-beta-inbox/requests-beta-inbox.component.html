@@ -90,9 +90,9 @@
                                 <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                                 <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                     <div *ngFor="let file of getUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                        <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                        <p-button [text]="true" severity="primary" size="small" (onClick)="downloadFormFile(file)">
-                                            <lucide-icon name="download"></lucide-icon>
+                                        <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                        <p-button [text]="true" severity="primary" size="small" (click)="downloadFormFile(file, $event)" (onClick)="downloadFormFile(file, $event)" pTooltip="Descargar archivo">
+                                            <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
                                         </p-button>
                                     </div>
                                 </div>
@@ -145,9 +145,9 @@
                             <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                             <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                 <div *ngFor="let file of getUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                    <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                    <p-button [text]="true" severity="primary" size="small" (onClick)="downloadFormFile(file)">
-                                        <lucide-icon name="download"></lucide-icon>
+                                    <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                    <p-button [text]="true" severity="primary" size="small" (click)="downloadFormFile(file, $event)" (onClick)="downloadFormFile(file, $event)" pTooltip="Descargar archivo">
+                                        <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
                                     </p-button>
                                 </div>
                             </div>
@@ -215,9 +215,9 @@
                                     <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                                     <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                         <div *ngFor="let file of getUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                            <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                            <p-button [text]="true" severity="primary" size="small" (onClick)="downloadFormFile(file)">
-                                                <lucide-icon name="download"></lucide-icon>
+                                            <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                            <p-button [text]="true" severity="primary" size="small" (click)="downloadFormFile(file, $event)" (onClick)="downloadFormFile(file, $event)" pTooltip="Descargar archivo">
+                                                <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
                                             </p-button>
                                         </div>
                                     </div>
@@ -495,9 +495,9 @@
                                             <!-- Uploaded files list (for viewing/downloading) -->
                                             <div class="flex flex-column gap-1 mt-1" *ngIf="getUploadedFiles(stageFormValues[form.formId + '_' + field.name]).length > 0">
                                                 <div *ngFor="let file of getUploadedFiles(stageFormValues[form.formId + '_' + field.name])" class="flex justify-content-between align-items-center bg-blue-50 p-2 border-round text-sm border-1 border-blue-200">
-                                                    <span class="font-medium text-blue-700"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                                    <p-button [text]="true" severity="primary" size="small" (onClick)="downloadFormFile(file)">
-                                                        <lucide-icon name="download"></lucide-icon>
+                                                    <span class="font-medium text-blue-700 cursor-pointer hover:underline" (click)="downloadFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                                    <p-button [text]="true" severity="primary" size="small" (click)="downloadFormFile(file, $event)" (onClick)="downloadFormFile(file, $event)" pTooltip="Descargar archivo">
+                                                        <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
                                                     </p-button>
                                                 </div>
                                             </div>
@@ -733,9 +733,9 @@
                                         <!-- Uploaded files list (for viewing/downloading) -->
                                         <div class="flex flex-column gap-1 mt-1" *ngIf="getUploadedFiles(stageFormValues[field.name]).length > 0">
                                             <div *ngFor="let file of getUploadedFiles(stageFormValues[field.name])" class="flex justify-content-between align-items-center bg-blue-50 p-2 border-round text-sm border-1 border-blue-200">
-                                                <span class="font-medium text-blue-700"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                                <p-button [text]="true" severity="primary" size="small" (onClick)="downloadFormFile(file)">
-                                                    <lucide-icon name="download"></lucide-icon>
+                                                <span class="font-medium text-blue-700 cursor-pointer hover:underline" (click)="downloadFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                                <p-button [text]="true" severity="primary" size="small" (click)="downloadFormFile(file, $event)" (onClick)="downloadFormFile(file, $event)" pTooltip="Descargar archivo">
+                                                    <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
                                                 </p-button>
                                             </div>
                                         </div>
@@ -1149,9 +1149,9 @@
                                 <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                                 <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                     <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                        <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                        <p-button [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)">
-                                            <lucide-icon name="download"></lucide-icon>
+                                        <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                        <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
+                                            <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
                                         </p-button>
                                     </div>
                                 </div>
@@ -1204,9 +1204,9 @@
                             <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                             <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                 <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                    <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                    <p-button [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)">
-                                        <lucide-icon name="download"></lucide-icon>
+                                    <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                    <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
+                                        <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
                                     </p-button>
                                 </div>
                             </div>
@@ -1276,9 +1276,9 @@
                                     <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                                     <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                         <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                            <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                            <p-button [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)">
-                                                <lucide-icon name="download"></lucide-icon>
+                                            <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                            <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
+                                                <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
                                             </p-button>
                                         </div>
                                     </div>

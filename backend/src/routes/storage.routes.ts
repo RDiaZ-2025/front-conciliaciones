@@ -35,6 +35,9 @@ const requireCommercialAccess = (req: Request, res: Response, next: NextFunction
 // Protected by authentication middleware to ensure only authorized users can upload
 router.get('/sas-token', authenticateToken, storageController.generateSasToken);
 
+// General download endpoint for private/public blobs
+router.get('/download', authenticateToken, storageController.downloadFile);
+
 // Commercial endpoints (Proxy to avoid CORS)
 router.get('/commercial/files', authenticateToken, requireCommercialAccess, storageController.listCommercialFiles);
 router.get('/commercial/download', authenticateToken, requireCommercialAccess, storageController.downloadCommercialFile);

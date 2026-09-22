@@ -2,7 +2,8 @@ import {
   StorageSharedKeyCredential,
   generateBlobSASQueryParameters,
   ContainerSASPermissions,
-  SASProtocol
+  SASProtocol,
+  BlobServiceClient
 } from '@azure/storage-blob';
 import {
   StorageSharedKeyCredential as ShareSharedKeyCredential,
@@ -191,6 +192,64 @@ export class StorageService {
     if (!downloadResponse.readableStreamBody) {
       return null;
     }
+
+    return {
+      fileName,
+      contentType: downloadResponse.contentType || 'application/octet-stream',
+      stream: downloadResponse.readableStreamBody
+    };
+  }
+
+  /**
+   * Descarga segura de archivos Blob (privados/públicos)
+   */
+  async getBlobFileDownload(filePath: string, requestedContainer: string = 'private') {
+    const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME || 'vocprojectstorage';
+    const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY;
+
+    if (!accountKey) {
+      throw new Error('Azure Storage configuration missing');
+    }
+
+    let containerName = requestedContainer || 'private';
+    let resolvedBlobName = filePath;
+
+    if (/^https?:\/\//i.test(filePath)) {
+      try {
+        const url = new URL(filePath);
+        const parts = url.pathname.split('/').filter(Boolean);
+        if (parts.length > 1) {
+          containerName = parts[0];
+          resolvedBlobName = decodeURIComponent(parts.slice(1).join('/'));
+        } else if (parts.length === 1) {
+          resolvedBlobName = decodeURIComponent(parts[0]);
+        }
+      } catch (e) {
+        resolvedBlobName = filePath;
+      }
+    } else if (resolvedBlobName.startsWith('/')) {
+      resolvedBlobName = resolvedBlobName.substring(1);
+    }
+
+    if (resolvedBlobName.includes('?')) {
+      resolvedBlobName = resolvedBlobName.split('?')[0];
+    }
+
+    const credential = new StorageSharedKeyCredential(accountName, accountKey);
+    const blobServiceClient = new BlobServiceClient(`https://${accountName}.blob.core.windows.net`, credential);
+    const containerClient = blobServiceClient.getContainerClient(containerName);
+    const blockBlobClient = containerClient.getBlockBlobClient(resolvedBlobName);
+
+    if (!await blockBlobClient.exists()) {
+      return null;
+    }
+
+    const downloadResponse = await blockBlobClient.download();
+    if (!downloadResponse.readableStreamBody) {
+      return null;
+    }
+
+    const fileName = resolvedBlobName.split('/').pop() || 'archivo';
 
     return {
       fileName,

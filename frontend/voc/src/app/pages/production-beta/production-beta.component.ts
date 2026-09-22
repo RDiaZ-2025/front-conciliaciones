@@ -913,10 +913,8 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }
   }
 
-  downloadFormFile(file: any) {
-    if (file && file.url) {
-      window.open(file.url, '_blank');
-    }
+  downloadFormFile(file: any, event?: Event) {
+    return this.downloadStageFormFile(file, event);
   }
 
   async uploadFilesAndSubmit(currentForm: any) {
@@ -1893,19 +1891,74 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.stageTempFiles[fieldName] = current;
   }
 
-  getStageUploadedFiles(valueStr: string): any[] {
+  private downloadingFileKeys = new Set<string>();
+
+  getStageUploadedFiles(valueStr: any): any[] {
     if (!valueStr) return [];
+    if (Array.isArray(valueStr)) return valueStr;
+    if (typeof valueStr === 'object') return [valueStr];
     try {
-      const parsed = JSON.parse(valueStr);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      return [];
+      const parsed = typeof valueStr === 'string' && (valueStr.startsWith('[') || valueStr.startsWith('{')) ? JSON.parse(valueStr) : null;
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === 'object') return [parsed];
+    } catch (e) {}
+
+    if (typeof valueStr === 'string' && valueStr.trim()) {
+      const parts = valueStr.split(',');
+      return parts.map(p => {
+        const item = p.trim();
+        if (item.startsWith('http://') || item.startsWith('https://')) {
+          const fileName = decodeURIComponent(item.split('?')[0].split('/').pop() || 'archivo');
+          return { name: fileName, url: item };
+        }
+        return { name: item, url: item };
+      });
     }
+    return [];
   }
 
-  downloadStageFormFile(file: any) {
-    if (file && file.url) {
-      window.open(file.url, '_blank');
+  async downloadStageFormFile(file: any, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    if (!file) return;
+
+    const fileUrl = file.url || (typeof file === 'string' && (file.startsWith('http://') || file.startsWith('https://')) ? file : '');
+    const fileName = file.name || (fileUrl ? decodeURIComponent(fileUrl.split('?')[0].split('/').pop() || 'archivo') : (typeof file === 'string' ? file : 'archivo'));
+    const target = fileUrl || fileName;
+
+    if (this.downloadingFileKeys.has(target)) return;
+    this.downloadingFileKeys.add(target);
+
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Descargando',
+      detail: `Iniciando descarga de ${fileName}...`,
+      life: 2500
+    });
+
+    try {
+      await this.azureService.downloadSingleFile(target, fileName);
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Éxito',
+        detail: `Archivo ${fileName} descargado correctamente.`,
+        life: 3000
+      });
+    } catch (err: any) {
+      console.warn('downloadSingleFile error, trying window.open fallback:', err);
+      if (fileUrl) {
+        window.open(fileUrl, '_blank');
+      } else {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error al descargar',
+          detail: `No se pudo descargar el archivo: ${err?.message || 'Error de almacenamiento'}`
+        });
+      }
+    } finally {
+      this.downloadingFileKeys.delete(target);
     }
   }
 
@@ -1913,8 +1966,11 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     if (!value) return false;
     try {
       const parsed = JSON.parse(value);
-      return Array.isArray(parsed) && parsed.length > 0 && parsed[0].url !== undefined;
+      return Array.isArray(parsed) && parsed.length > 0 && (parsed[0].url !== undefined || parsed[0].name !== undefined);
     } catch(e) {
+      if (typeof value === 'string' && (value.includes('.blob.core.windows.net') || value.startsWith('http://') || value.startsWith('https://'))) {
+        return true;
+      }
       return false;
     }
   }

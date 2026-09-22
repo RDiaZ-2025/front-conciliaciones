@@ -167,15 +167,19 @@ export class RequestsBetaAdminComponent implements OnInit {
   ];
 
   getTeamWorkflow(teamId: number): number | null {
-    return this.formTeamWorkflows()[teamId] ?? null;
+    const wfs = this.formTeamWorkflows();
+    const val = wfs[teamId] ?? (wfs as any)[String(teamId)] ?? null;
+    return val !== null && val !== undefined ? Number(val) : null;
   }
 
-  setTeamWorkflow(teamId: number, workflowId: number | null) {
+  setTeamWorkflow(teamId: number, workflowId: any) {
     const current = { ...this.formTeamWorkflows() };
-    if (workflowId) {
-      current[teamId] = workflowId;
+    const numId = Number(teamId);
+    if (workflowId !== null && workflowId !== undefined && (workflowId as any) !== '' && !isNaN(Number(workflowId))) {
+      current[numId] = Number(workflowId);
     } else {
-      delete current[teamId];
+      delete current[numId];
+      delete (current as any)[String(teamId)];
     }
     this.formTeamWorkflows.set(current);
   }
@@ -456,7 +460,11 @@ export class RequestsBetaAdminComponent implements OnInit {
       try {
         const meta = typeof form.metadata === 'object' ? form.metadata : JSON.parse(form.metadata);
         if (meta && meta.teamWorkflows && typeof meta.teamWorkflows === 'object') {
-          teamWfs = { ...meta.teamWorkflows };
+          for (const [k, v] of Object.entries(meta.teamWorkflows)) {
+            if (v !== null && v !== undefined && v !== '') {
+              teamWfs[Number(k)] = Number(v);
+            }
+          }
         }
         if (meta && meta.closingConfig) {
           closingCfg = meta.closingConfig;
@@ -499,6 +507,20 @@ export class RequestsBetaAdminComponent implements OnInit {
         meta = {};
       }
     }
+
+    if (data.isInitialForm) {
+      const cleanWfs: { [teamId: number]: number } = {};
+      const currentWfs = this.formTeamWorkflows();
+      for (const [teamIdStr, wfId] of Object.entries(currentWfs)) {
+        if (wfId !== null && wfId !== undefined && (wfId as any) !== '' && !isNaN(Number(wfId))) {
+          cleanWfs[Number(teamIdStr)] = Number(wfId);
+        }
+      }
+      meta.teamWorkflows = cleanWfs;
+    } else {
+      delete meta.teamWorkflows;
+    }
+
     const requireClosing = this.formRequireClosingStep();
     meta.closingConfig = {
       requireClosingStep: requireClosing,
