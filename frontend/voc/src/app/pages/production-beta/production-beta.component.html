@@ -39,17 +39,16 @@
                                     [pTooltip]="task.formName">
                                     <lucide-icon [name]="getFormIcon(task)" [class]="getFormIconColor(task) + ' mr-2'"></lucide-icon>{{ task.formName }}
                                 </h3>
-                                <div class="flex align-items-center gap-1.5 flex-shrink-0">
-                                    <p-tag [severity]="isCorrection(task) ? 'danger' : 'info'" [value]="isCorrection(task) ? 'Devuelta para Corrección' : task.stageName"></p-tag>
-                                    <span class="text-xs font-mono font-bold px-2 py-0.5 border-round surface-100 text-700 border-1 surface-border flex-shrink-0"
-                                        [pTooltip]="'ID de Solicitud en BD: #' + (task.submissionId || task.id)" tooltipPosition="top">
-                                        #{{ task.submissionId || task.id }}
-                                    </span>
-                                </div>
+                                <p-tag [severity]="isCorrection(task) ? 'danger' : 'info'" [value]="isCorrection(task) ? 'Devuelta para Corrección' : task.stageName"></p-tag>
                             </div>
                         </ng-template>
 
                         <div class="flex flex-column gap-3 p-3 pt-3 flex-grow-1">
+                            <div class="flex align-items-center gap-2 text-sm text-600">
+                                <lucide-icon name="hash"></lucide-icon>
+                                <span>ID Solicitud: <strong class="font-mono text-900">#{{ task.submissionId || task.id }}</strong></span>
+                            </div>
+
                             <div class="flex align-items-center gap-2 text-sm text-600">
                                 <lucide-icon name="user"></lucide-icon>
                                 <span>Solicitante: <strong>{{ task.requesterName }}</strong></span>
@@ -106,17 +105,16 @@
                                     [pTooltip]="sub.formName">
                                     <lucide-icon [name]="getFormIcon(sub)" [class]="getFormIconColor(sub) + ' mr-2'"></lucide-icon>{{ sub.formName }}
                                 </h3>
-                                <div class="flex align-items-center gap-1.5 flex-shrink-0">
-                                    <p-tag [severity]="getStatusSeverity(sub.status)" [value]="getStatusLabel(sub.status)"></p-tag>
-                                    <span class="text-xs font-mono font-bold px-2 py-0.5 border-round surface-100 text-700 border-1 surface-border flex-shrink-0"
-                                        [pTooltip]="'ID de Solicitud en BD: #' + sub.id" tooltipPosition="top">
-                                        #{{ sub.id }}
-                                    </span>
-                                </div>
+                                <p-tag [severity]="getStatusSeverity(sub.status)" [value]="getStatusLabel(sub.status)"></p-tag>
                             </div>
                         </ng-template>
 
                         <div class="flex flex-column gap-3 p-3 pt-3 flex-grow-1">
+                            <div class="flex align-items-center gap-2 text-sm text-600">
+                                <lucide-icon name="hash"></lucide-icon>
+                                <span>ID Solicitud: <strong class="font-mono text-900">#{{ sub.id }}</strong></span>
+                            </div>
+
                             <div class="flex align-items-center gap-2 text-sm text-600">
                                 <lucide-icon name="calendar"></lucide-icon>
                                 <span>Solicitado: <strong>{{ sub.createdAt | date:'dd/MM/yyyy HH:mm' }}</strong></span>
