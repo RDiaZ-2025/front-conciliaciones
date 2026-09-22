@@ -288,8 +288,16 @@ export class DynamicFormService {
         const f = fields[i];
         let fieldEntity = existingFields.find(ef => ef.id === f.id);
 
-        const metaSanitized = f.metadata ? this.sanitizeFieldMetadata(f.metadata) : null;
-        const metaString = metaSanitized ? JSON.stringify(metaSanitized) : null;
+        let metaObj: any = f.metadata;
+        if (typeof metaObj === 'string') {
+          try { metaObj = JSON.parse(metaObj); } catch (e) { metaObj = {}; }
+        }
+        if (!metaObj || typeof metaObj !== 'object') metaObj = {};
+        if ((f as any).showInCard !== undefined) {
+          metaObj.showInCard = !!(f as any).showInCard;
+        }
+        const metaSanitized = this.sanitizeFieldMetadata(metaObj);
+        const metaString = metaSanitized && Object.keys(metaSanitized).length > 0 ? JSON.stringify(metaSanitized) : null;
 
         if (!fieldEntity) {
           fieldEntity = fieldRepo.create({
@@ -317,7 +325,7 @@ export class DynamicFormService {
           if (f.isActive !== undefined) fieldEntity.isActive = f.isActive;
           if (f.defaultValueExpression !== undefined) fieldEntity.defaultValueExpression = f.defaultValueExpression;
           if (f.displayOrder !== undefined) fieldEntity.displayOrder = f.displayOrder;
-          if (f.metadata !== undefined) fieldEntity.metadata = metaString;
+          if (f.metadata !== undefined || (f as any).showInCard !== undefined) fieldEntity.metadata = metaString;
         }
 
         savedFields.push(await fieldRepo.save(fieldEntity));

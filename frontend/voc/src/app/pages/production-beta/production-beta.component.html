@@ -49,6 +49,14 @@
                                 <span>ID Solicitud: <strong class="font-mono text-900">#{{ task.submissionId || task.id }}</strong></span>
                             </div>
 
+                            <!-- Campos configurados para mostrarse en tarjeta -->
+                            <ng-container *ngIf="task.cardFields && task.cardFields.length > 0">
+                                <div *ngFor="let cf of task.cardFields" class="flex align-items-center gap-2 text-sm text-600">
+                                    <lucide-icon name="tag" class="text-primary" style="width: 1rem; height: 1rem;"></lucide-icon>
+                                    <span>{{ cf.label }}: <strong class="text-900">{{ formatCardValue(cf) }}</strong></span>
+                                </div>
+                            </ng-container>
+
                             <div class="flex align-items-center gap-2 text-sm text-600">
                                 <lucide-icon name="user"></lucide-icon>
                                 <span>Solicitante: <strong>{{ task.requesterName }}</strong></span>
@@ -114,6 +122,14 @@
                                 <lucide-icon name="hash"></lucide-icon>
                                 <span>ID Solicitud: <strong class="font-mono text-900">#{{ sub.id }}</strong></span>
                             </div>
+
+                            <!-- Campos configurados para mostrarse en tarjeta -->
+                            <ng-container *ngIf="sub.cardFields && sub.cardFields.length > 0">
+                                <div *ngFor="let cf of sub.cardFields" class="flex align-items-center gap-2 text-sm text-600">
+                                    <lucide-icon name="tag" class="text-primary" style="width: 1rem; height: 1rem;"></lucide-icon>
+                                    <span>{{ cf.label }}: <strong class="text-900">{{ formatCardValue(cf) }}</strong></span>
+                                </div>
+                            </ng-container>
 
                             <div class="flex align-items-center gap-2 text-sm text-600">
                                 <lucide-icon name="calendar"></lucide-icon>

@@ -722,6 +722,7 @@
                             </th>
                             <th class="text-center" style="width: 4rem;">Req</th>
                             <th class="text-center" style="width: 4rem;">Lec</th>
+                            <th class="text-center" style="width: 4rem;" pTooltip="Mostrar en Tarjeta (Aprobaciones e Historial)" tooltipPosition="top">Tarj</th>
                             <th class="text-center" style="width: 4rem;">Elim</th>
                         </tr>
                     </ng-template>
@@ -793,6 +794,9 @@
                             </td>
                             <td class="text-center" [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
                                 <p-checkbox [(ngModel)]="field.isReadOnly" [binary]="true" [disabled]="!field.isActive || field.type === 'section_header'"></p-checkbox>
+                            </td>
+                            <td class="text-center" [class.opacity-60]="!field.isActive" [class.surface-100]="!field.isActive">
+                                <p-checkbox [(ngModel)]="field.showInCard" [binary]="true" [disabled]="!field.isActive || field.type === 'section_header'" [pTooltip]="'Mostrar en tarjeta'"></p-checkbox>
                             </td>
                             <td class="text-center">
                                 <div class="flex justify-content-center gap-1">

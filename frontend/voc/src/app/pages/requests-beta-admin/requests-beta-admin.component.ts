@@ -34,6 +34,7 @@ interface FormFieldItem {
   placeholder: string;
   isRequired: boolean;
   isReadOnly: boolean;
+  showInCard: boolean;
   isActive: boolean;
   defaultValueExpression: string;
   displayOrder: number;
@@ -656,6 +657,7 @@ export class RequestsBetaAdminComponent implements OnInit {
             placeholder: f.placeholder || '',
             isRequired: !!f.isRequired,
             isReadOnly: !!f.isReadOnly,
+            showInCard: !!(meta?.showInCard || (f as any).showInCard),
             isActive: f.isActive !== false,
             defaultValueExpression: f.defaultValueExpression || '',
             displayOrder: f.displayOrder,
@@ -679,6 +681,7 @@ export class RequestsBetaAdminComponent implements OnInit {
         placeholder: '',
         isRequired: false,
         isReadOnly: false,
+        showInCard: false,
         isActive: true,
         defaultValueExpression: '',
         displayOrder: currentFields.length + 1,
@@ -1099,6 +1102,8 @@ export class RequestsBetaAdminComponent implements OnInit {
       if (!f.name.trim()) {
         f.name = f.label.toLowerCase().replace(/[^a-z0-9]/g, '_');
       }
+      if (!f.metadata) f.metadata = {};
+      f.metadata.showInCard = !!f.showInCard;
     }
 
     this.productionService.adminSaveFields(form.id, fields).subscribe({

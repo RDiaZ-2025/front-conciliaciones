@@ -673,6 +673,13 @@ export class ProductionService {
             relations: ['assignedUser', 'stage', 'stage.workflow', 'submission', 'submission.form']
         }) : [];
 
+        const valRepo = AppDataSource.getRepository(DynamicFormFieldValue);
+        const allValues = allTreeIds.size > 0 ? await valRepo.find({
+            where: { submissionId: In(Array.from(allTreeIds)) },
+            relations: ['field', 'field.form'],
+            order: { id: 'ASC' }
+        }) : [];
+
         const getDescendantIds = (rootId: number): Set<number> => {
             const ids = new Set<number>([rootId]);
             let added = true;
@@ -690,6 +697,9 @@ export class ProductionService {
 
         const results = mainSubmissions.map((sub) => {
             const treeSubIds = getDescendantIds(sub.id);
+            if (sub.parentSubmissionId) {
+                treeSubIds.add(sub.parentSubmissionId);
+            }
             const activeStatesForThisSub = allActiveStates.filter(s => treeSubIds.has(s.submissionId));
 
             let assigneeName = 'Sin Asignar';
@@ -730,6 +740,29 @@ export class ProductionService {
                 }
             }
 
+            const subValues = allValues.filter(v => treeSubIds.has(v.submissionId));
+            const cardFieldsMap = new Map<number, { label: string; value: string; fieldType: string; metadata?: any; displayOrder: number }>();
+            for (const v of subValues) {
+                if (v && v.field && v.value !== undefined && v.value !== null && v.value !== '') {
+                    let parsedMeta: any = v.field.metadata;
+                    if (parsedMeta && typeof parsedMeta === 'string') {
+                        try { parsedMeta = JSON.parse(parsedMeta); } catch (e) {}
+                    }
+                    if (parsedMeta && (parsedMeta.showInCard === true || parsedMeta.showInCard === 'true')) {
+                        cardFieldsMap.set(v.field.id, {
+                            label: v.field.label,
+                            value: v.value,
+                            fieldType: v.field.type,
+                            metadata: parsedMeta,
+                            displayOrder: v.field.displayOrder ?? 0
+                        });
+                    }
+                }
+            }
+            const cardFields = Array.from(cardFieldsMap.values())
+                .sort((a, b) => a.displayOrder - b.displayOrder)
+                .map(cf => ({ label: cf.label, value: cf.value, fieldType: cf.fieldType, metadata: cf.metadata }));
+
             return {
                 id: sub.id,
                 formName: sub.form ? sub.form.name : 'Solicitud',
@@ -739,7 +772,8 @@ export class ProductionService {
                 assigneeName,
                 assigneeEmail,
                 consecutive: sub.consecutive,
-                icon: sub.form ? sub.form.icon : undefined
+                icon: sub.form ? sub.form.icon : undefined,
+                cardFields
             };
         });
 
@@ -1958,6 +1992,28 @@ export class ProductionService {
                 }
             }
 
+            const cardFieldsMap = new Map<number, { label: string; value: string; fieldType: string; metadata?: any; displayOrder: number }>();
+            for (const v of allValuesToInclude) {
+                if (v && v.field && v.value !== undefined && v.value !== null && v.value !== '') {
+                    let parsedMeta: any = v.field.metadata;
+                    if (parsedMeta && typeof parsedMeta === 'string') {
+                        try { parsedMeta = JSON.parse(parsedMeta); } catch (e) {}
+                    }
+                    if (parsedMeta && (parsedMeta.showInCard === true || parsedMeta.showInCard === 'true')) {
+                        cardFieldsMap.set(v.field.id, {
+                            label: v.field.label,
+                            value: v.value,
+                            fieldType: v.field.type,
+                            metadata: parsedMeta,
+                            displayOrder: v.field.displayOrder ?? 0
+                        });
+                    }
+                }
+            }
+            const cardFields = Array.from(cardFieldsMap.values())
+                .sort((a, b) => a.displayOrder - b.displayOrder)
+                .map(cf => ({ label: cf.label, value: cf.value, fieldType: cf.fieldType, metadata: cf.metadata }));
+
             results.push({
                 id: state.submissionId,
                 stateId: state.id,
@@ -1968,6 +2024,7 @@ export class ProductionService {
                 submissionStatus: state.submission.status,
                 rejectionNotes,
                 formName: state.submission.form.name,
+                cardFields,
                 requesterName: state.submission.requesterUser ? state.submission.requesterUser.name : 'Usuario',
                 requesterEmail: state.submission.requesterUser ? state.submission.requesterUser.email : '',
                 createdAt: state.submission.createdAt,

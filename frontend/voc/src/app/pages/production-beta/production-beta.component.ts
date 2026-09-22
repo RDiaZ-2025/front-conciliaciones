@@ -1479,6 +1479,26 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     return rawValue;
   }
 
+  formatCardValue(cf: any): string {
+    if (!cf || cf.value === undefined || cf.value === null || cf.value === '') return '';
+    const raw = String(cf.value).trim();
+    if ((raw.startsWith('[') && raw.endsWith(']')) || (raw.startsWith('{') && raw.endsWith('}'))) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          if (parsed.length > 0 && parsed[0]?.name && (parsed[0]?.url || parsed[0]?.size)) {
+            return parsed.map((f: any) => f.name).join(', ');
+          }
+          if (parsed.length > 0 && typeof parsed[0] === 'object') {
+            return `${parsed.length} ítem(s)`;
+          }
+          return parsed.join(', ');
+        }
+      } catch (e) {}
+    }
+    return this.formatValue(cf);
+  }
+
   toNumber(val: any): number | null {
     if (val === undefined || val === null || String(val).trim() === '') return null;
     const num = Number(val);
