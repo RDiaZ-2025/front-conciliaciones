@@ -1959,6 +1959,7 @@ export class ProductionService {
             }
 
             results.push({
+                id: state.submissionId,
                 stateId: state.id,
                 submissionId: state.submissionId,
                 parentSubmissionId: state.submission.parentSubmissionId,

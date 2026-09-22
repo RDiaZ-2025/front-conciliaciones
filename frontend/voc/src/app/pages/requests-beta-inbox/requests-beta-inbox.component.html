@@ -18,7 +18,13 @@
                     <div class="flex justify-content-between align-items-start p-3 pb-0">
                         <h3 class="text-xl font-bold m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap flex-1 mr-2"
                             [pTooltip]="task.formName">{{ task.formName }}</h3>
-                        <p-tag [severity]="isCorrection(task) ? 'danger' : 'info'" [value]="isCorrection(task) ? 'Devuelta para Corrección' : task.stageName"></p-tag>
+                        <div class="flex align-items-center gap-1.5 flex-shrink-0">
+                            <p-tag [severity]="isCorrection(task) ? 'danger' : 'info'" [value]="isCorrection(task) ? 'Devuelta para Corrección' : task.stageName"></p-tag>
+                            <span class="text-xs font-mono font-bold px-2 py-0.5 border-round surface-100 text-700 border-1 surface-border flex-shrink-0"
+                                [pTooltip]="'ID de Solicitud en BD: #' + (task.submissionId || task.id)" tooltipPosition="top">
+                                #{{ task.submissionId || task.id }}
+                            </span>
+                        </div>
                     </div>
                 </ng-template>
 
@@ -1077,7 +1083,13 @@
                                 [pTooltip]="sub.formName">
                                 <lucide-icon [name]="getFormIcon(sub)" [class]="getFormIconColor(sub) + ' mr-2'"></lucide-icon>{{ sub.formName }}
                             </h3>
-                            <p-tag [severity]="getStatusSeverity(sub.status)" [value]="getStatusLabel(sub.status)"></p-tag>
+                            <div class="flex align-items-center gap-1.5 flex-shrink-0">
+                                <p-tag [severity]="getStatusSeverity(sub.status)" [value]="getStatusLabel(sub.status)"></p-tag>
+                                <span class="text-xs font-mono font-bold px-2 py-0.5 border-round surface-100 text-700 border-1 surface-border flex-shrink-0"
+                                    [pTooltip]="'ID de Solicitud en BD: #' + sub.id" tooltipPosition="top">
+                                    #{{ sub.id }}
+                                </span>
+                            </div>
                         </div>
                     </ng-template>
 
