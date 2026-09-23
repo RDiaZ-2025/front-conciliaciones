@@ -649,7 +649,7 @@ export class ProductionService {
 
         let submissions = await subRepo.find({
             where: { id: In(Array.from(allTreeIds)) },
-            relations: ['form', 'currentStage', 'workflow'],
+            relations: ['form', 'currentStage', 'workflow', 'requesterUser'],
             order: { createdAt: 'DESC' }
         });
 
@@ -769,6 +769,8 @@ export class ProductionService {
                 createdAt: sub.createdAt,
                 stageName: displayStageName,
                 status: sub.status,
+                requesterName: (sub as any).requesterUser ? (sub as any).requesterUser.name : (sub.requesterUserId ? `Usuario #${sub.requesterUserId}` : 'Usuario'),
+                requesterEmail: (sub as any).requesterUser ? (sub as any).requesterUser.email : '',
                 assigneeName,
                 assigneeEmail,
                 consecutive: sub.consecutive,

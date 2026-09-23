@@ -46,6 +46,7 @@ import { AssignImplementationDialogComponent } from '../production_2/assign-impl
 import { MaterialRegisterListDialogComponent } from '../production_2/material-register-list-dialog/material-register-list-dialog.component';
 
 import { CustomerAutocompleteComponent } from '../../components/customer-autocomplete/customer-autocomplete.component';
+import { DatePickerModule } from 'primeng/datepicker';
 
 @Component({
   selector: 'app-production-beta',
@@ -72,6 +73,7 @@ import { CustomerAutocompleteComponent } from '../../components/customer-autocom
     SelectModule,
     MultiSelectModule,
     InputNumberModule,
+    DatePickerModule,
     FormsModule,
     CustomerAutocompleteComponent
   ],
@@ -91,7 +93,51 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
   requests = signal<ProductionRequest[]>([]);
   dynamicSubmissions = signal<any[]>([]);
-  sortedAllSubmissions = computed(() => {
+
+  // --- Filtros Integrales (Aprobaciones e Historial) ---
+  filterSearch = signal<string>('');
+  filterSelectedForms = signal<string[]>([]);
+  filterStatus = signal<string>('all');
+  filterDatePreset = signal<string>('all');
+  filterDateFrom = signal<Date | null>(null);
+  filterDateTo = signal<Date | null>(null);
+  filterRequester = signal<string>('');
+  showAdvancedFilters = signal<boolean>(false);
+
+  statusOptions = [
+    { label: 'Todos los estados', value: 'all' },
+    { label: 'Pendientes de mi Aprobación', value: 'pending_me' },
+    { label: 'En Proceso', value: 'in_progress' },
+    { label: 'Aprobadas / Completadas', value: 'completed' },
+    { label: 'Devueltas para Corrección', value: 'rejected' }
+  ];
+
+  datePresetOptions = [
+    { label: 'Cualquier fecha', value: 'all' },
+    { label: 'Hoy', value: 'today' },
+    { label: 'Últimos 7 días', value: 'week' },
+    { label: 'Este mes', value: 'month' },
+    { label: 'Personalizado (Rango)', value: 'custom' }
+  ];
+
+  activeFiltersCount = computed(() => {
+    let count = 0;
+    if (this.filterSearch().trim()) count++;
+    if (this.filterSelectedForms().length > 0) count++;
+    if (this.filterStatus() !== 'all') count++;
+    if (this.filterDatePreset() !== 'all') count++;
+    if (this.filterRequester().trim()) count++;
+    return count;
+  });
+
+  availableFormOptions = computed(() => {
+    const set = new Set<string>();
+    (this.pendingTasks() || []).forEach(t => { if (t.formName) set.add(t.formName); });
+    (this.dynamicSubmissions() || []).forEach(s => { if (s.formName) set.add(s.formName); });
+    return Array.from(set).sort().map(name => ({ label: name, value: name }));
+  });
+
+  baseHistorySubmissions = computed(() => {
     const pendingSubmissionIds = new Set<number>();
     (this.pendingTasks() || []).forEach(t => {
       if (t.submissionId) pendingSubmissionIds.add(t.submissionId);
@@ -111,6 +157,154 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   });
+
+  displayedPendingTasks = computed(() => {
+    const tasks = this.pendingTasks() || [];
+    const query = this.filterSearch();
+    const forms = this.filterSelectedForms();
+    const status = this.filterStatus();
+    const datePreset = this.filterDatePreset();
+    const dateFrom = this.filterDateFrom();
+    const dateTo = this.filterDateTo();
+    const requester = this.filterRequester();
+
+    return tasks.filter(t => this.matchesFilter(t, true, query, forms, status, datePreset, dateFrom, dateTo, requester));
+  });
+
+  displayedSubmissions = computed(() => {
+    const subs = this.baseHistorySubmissions();
+    const query = this.filterSearch();
+    const forms = this.filterSelectedForms();
+    const status = this.filterStatus();
+    const datePreset = this.filterDatePreset();
+    const dateFrom = this.filterDateFrom();
+    const dateTo = this.filterDateTo();
+    const requester = this.filterRequester();
+
+    return subs.filter(s => this.matchesFilter(s, false, query, forms, status, datePreset, dateFrom, dateTo, requester));
+  });
+
+  // Alias retrocompatible con sortedAllSubmissions
+  sortedAllSubmissions = computed(() => this.displayedSubmissions());
+
+  clearAllFilters() {
+    this.filterSearch.set('');
+    this.filterSelectedForms.set([]);
+    this.filterStatus.set('all');
+    this.filterDatePreset.set('all');
+    this.filterDateFrom.set(null);
+    this.filterDateTo.set(null);
+    this.filterRequester.set('');
+  }
+
+  onDatePresetChange(preset: string) {
+    this.filterDatePreset.set(preset);
+    if (preset !== 'custom') {
+      this.filterDateFrom.set(null);
+      this.filterDateTo.set(null);
+    }
+  }
+
+  private matchesFilter(
+    item: any,
+    isPendingTask: boolean,
+    query: string,
+    selectedForms: string[],
+    status: string,
+    datePreset: string,
+    dateFrom: Date | null,
+    dateTo: Date | null,
+    requester: string
+  ): boolean {
+    // 1. Filtro de Estado
+    if (status !== 'all') {
+      if (isPendingTask) {
+        if (status === 'completed') return false;
+        if (status === 'rejected' && !this.isCorrection(item)) return false;
+        if (status === 'in_progress' && this.isCorrection(item)) return false;
+      } else {
+        if (status === 'pending_me') return false;
+        const st = (item.status || '').toLowerCase();
+        if (status === 'completed' && st !== 'completed' && st !== 'approved') return false;
+        if (status === 'in_progress' && st !== 'in progress' && st !== 'in_progress') return false;
+        if (status === 'rejected' && st !== 'rejected') return false;
+      }
+    }
+
+    // 2. Filtro de Formularios
+    if (selectedForms && selectedForms.length > 0) {
+      if (!selectedForms.includes(item.formName)) return false;
+    }
+
+    // 3. Filtro de Solicitante
+    if (requester && requester.trim()) {
+      const reqQuery = requester.toLowerCase().trim();
+      const reqName = (item.requesterName || '').toLowerCase();
+      const reqEmail = (item.requesterEmail || '').toLowerCase();
+      if (!reqName.includes(reqQuery) && !reqEmail.includes(reqQuery)) return false;
+    }
+
+    // 4. Filtro de Fechas
+    if (datePreset !== 'all') {
+      const itemDate = new Date(item.createdAt);
+      if (!isNaN(itemDate.getTime())) {
+        const now = new Date();
+        if (datePreset === 'today') {
+          const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          if (itemDate < startOfToday) return false;
+        } else if (datePreset === 'week') {
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          if (itemDate < weekAgo) return false;
+        } else if (datePreset === 'month') {
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          if (itemDate < startOfMonth) return false;
+        } else if (datePreset === 'custom') {
+          if (dateFrom) {
+            const start = new Date(dateFrom);
+            start.setHours(0, 0, 0, 0);
+            if (itemDate < start) return false;
+          }
+          if (dateTo) {
+            const end = new Date(dateTo);
+            end.setHours(23, 59, 59, 999);
+            if (itemDate > end) return false;
+          }
+        }
+      }
+    }
+
+    // 5. Búsqueda de texto libre global
+    if (query && query.trim()) {
+      const cleanQ = query.toLowerCase().trim();
+      const rawId = String(item.id || item.submissionId || '');
+      if (cleanQ.startsWith('#')) {
+        const numQ = cleanQ.replace('#', '').trim();
+        if (rawId === numQ || rawId.includes(numQ)) return true;
+      } else {
+        if (rawId === cleanQ || rawId.includes(cleanQ)) return true;
+      }
+
+      if (item.formName && item.formName.toLowerCase().includes(cleanQ)) return true;
+      if (item.consecutive && item.consecutive.toLowerCase().includes(cleanQ)) return true;
+      if (item.requesterName && item.requesterName.toLowerCase().includes(cleanQ)) return true;
+      if (item.requesterEmail && item.requesterEmail.toLowerCase().includes(cleanQ)) return true;
+      if (item.assigneeName && item.assigneeName.toLowerCase().includes(cleanQ)) return true;
+      if (item.stageName && item.stageName.toLowerCase().includes(cleanQ)) return true;
+
+      // Buscar en campos dinámicos de la tarjeta
+      if (Array.isArray(item.cardFields) && item.cardFields.length > 0) {
+        for (const cf of item.cardFields) {
+          if (cf.label && cf.label.toLowerCase().includes(cleanQ)) return true;
+          const formattedVal = this.formatCardValue(cf);
+          if (formattedVal && String(formattedVal).toLowerCase().includes(cleanQ)) return true;
+        }
+      }
+
+      return false;
+    }
+
+    return true;
+  }
 
   pendingTasks = signal<any[]>([]);
   loadingTasks = signal<boolean>(false);
