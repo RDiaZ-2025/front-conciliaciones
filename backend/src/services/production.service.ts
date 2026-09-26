@@ -617,7 +617,17 @@ export class ProductionService {
         });
     }
 
-    async getSubmissions(userId: number) {
+    async getSubmissions(userId: number, options?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        forms?: string[];
+        status?: string;
+        dateFrom?: string;
+        dateTo?: string;
+        requester?: string;
+        excludePendingForUser?: boolean;
+    }) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const stateRepo = AppDataSource.getRepository(DynamicSubmissionWorkflowState);
         const subRepo = AppDataSource.getRepository(DynamicFormSubmission);
@@ -638,7 +648,7 @@ export class ProductionService {
         userCreatedSubs.forEach(s => directSubIds.add(s.id));
 
         if (directSubIds.size === 0) {
-            return [];
+            return options?.page || options?.limit ? { data: [], total: 0, page: options?.page || 1, limit: options?.limit || 12, totalPages: 0 } : [];
         }
 
         const allTreeIds = new Set<number>();
@@ -668,17 +678,114 @@ export class ProductionService {
             return !isEntryContainer && !isInternalSubflow;
         });
 
-        const allActiveStates = allTreeIds.size > 0 ? await stateRepo.find({
-            where: { submissionId: In(Array.from(allTreeIds)), status: 'Pending' },
-            relations: ['assignedUser', 'stage', 'stage.workflow', 'submission', 'submission.form']
-        }) : [];
+        // 1. Excluir solicitudes que tienen tareas pendientes asignadas al usuario para evitar duplicidad
+        let candidateSubmissions = mainSubmissions;
+        if (options?.excludePendingForUser !== false) {
+            const userPendingStates = await stateRepo.find({
+                where: { assignedUserId: userId, status: 'Pending' },
+                select: ['submissionId']
+            });
+            const pendingSubIds = new Set<number>();
+            for (const ps of userPendingStates) {
+                if (ps.submissionId) {
+                    pendingSubIds.add(ps.submissionId);
+                    const tree = await this.getSubmissionTreeIds(ps.submissionId);
+                    tree.forEach(id => pendingSubIds.add(id));
+                }
+            }
+            candidateSubmissions = candidateSubmissions.filter(s => !pendingSubIds.has(s.id) && !(s.parentSubmissionId && pendingSubIds.has(s.parentSubmissionId)));
+        }
 
-        const valRepo = AppDataSource.getRepository(DynamicFormFieldValue);
-        const allValues = allTreeIds.size > 0 ? await valRepo.find({
-            where: { submissionId: In(Array.from(allTreeIds)) },
-            relations: ['field', 'field.form'],
-            order: { id: 'ASC' }
-        }) : [];
+        // 2. Ordenar: Activas primero, luego fecha descendente
+        candidateSubmissions.sort((a, b) => {
+            const aActive = a.status !== 'Completed' && a.status !== 'Approved';
+            const bActive = b.status !== 'Completed' && b.status !== 'Approved';
+            if (aActive && !bActive) return -1;
+            if (!aActive && bActive) return 1;
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+
+        // 3. Aplicar Filtro de Formularios
+        if (options?.forms && options.forms.length > 0) {
+            const formSet = new Set(options.forms.map(f => f.toLowerCase().trim()));
+            candidateSubmissions = candidateSubmissions.filter(s => s.form && formSet.has(s.form.name.toLowerCase().trim()));
+        }
+
+        // 4. Aplicar Filtro de Estado
+        if (options?.status && options.status !== 'all') {
+            const st = options.status.toLowerCase().trim();
+            candidateSubmissions = candidateSubmissions.filter(s => {
+                const subSt = (s.status || '').toLowerCase();
+                if (st === 'completed') return subSt === 'completed' || subSt === 'approved';
+                if (st === 'in_progress') return subSt === 'in progress' || subSt === 'in_progress';
+                if (st === 'rejected') return subSt === 'rejected';
+                return true;
+            });
+        }
+
+        // 5. Aplicar Filtro de Solicitante
+        if (options?.requester && options.requester.trim()) {
+            const reqQ = options.requester.toLowerCase().trim();
+            candidateSubmissions = candidateSubmissions.filter(s => {
+                const name = (s.requesterUser?.name || '').toLowerCase();
+                const email = (s.requesterUser?.email || '').toLowerCase();
+                return name.includes(reqQ) || email.includes(reqQ);
+            });
+        }
+
+        // 6. Aplicar Filtro de Fechas
+        if (options?.dateFrom) {
+            const from = new Date(options.dateFrom);
+            if (!isNaN(from.getTime())) {
+                from.setHours(0, 0, 0, 0);
+                candidateSubmissions = candidateSubmissions.filter(s => new Date(s.createdAt) >= from);
+            }
+        }
+        if (options?.dateTo) {
+            const to = new Date(options.dateTo);
+            if (!isNaN(to.getTime())) {
+                to.setHours(23, 59, 59, 999);
+                candidateSubmissions = candidateSubmissions.filter(s => new Date(s.createdAt) <= to);
+            }
+        }
+
+        // 7. Aplicar Búsqueda Global (ID, consecutivo, nombre formulario, etapa, solicitante, y campos de tarjeta)
+        if (options?.search && options.search.trim()) {
+            const cleanQ = options.search.toLowerCase().trim();
+            const isHashId = cleanQ.startsWith('#');
+            const searchNum = isHashId ? cleanQ.replace('#', '').trim() : cleanQ;
+
+            const candidateIds = candidateSubmissions.map(s => s.id);
+            let subIdsWithMatchingValues = new Set<number>();
+            if (candidateIds.length > 0) {
+                const matchingVals = await AppDataSource.getRepository(DynamicFormFieldValue)
+                    .createQueryBuilder('val')
+                    .where('LOWER(val.value) LIKE :q', { q: `%${cleanQ}%` })
+                    .andWhere('val.submissionId IN (:...ids)', { ids: candidateIds })
+                    .select('val.submissionId', 'submissionId')
+                    .getRawMany();
+                matchingVals.forEach(m => subIdsWithMatchingValues.add(m.submissionId));
+            }
+
+            candidateSubmissions = candidateSubmissions.filter(s => {
+                const idStr = String(s.id);
+                if (idStr === searchNum || idStr.includes(searchNum)) return true;
+                if (s.form?.name && s.form.name.toLowerCase().includes(cleanQ)) return true;
+                if (s.consecutive && s.consecutive.toLowerCase().includes(cleanQ)) return true;
+                if (s.requesterUser?.name && s.requesterUser.name.toLowerCase().includes(cleanQ)) return true;
+                if (s.requesterUser?.email && s.requesterUser.email.toLowerCase().includes(cleanQ)) return true;
+                if (s.currentStage?.name && s.currentStage.name.toLowerCase().includes(cleanQ)) return true;
+                if (subIdsWithMatchingValues.has(s.id)) return true;
+                return false;
+            });
+        }
+
+        const total = candidateSubmissions.length;
+        const page = options?.page ? Math.max(1, options.page) : 1;
+        const limit = options?.limit ? Math.max(1, options.limit) : 12;
+        const pagedSubmissions = (options?.page || options?.limit)
+            ? candidateSubmissions.slice((page - 1) * limit, page * limit)
+            : candidateSubmissions;
 
         const getDescendantIds = (rootId: number): Set<number> => {
             const ids = new Set<number>([rootId]);
@@ -695,7 +802,26 @@ export class ProductionService {
             return ids;
         };
 
-        const results = mainSubmissions.map((sub) => {
+        const pagedTreeIds = new Set<number>();
+        for (const sub of pagedSubmissions) {
+            const tree = getDescendantIds(sub.id);
+            tree.forEach(id => pagedTreeIds.add(id));
+            if (sub.parentSubmissionId) pagedTreeIds.add(sub.parentSubmissionId);
+        }
+
+        const allActiveStates = pagedTreeIds.size > 0 ? await stateRepo.find({
+            where: { submissionId: In(Array.from(pagedTreeIds)), status: 'Pending' },
+            relations: ['assignedUser', 'stage', 'stage.workflow', 'submission', 'submission.form']
+        }) : [];
+
+        const valRepo = AppDataSource.getRepository(DynamicFormFieldValue);
+        const allValues = pagedTreeIds.size > 0 ? await valRepo.find({
+            where: { submissionId: In(Array.from(pagedTreeIds)) },
+            relations: ['field', 'field.form'],
+            order: { id: 'ASC' }
+        }) : [];
+
+        const results = pagedSubmissions.map((sub) => {
             const treeSubIds = getDescendantIds(sub.id);
             if (sub.parentSubmissionId) {
                 treeSubIds.add(sub.parentSubmissionId);
@@ -778,6 +904,16 @@ export class ProductionService {
                 cardFields
             };
         });
+
+        if (options?.page || options?.limit) {
+            return {
+                data: results,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            };
+        }
 
         return results;
     }
@@ -1662,7 +1798,16 @@ export class ProductionService {
         return this.adminSaveWorkflowStages(formId, stages);
     }
 
-    async getPendingApprovals(userId: number) {
+    async getPendingApprovals(userId: number, options?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        forms?: string[];
+        status?: string;
+        dateFrom?: string;
+        dateTo?: string;
+        requester?: string;
+    }) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const stateRepo = AppDataSource.getRepository(DynamicSubmissionWorkflowState);
 
@@ -1674,12 +1819,94 @@ export class ProductionService {
 
         states = states.filter(s => s.submission && (s.submission.status === 'In Progress' || s.submission.status === 'Rejected'));
 
+        // 1. Filtro de Formularios
+        if (options?.forms && options.forms.length > 0) {
+            const formSet = new Set(options.forms.map(f => f.toLowerCase().trim()));
+            states = states.filter(s => s.submission?.form && formSet.has(s.submission.form.name.toLowerCase().trim()));
+        }
+
+        // 2. Filtro de Estado
+        if (options?.status && options.status !== 'all') {
+            const st = options.status.toLowerCase().trim();
+            states = states.filter(s => {
+                const subSt = (s.submission?.status || '').toLowerCase();
+                if (st === 'completed') return false;
+                if (st === 'in_progress') return subSt === 'in progress' || subSt === 'in_progress';
+                if (st === 'rejected') return subSt === 'rejected';
+                return true;
+            });
+        }
+
+        // 3. Filtro de Solicitante
+        if (options?.requester && options.requester.trim()) {
+            const reqQ = options.requester.toLowerCase().trim();
+            states = states.filter(s => {
+                const name = (s.submission?.requesterUser?.name || '').toLowerCase();
+                const email = (s.submission?.requesterUser?.email || '').toLowerCase();
+                return name.includes(reqQ) || email.includes(reqQ);
+            });
+        }
+
+        // 4. Filtro de Fechas
+        if (options?.dateFrom) {
+            const from = new Date(options.dateFrom);
+            if (!isNaN(from.getTime())) {
+                from.setHours(0, 0, 0, 0);
+                states = states.filter(s => new Date(s.createdAt) >= from || (s.submission?.createdAt && new Date(s.submission.createdAt) >= from));
+            }
+        }
+        if (options?.dateTo) {
+            const to = new Date(options.dateTo);
+            if (!isNaN(to.getTime())) {
+                to.setHours(23, 59, 59, 999);
+                states = states.filter(s => new Date(s.createdAt) <= to || (s.submission?.createdAt && new Date(s.submission.createdAt) <= to));
+            }
+        }
+
+        // 5. Búsqueda Global (ID, consecutivo, nombre formulario, etapa, solicitante, y campos de formulario)
+        if (options?.search && options.search.trim()) {
+            const cleanQ = options.search.toLowerCase().trim();
+            const isHashId = cleanQ.startsWith('#');
+            const searchNum = isHashId ? cleanQ.replace('#', '').trim() : cleanQ;
+
+            const subIds = states.map(s => s.submissionId).filter(Boolean);
+            let subIdsWithMatchingValues = new Set<number>();
+            if (subIds.length > 0) {
+                const matchingVals = await AppDataSource.getRepository(DynamicFormFieldValue)
+                    .createQueryBuilder('val')
+                    .where('LOWER(val.value) LIKE :q', { q: `%${cleanQ}%` })
+                    .andWhere('val.submissionId IN (:...ids)', { ids: subIds })
+                    .select('val.submissionId', 'submissionId')
+                    .getRawMany();
+                matchingVals.forEach(m => subIdsWithMatchingValues.add(m.submissionId));
+            }
+
+            states = states.filter(s => {
+                const idStr = String(s.submissionId);
+                if (idStr === searchNum || idStr.includes(searchNum)) return true;
+                if (s.submission?.form?.name && s.submission.form.name.toLowerCase().includes(cleanQ)) return true;
+                if (s.submission?.consecutive && s.submission.consecutive.toLowerCase().includes(cleanQ)) return true;
+                if (s.submission?.requesterUser?.name && s.submission.requesterUser.name.toLowerCase().includes(cleanQ)) return true;
+                if (s.submission?.requesterUser?.email && s.submission.requesterUser.email.toLowerCase().includes(cleanQ)) return true;
+                if (s.stage?.name && s.stage.name.toLowerCase().includes(cleanQ)) return true;
+                if (subIdsWithMatchingValues.has(s.submissionId)) return true;
+                return false;
+            });
+        }
+
+        const total = states.length;
+        const page = options?.page ? Math.max(1, options.page) : 1;
+        const limit = options?.limit ? Math.max(1, options.limit) : 4;
+        const pagedStates = (options?.page || options?.limit)
+            ? states.slice((page - 1) * limit, page * limit)
+            : states;
+
         const allTeams = await AppDataSource.getRepository(Team).find({ relations: ['subteams'] });
         const allUsers = await AppDataSource.getRepository(User).find({ select: ['id', 'name', 'email'] });
 
         const valRepo = AppDataSource.getRepository(DynamicFormFieldValue);
         const results = [];
-        for (const state of states) {
+        for (const state of pagedStates) {
             const values = await valRepo.find({
                 where: { submissionId: state.submissionId },
                 relations: ['field', 'field.form']
@@ -2118,6 +2345,15 @@ export class ProductionService {
             });
         }
 
+        if (options?.page || options?.limit) {
+            return {
+                data: results,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            };
+        }
         return results;
     }
 

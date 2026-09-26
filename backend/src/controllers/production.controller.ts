@@ -106,7 +106,35 @@ export const createSubmission = asyncHandler(async (req: Request, res: Response)
 export const getSubmissions = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
     const requesterUserId = req.user?.userId;
     if (!requesterUserId) return res.status(401).json({ message: 'Usuario no autenticado' });
-    const submissions = await productionService.getSubmissions(requesterUserId);
+
+    const page = req.query.page ? parseInt(req.query.page as string) : undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+    const search = req.query.search as string | undefined;
+    let forms: string[] | undefined = undefined;
+    if (req.query.forms) {
+        if (Array.isArray(req.query.forms)) {
+            forms = req.query.forms as string[];
+        } else {
+            forms = (req.query.forms as string).split(',').map(f => f.trim()).filter(Boolean);
+        }
+    }
+    const status = req.query.status as string | undefined;
+    const dateFrom = req.query.dateFrom as string | undefined;
+    const dateTo = req.query.dateTo as string | undefined;
+    const requester = req.query.requester as string | undefined;
+    const excludePendingForUser = req.query.excludePending !== 'false';
+
+    const submissions = await productionService.getSubmissions(requesterUserId, {
+        page,
+        limit,
+        search,
+        forms,
+        status,
+        dateFrom,
+        dateTo,
+        requester,
+        excludePendingForUser
+    });
     return res.json(submissions);
 });
 
@@ -194,7 +222,33 @@ export const adminSaveWorkflowStages = asyncHandler(async (req: Request, res: Re
 export const getPendingApprovals = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: 'Usuario no autenticado' });
-    const approvals = await productionService.getPendingApprovals(userId);
+
+    const page = req.query.page ? parseInt(req.query.page as string) : undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+    const search = req.query.search as string | undefined;
+    let forms: string[] | undefined = undefined;
+    if (req.query.forms) {
+        if (Array.isArray(req.query.forms)) {
+            forms = req.query.forms as string[];
+        } else {
+            forms = (req.query.forms as string).split(',').map(f => f.trim()).filter(Boolean);
+        }
+    }
+    const status = req.query.status as string | undefined;
+    const dateFrom = req.query.dateFrom as string | undefined;
+    const dateTo = req.query.dateTo as string | undefined;
+    const requester = req.query.requester as string | undefined;
+
+    const approvals = await productionService.getPendingApprovals(userId, {
+        page,
+        limit,
+        search,
+        forms,
+        status,
+        dateFrom,
+        dateTo,
+        requester
+    });
     return res.json(approvals);
 });
 

@@ -22,7 +22,8 @@
                 <lucide-icon name="search" class="text-400 absolute ml-3" style="width: 1.1rem; height: 1.1rem; pointer-events: none;"></lucide-icon>
                 <input 
                     pInputText 
-                    [(ngModel)]="filterSearch" 
+                    [ngModel]="filterSearch()" 
+                    (input)="onSearchInput($any($event.target).value)"
                     placeholder="Buscar por ID (#), formulario, solicitante, consecutivo, etapa o datos..." 
                     class="w-full text-sm pl-6 pr-6 py-2 border-round-lg" />
                 <button 
@@ -32,7 +33,7 @@
                     [rounded]="true" 
                     severity="secondary" 
                     class="w-2rem h-2rem p-0 flex align-items-center justify-content-center absolute right-0 mr-2" 
-                    (click)="filterSearch.set('')"
+                    (click)="onSearchInput('')"
                     pTooltip="Borrar texto">
                     <lucide-icon name="x" style="width: 1rem; height: 1rem;"></lucide-icon>
                 </button>
@@ -67,11 +68,11 @@
                 <!-- Resumen rápido de resultados -->
                 <div class="hidden lg:flex align-items-center gap-2 pl-2 border-left-1 surface-border">
                     <span class="text-xs text-500 font-medium">Aprobaciones:</span>
-                    <p-tag [severity]="displayedPendingTasks().length > 0 ? 'warn' : 'secondary'" 
-                           [value]="displayedPendingTasks().length + ' de ' + pendingTasks().length"></p-tag>
+                    <p-tag [severity]="approvalsTotal() > 0 ? 'warn' : 'secondary'" 
+                           [value]="approvalsTotal() + ' total'"></p-tag>
                     <span class="text-xs text-500 font-medium ml-2">Historial:</span>
-                    <p-tag [severity]="displayedSubmissions().length > 0 ? 'info' : 'secondary'" 
-                           [value]="displayedSubmissions().length + ' de ' + baseHistorySubmissions().length"></p-tag>
+                    <p-tag [severity]="historyTotal() > 0 ? 'info' : 'secondary'" 
+                           [value]="historyTotal() + ' total'"></p-tag>
                 </div>
             </div>
         </div>
@@ -84,6 +85,7 @@
                 <p-multiSelect 
                     [options]="availableFormOptions()" 
                     [(ngModel)]="filterSelectedForms" 
+                    (onChange)="onFilterChange()"
                     optionLabel="label" 
                     optionValue="value" 
                     placeholder="Todos los formularios" 
@@ -100,6 +102,7 @@
                 <p-select 
                     [options]="statusOptions" 
                     [(ngModel)]="filterStatus" 
+                    (onChange)="onFilterChange()"
                     optionLabel="label" 
                     optionValue="value" 
                     styleClass="p-inputtext-sm w-full"
@@ -127,7 +130,8 @@
                 <div class="relative flex align-items-center">
                     <input 
                         pInputText 
-                        [(ngModel)]="filterRequester" 
+                        [ngModel]="filterRequester()" 
+                        (input)="filterRequester.set($any($event.target).value); onFilterChange()"
                         placeholder="Nombre o correo..." 
                         class="p-inputtext-sm w-full pr-5" />
                     <button 
@@ -137,7 +141,7 @@
                         [rounded]="true" 
                         severity="secondary" 
                         class="w-1.5rem h-1.5rem p-0 flex align-items-center justify-content-center absolute right-0 mr-1" 
-                        (click)="filterRequester.set('')">
+                        (click)="filterRequester.set(''); onFilterChange()">
                         <lucide-icon name="x" style="width: 0.8rem; height: 0.8rem;"></lucide-icon>
                     </button>
                 </div>
@@ -146,11 +150,11 @@
             <!-- Campos de fecha personalizada (si se seleccionó 'custom') -->
             <div *ngIf="filterDatePreset() === 'custom'" class="col-12 sm:col-6 md:col-3 flex flex-column gap-1 mt-1">
                 <label class="text-xs font-semibold text-700">Desde:</label>
-                <p-datepicker [(ngModel)]="filterDateFrom" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" placeholder="dd/mm/aaaa" styleClass="p-inputtext-sm w-full"></p-datepicker>
+                <p-datepicker [(ngModel)]="filterDateFrom" (onSelect)="onFilterChange()" (onClearClick)="onFilterChange()" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" placeholder="dd/mm/aaaa" styleClass="p-inputtext-sm w-full"></p-datepicker>
             </div>
             <div *ngIf="filterDatePreset() === 'custom'" class="col-12 sm:col-6 md:col-3 flex flex-column gap-1 mt-1">
                 <label class="text-xs font-semibold text-700">Hasta:</label>
-                <p-datepicker [(ngModel)]="filterDateTo" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" placeholder="dd/mm/aaaa" styleClass="p-inputtext-sm w-full"></p-datepicker>
+                <p-datepicker [(ngModel)]="filterDateTo" (onSelect)="onFilterChange()" (onClearClick)="onFilterChange()" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" placeholder="dd/mm/aaaa" styleClass="p-inputtext-sm w-full"></p-datepicker>
             </div>
         </div>
     </div>
@@ -162,21 +166,21 @@
                 <h3 class="text-xl font-bold text-900 m-0 flex align-items-center gap-2">
                     <lucide-icon name="inbox" class="text-primary" style="width: 1.5rem; height: 1.5rem;"></lucide-icon>
                     <span>Aprobaciones y Tareas Pendientes</span>
-                    <p-badge [value]="displayedPendingTasks().length.toString()" [severity]="displayedPendingTasks().length > 0 ? 'warn' : 'secondary'"></p-badge>
+                    <p-badge [value]="approvalsTotal().toString()" [severity]="approvalsTotal() > 0 ? 'warn' : 'secondary'"></p-badge>
                 </h3>
             </div>
             
             <!-- Caso A: No hay tareas pendientes en absoluto -->
-            <div *ngIf="pendingTasks().length === 0 && !loadingTasks()" class="text-center p-5 border-round surface-card border-1 surface-border">
+            <div *ngIf="approvalsTotal() === 0 && !loadingTasks() && activeFiltersCount() === 0" class="text-center p-5 border-round surface-card border-1 surface-border">
                 <lucide-icon name="check-circle" class="text-4xl text-green-500 mb-2 block"></lucide-icon>
                 <p class="text-600 m-0 font-medium">¡Al día! No tienes tareas ni aprobaciones pendientes.</p>
             </div>
 
-            <!-- Caso B: Hay tareas pendientes pero ninguna coincide con los filtros aplicados -->
-            <div *ngIf="pendingTasks().length > 0 && displayedPendingTasks().length === 0 && !loadingTasks()" class="text-center p-5 border-round surface-card border-1 surface-border">
+            <!-- Caso B: Hay filtros aplicados y 0 coinciden -->
+            <div *ngIf="approvalsTotal() === 0 && !loadingTasks() && activeFiltersCount() > 0" class="text-center p-5 border-round surface-card border-1 surface-border">
                 <lucide-icon name="search-x" class="text-4xl text-400 mb-2 block"></lucide-icon>
                 <h4 class="text-700 m-0">No se encontraron aprobaciones con los filtros aplicados</h4>
-                <p class="text-500 text-sm mt-1 mb-3">Hay {{ pendingTasks().length }} aprobaciones pendientes en total que no coinciden con la búsqueda actual.</p>
+                <p class="text-500 text-sm mt-1 mb-3">No hay aprobaciones pendientes que coincidan con la búsqueda actual.</p>
                 <p-button [outlined]="true" severity="secondary" size="small" (onClick)="clearAllFilters()">
                     <lucide-icon name="rotate-ccw" class="mr-2"></lucide-icon>
                     Restablecer Filtros
@@ -242,6 +246,18 @@
                     </p-card>
                 </div>
             </div>
+
+            <!-- Paginador Real para Aprobaciones -->
+            <div *ngIf="approvalsTotal() > 0 && !loadingTasks()" class="mt-2 flex justify-content-end">
+                <p-paginator 
+                    [first]="(approvalsPage() - 1) * approvalsLimit()" 
+                    [rows]="approvalsLimit()" 
+                    [totalRecords]="approvalsTotal()" 
+                    [rowsPerPageOptions]="[4, 8, 12, 20]"
+                    (onPageChange)="onApprovalsPageChange($event)"
+                    styleClass="surface-card border-round border-1 surface-border py-1 px-2 text-sm">
+                </p-paginator>
+            </div>
         </div>
 
         <!-- SECCIÓN 2: HISTORIAL Y SEGUIMIENTO DE SOLICITUDES (CUADRÍCULA VERTICAL) -->
@@ -250,7 +266,7 @@
                 <h3 class="text-xl font-bold text-900 m-0 flex align-items-center gap-2">
                     <lucide-icon name="history" class="text-secondary" style="width: 1.5rem; height: 1.5rem;"></lucide-icon>
                     <span>Historial y Seguimiento de Solicitudes</span>
-                    <p-badge [value]="displayedSubmissions().length.toString()" severity="info"></p-badge>
+                    <p-badge [value]="historyTotal().toString()" severity="info"></p-badge>
                 </h3>
             </div>
 
@@ -260,16 +276,16 @@
 
             <div *ngIf="!loading()" class="w-full">
                 <!-- Caso A: No hay solicitudes en el historial en absoluto -->
-                <div *ngIf="baseHistorySubmissions().length === 0" class="text-center p-5 border-round surface-card border-1 surface-border">
+                <div *ngIf="historyTotal() === 0 && activeFiltersCount() === 0" class="text-center p-5 border-round surface-card border-1 surface-border">
                     <lucide-icon name="archive" class="text-4xl text-400 mb-2 block"></lucide-icon>
                     <p class="text-600 m-0 font-medium">No hay solicitudes registradas.</p>
                 </div>
 
-                <!-- Caso B: Hay solicitudes pero ninguna coincide con los filtros aplicados -->
-                <div *ngIf="baseHistorySubmissions().length > 0 && displayedSubmissions().length === 0" class="text-center p-5 border-round surface-card border-1 surface-border">
+                <!-- Caso B: Hay filtros aplicados y 0 coinciden -->
+                <div *ngIf="historyTotal() === 0 && activeFiltersCount() > 0" class="text-center p-5 border-round surface-card border-1 surface-border">
                     <lucide-icon name="search-x" class="text-4xl text-400 mb-2 block"></lucide-icon>
                     <h4 class="text-700 m-0">No se encontraron solicitudes con los filtros aplicados</h4>
-                    <p class="text-500 text-sm mt-1 mb-3">Hay {{ baseHistorySubmissions().length }} solicitudes registradas en total que no coinciden con la búsqueda actual.</p>
+                    <p class="text-500 text-sm mt-1 mb-3">No hay solicitudes registradas que coincidan con la búsqueda actual.</p>
                     <p-button [outlined]="true" severity="secondary" size="small" (onClick)="clearAllFilters()">
                         <lucide-icon name="rotate-ccw" class="mr-2"></lucide-icon>
                         Restablecer Filtros
@@ -343,6 +359,18 @@
                             </ng-template>
                         </p-card>
                     </div>
+                </div>
+
+                <!-- Paginador Real para Historial -->
+                <div *ngIf="historyTotal() > 0 && !loading()" class="mt-3 flex justify-content-end">
+                    <p-paginator 
+                        [first]="(historyPage() - 1) * historyLimit()" 
+                        [rows]="historyLimit()" 
+                        [totalRecords]="historyTotal()" 
+                        [rowsPerPageOptions]="[8, 12, 24, 48]"
+                        (onPageChange)="onHistoryPageChange($event)"
+                        styleClass="surface-card border-round border-1 surface-border py-1 px-2 text-sm">
+                    </p-paginator>
                 </div>
             </div>
         </div>

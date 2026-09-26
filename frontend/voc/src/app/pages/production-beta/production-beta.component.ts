@@ -3,15 +3,16 @@ import { CoreDialogService } from '../../services/core-dialog.service';
 import { Component, inject, OnInit, OnDestroy, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin, of, firstValueFrom } from 'rxjs';
+import { forkJoin, of, firstValueFrom, Subject, Subscription } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { filter, take } from 'rxjs/operators';
+import { filter, take, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { ChipModule } from 'primeng/chip';
 import { TagModule } from 'primeng/tag';
 import { MenuModule } from 'primeng/menu';
 import { ToastModule } from 'primeng/toast';
+import { PaginatorModule } from 'primeng/paginator';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { BadgeModule } from 'primeng/badge';
@@ -75,7 +76,8 @@ import { DatePickerModule } from 'primeng/datepicker';
     InputNumberModule,
     DatePickerModule,
     FormsModule,
-    CustomerAutocompleteComponent
+    CustomerAutocompleteComponent,
+    PaginatorModule
   ],
   providers: [DialogService, ConfirmationService, MessageService],
   templateUrl: './production-beta.component.html',
@@ -120,6 +122,19 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     { label: 'Personalizado (Rango)', value: 'custom' }
   ];
 
+  // --- Paginación Real del Servidor ---
+  approvalsPage = signal<number>(1);
+  approvalsLimit = signal<number>(4);
+  approvalsTotal = signal<number>(0);
+
+  historyPage = signal<number>(1);
+  historyLimit = signal<number>(8);
+  historyTotal = signal<number>(0);
+
+  allFormOptions = signal<{ label: string; value: string }[]>([]);
+  private searchSubject = new Subject<string>();
+  private searchSub?: Subscription;
+
   activeFiltersCount = computed(() => {
     let count = 0;
     if (this.filterSearch().trim()) count++;
@@ -132,60 +147,28 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
   availableFormOptions = computed(() => {
     const set = new Set<string>();
+    this.allFormOptions().forEach(f => set.add(f.value));
     (this.pendingTasks() || []).forEach(t => { if (t.formName) set.add(t.formName); });
     (this.dynamicSubmissions() || []).forEach(s => { if (s.formName) set.add(s.formName); });
     return Array.from(set).sort().map(name => ({ label: name, value: name }));
   });
 
-  baseHistorySubmissions = computed(() => {
-    const pendingSubmissionIds = new Set<number>();
-    (this.pendingTasks() || []).forEach(t => {
-      if (t.submissionId) pendingSubmissionIds.add(t.submissionId);
-      if (t.parentSubmissionId) pendingSubmissionIds.add(t.parentSubmissionId);
-    });
-
-    const all = this.dynamicSubmissions().filter(s => {
-      if (pendingSubmissionIds.has(s.id)) return false;
-      if (s.parentSubmissionId && pendingSubmissionIds.has(s.parentSubmissionId)) return false;
-      return true;
-    });
-    return all.sort((a, b) => {
-      const aActive = a.status !== 'Completed' && a.status !== 'Approved';
-      const bActive = b.status !== 'Completed' && b.status !== 'Approved';
-      if (aActive && !bActive) return -1;
-      if (!aActive && bActive) return 1;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
-  });
-
-  displayedPendingTasks = computed(() => {
-    const tasks = this.pendingTasks() || [];
-    const query = this.filterSearch();
-    const forms = this.filterSelectedForms();
-    const status = this.filterStatus();
-    const datePreset = this.filterDatePreset();
-    const dateFrom = this.filterDateFrom();
-    const dateTo = this.filterDateTo();
-    const requester = this.filterRequester();
-
-    return tasks.filter(t => this.matchesFilter(t, true, query, forms, status, datePreset, dateFrom, dateTo, requester));
-  });
-
-  displayedSubmissions = computed(() => {
-    const subs = this.baseHistorySubmissions();
-    const query = this.filterSearch();
-    const forms = this.filterSelectedForms();
-    const status = this.filterStatus();
-    const datePreset = this.filterDatePreset();
-    const dateFrom = this.filterDateFrom();
-    const dateTo = this.filterDateTo();
-    const requester = this.filterRequester();
-
-    return subs.filter(s => this.matchesFilter(s, false, query, forms, status, datePreset, dateFrom, dateTo, requester));
-  });
-
-  // Alias retrocompatible con sortedAllSubmissions
+  baseHistorySubmissions = computed(() => this.dynamicSubmissions());
+  displayedPendingTasks = computed(() => this.pendingTasks());
+  displayedSubmissions = computed(() => this.dynamicSubmissions());
   sortedAllSubmissions = computed(() => this.displayedSubmissions());
+
+  onSearchInput(value: string) {
+    this.filterSearch.set(value);
+    this.searchSubject.next(value);
+  }
+
+  onFilterChange() {
+    this.approvalsPage.set(1);
+    this.historyPage.set(1);
+    this.loadPendingTasks();
+    this.loadRequests();
+  }
 
   clearAllFilters() {
     this.filterSearch.set('');
@@ -195,6 +178,10 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.filterDateFrom.set(null);
     this.filterDateTo.set(null);
     this.filterRequester.set('');
+    this.approvalsPage.set(1);
+    this.historyPage.set(1);
+    this.loadPendingTasks();
+    this.loadRequests();
   }
 
   onDatePresetChange(preset: string) {
@@ -202,108 +189,68 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     if (preset !== 'custom') {
       this.filterDateFrom.set(null);
       this.filterDateTo.set(null);
+      this.onFilterChange();
     }
   }
 
-  private matchesFilter(
-    item: any,
-    isPendingTask: boolean,
-    query: string,
-    selectedForms: string[],
-    status: string,
-    datePreset: string,
-    dateFrom: Date | null,
-    dateTo: Date | null,
-    requester: string
-  ): boolean {
-    // 1. Filtro de Estado
-    if (status !== 'all') {
-      if (isPendingTask) {
-        if (status === 'completed') return false;
-        if (status === 'rejected' && !this.isCorrection(item)) return false;
-        if (status === 'in_progress' && this.isCorrection(item)) return false;
-      } else {
-        if (status === 'pending_me') return false;
-        const st = (item.status || '').toLowerCase();
-        if (status === 'completed' && st !== 'completed' && st !== 'approved') return false;
-        if (status === 'in_progress' && st !== 'in progress' && st !== 'in_progress') return false;
-        if (status === 'rejected' && st !== 'rejected') return false;
-      }
-    }
+  onApprovalsPageChange(event: any) {
+    this.approvalsPage.set((event.page || 0) + 1);
+    this.approvalsLimit.set(event.rows || 4);
+    this.loadPendingTasks();
+  }
 
-    // 2. Filtro de Formularios
-    if (selectedForms && selectedForms.length > 0) {
-      if (!selectedForms.includes(item.formName)) return false;
-    }
+  onHistoryPageChange(event: any) {
+    this.historyPage.set((event.page || 0) + 1);
+    this.historyLimit.set(event.rows || 8);
+    this.loadRequests();
+  }
 
-    // 3. Filtro de Solicitante
-    if (requester && requester.trim()) {
-      const reqQuery = requester.toLowerCase().trim();
-      const reqName = (item.requesterName || '').toLowerCase();
-      const reqEmail = (item.requesterEmail || '').toLowerCase();
-      if (!reqName.includes(reqQuery) && !reqEmail.includes(reqQuery)) return false;
-    }
-
-    // 4. Filtro de Fechas
-    if (datePreset !== 'all') {
-      const itemDate = new Date(item.createdAt);
-      if (!isNaN(itemDate.getTime())) {
-        const now = new Date();
-        if (datePreset === 'today') {
-          const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          if (itemDate < startOfToday) return false;
-        } else if (datePreset === 'week') {
-          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          if (itemDate < weekAgo) return false;
-        } else if (datePreset === 'month') {
-          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-          if (itemDate < startOfMonth) return false;
-        } else if (datePreset === 'custom') {
-          if (dateFrom) {
-            const start = new Date(dateFrom);
-            start.setHours(0, 0, 0, 0);
-            if (itemDate < start) return false;
-          }
-          if (dateTo) {
-            const end = new Date(dateTo);
-            end.setHours(23, 59, 59, 999);
-            if (itemDate > end) return false;
-          }
+  loadAllForms() {
+    this.productionService.adminGetForms().subscribe({
+      next: (forms) => {
+        if (Array.isArray(forms)) {
+          this.allFormOptions.set(forms.filter(f => f.isActive !== false).map(f => ({ label: f.name, value: f.name })));
         }
-      }
+      },
+      error: () => {}
+    });
+  }
+
+  private buildFilterParams(page: number, limit: number) {
+    const params: any = {
+      page,
+      limit
+    };
+
+    const q = this.filterSearch();
+    if (q && q.trim()) params.search = q.trim();
+
+    const forms = this.filterSelectedForms();
+    if (forms && forms.length > 0) params.forms = forms;
+
+    const status = this.filterStatus();
+    if (status && status !== 'all') params.status = status;
+
+    const requester = this.filterRequester();
+    if (requester && requester.trim()) params.requester = requester.trim();
+
+    const preset = this.filterDatePreset();
+    if (preset === 'today') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      params.dateFrom = today.toISOString();
+    } else if (preset === 'week') {
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      params.dateFrom = weekAgo.toISOString();
+    } else if (preset === 'month') {
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      params.dateFrom = startOfMonth.toISOString();
+    } else if (preset === 'custom') {
+      if (this.filterDateFrom()) params.dateFrom = this.filterDateFrom()!.toISOString();
+      if (this.filterDateTo()) params.dateTo = this.filterDateTo()!.toISOString();
     }
 
-    // 5. Búsqueda de texto libre global
-    if (query && query.trim()) {
-      const cleanQ = query.toLowerCase().trim();
-      const rawId = String(item.id || item.submissionId || '');
-      if (cleanQ.startsWith('#')) {
-        const numQ = cleanQ.replace('#', '').trim();
-        if (rawId === numQ || rawId.includes(numQ)) return true;
-      } else {
-        if (rawId === cleanQ || rawId.includes(cleanQ)) return true;
-      }
-
-      if (item.formName && item.formName.toLowerCase().includes(cleanQ)) return true;
-      if (item.consecutive && item.consecutive.toLowerCase().includes(cleanQ)) return true;
-      if (item.requesterName && item.requesterName.toLowerCase().includes(cleanQ)) return true;
-      if (item.requesterEmail && item.requesterEmail.toLowerCase().includes(cleanQ)) return true;
-      if (item.assigneeName && item.assigneeName.toLowerCase().includes(cleanQ)) return true;
-      if (item.stageName && item.stageName.toLowerCase().includes(cleanQ)) return true;
-
-      // Buscar en campos dinámicos de la tarjeta
-      if (Array.isArray(item.cardFields) && item.cardFields.length > 0) {
-        for (const cf of item.cardFields) {
-          if (cf.label && cf.label.toLowerCase().includes(cleanQ)) return true;
-          const formattedVal = this.formatCardValue(cf);
-          if (formattedVal && String(formattedVal).toLowerCase().includes(cleanQ)) return true;
-        }
-      }
-
-      return false;
-    }
-
-    return true;
+    return params;
   }
 
   pendingTasks = signal<any[]>([]);
@@ -428,6 +375,14 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.searchSub = this.searchSubject.pipe(
+      debounceTime(350),
+      distinctUntilChanged()
+    ).subscribe(() => {
+      this.onFilterChange();
+    });
+
+    this.loadAllForms();
     this.loadRequests();
     this.loadWorkflowStages();
     this.loadPendingTasks();
@@ -476,6 +431,9 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    if (this.searchSub) {
+      this.searchSub.unsubscribe();
+    }
     if (this.intervalId) {
       clearInterval(this.intervalId);
     }
@@ -483,9 +441,16 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
   loadRequests() {
     this.loading.set(true);
-    this.productionService.getDynamicSubmissions().subscribe({
-      next: (subs) => {
-        this.dynamicSubmissions.set(subs);
+    const params = this.buildFilterParams(this.historyPage(), this.historyLimit());
+    this.productionService.getDynamicSubmissions(params).subscribe({
+      next: (res) => {
+        if (res && res.data) {
+          this.dynamicSubmissions.set(res.data);
+          this.historyTotal.set(res.total || 0);
+        } else if (Array.isArray(res)) {
+          this.dynamicSubmissions.set(res);
+          this.historyTotal.set(res.length);
+        }
         this.loading.set(false);
       },
       error: (err) => {
@@ -1591,9 +1556,16 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
   loadPendingTasks() {
     this.loadingTasks.set(true);
-    this.productionService.getPendingApprovals().subscribe({
-      next: (data) => {
-        this.pendingTasks.set(data);
+    const params = this.buildFilterParams(this.approvalsPage(), this.approvalsLimit());
+    this.productionService.getPendingApprovals(params).subscribe({
+      next: (res) => {
+        if (res && res.data) {
+          this.pendingTasks.set(res.data);
+          this.approvalsTotal.set(res.total || 0);
+        } else if (Array.isArray(res)) {
+          this.pendingTasks.set(res);
+          this.approvalsTotal.set(res.length);
+        }
         this.loadingTasks.set(false);
       },
       error: () => {

@@ -1,6 +1,6 @@
 import { BaseApiService } from './base-api.service';
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { ProductionRequest } from '../models/common/production-request';
@@ -157,8 +157,22 @@ export class ProductionService extends BaseApiService {
     });
   }
 
-  getDynamicSubmissions(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/submissions`);
+  getDynamicSubmissions(params?: any): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params) {
+      Object.keys(params).forEach(key => {
+        if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+          if (Array.isArray(params[key])) {
+            if (params[key].length > 0) {
+              httpParams = httpParams.set(key, params[key].join(','));
+            }
+          } else {
+            httpParams = httpParams.set(key, String(params[key]));
+          }
+        }
+      });
+    }
+    return this.http.get<any>(`${this.apiUrl}/submissions`, { params: httpParams });
   }
 
   adminGetForms(): Observable<any[]> {
@@ -219,8 +233,22 @@ export class ProductionService extends BaseApiService {
     return this.http.get<any>(`${this.apiUrl}/submissions/${submissionId}`);
   }
 
-  getPendingApprovals(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/approvals/pending`);
+  getPendingApprovals(params?: any): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params) {
+      Object.keys(params).forEach(key => {
+        if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+          if (Array.isArray(params[key])) {
+            if (params[key].length > 0) {
+              httpParams = httpParams.set(key, params[key].join(','));
+            }
+          } else {
+            httpParams = httpParams.set(key, String(params[key]));
+          }
+        }
+      });
+    }
+    return this.http.get<any>(`${this.apiUrl}/approvals/pending`, { params: httpParams });
   }
 
   actionApproval(stateId: number, action: 'approve' | 'reject', notes: string, formValues?: any, consecutive?: string, chosenNextAssignee?: any): Observable<any> {
