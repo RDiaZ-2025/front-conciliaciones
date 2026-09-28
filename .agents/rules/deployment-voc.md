@@ -5,49 +5,58 @@ description: When I request deploy VOC frontend
 
 # VOC (Sistema de Conciliaciones) Deployment Guide
 
-This rule outlines the step-by-step process to deploy the VOC system components.
+This rule outlines the deployment process for VOC frontend and backend components across Test and Production environments.
+
+## Environments and Triggers
+
+| Environment | Trigger Branch | GitHub Environment Name |
+|---|---|---|
+| **Production** | `main` | `main` |
+| **Test** | `test`, or manual `workflow_dispatch` | `test` |
+
+---
 
 ## 1. VOC Frontend Deployment
 
-The VOC frontend is an Angular application located in `frontend/voc/`.
+The VOC frontend is an Angular application in `frontend/voc/`.
 
-### Automated Deployment (Recommended)
-- **CI/CD Pipeline:** Deployed automatically using GitHub Actions via `.github/workflows/azure-static-web-apps-blue-pebble-080603f0f.yml`.
-- **Trigger:** Any push or merged Pull Request to the `main` branch that modifies files in the `frontend/voc/**` path.
-- **Azure Resource:** Azure Static Web App (e.g., `wonderful-coast-0c074260f`).
+### Automated Deployment (GitHub Actions)
+- **Production (`main`):** [.github/workflows/deploy-frontend-main.yml](file:///c:/source/Voc/.github/workflows/deploy-frontend-main.yml)
+  - **Trigger:** Push to `main` affecting `frontend/voc/**`, or manual dispatch.
+  - **Secret:** `AZURE_STATIC_WEB_APPS_API_TOKEN_BLUE_PEBBLE_080603F0F` or `AZURE_STATIC_WEB_APPS_API_TOKEN_MAIN`.
+- **Test (`test`):** [.github/workflows/deploy-frontend-test.yml](file:///c:/source/Voc/.github/workflows/deploy-frontend-test.yml)
+  - **Trigger:** Push to `test` affecting `frontend/voc/**`, or manual dispatch.
+  - **Secret:** `AZURE_STATIC_WEB_APPS_API_TOKEN_TEST`.
 
 ### Manual / Local Build
-If you need to build the frontend locally to verify it:
 1. Navigate to the `frontend` directory:
    ```bash
    cd frontend
    ```
-2. Build the VOC project:
+2. Build VOC:
    ```bash
    npm run build:voc
    ```
-3. The build artifacts will be generated in `frontend/dist/voc/browser/`.
+3. Artifacts generated in `frontend/dist/voc/browser/`.
 
 ---
 
 ## 2. VOC Backend Deployment
 
-The VOC backend is a Node.js/Express application located in `backend/`.
+The VOC backend is a Node.js/Express application in `backend/`.
 
-### Deployment via PowerShell Script
-To deploy the backend directly to Azure App Service:
-1. Open a PowerShell terminal in the project root directory.
-2. Run the deployment script `deploy-to-azure.ps1` with the required parameters:
-   ```powershell
-   ./deploy-to-azure.ps1 -ResourceGroup "<ResourceGroup>" -AppName "<AppName>" -SubscriptionId "<SubscriptionId>"
-   ```
-   **Parameters:**
-   - `-ResourceGroup`: The name of the Azure Resource Group.
-   - `-AppName`: The Azure Web App name (e.g., `voc-backend`).
-   - `-SubscriptionId`: Your Azure Subscription ID.
-   - `-Location`: (Optional) Azure region (defaults to `"East US"`).
-   - `-AppServicePlan`: (Optional) App Service Plan name.
-   - `-Runtime`: (Optional) Node runtime (defaults to `"NODE:18-lts"`).
+### Automated Deployment (GitHub Actions)
+- **Production (`main`):** [.github/workflows/deploy-backend-main.yml](file:///c:/source/Voc/.github/workflows/deploy-backend-main.yml)
+  - **Trigger:** Push to `main` affecting `backend/**`, or manual dispatch.
+  - **Target:** Azure Web App `voc-backend`.
+  - **Secrets:** `AZUREAPPSERVICE_CLIENTID_...` / `AZUREAPPSERVICE_TENANTID_...` / `AZUREAPPSERVICE_SUBSCRIPTIONID_...`.
+- **Test (`test`):** [.github/workflows/deploy-backend-test.yml](file:///c:/source/Voc/.github/workflows/deploy-backend-test.yml)
+  - **Trigger:** Push to `test` affecting `backend/**`, or manual dispatch.
+  - **Target:** Azure Web App `voc-backend-test` (configurable via variable `AZUREAPPSERVICE_APPNAME_TEST`).
+  - **Secrets:** `AZUREAPPSERVICE_CLIENTID_TEST`, `AZUREAPPSERVICE_TENANTID_TEST`, `AZUREAPPSERVICE_SUBSCRIPTIONID_TEST`.
 
-### Automated Pipeline (Disabled by Default)
-- **GitHub Workflow:** There is a commented-out workflow `.github/workflows/main_voc-backend.yml` that can be configured to deploy the Express backend to Azure App Service upon push to `main`.
+### Manual Deployment via PowerShell Script
+To deploy backend directly from local terminal:
+```powershell
+./deploy-to-azure.ps1 -ResourceGroup "<ResourceGroup>" -AppName "<AppName>" -SubscriptionId "<SubscriptionId>"
+```
