@@ -37,24 +37,22 @@ export class SatPushDialogComponent {
     private messageService = inject(MessageService);
 
     form: FormGroup;
-    
+
     satMessageValidator = (control: AbstractControl): ValidationErrors | null => {
         const value = control.value;
         if (!value) return null;
         const errors: ValidationErrors = {};
 
-        // Check accents/Ñ
         if (/[áéíóúÁÉÍÓÚñÑ]/.test(value)) {
             errors['forbiddenChars'] = true;
         }
 
-        // Check prefix
         const formGroup = control.parent;
         if (formGroup) {
             const clientName = formGroup.get('sat_clientName')?.value;
             if (clientName) {
                 const prefix = `PUBLICIDAD DE ${clientName.toUpperCase()}`;
-                // Allow case-insensitive prefix check and allow optional colon
+
                 const cleanValue = value.toUpperCase().replace(/^PUBLICIDAD DE:\s*/, 'PUBLICIDAD DE ');
                 if (!cleanValue.startsWith(prefix)) {
                     errors['invalidPrefix'] = true;
@@ -82,17 +80,14 @@ export class SatPushDialogComponent {
             sat_phoneNumber: ['']
         });
 
-        // Pre-fill
         if (this.config.data?.request?.materialData) {
             this.form.patchValue(this.config.data.request.materialData);
         }
 
-        // Handle Client Name Changes
         this.form.get('sat_clientName')?.valueChanges.subscribe(() => {
             this.form.get('sat_messageText')?.updateValueAndValidity();
         });
 
-        // Handle Click-to-Call Toggle
         this.form.get('sat_isClickToCall')?.valueChanges.subscribe(isClickToCall => {
             this.updateSatValidators(isClickToCall);
         });
@@ -103,7 +98,7 @@ export class SatPushDialogComponent {
         if (isClickToCall) {
             phoneControl?.setValidators([Validators.required, Validators.pattern(/^\d{10}$/)]);
         } else {
-            phoneControl?.setValidators([Validators.pattern(/^\d{10}$/)]); // Optional
+            phoneControl?.setValidators([Validators.pattern(/^\d{10}$/)]);
             if (!phoneControl?.value) {
                 phoneControl?.setErrors(null);
             }

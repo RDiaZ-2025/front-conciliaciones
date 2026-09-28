@@ -9,7 +9,7 @@ async function add() {
     try {
         await AppDataSource.initialize();
         const repo = AppDataSource.getRepository(DynamicFormField);
-        
+
         const existing = await repo.findOne({ where: { formId: 7 } });
         if (!existing) {
             const field = repo.create({

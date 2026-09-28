@@ -1,4 +1,4 @@
-import { ProductionRequest, Product, User, FormatType, RightsDuration, Team, ProductionRequestType, DynamicWorkflow, DynamicForm, DynamicFormField, DynamicFormSubmission, DynamicFormFieldValue, DynamicWorkflowStage, DynamicSubmissionWorkflowState } from "../models";
+import { ProductionRequest, Product, User, FormatType, RightsDuration, Team, Subteam, SubteamUser, ProductionRequestType, DynamicWorkflow, DynamicForm, DynamicFormField, DynamicFormSubmission, DynamicFormFieldValue, DynamicWorkflowStage, DynamicSubmissionWorkflowState } from "../models";
 import { AppDataSource } from "../config/typeorm.config";
 import { NotificationService } from './notification.service';
 import { ProductionRequestHistoryService } from './production_request_history.service';
@@ -12,54 +12,15 @@ import { AudienceData } from '../models/AudienceData';
 import { CampaignDetail } from '../models/CampaignDetail';
 import { ProductionInfo } from '../models/ProductionInfo';
 import { DeepPartial } from 'typeorm';
+import { productionAssignmentService } from './production_assignment.service';
+import { dynamicFormService } from './dynamic_form.service';
 
 const authService = new AuthService();
 const workflowService = new WorkflowService();
 const notificationService = new NotificationService();
 const historyService = new ProductionRequestHistoryService();
-const performSmartAssignment = async (department: string): Promise<{ assignedUserId: number, userName: string, activeRequestsCount: number } | null> => {
-    try {
-        const teamRepository = AppDataSource.getRepository(Team);
-        const team = await teamRepository.findOne({ where: { name: department } });
 
-        if (team) {
-            const userRepository = AppDataSource.getRepository(User);
-            const users = await userRepository.find({ where: { teamId: team.id, status: 1 } });
-
-            if (users && users.length > 0) {
-                const productionRequestRepository = AppDataSource.getRepository(ProductionRequest);
-
-                const userWorkloads = await Promise.all(users.map(async (user) => {
-                    const activeRequestsCount = await productionRequestRepository.count({
-                        where: {
-                            assignedUserId: user.id,
-                            status: Not(In(['completed', 'cancelled']))
-                        }
-                    });
-                    return { user, count: activeRequestsCount };
-                }));
-
-                userWorkloads.sort((a, b) => a.count - b.count);
-
-                const minWorkload = userWorkloads[0].count;
-                const candidates = userWorkloads.filter(uw => uw.count === minWorkload);
-
-                const randomIndex = Math.floor(Math.random() * candidates.length);
-                const selectedCandidate = candidates[randomIndex];
-
-                return {
-                    assignedUserId: selectedCandidate.user.id,
-                    userName: selectedCandidate.user.name,
-                    activeRequestsCount: selectedCandidate.count
-                };
-            }
-        }
-        return null;
-    } catch (error) {
-        console.error('Error in smart assignment:', error);
-        return null;
-    }
-};
+const performSmartAssignment = (department: string) => productionAssignmentService.performSmartAssignment(department);
 
 export class ProductionService {
     async getFormatTypes() {
@@ -98,98 +59,33 @@ export class ProductionService {
     }
 
     async getRequestTypes() {
-        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
-        const types = await AppDataSource.getRepository(DynamicForm).find({
-            where: { isEntryForm: true, isActive: true, isInitialForm: false },
-            order: { id: 'ASC' }
-        });
-        return types.map(t => {
-            let parsedMeta = t.metadata;
-            if (parsedMeta && typeof parsedMeta === 'string') {
-                try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
-            }
-            return {
-                ...t,
-                metadata: parsedMeta || {}
-            };
-        });
+        return dynamicFormService.getRequestTypes();
     }
 
     async getInitialForm() {
-        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
-        return await AppDataSource.getRepository(DynamicForm).find({
-            where: { isInitialForm: true, isActive: true },
-            order: { displayOrder: 'ASC', id: 'ASC' }
-        });
+        return dynamicFormService.getInitialForm();
     }
 
     private sanitizeFieldMetadata(meta: any): any {
-        if (!meta) return null;
-        let obj = meta;
-        if (typeof obj === 'string') {
-            try { obj = JSON.parse(obj); } catch(e) { return meta; }
-        }
-        if (typeof obj !== 'object' || obj === null) return obj;
-
-        if (Array.isArray(obj.options)) {
-            obj.options = obj.options
-                .map((opt: any) => typeof opt === 'object' && opt !== null ? (opt.value ?? opt.label ?? '') : String(opt ?? ''))
-                .map((s: string) => s.trim())
-                .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
-        }
-
-        if (obj.dependency) {
-            if (Array.isArray(obj.dependency.value)) {
-                obj.dependency.value = obj.dependency.value
-                    .map((v: any) => typeof v === 'object' && v !== null ? (v.value ?? v.label ?? '') : String(v ?? ''))
-                    .map((s: string) => s.trim())
-                    .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
-                if (obj.dependency.value.length === 1) obj.dependency.value = obj.dependency.value[0];
-                else if (obj.dependency.value.length === 0) obj.dependency.value = '';
-            } else if (typeof obj.dependency.value === 'string') {
-                const clean = obj.dependency.value
-                    .split(',')
-                    .map((s: string) => s.trim())
-                    .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
-                obj.dependency.value = clean.length > 1 ? clean : (clean[0] || '');
-            } else if (obj.dependency.value === null || obj.dependency.value === undefined) {
-                obj.dependency.value = '';
-            }
-        }
-        return obj;
+        return dynamicFormService.sanitizeFieldMetadata(meta);
     }
 
     async getFormFields(formId: number, includeInactive: boolean = false) {
-        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
-        const whereClause: any = { formId };
-        if (!includeInactive) {
-            whereClause.isActive = true;
-        }
-        const fields = await AppDataSource.getRepository(DynamicFormField).find({
-            where: whereClause,
-            order: { displayOrder: 'ASC' }
-        });
-        return fields.map(f => {
-            if (f.metadata) {
-                const sanitized = this.sanitizeFieldMetadata(f.metadata);
-                f.metadata = typeof sanitized === 'object' ? JSON.stringify(sanitized) : sanitized;
-            }
-            return f;
-        });
+        return dynamicFormService.getFormFields(formId, includeInactive);
     }
 
     async createSubmission(
-        formId: number, 
-        requesterUserId: number, 
-        values: Record<string, string>, 
-        targetFormIds?: number[], 
+        formId: number,
+        requesterUserId: number,
+        values: Record<string, string>,
+        targetFormIds?: number[],
         submissions?: { formId: number; values: Record<string, string> }[],
         targetTeamIds?: number[],
-        targetTeams?: Array<{ teamId: number; assignmentMode?: 'leader' | 'random' | 'workflow' }>,
+        targetTeams?: Array<{ teamId: number; subteamId?: number | null; assignmentMode?: 'leader' | 'random' | 'workflow' | 'subteam_random' }>,
         closingConfig?: { formId?: number | null; workflowId?: number | null }
     ) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
-        
+
         return await AppDataSource.transaction(async (transactionManager) => {
             const subRepo = transactionManager.getRepository(DynamicFormSubmission);
             const valRepo = transactionManager.getRepository(DynamicFormFieldValue);
@@ -199,7 +95,7 @@ export class ProductionService {
             const teamRepo = transactionManager.getRepository(Team);
 
             if (submissions && submissions.length > 0) {
-                // 1. Create root parent submission from first element
+
                 const rootEntry = submissions[0];
                 let rootFormMeta: any = {};
                 if (rootEntry.formId) {
@@ -229,7 +125,6 @@ export class ProductionService {
                 });
                 const savedRootSub = await subRepo.save(rootSub);
 
-                // Insert values for root parent
                 const rootFields = await transactionManager.getRepository(DynamicFormField).find({
                     where: { formId: rootEntry.formId },
                     order: { displayOrder: 'ASC' }
@@ -246,7 +141,6 @@ export class ProductionService {
                     }
                 }
 
-                // 2. Create sibling parent submissions for subsequent entries
                 for (let i = 1; i < submissions.length; i++) {
                     const entry = submissions[i];
                     const sibSub = subRepo.create({
@@ -274,16 +168,20 @@ export class ProductionService {
                     }
                 }
 
-                // 3. Create child submissions for each selected Team linked to root parent
-                let teamsToDispatch: Array<{ teamId: number; assignmentMode: 'leader' | 'random' | 'workflow' }> = [];
+                let teamsToDispatch: Array<{ teamId: number; subteamId?: number | null; assignmentMode: 'leader' | 'random' | 'workflow' | 'subteam_random' }> = [];
                 if (targetTeams && targetTeams.length > 0) {
-                    teamsToDispatch = targetTeams.map(t => ({
-                        teamId: t.teamId,
-                        assignmentMode: t.assignmentMode || 'leader'
-                    }));
+                    teamsToDispatch = targetTeams.map(t => {
+                        const isSubteam = (t.assignmentMode === 'subteam_random' || t.assignmentMode === 'random') && !!t.subteamId;
+                        return {
+                            teamId: t.teamId,
+                            subteamId: isSubteam ? t.subteamId : null,
+                            assignmentMode: isSubteam ? 'subteam_random' : (t.assignmentMode || 'leader')
+                        };
+                    });
                 } else if (targetTeamIds && targetTeamIds.length > 0) {
                     teamsToDispatch = targetTeamIds.map(id => ({
                         teamId: id,
+                        subteamId: null,
                         assignmentMode: 'leader'
                     }));
                 }
@@ -308,10 +206,11 @@ export class ProductionService {
                         });
                         if (!team) continue;
 
-                        // Resolve specific workflow for this team if mapped in initial form
                         let targetWfId = formWfId;
                         if (rootFormMeta.teamWorkflows && rootFormMeta.teamWorkflows[teamTarget.teamId]) {
                             targetWfId = rootFormMeta.teamWorkflows[teamTarget.teamId];
+                        } else if (!targetWfId && team.defaultWorkflowId) {
+                            targetWfId = team.defaultWorkflowId;
                         }
 
                         const childSub = subRepo.create({
@@ -323,7 +222,6 @@ export class ProductionService {
                         });
                         const savedChildSub = await subRepo.save(childSub);
 
-                        // Save root entry field values directly to the child submission
                         for (const field of rootFields) {
                             const valueStr = rootEntry.values[field.name];
                             if (valueStr !== undefined && valueStr !== null) {
@@ -338,8 +236,8 @@ export class ProductionService {
 
                         if (targetWfId) {
                             const firstStage = await stageRepo.findOne({
-                                where: { workflowId: targetWfId, stepOrder: 1, isDeleted: false },
-                                order: { stepOrder: 'ASC' }
+                                where: { workflowId: targetWfId, isDeleted: false },
+                                order: { stepOrder: 'ASC', id: 'ASC' }
                             });
 
                             if (firstStage) {
@@ -350,13 +248,34 @@ export class ProductionService {
                                 const mode = teamTarget.assignmentMode || 'leader';
 
                                 if (mode === 'workflow') {
-                                    // Mode 3: According to Stage 1 of the Workflow
                                     await this.createStageStates(transactionManager, savedChildSub, firstStage);
                                 } else {
                                     let assignedUserId: number | null = null;
 
-                                    if (mode === 'leader') {
-                                        // Mode 1: Leader (fallback to random team member if no leader)
+                                    const parsedSubteamId = Number(teamTarget.subteamId);
+                                    const hasValidSubteam = Number.isInteger(parsedSubteamId) && parsedSubteamId > 0;
+
+                                    if ((mode === 'subteam_random' || mode === 'random') && hasValidSubteam) {
+                                        const subteamUserRepo = transactionManager.getRepository(SubteamUser);
+                                        const subteamUsers = await subteamUserRepo.find({
+                                            where: { subteamId: parsedSubteamId },
+                                            relations: ['user']
+                                        });
+                                        const activeMembers = subteamUsers
+                                            .map(su => su.user)
+                                            .filter((u): u is User => !!u && (u.status === 1 || u.status === undefined || u.status === null));
+                                        const pool = activeMembers.length > 0 ? activeMembers : subteamUsers.map(su => su.user).filter(Boolean);
+
+                                        if (pool.length > 0) {
+                                            const randomIndex = Math.floor(Math.random() * pool.length);
+                                            assignedUserId = pool[randomIndex].id;
+                                        } else {
+                                            const subteam = await transactionManager.getRepository(Subteam).findOne({
+                                                where: { id: parsedSubteamId }
+                                            });
+                                            assignedUserId = subteam?.leaderId || team.leaderId || null;
+                                        }
+                                    } else if (mode === 'leader') {
                                         assignedUserId = team.leaderId || null;
                                         if (!assignedUserId) {
                                             const teamMembers = await transactionManager.getRepository(User).find({
@@ -370,7 +289,6 @@ export class ProductionService {
                                             }
                                         }
                                     } else if (mode === 'random') {
-                                        // Mode 2: Random team member (fallback to leader)
                                         const teamMembers = await transactionManager.getRepository(User).find({
                                             where: { teamId: team.id }
                                         });
@@ -394,18 +312,27 @@ export class ProductionService {
                                         });
                                         await stateRepo.save(nextState);
 
+                                        let notifTarget = `el equipo ${team.name}`;
+                                        if (teamTarget.subteamId && (mode === 'subteam_random' || mode === 'random')) {
+                                            const subteam = await transactionManager.getRepository(Subteam).findOne({
+                                                where: { id: teamTarget.subteamId }
+                                            });
+                                            if (subteam) {
+                                                notifTarget = `el subequipo ${subteam.name} (${team.name})`;
+                                            }
+                                        }
+
                                         try {
                                             await notificationService.createNotification(
                                                 assignedUserId,
                                                 'Nueva Solicitud Asignada a tu Equipo',
-                                                `Se ha asignado la tarea "${firstStage.name}" para el equipo ${team.name}.`,
+                                                `Se ha asignado la tarea "${firstStage.name}" para ${notifTarget}.`,
                                                 'info'
                                             );
                                         } catch (err) {
                                             console.error('Error sending notification to assigned user:', err);
                                         }
                                     } else {
-                                        // Fallback to workflow stage 1 configuration
                                         await this.createStageStates(transactionManager, savedChildSub, firstStage);
                                     }
                                 }
@@ -429,10 +356,10 @@ export class ProductionService {
 
                         const firstStage = await stageRepo.findOne({
                             where: [
-                                { workflowId: wfId || -1, stepOrder: 1, isDeleted: false },
-                                { formId: targetFormId, stepOrder: 1, isDeleted: false }
+                                { workflowId: wfId || -1, isDeleted: false },
+                                { formId: targetFormId, isDeleted: false }
                             ],
-                            order: { stepOrder: 'ASC' }
+                            order: { stepOrder: 'ASC', id: 'ASC' }
                         });
 
                         if (firstStage) {
@@ -448,7 +375,7 @@ export class ProductionService {
 
             const form = await transactionManager.getRepository(DynamicForm).findOne({ where: { id: formId } });
             if (form && form.isInitialForm) {
-                // Create parent submission header
+
                 const submission = subRepo.create({
                     formId,
                     requesterUserId,
@@ -456,7 +383,6 @@ export class ProductionService {
                 });
                 const savedSubmission = await subRepo.save(submission);
 
-                // Insert values for parent
                 const fields = await transactionManager.getRepository(DynamicFormField).find({
                     where: { formId },
                     order: { displayOrder: 'ASC' }
@@ -481,9 +407,9 @@ export class ProductionService {
                             evaluated = evaluated.replace(/\{\{LOGGED_USER_EMAIL\}\}/g, requester?.email || '');
                         }
                         if (evaluated.includes('{{LOGGED_USER_AREA}}')) {
-                            const requester = await userRepo.findOne({ 
-                                where: { id: requesterUserId }, 
-                                relations: ['team'] 
+                            const requester = await userRepo.findOne({
+                                where: { id: requesterUserId },
+                                relations: ['team']
                             });
                             evaluated = evaluated.replace(/\{\{LOGGED_USER_AREA\}\}/g, requester?.team?.name || '');
                         }
@@ -499,7 +425,6 @@ export class ProductionService {
                     }
                 }
 
-                // Create child submissions for each selected area
                 if (targetFormIds && targetFormIds.length > 0) {
                     for (const targetFormId of targetFormIds) {
                         const targetForm = await transactionManager.getRepository(DynamicForm).findOne({ where: { id: targetFormId } });
@@ -514,7 +439,8 @@ export class ProductionService {
                         const savedChildSub = await subRepo.save(childSub);
 
                         const firstStage = await stageRepo.findOne({
-                            where: { formId: targetFormId, stepOrder: 1, isDeleted: false }
+                            where: { formId: targetFormId, isDeleted: false },
+                            order: { stepOrder: 'ASC', id: 'ASC' }
                         });
 
                         if (firstStage) {
@@ -522,7 +448,6 @@ export class ProductionService {
                             savedChildSub.status = 'In Progress';
                             await subRepo.save(savedChildSub);
 
-                            // Create initial stage workflow entry using standard stage resolution
                             await this.createStageStates(transactionManager, savedChildSub, firstStage);
                         }
                     }
@@ -530,8 +455,6 @@ export class ProductionService {
                 return savedSubmission;
             }
 
-            // --- NORMAL SUBMISSION LOGIC ---
-            // Create submission header
             const submission = subRepo.create({
                 formId,
                 requesterUserId,
@@ -539,17 +462,14 @@ export class ProductionService {
             });
             const savedSubmission = await subRepo.save(submission);
 
-            // Fetch dynamic fields for validation/default generation
             const fields = await transactionManager.getRepository(DynamicFormField).find({
                 where: { formId },
                 order: { displayOrder: 'ASC' }
             });
 
-            // Insert values
             for (const field of fields) {
                 let valueStr = values[field.name];
 
-                // Auto-fill read-only defaults if not provided or to ensure integrity
                 if (field.isReadOnly && field.defaultValueExpression) {
                     let evaluated = field.defaultValueExpression;
 
@@ -570,9 +490,9 @@ export class ProductionService {
                         evaluated = evaluated.replace(/\{\{LOGGED_USER_EMAIL\}\}/g, email);
                     }
                     if (evaluated.includes('{{LOGGED_USER_AREA}}')) {
-                        const requester = await userRepo.findOne({ 
-                            where: { id: requesterUserId }, 
-                            relations: ['team'] 
+                        const requester = await userRepo.findOne({
+                            where: { id: requesterUserId },
+                            relations: ['team']
                         });
                         const area = requester?.team?.name || '';
                         evaluated = evaluated.replace(/\{\{LOGGED_USER_AREA\}\}/g, area);
@@ -590,9 +510,9 @@ export class ProductionService {
                 }
             }
 
-            // Find first stage in workflow (stepOrder = 1)
             const firstStage = await stageRepo.findOne({
-                where: { formId, stepOrder: 1, isDeleted: false }
+                where: { formId, isDeleted: false },
+                order: { stepOrder: 'ASC', id: 'ASC' }
             });
 
             if (firstStage) {
@@ -600,7 +520,6 @@ export class ProductionService {
                 savedSubmission.status = 'In Progress';
                 await subRepo.save(savedSubmission);
 
-                // Resolve assignee
                 let assigneeUserId: number | null = null;
                 if (firstStage.assigneeType === 'specific_user') {
                     assigneeUserId = firstStage.assigneeUserId;
@@ -608,7 +527,7 @@ export class ProductionService {
                     assigneeUserId = requesterUserId;
                 } else if (firstStage.assigneeType === 'requester_boss') {
                     const requester = await userRepo.findOne({ where: { id: requesterUserId } });
-                    assigneeUserId = requester?.bossId || firstStage.assigneeUserId || 1; // Fallback to admin/specific_user if no boss
+                    assigneeUserId = requester?.bossId || firstStage.assigneeUserId || 1;
                 } else if (firstStage.assigneeType === 'previous_stage_actioner') {
                     assigneeUserId = requesterUserId;
                 } else if (firstStage.assigneeType === 'previous_stage_team_random') {
@@ -620,8 +539,41 @@ export class ProductionService {
                     }
                 } else if (firstStage.assigneeType === 'team_leader' && firstStage.assigneeTeamId) {
                     assigneeUserId = await this.resolveTeamUser(AppDataSource.manager, firstStage.assigneeTeamId, 'leader');
+                } else if (firstStage.assigneeType === 'subteam_random' && firstStage.assigneeSubteamId) {
+                    const subteamUserRepo = AppDataSource.manager.getRepository(SubteamUser);
+                    const subteamUsers = await subteamUserRepo.find({
+                        where: { subteamId: firstStage.assigneeSubteamId },
+                        relations: ['user']
+                    });
+                    const activeUsers = subteamUsers
+                        .map((su: any) => su.user)
+                        .filter((u: any) => !!u && (u.status === 1 || u.status === undefined || u.status === null));
+                    
+                    let candidates = activeUsers;
+                    if (firstStage.excludeTeamLeader) {
+                        const subteam = await AppDataSource.manager.getRepository(Subteam).findOne({ where: { id: firstStage.assigneeSubteamId } });
+                        const team = firstStage.assigneeTeamId ? await AppDataSource.manager.getRepository(Team).findOne({ where: { id: firstStage.assigneeTeamId } }) : null;
+                        const leadersToExclude = new Set([subteam?.leaderId, team?.leaderId].filter(Boolean));
+                        const nonLeaders = activeUsers.filter((u: any) => !leadersToExclude.has(u.id));
+                        if (nonLeaders.length > 0) candidates = nonLeaders;
+                    }
+
+                    if (candidates.length > 0) {
+                        const randomIndex = Math.floor(Math.random() * candidates.length);
+                        assigneeUserId = candidates[randomIndex].id;
+                    } else {
+                        const subteam = await AppDataSource.manager.getRepository(Subteam).findOne({
+                            where: { id: firstStage.assigneeSubteamId },
+                            relations: ['leader']
+                        });
+                        if (subteam?.leader && (subteam.leader.status === 1 || subteam.leader.status === undefined)) {
+                            assigneeUserId = subteam.leader.id;
+                        } else if (firstStage.assigneeTeamId) {
+                            assigneeUserId = await this.resolveTeamUser(AppDataSource.manager, firstStage.assigneeTeamId, 'random', !!firstStage.excludeTeamLeader, requesterUserId);
+                        }
+                    }
                 } else if (firstStage.assigneeType === 'team' && firstStage.assigneeTeamId) {
-                    // Load balancing: pick user in active team with least pending tasks
+
                     const teamUsers = await userRepo.find({
                         where: { teamId: firstStage.assigneeTeamId, status: 1 }
                     });
@@ -639,9 +591,8 @@ export class ProductionService {
                     }
                 }
 
-                if (!assigneeUserId) assigneeUserId = 1; // absolute fallback to user ID 1 (Admin)
+                if (!assigneeUserId) assigneeUserId = 1;
 
-                // Create initial stage workflow entry
                 const state = stateRepo.create({
                     submissionId: savedSubmission.id,
                     stageId: firstStage.id,
@@ -650,7 +601,6 @@ export class ProductionService {
                 });
                 await stateRepo.save(state);
 
-                // Send notification
                 try {
                     await notificationService.createNotification(
                         assigneeUserId,
@@ -667,12 +617,21 @@ export class ProductionService {
         });
     }
 
-    async getSubmissions(userId: number) {
+    async getSubmissions(userId: number, options?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        forms?: string[];
+        status?: string;
+        dateFrom?: string;
+        dateTo?: string;
+        requester?: string;
+        excludePendingForUser?: boolean;
+    }) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const stateRepo = AppDataSource.getRepository(DynamicSubmissionWorkflowState);
         const subRepo = AppDataSource.getRepository(DynamicFormSubmission);
 
-        // 1. Find all submissions where user was requester, assigned, or actioner
         const states = await stateRepo.find({
             where: [
                 { assignedUserId: userId },
@@ -689,10 +648,9 @@ export class ProductionService {
         userCreatedSubs.forEach(s => directSubIds.add(s.id));
 
         if (directSubIds.size === 0) {
-            return [];
+            return options?.page || options?.limit ? { data: [], total: 0, page: options?.page || 1, limit: options?.limit || 12, totalPages: 0 } : [];
         }
 
-        // 2. Expand all directly participated submissions to include their full submission trees
         const allTreeIds = new Set<number>();
         for (const subId of directSubIds) {
             const tree = await this.getSubmissionTreeIds(subId);
@@ -701,16 +659,13 @@ export class ProductionService {
 
         let submissions = await subRepo.find({
             where: { id: In(Array.from(allTreeIds)) },
-            relations: ['form', 'currentStage', 'workflow'],
+            relations: ['form', 'currentStage', 'workflow', 'requesterUser'],
             order: { createdAt: 'DESC' }
         });
 
         const subMap = new Map<number, DynamicFormSubmission>();
         submissions.forEach(s => subMap.set(s.id, s));
 
-        // Filter out:
-        // 1. Initial entry multi-team containers (parentSubmissionId === null && !workflowId)
-        // 2. Internal subflow child submissions (parentSubmissionId !== null where parent has workflow/stages)
         const mainSubmissions = submissions.filter(sub => {
             const isEntryContainer = sub.parentSubmissionId === null && !sub.workflowId;
             let isInternalSubflow = false;
@@ -723,13 +678,115 @@ export class ProductionService {
             return !isEntryContainer && !isInternalSubflow;
         });
 
-        // Load all active pending states across all submission trees in a single bulk query
-        const allActiveStates = allTreeIds.size > 0 ? await stateRepo.find({
-            where: { submissionId: In(Array.from(allTreeIds)), status: 'Pending' },
-            relations: ['assignedUser', 'stage', 'stage.workflow', 'submission', 'submission.form']
-        }) : [];
+        // 1. Excluir solicitudes que tienen tareas pendientes asignadas al usuario para evitar duplicidad
+        let candidateSubmissions = mainSubmissions;
+        if (options?.excludePendingForUser !== false) {
+            const userPendingStates = await stateRepo.find({
+                where: { assignedUserId: userId, status: 'Pending' },
+                select: ['submissionId']
+            });
+            const pendingSubIds = new Set<number>();
+            for (const ps of userPendingStates) {
+                if (ps.submissionId) {
+                    pendingSubIds.add(ps.submissionId);
+                    const tree = await this.getSubmissionTreeIds(ps.submissionId);
+                    tree.forEach(id => pendingSubIds.add(id));
+                }
+            }
+            candidateSubmissions = candidateSubmissions.filter(s => !pendingSubIds.has(s.id) && !(s.parentSubmissionId && pendingSubIds.has(s.parentSubmissionId)));
+        }
 
-        // Build in-memory descendant resolver for each main submission
+        // 2. Ordenar: Activas primero, luego fecha descendente
+        candidateSubmissions.sort((a, b) => {
+            const aActive = a.status !== 'Completed' && a.status !== 'Approved';
+            const bActive = b.status !== 'Completed' && b.status !== 'Approved';
+            if (aActive && !bActive) return -1;
+            if (!aActive && bActive) return 1;
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+
+        // 3. Aplicar Filtro de Formularios
+        if (options?.forms && options.forms.length > 0) {
+            const formSet = new Set(options.forms.map(f => f.toLowerCase().trim()));
+            candidateSubmissions = candidateSubmissions.filter(s => s.form && formSet.has(s.form.name.toLowerCase().trim()));
+        }
+
+        // 4. Aplicar Filtro de Estado
+        if (options?.status && options.status !== 'all') {
+            const st = options.status.toLowerCase().trim();
+            candidateSubmissions = candidateSubmissions.filter(s => {
+                const subSt = (s.status || '').toLowerCase();
+                if (st === 'completed') return subSt === 'completed' || subSt === 'approved';
+                if (st === 'in_progress') return subSt === 'in progress' || subSt === 'in_progress';
+                if (st === 'rejected') return subSt === 'rejected';
+                return true;
+            });
+        }
+
+        // 5. Aplicar Filtro de Solicitante
+        if (options?.requester && options.requester.trim()) {
+            const reqQ = options.requester.toLowerCase().trim();
+            candidateSubmissions = candidateSubmissions.filter(s => {
+                const name = (s.requesterUser?.name || '').toLowerCase();
+                const email = (s.requesterUser?.email || '').toLowerCase();
+                return name.includes(reqQ) || email.includes(reqQ);
+            });
+        }
+
+        // 6. Aplicar Filtro de Fechas
+        if (options?.dateFrom) {
+            const from = new Date(options.dateFrom);
+            if (!isNaN(from.getTime())) {
+                from.setHours(0, 0, 0, 0);
+                candidateSubmissions = candidateSubmissions.filter(s => new Date(s.createdAt) >= from);
+            }
+        }
+        if (options?.dateTo) {
+            const to = new Date(options.dateTo);
+            if (!isNaN(to.getTime())) {
+                to.setHours(23, 59, 59, 999);
+                candidateSubmissions = candidateSubmissions.filter(s => new Date(s.createdAt) <= to);
+            }
+        }
+
+        // 7. Aplicar Búsqueda Global (ID, consecutivo, nombre formulario, etapa, solicitante, y campos de tarjeta)
+        if (options?.search && options.search.trim()) {
+            const cleanQ = options.search.toLowerCase().trim();
+            const isHashId = cleanQ.startsWith('#');
+            const searchNum = isHashId ? cleanQ.replace('#', '').trim() : cleanQ;
+
+            const candidateIds = candidateSubmissions.map(s => s.id);
+            let subIdsWithMatchingValues = new Set<number>();
+            if (candidateIds.length > 0) {
+                const matchingVals = await AppDataSource.getRepository(DynamicFormFieldValue)
+                    .createQueryBuilder('val')
+                    .where('LOWER(val.value) LIKE :q', { q: `%${cleanQ}%` })
+                    .andWhere('val.submissionId IN (:...ids)', { ids: candidateIds })
+                    .select('val.submissionId', 'submissionId')
+                    .getRawMany();
+                matchingVals.forEach(m => subIdsWithMatchingValues.add(m.submissionId));
+            }
+
+            candidateSubmissions = candidateSubmissions.filter(s => {
+                const idStr = String(s.id);
+                if (idStr === searchNum || idStr.includes(searchNum)) return true;
+                if (s.form?.name && s.form.name.toLowerCase().includes(cleanQ)) return true;
+                if (s.consecutive && s.consecutive.toLowerCase().includes(cleanQ)) return true;
+                if (s.requesterUser?.name && s.requesterUser.name.toLowerCase().includes(cleanQ)) return true;
+                if (s.requesterUser?.email && s.requesterUser.email.toLowerCase().includes(cleanQ)) return true;
+                if (s.currentStage?.name && s.currentStage.name.toLowerCase().includes(cleanQ)) return true;
+                if (subIdsWithMatchingValues.has(s.id)) return true;
+                return false;
+            });
+        }
+
+        const total = candidateSubmissions.length;
+        const page = options?.page ? Math.max(1, options.page) : 1;
+        const limit = options?.limit ? Math.max(1, options.limit) : 12;
+        const pagedSubmissions = (options?.page || options?.limit)
+            ? candidateSubmissions.slice((page - 1) * limit, page * limit)
+            : candidateSubmissions;
+
         const getDescendantIds = (rootId: number): Set<number> => {
             const ids = new Set<number>([rootId]);
             let added = true;
@@ -745,8 +802,30 @@ export class ProductionService {
             return ids;
         };
 
-        const results = mainSubmissions.map((sub) => {
+        const pagedTreeIds = new Set<number>();
+        for (const sub of pagedSubmissions) {
+            const tree = getDescendantIds(sub.id);
+            tree.forEach(id => pagedTreeIds.add(id));
+            if (sub.parentSubmissionId) pagedTreeIds.add(sub.parentSubmissionId);
+        }
+
+        const allActiveStates = pagedTreeIds.size > 0 ? await stateRepo.find({
+            where: { submissionId: In(Array.from(pagedTreeIds)), status: 'Pending' },
+            relations: ['assignedUser', 'stage', 'stage.workflow', 'submission', 'submission.form']
+        }) : [];
+
+        const valRepo = AppDataSource.getRepository(DynamicFormFieldValue);
+        const allValues = pagedTreeIds.size > 0 ? await valRepo.find({
+            where: { submissionId: In(Array.from(pagedTreeIds)) },
+            relations: ['field', 'field.form'],
+            order: { id: 'ASC' }
+        }) : [];
+
+        const results = pagedSubmissions.map((sub) => {
             const treeSubIds = getDescendantIds(sub.id);
+            if (sub.parentSubmissionId) {
+                treeSubIds.add(sub.parentSubmissionId);
+            }
             const activeStatesForThisSub = allActiveStates.filter(s => treeSubIds.has(s.submissionId));
 
             let assigneeName = 'Sin Asignar';
@@ -787,18 +866,54 @@ export class ProductionService {
                 }
             }
 
+            const subValues = allValues.filter(v => treeSubIds.has(v.submissionId));
+            const cardFieldsMap = new Map<number, { label: string; value: string; fieldType: string; metadata?: any; displayOrder: number }>();
+            for (const v of subValues) {
+                if (v && v.field && v.value !== undefined && v.value !== null && v.value !== '') {
+                    let parsedMeta: any = v.field.metadata;
+                    if (parsedMeta && typeof parsedMeta === 'string') {
+                        try { parsedMeta = JSON.parse(parsedMeta); } catch (e) {}
+                    }
+                    if (parsedMeta && (parsedMeta.showInCard === true || parsedMeta.showInCard === 'true')) {
+                        cardFieldsMap.set(v.field.id, {
+                            label: v.field.label,
+                            value: v.value,
+                            fieldType: v.field.type,
+                            metadata: parsedMeta,
+                            displayOrder: v.field.displayOrder ?? 0
+                        });
+                    }
+                }
+            }
+            const cardFields = Array.from(cardFieldsMap.values())
+                .sort((a, b) => a.displayOrder - b.displayOrder)
+                .map(cf => ({ label: cf.label, value: cf.value, fieldType: cf.fieldType, metadata: cf.metadata }));
+
             return {
                 id: sub.id,
                 formName: sub.form ? sub.form.name : 'Solicitud',
                 createdAt: sub.createdAt,
                 stageName: displayStageName,
                 status: sub.status,
+                requesterName: (sub as any).requesterUser ? (sub as any).requesterUser.name : (sub.requesterUserId ? `Usuario #${sub.requesterUserId}` : 'Usuario'),
+                requesterEmail: (sub as any).requesterUser ? (sub as any).requesterUser.email : '',
                 assigneeName,
                 assigneeEmail,
                 consecutive: sub.consecutive,
-                icon: sub.form ? sub.form.icon : undefined
+                icon: sub.form ? sub.form.icon : undefined,
+                cardFields
             };
         });
+
+        if (options?.page || options?.limit) {
+            return {
+                data: results,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            };
+        }
 
         return results;
     }
@@ -891,7 +1006,6 @@ export class ProductionService {
         const entryValues = allValuesToInclude.filter(v => v && v.field && v.field.formId === sub.formId);
         const stageValues = allValuesToInclude.filter(v => v && v.field && v.field.formId !== sub.formId);
 
-        // Determine if next stage query exists to identify final stage
         const wfId = sub.workflowId || (sub.currentStage ? sub.currentStage.workflowId : null) || (sub.form ? sub.form.workflowId : null);
         let nextStageQuery = AppDataSource.getRepository(DynamicWorkflowStage)
             .createQueryBuilder("stage")
@@ -911,19 +1025,18 @@ export class ProductionService {
              const resolvedForm = cState.customFormToFill || cState.stage?.formToFill || (isChildSub ? (cState as any).submission?.form : null);
              const resolvedFormId = cState.customFormIdToFill || cState.stage?.formIdToFill || (isChildSub ? (cState as any).submission?.formId : null);
              let stageVals = allValuesToInclude.filter(v => v && v.field && v.workflowStateId === cState.id);
-             
-             // If no specific workflowStateId, but is the initial state of a child submission/subflow with its own form:
+
              if (stageVals.length === 0 && isChildSub && resolvedFormId && (!cState.stage || cState.stage.stepOrder === 1) && cState.status === 'Approved' && !cState.notes?.toLowerCase().includes('rechaz')) {
                  stageVals = allValuesToInclude.filter(v => v && v.field && v.submissionId === cState.submissionId && !v.workflowStateId && v.field.formId === resolvedFormId);
              }
 
              const user = cState.actionedByUser || cState.assignedUser;
-             
+
              let displayName = cState.stage ? cState.stage.name : 'Etapa';
              if (cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir'))) {
                  displayName = `${displayName} (Corrección)`;
              }
-             
+
              if (cState.stage?.workflow && sub.workflowId && cState.stage.workflowId !== sub.workflowId) {
                  displayName = `${cState.stage.workflow.name}: ${displayName}`;
              } else if (cState.submissionId !== sub.id && (cState as any).submission?.form) {
@@ -939,7 +1052,7 @@ export class ProductionService {
                      formName = uniqueFormNames.join(', ');
                  }
              }
- 
+
              return {
                  stageName: displayName,
                  formName: formName,
@@ -1044,7 +1157,6 @@ export class ProductionService {
             }
         }
 
-        // Deduplicate entryValues by fieldId so no field repeats
         const uniqueEntryValues: any[] = [];
         const seenFieldIds = new Set<number>();
         for (const v of entryValues) {
@@ -1248,7 +1360,6 @@ export class ProductionService {
 
         const updatedRequest = await repo.save(existingRequest);
 
-        // Verification query: confirm DB persistence of consecutive & status
         const verification = await repo.findOne({ where: { id: existingRequest.id } });
         if (!verification) {
             throw new Error('Error de verificación: La solicitud no se encontró tras el guardado.');
@@ -1320,7 +1431,6 @@ export class ProductionService {
 
         const updatedRequest = await repo.save(existingRequest);
 
-        // Verification query: confirm DB persistence of consecutive & status
         const verification = await repo.findOne({ where: { id: existingRequest.id } });
         if (!verification) {
             throw new Error('Error de verificación: La solicitud no se encontró tras el guardado.');
@@ -1347,198 +1457,26 @@ export class ProductionService {
         return this.updateProductionRequestPartial(id, data, userId);
     }
 
-    // --- ADMIN FORMS ---
     async adminGetForms() {
-        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
-        return await AppDataSource.getRepository(DynamicForm).find({
-            order: { name: 'ASC' }
-        });
+        return dynamicFormService.adminGetForms();
     }
 
     async adminCreateForm(data: Partial<DynamicForm>) {
-        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
-        const repo = AppDataSource.getRepository(DynamicForm);
-        const wfRepo = AppDataSource.getRepository(DynamicWorkflow);
-        
-        let targetWfId = data.workflowId || null;
-        if (!targetWfId && data.isEntryForm && !data.isInitialForm) {
-            const wfName = `Flujo: ${data.name}`;
-            let existingWf = await wfRepo.findOne({ where: { name: wfName } });
-            if (!existingWf) {
-                existingWf = await wfRepo.save(wfRepo.create({
-                    name: wfName,
-                    description: data.description || `Flujo para ${data.name}`,
-                    isActive: true
-                }));
-            }
-            targetWfId = existingWf.id;
-        }
-
-        const form = repo.create({
-            name: data.name,
-            description: data.description,
-            isEntryForm: data.isEntryForm ?? true,
-            isInitialForm: data.isInitialForm ?? false,
-            isActive: data.isActive ?? true,
-            responsible: data.responsible,
-            role: data.role,
-            icon: data.icon,
-            displayOrder: data.displayOrder ?? 0,
-            metadata: data.metadata,
-            workflowId: targetWfId
-        });
-        return await repo.save(form);
+        return dynamicFormService.adminCreateForm(data);
     }
 
     async adminUpdateForm(id: number, data: Partial<DynamicForm>) {
-        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
-        const repo = AppDataSource.getRepository(DynamicForm);
-        const form = await repo.findOne({ where: { id } });
-        if (!form) throw new Error('Formulario no encontrado');
-        
-        const updateData: Partial<DynamicForm> = {};
-        if (data.isInitialForm !== undefined) updateData.isInitialForm = Boolean(data.isInitialForm);
-        if (data.name !== undefined) updateData.name = data.name;
-        if (data.description !== undefined) updateData.description = data.description;
-        if (data.isEntryForm !== undefined) updateData.isEntryForm = Boolean(data.isEntryForm);
-        if (data.isActive !== undefined) updateData.isActive = Boolean(data.isActive);
-        if (data.responsible !== undefined) updateData.responsible = data.responsible;
-        if (data.role !== undefined) updateData.role = data.role;
-        if (data.icon !== undefined) updateData.icon = data.icon;
-        if (data.displayOrder !== undefined) updateData.displayOrder = Number(data.displayOrder);
-        if (data.metadata !== undefined) updateData.metadata = data.metadata;
-        if (data.workflowId !== undefined) updateData.workflowId = data.workflowId;
-
-        await repo.update({ id }, updateData);
-        return await repo.findOne({ where: { id } });
+        return dynamicFormService.adminUpdateForm(id, data);
     }
 
     async adminDeleteForm(id: number, physicalDelete: boolean = false) {
-        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
-        
-        if (physicalDelete) {
-            return await AppDataSource.transaction(async (manager) => {
-                // 1. Unlink form from any workflow stage pointing to it as form to fill
-                await manager.query(`UPDATE DynamicWorkflowStages SET FormIdToFill = NULL WHERE FormIdToFill = ${id};`);
-
-                // 2. Unlink any submission parent/children and clear currentStageId
-                await manager.query(`
-                    UPDATE DynamicFormSubmissions 
-                    SET ParentSubmissionId = NULL, CurrentStageId = NULL 
-                    WHERE FormId = ${id} OR ParentSubmissionId IN (SELECT Id FROM DynamicFormSubmissions WHERE FormId = ${id});
-                `);
-
-                // 3. Nullify WorkflowStateId on DynamicFormFieldValues if column exists
-                await manager.query(`
-                    IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('DynamicFormFieldValues') AND name = 'WorkflowStateId')
-                    BEGIN
-                        UPDATE DynamicFormFieldValues SET WorkflowStateId = NULL 
-                        WHERE FieldId IN (SELECT Id FROM DynamicFormFields WHERE FormId = ${id})
-                           OR SubmissionId IN (SELECT Id FROM DynamicFormSubmissions WHERE FormId = ${id});
-                    END
-                `);
-
-                // 4. Delete DynamicFormFieldValues
-                await manager.query(`
-                    DELETE FROM DynamicFormFieldValues 
-                    WHERE FieldId IN (SELECT Id FROM DynamicFormFields WHERE FormId = ${id})
-                       OR SubmissionId IN (SELECT Id FROM DynamicFormSubmissions WHERE FormId = ${id});
-                `);
-
-                // 5. Delete DynamicSubmissionWorkflowState
-                await manager.query(`
-                    DELETE FROM DynamicSubmissionWorkflowState 
-                    WHERE SubmissionId IN (SELECT Id FROM DynamicFormSubmissions WHERE FormId = ${id})
-                       OR StageId IN (SELECT Id FROM DynamicWorkflowStages WHERE FormId = ${id});
-                `);
-
-                // 6. Delete DynamicFormSubmissions
-                await manager.query(`DELETE FROM DynamicFormSubmissions WHERE FormId = ${id};`);
-
-                // 7. Delete DynamicFormFields
-                await manager.query(`DELETE FROM DynamicFormFields WHERE FormId = ${id};`);
-
-                // 8. Delete DynamicWorkflowStages where FormId is this form
-                await manager.query(`DELETE FROM DynamicWorkflowStages WHERE FormId = ${id};`);
-
-                // 9. Unlink workflowId on this form
-                await manager.query(`UPDATE DynamicForms SET WorkflowId = NULL WHERE Id = ${id};`);
-
-                // 10. Delete the form
-                await manager.query(`DELETE FROM DynamicForms WHERE Id = ${id};`);
-
-                return { id, deleted: true };
-            });
-        } else {
-            const repo = AppDataSource.getRepository(DynamicForm);
-            await repo.update({ id }, { isActive: false });
-            return await repo.findOne({ where: { id } });
-        }
+        return dynamicFormService.adminDeleteForm(id, physicalDelete);
     }
 
     async adminSaveFields(formId: number, fields: Partial<DynamicFormField>[]) {
-        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
-        return await AppDataSource.transaction(async (manager) => {
-            const fieldRepo = manager.getRepository(DynamicFormField);
+        return dynamicFormService.adminSaveFields(formId, fields);
+}
 
-            // Fetch existing field IDs to know what to delete
-            const existingFields = await fieldRepo.find({ where: { formId } });
-            const inputIds = fields.map(f => f.id).filter(id => !!id) as number[];
-            
-            // Delete fields that are not in the input list (Cascade delete values and field itself)
-            const fieldsToDelete = existingFields.filter(ef => !inputIds.includes(ef.id));
-            if (fieldsToDelete.length > 0) {
-                const ids = fieldsToDelete.map(f => f.id);
-                await manager.getRepository(DynamicFormFieldValue).delete({ fieldId: In(ids) });
-                await fieldRepo.remove(fieldsToDelete);
-            }
-
-            // Insert or Update fields
-            const savedFields = [];
-            for (let i = 0; i < fields.length; i++) {
-                const f = fields[i];
-                let fieldEntity = existingFields.find(ef => ef.id === f.id);
-
-                const metaSanitized = f.metadata ? this.sanitizeFieldMetadata(f.metadata) : null;
-                const metaString = metaSanitized ? JSON.stringify(metaSanitized) : null;
-
-                if (!fieldEntity) {
-                    fieldEntity = fieldRepo.create({
-                        formId,
-                        name: f.name || `field_${Date.now()}_${i}`,
-                        label: f.label || 'Campo nuevo',
-                        description: f.description,
-                        type: f.type || 'text',
-                        placeholder: f.placeholder,
-                        isRequired: f.isRequired ?? false,
-                        isReadOnly: f.isReadOnly ?? false,
-                        isActive: f.isActive ?? true,
-                        defaultValueExpression: f.defaultValueExpression,
-                        displayOrder: f.displayOrder ?? (i + 1),
-                        metadata: metaString
-                    });
-                } else {
-                    if (f.name !== undefined) fieldEntity.name = f.name;
-                    if (f.label !== undefined) fieldEntity.label = f.label;
-                    if (f.description !== undefined) fieldEntity.description = f.description;
-                    if (f.type !== undefined) fieldEntity.type = f.type;
-                    if (f.placeholder !== undefined) fieldEntity.placeholder = f.placeholder;
-                    if (f.isRequired !== undefined) fieldEntity.isRequired = f.isRequired;
-                    if (f.isReadOnly !== undefined) fieldEntity.isReadOnly = f.isReadOnly;
-                    if (f.isActive !== undefined) fieldEntity.isActive = f.isActive;
-                    if (f.defaultValueExpression !== undefined) fieldEntity.defaultValueExpression = f.defaultValueExpression;
-                    if (f.displayOrder !== undefined) fieldEntity.displayOrder = f.displayOrder;
-                    if (f.metadata !== undefined) fieldEntity.metadata = metaString;
-                }
-
-                savedFields.push(await fieldRepo.save(fieldEntity));
-            }
-
-            return savedFields;
-        });
-    }
-
-    // --- ADMIN WORKFLOWS (INDEPENDENT) ---
     async adminGetWorkflows() {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         return await AppDataSource.getRepository(DynamicWorkflow).find({
@@ -1558,6 +1496,109 @@ export class ProductionService {
         return await repo.save(wf);
     }
 
+    /**
+     * Bloquea y cierra todas las solicitudes en curso asociadas a un flujo de trabajo
+     * cuando dicho flujo es modificado, desactivado o eliminado.
+     */
+    async blockActiveSubmissionsForWorkflow(manager: any, workflowId: number, reason: string): Promise<number> {
+        const subRepo = manager.getRepository(DynamicFormSubmission);
+        const stageRepo = manager.getRepository(DynamicWorkflowStage);
+        const stateRepo = manager.getRepository(DynamicSubmissionWorkflowState);
+
+        // 1. Obtener todas las etapas que pertenecen a este flujo
+        const stages = await stageRepo.find({
+            where: { workflowId },
+            select: ['id']
+        });
+        const stageIds = stages.map((s: any) => s.id);
+
+        // 2. Buscar submissions activas directamente asociadas a este workflow o a sus etapas
+        const query = subRepo.createQueryBuilder("sub")
+            .where("sub.status IN (:...statuses)", { statuses: ['In Progress', 'Pending', 'Rejected'] });
+
+        if (stageIds.length > 0) {
+            query.andWhere("(sub.workflowId = :workflowId OR sub.currentStageId IN (:...stageIds))", { workflowId, stageIds });
+        } else {
+            query.andWhere("sub.workflowId = :workflowId", { workflowId });
+        }
+
+        const directSubs = await query.getMany();
+
+        // 3. Buscar submissions que tengan estados pendientes en alguna etapa de este flujo
+        let stateSubs: DynamicFormSubmission[] = [];
+        if (stageIds.length > 0) {
+            const pendingStates = await stateRepo.find({
+                where: { stageId: In(stageIds), status: 'Pending' },
+                relations: ['submission']
+            });
+            stateSubs = pendingStates.map((ps: any) => ps.submission).filter((s: any) => s && ['In Progress', 'Pending', 'Rejected'].includes(s.status));
+        }
+
+        const candidateSubs = [...directSubs, ...stateSubs];
+        const uniqueSubMap = new Map<number, DynamicFormSubmission>();
+        candidateSubs.forEach(s => uniqueSubMap.set(s.id, s));
+
+        if (uniqueSubMap.size === 0) {
+            return 0;
+        }
+
+        // 4. Obtener árbol genealógico completo (padre e hijos) de las solicitudes afectadas
+        const allTreeSubIds = new Set<number>();
+        for (const sub of uniqueSubMap.values()) {
+            const tree = await this.getSubmissionTreeIds(sub.id);
+            tree.forEach(tid => allTreeSubIds.add(tid));
+        }
+
+        const allSubsToBlock = await subRepo.find({
+            where: {
+                id: In(Array.from(allTreeSubIds)),
+                status: In(['In Progress', 'Pending', 'Rejected'])
+            },
+            relations: ['form']
+        });
+
+        if (allSubsToBlock.length === 0) {
+            return 0;
+        }
+
+        // 5. Bloquear cada submission y sus estados pendientes
+        for (const subToBlock of allSubsToBlock) {
+            subToBlock.status = 'Blocked';
+            subToBlock.currentStageId = null;
+            await subRepo.save(subToBlock);
+
+            const pendingStatesToBlock = await stateRepo.find({
+                where: { submissionId: subToBlock.id, status: 'Pending' }
+            });
+
+            for (const pState of pendingStatesToBlock) {
+                pState.status = 'Blocked';
+                pState.notes = reason;
+                await stateRepo.save(pState);
+
+                try {
+                    await notificationService.createNotification(
+                        pState.assignedUserId,
+                        'Solicitud Bloqueada',
+                        `La solicitud de "${subToBlock.form?.name || 'Formulario'}" ha sido bloqueada porque el flujo de trabajo original fue modificado o eliminado. Debe iniciar una solicitud nueva.`,
+                        'warning'
+                    );
+                } catch (e) {}
+            }
+
+            try {
+                await notificationService.createNotification(
+                    subToBlock.requesterUserId,
+                    'Solicitud Bloqueada',
+                    `Tu solicitud de "${subToBlock.form?.name || 'Formulario'}" ha sido bloqueada porque el flujo de trabajo original fue modificado o eliminado. Debe iniciar una solicitud nueva.`,
+                    'warning'
+                );
+            } catch (e) {}
+        }
+
+        return allSubsToBlock.length;
+    }
+
     async adminUpdateWorkflow(id: number, data: Partial<DynamicWorkflow>) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const repo = AppDataSource.getRepository(DynamicWorkflow);
@@ -1566,18 +1607,69 @@ export class ProductionService {
         if (data.name !== undefined) wf.name = data.name;
         if (data.description !== undefined) wf.description = data.description;
         if (data.isActive !== undefined) wf.isActive = data.isActive;
-        return await repo.save(wf);
+        const saved = await repo.save(wf);
+
+        if (data.isActive === false) {
+            await AppDataSource.transaction(async (manager) => {
+                await this.blockActiveSubmissionsForWorkflow(
+                    manager,
+                    id,
+                    'Solicitud bloqueada: El flujo de trabajo original fue desactivado mientras la solicitud estaba en proceso. Debe iniciar una solicitud nueva.'
+                );
+            });
+        }
+        return saved;
     }
 
     async adminDeleteWorkflow(id: number) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
-        const repo = AppDataSource.getRepository(DynamicWorkflow);
-        const wf = await repo.findOne({ where: { id } });
-        if (!wf) throw new Error('Flujo de trabajo no encontrado');
+        return await AppDataSource.transaction(async (manager) => {
+            const repo = manager.getRepository(DynamicWorkflow);
+            const wf = await repo.findOne({ where: { id } });
+            if (!wf) throw new Error('Flujo de trabajo no encontrado');
 
-        await AppDataSource.getRepository(DynamicForm).update({ workflowId: id }, { workflowId: null });
-        await repo.update({ id }, { isActive: false });
-        return { id, deleted: true };
+            // 1. Bloquear y cerrar solicitudes en curso que dependían de este flujo
+            await this.blockActiveSubmissionsForWorkflow(
+                manager,
+                id,
+                'Solicitud bloqueada: El flujo de trabajo original fue eliminado mientras la solicitud estaba en proceso. Debe iniciar una solicitud nueva.'
+            );
+
+            // 2. Limpiar columna directa en DynamicForms
+            await manager.getRepository(DynamicForm).update({ workflowId: id }, { workflowId: null });
+
+            // 3. Limpiar referencias en metadatos de formularios (teamWorkflows y closingConfig)
+            const formRepo = manager.getRepository(DynamicForm);
+            const forms = await formRepo.find();
+            for (const f of forms) {
+                if (!f.metadata) continue;
+                try {
+                    let meta = typeof f.metadata === 'object' ? f.metadata : JSON.parse(f.metadata);
+                    let changed = false;
+                    if (meta.teamWorkflows && typeof meta.teamWorkflows === 'object') {
+                        for (const [tKey, wfVal] of Object.entries(meta.teamWorkflows)) {
+                            if (Number(wfVal) === id) {
+                                delete meta.teamWorkflows[tKey];
+                                changed = true;
+                            }
+                        }
+                    }
+                    if (meta.closingConfig && (Number(meta.closingConfig.closingWorkflowId) === id || Number(meta.closingConfig.workflowId) === id)) {
+                        meta.closingConfig.closingWorkflowId = null;
+                        meta.closingConfig.workflowId = null;
+                        changed = true;
+                    }
+                    if (changed) {
+                        f.metadata = JSON.stringify(meta);
+                        await formRepo.save(f);
+                    }
+                } catch(e) {}
+            }
+
+            // 4. Desactivar flujo
+            await repo.update({ id }, { isActive: false });
+            return { id, deleted: true };
+        });
     }
 
     async adminGetWorkflowStages(workflowId: number) {
@@ -1586,7 +1678,7 @@ export class ProductionService {
             where: [
                 { workflowId, isDeleted: false }
             ],
-            relations: ['assigneeUser', 'assigneeTeam', 'formToFill', 'rejectionTargetUser', 'rejectionTargetTeam'],
+            relations: ['assigneeUser', 'assigneeTeam', 'assigneeSubteam', 'formToFill', 'rejectionTargetUser', 'rejectionTargetTeam'],
             order: { stepOrder: 'ASC' }
         });
         return stages.map(s => {
@@ -1596,12 +1688,20 @@ export class ProductionService {
                     parsedIds = JSON.parse(s.assigneeUserIds);
                 } catch(e) {}
             }
+            let parsedNextAssigneeOptions: any = [];
+            if (s.nextStageAssigneeOptions) {
+                try {
+                    parsedNextAssigneeOptions = typeof s.nextStageAssigneeOptions === 'string' ? JSON.parse(s.nextStageAssigneeOptions) : s.nextStageAssigneeOptions;
+                } catch(e) {}
+            }
             const isMultiForms = (parsedIds && !Array.isArray(parsedIds) && parsedIds.multiFormsConfig && parsedIds.multiFormsConfig.length > 0)
                 || (Array.isArray(parsedIds) && parsedIds.length > 0 && (parsedIds[0].sourceFormId !== undefined || parsedIds[0].targetFormIdToFill !== undefined || parsedIds[0].targetSubflowFormId !== undefined || parsedIds[0].targetSubflowWorkflowId !== undefined));
             return {
                 ...s,
                 formIdToFill: isMultiForms ? -1 : s.formIdToFill,
-                assigneeUserIds: parsedIds
+                assigneeUserIds: parsedIds,
+                allowChooseNextStageAssignee: !!s.allowChooseNextStageAssignee,
+                nextStageAssigneeOptions: parsedNextAssigneeOptions
             };
         });
     }
@@ -1611,13 +1711,11 @@ export class ProductionService {
         return await AppDataSource.transaction(async (manager) => {
             const stageRepo = manager.getRepository(DynamicWorkflowStage);
 
-            // Fetch existing stages for this workflow
             const existingStages = await stageRepo.find({
                 where: { workflowId }
             });
             const inputIds = stages.map(s => s.id).filter(id => !!id) as number[];
 
-            // Soft delete stages that are not in the input list
             const stagesToDelete = existingStages.filter(es => !inputIds.includes(es.id));
             if (stagesToDelete.length > 0) {
                 for (const es of stagesToDelete) {
@@ -1626,7 +1724,6 @@ export class ProductionService {
                 }
             }
 
-            // Insert or Update stages
             const savedStages = [];
             for (let i = 0; i < stages.length; i++) {
                 const s = stages[i];
@@ -1644,16 +1741,19 @@ export class ProductionService {
                         assigneeType: s.assigneeType || 'specific_user',
                         assigneeUserId: s.assigneeUserId || null,
                         assigneeTeamId: s.assigneeTeamId || null,
+                        assigneeSubteamId: s.assigneeSubteamId || null,
                         formIdToFill: dbFormIdToFill,
                         rejectionTargetType: s.rejectionTargetType || 'previous_sender',
                         rejectionTargetUserId: s.rejectionTargetUserId || null,
                         rejectionTargetTeamId: s.rejectionTargetTeamId || null,
                         requireCommentOnApprove: !!s.requireCommentOnApprove,
                         excludeTeamLeader: !!s.excludeTeamLeader,
-                        assigneeUserIds: s.assigneeUserIds ? JSON.stringify(s.assigneeUserIds) : null
+                        assigneeUserIds: s.assigneeUserIds ? JSON.stringify(s.assigneeUserIds) : null,
+                        allowChooseNextStageAssignee: !!s.allowChooseNextStageAssignee,
+                        nextStageAssigneeOptions: s.nextStageAssigneeOptions ? (typeof s.nextStageAssigneeOptions === 'string' ? s.nextStageAssigneeOptions : JSON.stringify(s.nextStageAssigneeOptions)) : null
                     });
                 } else {
-                    stageEntity.isDeleted = false; // Reactivate if it was soft-deleted
+                    stageEntity.isDeleted = false;
                     stageEntity.workflowId = workflowId;
                     stageEntity.formId = null;
                     if (s.name !== undefined) stageEntity.name = s.name;
@@ -1662,6 +1762,7 @@ export class ProductionService {
                     if (s.assigneeType !== undefined) stageEntity.assigneeType = s.assigneeType;
                     if (s.assigneeUserId !== undefined) stageEntity.assigneeUserId = s.assigneeUserId;
                     if (s.assigneeTeamId !== undefined) stageEntity.assigneeTeamId = s.assigneeTeamId;
+                    if (s.assigneeSubteamId !== undefined) stageEntity.assigneeSubteamId = s.assigneeSubteamId;
                     if (s.formIdToFill !== undefined) stageEntity.formIdToFill = dbFormIdToFill;
                     if (s.rejectionTargetType !== undefined) stageEntity.rejectionTargetType = s.rejectionTargetType;
                     if (s.rejectionTargetUserId !== undefined) stageEntity.rejectionTargetUserId = s.rejectionTargetUserId;
@@ -1669,10 +1770,21 @@ export class ProductionService {
                     if (s.requireCommentOnApprove !== undefined) stageEntity.requireCommentOnApprove = s.requireCommentOnApprove;
                     if (s.excludeTeamLeader !== undefined) stageEntity.excludeTeamLeader = !!s.excludeTeamLeader;
                     if (s.assigneeUserIds !== undefined) stageEntity.assigneeUserIds = s.assigneeUserIds ? JSON.stringify(s.assigneeUserIds) : null;
+                    if (s.allowChooseNextStageAssignee !== undefined) stageEntity.allowChooseNextStageAssignee = !!s.allowChooseNextStageAssignee;
+                    if (s.nextStageAssigneeOptions !== undefined) {
+                        stageEntity.nextStageAssigneeOptions = s.nextStageAssigneeOptions ? (typeof s.nextStageAssigneeOptions === 'string' ? s.nextStageAssigneeOptions : JSON.stringify(s.nextStageAssigneeOptions)) : null;
+                    }
                 }
 
                 savedStages.push(await stageRepo.save(stageEntity));
             }
+
+            // Bloquear cualquier solicitud en curso que dependa de este flujo de trabajo modificado
+            await this.blockActiveSubmissionsForWorkflow(
+                manager,
+                workflowId,
+                'Solicitud bloqueada: El flujo de trabajo original fue modificado mientras la solicitud estaba en proceso. Debe iniciar una solicitud nueva.'
+            );
 
             return savedStages;
         });
@@ -1686,8 +1798,16 @@ export class ProductionService {
         return this.adminSaveWorkflowStages(formId, stages);
     }
 
-    // --- APPROVALS INBOX ---
-    async getPendingApprovals(userId: number) {
+    async getPendingApprovals(userId: number, options?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        forms?: string[];
+        status?: string;
+        dateFrom?: string;
+        dateTo?: string;
+        requester?: string;
+    }) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const stateRepo = AppDataSource.getRepository(DynamicSubmissionWorkflowState);
 
@@ -1697,13 +1817,96 @@ export class ProductionService {
             order: { createdAt: 'DESC' }
         });
 
-        // Ensure we only return approvals for submissions that are actively In Progress or Rejected (for corrections)
         states = states.filter(s => s.submission && (s.submission.status === 'In Progress' || s.submission.status === 'Rejected'));
 
-        // For each pending approval, fetch the values of the submission
+        // 1. Filtro de Formularios
+        if (options?.forms && options.forms.length > 0) {
+            const formSet = new Set(options.forms.map(f => f.toLowerCase().trim()));
+            states = states.filter(s => s.submission?.form && formSet.has(s.submission.form.name.toLowerCase().trim()));
+        }
+
+        // 2. Filtro de Estado
+        if (options?.status && options.status !== 'all') {
+            const st = options.status.toLowerCase().trim();
+            states = states.filter(s => {
+                const subSt = (s.submission?.status || '').toLowerCase();
+                if (st === 'completed') return false;
+                if (st === 'in_progress') return subSt === 'in progress' || subSt === 'in_progress';
+                if (st === 'rejected') return subSt === 'rejected';
+                return true;
+            });
+        }
+
+        // 3. Filtro de Solicitante
+        if (options?.requester && options.requester.trim()) {
+            const reqQ = options.requester.toLowerCase().trim();
+            states = states.filter(s => {
+                const name = (s.submission?.requesterUser?.name || '').toLowerCase();
+                const email = (s.submission?.requesterUser?.email || '').toLowerCase();
+                return name.includes(reqQ) || email.includes(reqQ);
+            });
+        }
+
+        // 4. Filtro de Fechas
+        if (options?.dateFrom) {
+            const from = new Date(options.dateFrom);
+            if (!isNaN(from.getTime())) {
+                from.setHours(0, 0, 0, 0);
+                states = states.filter(s => new Date(s.createdAt) >= from || (s.submission?.createdAt && new Date(s.submission.createdAt) >= from));
+            }
+        }
+        if (options?.dateTo) {
+            const to = new Date(options.dateTo);
+            if (!isNaN(to.getTime())) {
+                to.setHours(23, 59, 59, 999);
+                states = states.filter(s => new Date(s.createdAt) <= to || (s.submission?.createdAt && new Date(s.submission.createdAt) <= to));
+            }
+        }
+
+        // 5. Búsqueda Global (ID, consecutivo, nombre formulario, etapa, solicitante, y campos de formulario)
+        if (options?.search && options.search.trim()) {
+            const cleanQ = options.search.toLowerCase().trim();
+            const isHashId = cleanQ.startsWith('#');
+            const searchNum = isHashId ? cleanQ.replace('#', '').trim() : cleanQ;
+
+            const subIds = states.map(s => s.submissionId).filter(Boolean);
+            let subIdsWithMatchingValues = new Set<number>();
+            if (subIds.length > 0) {
+                const matchingVals = await AppDataSource.getRepository(DynamicFormFieldValue)
+                    .createQueryBuilder('val')
+                    .where('LOWER(val.value) LIKE :q', { q: `%${cleanQ}%` })
+                    .andWhere('val.submissionId IN (:...ids)', { ids: subIds })
+                    .select('val.submissionId', 'submissionId')
+                    .getRawMany();
+                matchingVals.forEach(m => subIdsWithMatchingValues.add(m.submissionId));
+            }
+
+            states = states.filter(s => {
+                const idStr = String(s.submissionId);
+                if (idStr === searchNum || idStr.includes(searchNum)) return true;
+                if (s.submission?.form?.name && s.submission.form.name.toLowerCase().includes(cleanQ)) return true;
+                if (s.submission?.consecutive && s.submission.consecutive.toLowerCase().includes(cleanQ)) return true;
+                if (s.submission?.requesterUser?.name && s.submission.requesterUser.name.toLowerCase().includes(cleanQ)) return true;
+                if (s.submission?.requesterUser?.email && s.submission.requesterUser.email.toLowerCase().includes(cleanQ)) return true;
+                if (s.stage?.name && s.stage.name.toLowerCase().includes(cleanQ)) return true;
+                if (subIdsWithMatchingValues.has(s.submissionId)) return true;
+                return false;
+            });
+        }
+
+        const total = states.length;
+        const page = options?.page ? Math.max(1, options.page) : 1;
+        const limit = options?.limit ? Math.max(1, options.limit) : 4;
+        const pagedStates = (options?.page || options?.limit)
+            ? states.slice((page - 1) * limit, page * limit)
+            : states;
+
+        const allTeams = await AppDataSource.getRepository(Team).find({ relations: ['subteams'] });
+        const allUsers = await AppDataSource.getRepository(User).find({ select: ['id', 'name', 'email'] });
+
         const valRepo = AppDataSource.getRepository(DynamicFormFieldValue);
         const results = [];
-        for (const state of states) {
+        for (const state of pagedStates) {
             const values = await valRepo.find({
                 where: { submissionId: state.submissionId },
                 relations: ['field', 'field.form']
@@ -1751,9 +1954,9 @@ export class ProductionService {
 
             const isCorrection = (state.submission.status === 'Rejected');
             const hasPriorApprovedStages = allStatesToInclude.some(cs => cs.status === 'Approved');
-            const isInitialRequestCorrection = isCorrection && 
-                (state.assignedUserId === state.submission.requesterUserId) && 
-                !state.customFormIdToFill && 
+            const isInitialRequestCorrection = isCorrection &&
+                (state.assignedUserId === state.submission.requesterUserId) &&
+                !state.customFormIdToFill &&
                 !hasPriorApprovedStages &&
                 !state.submission.parentSubmissionId;
             const statesForHistory = allStatesToInclude.filter(cs => cs.id < state.id && cs.status !== 'Pending');
@@ -1761,17 +1964,16 @@ export class ProductionService {
             const historyStages = statesForHistory.map((cState) => {
                 const resolvedForm = cState.customFormToFill || cState.stage?.formToFill;
                 const resolvedFormId = cState.customFormIdToFill || cState.stage?.formIdToFill;
-                
-                // Values specifically saved for this state
+
                 const stageVals = allValuesToInclude.filter(v => v && v.field && v.workflowStateId === cState.id);
 
                 const user = cState.actionedByUser || cState.assignedUser;
-                
+
                 let displayName = cState.stage ? cState.stage.name : 'Etapa';
                 if (cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid'))) {
                     displayName = `${displayName} (Corrección)`;
                 }
-                
+
                 if (cState.stage?.workflow && state.submission.workflowId && cState.stage.workflowId !== state.submission.workflowId) {
                     displayName = `${cState.stage.workflow.name}: ${displayName}`;
                 } else if (cState.submissionId !== state.submissionId && (cState as any).submission?.form) {
@@ -1787,7 +1989,7 @@ export class ProductionService {
                         formName = uniqueFormNames.join(', ');
                     }
                 }
- 
+
                 return {
                     stageName: displayName,
                     formName: formName,
@@ -2019,7 +2221,30 @@ export class ProductionService {
                 }
             }
 
+            const cardFieldsMap = new Map<number, { label: string; value: string; fieldType: string; metadata?: any; displayOrder: number }>();
+            for (const v of allValuesToInclude) {
+                if (v && v.field && v.value !== undefined && v.value !== null && v.value !== '') {
+                    let parsedMeta: any = v.field.metadata;
+                    if (parsedMeta && typeof parsedMeta === 'string') {
+                        try { parsedMeta = JSON.parse(parsedMeta); } catch (e) {}
+                    }
+                    if (parsedMeta && (parsedMeta.showInCard === true || parsedMeta.showInCard === 'true')) {
+                        cardFieldsMap.set(v.field.id, {
+                            label: v.field.label,
+                            value: v.value,
+                            fieldType: v.field.type,
+                            metadata: parsedMeta,
+                            displayOrder: v.field.displayOrder ?? 0
+                        });
+                    }
+                }
+            }
+            const cardFields = Array.from(cardFieldsMap.values())
+                .sort((a, b) => a.displayOrder - b.displayOrder)
+                .map(cf => ({ label: cf.label, value: cf.value, fieldType: cf.fieldType, metadata: cf.metadata }));
+
             results.push({
+                id: state.submissionId,
                 stateId: state.id,
                 submissionId: state.submissionId,
                 parentSubmissionId: state.submission.parentSubmissionId,
@@ -2028,6 +2253,7 @@ export class ProductionService {
                 submissionStatus: state.submission.status,
                 rejectionNotes,
                 formName: state.submission.form.name,
+                cardFields,
                 requesterName: state.submission.requesterUser ? state.submission.requesterUser.name : 'Usuario',
                 requesterEmail: state.submission.requesterUser ? state.submission.requesterUser.email : '',
                 createdAt: state.submission.createdAt,
@@ -2069,62 +2295,188 @@ export class ProductionService {
                 }),
                 submittedValuesRaw,
                 requireCommentOnApprove: state.stage ? !!state.stage.requireCommentOnApprove : false,
+                allowChooseNextStageAssignee: state.stage ? !!state.stage.allowChooseNextStageAssignee : false,
+                nextStageAssigneeOptions: (() => {
+                    if (!state.stage?.allowChooseNextStageAssignee || !state.stage?.nextStageAssigneeOptions) return [];
+                    try {
+                        const raw = typeof state.stage.nextStageAssigneeOptions === 'string'
+                            ? JSON.parse(state.stage.nextStageAssigneeOptions)
+                            : state.stage.nextStageAssigneeOptions;
+                        if (!Array.isArray(raw)) return [];
+                        return raw.map((opt: any) => {
+                            let defaultLabel = '';
+                            if (opt.type === 'specific_user') {
+                                const u = allUsers.find(u => u.id === opt.userId);
+                                defaultLabel = u ? `👤 ${u.name}` : `👤 Usuario #${opt.userId}`;
+                            } else if (opt.type === 'team_random') {
+                                const t = allTeams.find(t => t.id === opt.teamId);
+                                defaultLabel = t ? `🎲 Al azar de: ${t.name}` : `🎲 Equipo #${opt.teamId}`;
+                            } else if (opt.type === 'team_leader') {
+                                const t = allTeams.find(t => t.id === opt.teamId);
+                                defaultLabel = t ? `👔 Líder de: ${t.name}` : `👔 Líder de equipo #${opt.teamId}`;
+                            } else if (opt.type === 'team_workload') {
+                                const t = allTeams.find(t => t.id === opt.teamId);
+                                defaultLabel = t ? `⚖️ Menor carga de: ${t.name}` : `⚖️ Equipo #${opt.teamId}`;
+                            } else if (opt.type === 'subteam_random') {
+                                let subName = `Subequipo #${opt.subteamId}`;
+                                for (const t of allTeams) {
+                                    const st = (t.subteams || []).find((s: any) => s.id === opt.subteamId);
+                                    if (st) {
+                                        subName = `${st.name} (${t.name})`;
+                                        break;
+                                    }
+                                }
+                                defaultLabel = `👥 Al azar de subequipo: ${subName}`;
+                            } else if (opt.type === 'requester') {
+                                defaultLabel = '👤 Solicitante Original';
+                            } else if (opt.type === 'requester_boss') {
+                                defaultLabel = '👔 Jefe del Solicitante';
+                            }
+                            return {
+                                ...opt,
+                                displayLabel: opt.label && opt.label.trim() ? opt.label.trim() : (defaultLabel || 'Opción de asignación')
+                            };
+                        });
+                    } catch (e) {
+                        return [];
+                    }
+                })(),
                 historyStages
             });
         }
 
+        if (options?.page || options?.limit) {
+            return {
+                data: results,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            };
+        }
         return results;
     }
 
     async resolveTeamUser(
-        manager: any, 
-        teamId: number, 
+        manager: any,
+        teamId: number,
         strategy: 'random' | 'workload' | 'first' | 'leader' = 'random',
         excludeLeader: boolean = false,
         previousActionerId?: number
     ): Promise<number> {
-        const team = await manager.getRepository(Team).findOne({ where: { id: teamId } });
+        return productionAssignmentService.resolveTeamUser(manager, teamId, strategy, excludeLeader, previousActionerId);
+    }
 
-        if (strategy === 'leader') {
-            if (team && team.leaderId) {
-                const leaderUser = await manager.getRepository(User).findOne({ where: { id: team.leaderId, status: 1 } });
-                if (leaderUser) {
-                    return leaderUser.id;
+    async resolveChosenAssignee(manager: any, submission: any, currentStage: any, nextStage: any, chosenOption: any): Promise<number | undefined> {
+        if (!chosenOption) return undefined;
+
+        let opt = chosenOption;
+        if (typeof opt === 'string') {
+            try {
+                opt = JSON.parse(opt);
+            } catch (e) {
+                const num = Number(opt);
+                if (!isNaN(num) && num > 0) return num;
+                return undefined;
+            }
+        }
+
+        // If currentStage has configured nextStageAssigneeOptions, enforce that the option matches the DB configuration
+        if (currentStage?.nextStageAssigneeOptions) {
+            try {
+                const parsedOptions = typeof currentStage.nextStageAssigneeOptions === 'string'
+                    ? JSON.parse(currentStage.nextStageAssigneeOptions)
+                    : currentStage.nextStageAssigneeOptions;
+                if (Array.isArray(parsedOptions) && parsedOptions.length > 0) {
+                    const optionId = typeof opt === 'object' && opt !== null ? opt.id : opt;
+                    const matched = parsedOptions.find((o: any) => o.id === optionId || (opt && o.id === opt.id));
+                    if (matched) {
+                        opt = matched; // Strictly use the trusted database record
+                    } else if (currentStage?.allowChooseNextStageAssignee) {
+                        throw new Error('La opción de destinatario seleccionada no es válida o no está configurada para esta etapa.');
+                    }
+                }
+            } catch (e: any) {
+                if (e.message && e.message.includes('La opción de destinatario')) throw e;
+            }
+        }
+
+        const userRepo = manager.getRepository(User);
+
+        if (opt.type === 'specific_user' && opt.userId) {
+            return Number(opt.userId);
+        }
+
+        if (opt.type === 'requester') {
+            return submission.requesterUserId;
+        }
+
+        if (opt.type === 'requester_boss') {
+            const requester = await userRepo.findOne({ where: { id: submission.requesterUserId } });
+            return requester?.bossId || submission.requesterUserId;
+        }
+
+        if (opt.type === 'previous_stage_actioner') {
+            const stateRepo = manager.getRepository(DynamicSubmissionWorkflowState);
+            const prevApproved = await stateRepo.findOne({
+                where: { submissionId: submission.id, status: 'Approved' },
+                order: { updatedAt: 'DESC' }
+            });
+            return prevApproved?.actionedByUserId || prevApproved?.assignedUserId || submission.requesterUserId;
+        }
+
+        if (opt.type === 'team_leader' && opt.teamId) {
+            return await this.resolveTeamUser(manager, Number(opt.teamId), 'leader');
+        }
+
+        if (opt.type === 'team_workload' && opt.teamId) {
+            return await this.resolveTeamUser(manager, Number(opt.teamId), 'workload', !!nextStage.excludeTeamLeader);
+        }
+
+        if (opt.type === 'team_random' && opt.teamId) {
+            return await this.resolveTeamUser(manager, Number(opt.teamId), 'random', !!nextStage.excludeTeamLeader);
+        }
+
+        if (opt.type === 'subteam_random' && opt.subteamId) {
+            const subteamUserRepo = manager.getRepository(SubteamUser);
+            const subteamUsers = await subteamUserRepo.find({
+                where: { subteamId: Number(opt.subteamId) },
+                relations: ['user']
+            });
+            const activeUsers = subteamUsers
+                .map((su: any) => su.user)
+                .filter((u: any) => !!u && (u.status === 1 || u.status === undefined || u.status === null));
+
+            let candidates = activeUsers;
+            if (nextStage.excludeTeamLeader) {
+                const subteam = await manager.getRepository(Subteam).findOne({ where: { id: Number(opt.subteamId) } });
+                const team = opt.teamId ? await manager.getRepository(Team).findOne({ where: { id: Number(opt.teamId) } }) : null;
+                const leadersToExclude = new Set([subteam?.leaderId, team?.leaderId].filter(Boolean));
+                const nonLeaders = activeUsers.filter((u: any) => !leadersToExclude.has(u.id));
+                if (nonLeaders.length > 0) candidates = nonLeaders;
+            }
+
+            if (candidates.length > 0) {
+                const randomIndex = Math.floor(Math.random() * candidates.length);
+                return candidates[randomIndex].id;
+            } else {
+                const subteam = await manager.getRepository(Subteam).findOne({
+                    where: { id: Number(opt.subteamId) },
+                    relations: ['leader']
+                });
+                if (subteam?.leader && (subteam.leader.status === 1 || subteam.leader.status === undefined)) {
+                    return subteam.leader.id;
+                } else if (opt.teamId) {
+                    return await this.resolveTeamUser(manager, Number(opt.teamId), 'random', !!nextStage.excludeTeamLeader);
                 }
             }
         }
 
-        const teamUsers = await manager.getRepository(User).find({
-            where: { teamId, status: 1 }
-        });
-        if (!teamUsers || teamUsers.length === 0) return 1;
-
-        // If excludeLeader is requested, filter out the team leader and/or previous actioner
-        let candidates = teamUsers;
-        if (excludeLeader) {
-            const leaderUserId = team?.leaderId || previousActionerId;
-            const filtered = teamUsers.filter((u: any) => u.id !== leaderUserId);
-            if (filtered.length > 0) {
-                candidates = filtered;
-            }
+        if (opt.userId) {
+            return Number(opt.userId);
         }
 
-        if (strategy === 'random') {
-            const randomIndex = Math.floor(Math.random() * candidates.length);
-            return candidates[randomIndex].id;
-        }
-        if (strategy === 'first' || strategy === 'leader') {
-            return candidates[0].id;
-        }
-        const stateRepo = manager.getRepository(DynamicSubmissionWorkflowState);
-        const workloads = await Promise.all(candidates.map(async (u: any) => {
-            const count = await stateRepo.count({
-                where: { assignedUserId: u.id, status: 'Pending' }
-            });
-            return { userId: u.id, count };
-        }));
-        workloads.sort((a: any, b: any) => a.count - b.count);
-        return workloads[0].userId;
+        return undefined;
     }
 
     async createStageStates(manager: any, submission: any, targetStage: any, preferredAssigneeUserId?: number) {
@@ -2132,7 +2484,6 @@ export class ProductionService {
         const userRepo = manager.getRepository(User);
         const valRepo = manager.getRepository(DynamicFormFieldValue);
 
-        // 1. If this stage is a subflow stage, directly activate the first stage of the sub-flow on this submission!
         if (targetStage.assigneeType === 'subflow') {
             const subflowWfId = targetStage.formIdToFill;
             const stageRepo = manager.getRepository(DynamicWorkflowStage);
@@ -2150,13 +2501,11 @@ export class ProductionService {
                 submission.currentStageId = targetStage.id;
                 await manager.getRepository(DynamicFormSubmission).save(submission);
 
-                // Recursively activate first stage of the sub-flow directly on this submission!
                 await this.createStageStates(manager, submission, firstSubflowStage, preferredAssigneeUserId);
                 return;
             }
         }
 
-        // 2. Delete previous values filled for this stage's form (so they start fresh)
         const pastStates = await stateRepo.find({
             where: { submissionId: submission.id, stageId: targetStage.id }
         });
@@ -2165,18 +2514,16 @@ export class ProductionService {
             await valRepo.delete({ submissionId: submission.id, workflowStateId: In(pastStateIds) });
         }
 
-        // 3. Resolve assignees
         let assigneeMappings: { userId: number, formId: number | null }[] = [];
 
         if (preferredAssigneeUserId) {
-            // General Rule: If this stage is being re-dispatched due to correction of a rejection,
-            // always assign to the exact user who previously rejected it!
+
             assigneeMappings = [{ userId: preferredAssigneeUserId, formId: targetStage.formIdToFill || null }];
         } else if (targetStage.assigneeType === 'multiple_users') {
             if (targetStage.assigneeUserIds) {
                 try {
-                    const parsed = typeof targetStage.assigneeUserIds === 'string' 
-                        ? JSON.parse(targetStage.assigneeUserIds) 
+                    const parsed = typeof targetStage.assigneeUserIds === 'string'
+                        ? JSON.parse(targetStage.assigneeUserIds)
                         : targetStage.assigneeUserIds;
                     if (Array.isArray(parsed)) {
                         assigneeMappings = parsed.map((item: any) => {
@@ -2186,7 +2533,7 @@ export class ProductionService {
                                     formId: item.formId ? Number(item.formId) : null
                                 };
                             } else {
-                                // Backward compatibility
+
                                 return {
                                     userId: Number(item),
                                     formId: null
@@ -2202,7 +2549,7 @@ export class ProductionService {
                 assigneeMappings = [{ userId: targetStage.assigneeUserId || 1, formId: null }];
             }
         } else if (targetStage.assigneeType === 'team' && targetStage.assigneeTeamId) {
-            // Assign to all team members in parallel
+
             const teamUsers = await userRepo.find({
                 where: { teamId: targetStage.assigneeTeamId, status: 1 }
             });
@@ -2244,18 +2591,50 @@ export class ProductionService {
                 }
             } else if (targetStage.assigneeType === 'team_leader' && targetStage.assigneeTeamId) {
                 assigneeUserId = await this.resolveTeamUser(manager, targetStage.assigneeTeamId, 'leader');
+            } else if (targetStage.assigneeType === 'subteam_random' && targetStage.assigneeSubteamId) {
+                const subteamUserRepo = manager.getRepository(SubteamUser);
+                const subteamUsers = await subteamUserRepo.find({
+                    where: { subteamId: targetStage.assigneeSubteamId },
+                    relations: ['user']
+                });
+                const activeUsers = subteamUsers
+                    .map((su: any) => su.user)
+                    .filter((u: any) => !!u && (u.status === 1 || u.status === undefined || u.status === null));
+                
+                let candidates = activeUsers;
+                if (targetStage.excludeTeamLeader) {
+                    const subteam = await manager.getRepository(Subteam).findOne({ where: { id: targetStage.assigneeSubteamId } });
+                    const team = targetStage.assigneeTeamId ? await manager.getRepository(Team).findOne({ where: { id: targetStage.assigneeTeamId } }) : null;
+                    const leadersToExclude = new Set([subteam?.leaderId, team?.leaderId].filter(Boolean));
+                    const nonLeaders = activeUsers.filter((u: any) => !leadersToExclude.has(u.id));
+                    if (nonLeaders.length > 0) candidates = nonLeaders;
+                }
+
+                if (candidates.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * candidates.length);
+                    assigneeUserId = candidates[randomIndex].id;
+                } else {
+                    const subteam = await manager.getRepository(Subteam).findOne({
+                        where: { id: targetStage.assigneeSubteamId },
+                        relations: ['leader']
+                    });
+                    if (subteam?.leader && (subteam.leader.status === 1 || subteam.leader.status === undefined)) {
+                        assigneeUserId = subteam.leader.id;
+                    } else if (targetStage.assigneeTeamId) {
+                        assigneeUserId = await this.resolveTeamUser(manager, targetStage.assigneeTeamId, 'random', !!targetStage.excludeTeamLeader);
+                    }
+                }
             } else if (targetStage.assigneeType === 'team_random' && targetStage.assigneeTeamId) {
                 assigneeUserId = await this.resolveTeamUser(manager, targetStage.assigneeTeamId, 'random', !!targetStage.excludeTeamLeader);
             } else if (targetStage.assigneeType === 'team_workload' && targetStage.assigneeTeamId) {
                 assigneeUserId = await this.resolveTeamUser(manager, targetStage.assigneeTeamId, 'workload', !!targetStage.excludeTeamLeader);
-            } else if (targetStage.assigneeType === 'subflow') {
+            } else if (targetStage.assigneeType === 'subflow' || targetStage.assigneeType === 'chosen_by_previous_stage') {
                 assigneeUserId = targetStage.assigneeUserId || submission.requesterUserId || 1;
             }
             if (!assigneeUserId) assigneeUserId = 1;
             assigneeMappings = [{ userId: assigneeUserId, formId: null }];
         }
 
-        // 4. Create parallel tasks
         for (const mapping of assigneeMappings) {
             const nextState = stateRepo.create({
                 submissionId: submission.id,
@@ -2289,7 +2668,7 @@ export class ProductionService {
         await subRepo.save(submission);
 
         if (!submission.parentSubmissionId) {
-            // Root submission without parent: check closingConfig on root form
+
             let formEntity = submission.form;
             if (!formEntity && submission.formId) {
                 formEntity = await manager.getRepository(DynamicForm).findOne({ where: { id: submission.formId } });
@@ -2307,8 +2686,8 @@ export class ProductionService {
 
             if (isClosingRequired && closingWfId) {
                 const firstClosingStage = await stageRepo.findOne({
-                    where: { workflowId: closingWfId, stepOrder: 1, isDeleted: false },
-                    order: { stepOrder: 'ASC' }
+                    where: { workflowId: closingWfId, isDeleted: false },
+                    order: { stepOrder: 'ASC', id: 'ASC' }
                 });
                 if (firstClosingStage) {
                     submission.workflowId = closingWfId;
@@ -2343,7 +2722,6 @@ export class ProductionService {
                 return;
             }
 
-            // NOT required or no closing stages:
             submission.workflowId = null;
             submission.currentStageId = null;
             submission.status = 'Completed';
@@ -2360,17 +2738,15 @@ export class ProductionService {
             return;
         }
 
-        // Child submission completed: check if all sibling child submissions of this parent have completed
         const pendingSiblingsCount = await subRepo.count({
             where: { parentSubmissionId: submission.parentSubmissionId, status: Not('Completed') }
         });
 
         if (pendingSiblingsCount > 0) {
-            // Still waiting for other sibling submissions to complete
+
             return;
         }
 
-        // All siblings finished! Load parent submission
         const parentSub = await subRepo.findOne({
             where: { id: submission.parentSubmissionId },
             relations: ['form', 'currentStage']
@@ -2378,7 +2754,6 @@ export class ProductionService {
 
         if (!parentSub) return;
 
-        // Check if parentSub has a workflow and a next stage to advance to
         const parentWfId = parentSub.workflowId || (parentSub.form ? parentSub.form.workflowId : null);
         let parentNextStage = null;
 
@@ -2388,23 +2763,23 @@ export class ProductionService {
                 .andWhere("stage.stepOrder > :stepOrder", { stepOrder: parentSub.currentStage.stepOrder })
                 .andWhere("stage.isDeleted = :isDeleted", { isDeleted: false })
                 .orderBy("stage.stepOrder", "ASC")
+                .addOrderBy("stage.id", "ASC")
                 .getOne();
         }
 
         if (parentNextStage) {
-            // Parent has a next stage in its workflow (e.g. DATA advancing from Stage 4 to Stage 5!)
+
             parentSub.currentStageId = parentNextStage.id;
             parentSub.status = 'In Progress';
             await subRepo.save(parentSub);
             await this.createStageStates(manager, parentSub, parentNextStage);
         } else {
-            // Parent has finished all its stages (e.g. DATA finished Stage 7, or parent is a multi-team container):
-            // Recursively complete parent!
+
             await this.handleSubmissionCompletion(manager, parentSub);
         }
     }
 
-    async actionApproval(stateId: number, userId: number, action: 'approve' | 'reject', notes: string, formValues?: Record<string, string>, consecutive?: string) {
+    async actionApproval(stateId: number, userId: number, action: 'approve' | 'reject', notes: string, formValues?: Record<string, string>, consecutive?: string, chosenNextAssignee?: any) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         return await AppDataSource.transaction(async (manager) => {
             const stateRepo = manager.getRepository(DynamicSubmissionWorkflowState);
@@ -2413,7 +2788,6 @@ export class ProductionService {
             const stageRepo = manager.getRepository(DynamicWorkflowStage);
             const valRepo = manager.getRepository(DynamicFormFieldValue);
 
-            // 1. Find active workflow state
             const currentState = await stateRepo.findOne({
                 where: { id: stateId, assignedUserId: userId, status: 'Pending' },
                 relations: ['submission', 'stage', 'submission.form']
@@ -2426,7 +2800,7 @@ export class ProductionService {
             const isCorrection = (submission.status === 'Rejected');
 
             if (isCorrection) {
-                // 1. Save / Update form fields (parent forms, root form, or stage form)
+
                 if (formValues) {
                     const targetFormIds = new Set<number>();
                     if (currentState.customFormIdToFill) targetFormIds.add(currentState.customFormIdToFill);
@@ -2441,8 +2815,8 @@ export class ProductionService {
                             where: { formId: fId }
                         });
                         for (const field of fields) {
-                            const valStr = formValues[fId + '_' + field.name] !== undefined 
-                                ? formValues[fId + '_' + field.name] 
+                            const valStr = formValues[fId + '_' + field.name] !== undefined
+                                ? formValues[fId + '_' + field.name]
                                 : formValues[field.name];
                             if (valStr !== undefined && valStr !== null) {
                                 valsToSave.push(valRepo.create({
@@ -2459,35 +2833,30 @@ export class ProductionService {
                     }
                 }
 
-                // 2. Mark correction task as Approved
                 currentState.status = 'Approved';
                 currentState.actionedByUserId = userId;
                 currentState.notes = notes || 'Corrección enviada';
                 await stateRepo.save(currentState);
 
-                // 3. Find the user who previously rejected this submission/stage and the stage that rejected it
                 const lastRejectionState = await stateRepo.findOne({
                     where: { submissionId: submission.id, status: 'Rejected' },
                     order: { id: 'DESC' },
                     relations: ['stage']
                 });
                 const previousRejectingUserId = lastRejectionState?.actionedByUserId || undefined;
-                const stageToReactivate = (lastRejectionState?.stage && lastRejectionState.stage.id !== stage.id) 
-                    ? lastRejectionState.stage 
+                const stageToReactivate = (lastRejectionState?.stage && lastRejectionState.stage.id !== stage.id)
+                    ? lastRejectionState.stage
                     : stage;
 
-                // 4. Reactivate submission workflow
                 submission.status = 'In Progress';
                 submission.currentStageId = stageToReactivate.id;
                 await subRepo.save(submission);
 
-                // 5. Create task for the stage to review again, assigned to the person who rejected it!
                 await this.createStageStates(manager, submission, stageToReactivate, previousRejectingUserId);
 
                 return submission;
             }
 
-            // 2. If approved and there are values to fill, save them
             const activatedConfigs: any[] = [];
             let multiFormsConfig: any[] = [];
             if (stage.assigneeUserIds) {
@@ -2506,7 +2875,7 @@ export class ProductionService {
 
             if (action === 'approve' && formValues) {
                 if (isInitialDispatch) {
-                    // Multi-form filling mode: parse multiFormsConfig
+
                     for (const cfg of multiFormsConfig) {
                         const sFormId = cfg.sourceFormId;
                         if (!sFormId) continue;
@@ -2515,8 +2884,8 @@ export class ProductionService {
                         });
                         let hasFilled = false;
                         for (const field of fields) {
-                            const valStr = formValues[`${sFormId}_${field.name}`] !== undefined 
-                                ? formValues[`${sFormId}_${field.name}`] 
+                            const valStr = formValues[`${sFormId}_${field.name}`] !== undefined
+                                ? formValues[`${sFormId}_${field.name}`]
                                 : formValues[field.name];
                             if (valStr !== undefined && valStr !== null && String(valStr).trim() !== '') {
                                 hasFilled = true;
@@ -2536,7 +2905,7 @@ export class ProductionService {
                 } else {
                     const formIdToFill = currentState.customFormIdToFill || stage.formIdToFill;
                     if (formIdToFill && formIdToFill > 0) {
-                        // Save standard single form values under this submission
+
                         const fields = await manager.getRepository(DynamicFormField).find({
                             where: { formId: formIdToFill }
                         });
@@ -2557,13 +2926,12 @@ export class ProductionService {
             }
 
             if (action === 'approve') {
-                // Mark current workflow state as Approved
+
                 currentState.status = 'Approved';
                 currentState.actionedByUserId = userId;
                 currentState.notes = notes;
                 await stateRepo.save(currentState);
 
-                // Case A: Initial Dispatch in a Multi-forms Stage
                 if (isInitialDispatch && activatedConfigs.length > 0) {
                     for (const cfg of activatedConfigs) {
                         const targetType = cfg.targetType || (cfg.targetSubflowFormId ? 'subflow' : (cfg.assignedTeamId ? 'team_random' : 'user'));
@@ -2571,7 +2939,7 @@ export class ProductionService {
                         if (targetType === 'subflow' || cfg.targetSubflowFormId) {
                             const subflowTargetId = cfg.targetSubflowFormId || cfg.sourceFormId;
                             if (subflowTargetId) {
-                                // Resolve whether subflowTargetId is a workflow or a form
+
                                 const isForm = await manager.getRepository(DynamicForm).findOne({ where: { id: subflowTargetId } });
                                 let childFormId = isForm ? isForm.id : (cfg.sourceFormId || submission.formId);
                                 let childWfId = isForm ? isForm.workflowId : subflowTargetId;
@@ -2581,7 +2949,6 @@ export class ProductionService {
                                     if (srcForm) childFormId = srcForm.id;
                                 }
 
-                                // Create Child Submission for the Subflow
                                 const childSub = subRepo.create({
                                     formId: childFormId,
                                     workflowId: childWfId || null,
@@ -2591,7 +2958,6 @@ export class ProductionService {
                                 });
                                 const savedChildSub = await subRepo.save(childSub);
 
-                                // Find stages configured for this subflow
                                 const childStages = await stageRepo.find({
                                     where: [
                                         { workflowId: childWfId || -1, isDeleted: false },
@@ -2606,7 +2972,7 @@ export class ProductionService {
                                     await subRepo.save(savedChildSub);
                                     await this.createStageStates(manager, savedChildSub, firstChildStage);
                                 } else {
-                                    // Direct single approval for child subflow
+
                                     let targetUserId = cfg.assignedUserId;
                                     if (!targetUserId && cfg.assignedTeamId) {
                                         targetUserId = await this.resolveTeamUser(manager, cfg.assignedTeamId, cfg.targetType === 'team_leader' ? 'leader' : 'random');
@@ -2636,7 +3002,7 @@ export class ProductionService {
                             const customFormIdToFill = cfg.targetFormIdToFill || null;
                             const recipientState = stateRepo.create({
                                 submissionId: submission.id,
-                                stageId: stage.id, // KEEP IN SAME STAGE
+                                stageId: stage.id,
                                 assignedUserId: recipientUserId,
                                 customFormIdToFill: customFormIdToFill,
                                 status: 'Pending'
@@ -2658,7 +3024,7 @@ export class ProductionService {
                             const customFormIdToFill = cfg.targetFormIdToFill || null;
                             const recipientState = stateRepo.create({
                                 submissionId: submission.id,
-                                stageId: stage.id, // KEEP IN SAME STAGE
+                                stageId: stage.id,
                                 assignedUserId: recipientUserId,
                                 customFormIdToFill: customFormIdToFill,
                                 status: 'Pending'
@@ -2683,40 +3049,36 @@ export class ProductionService {
                     return submission;
                 }
 
-                // Case B: Check remaining pending approvals in the current stage
                 const pendingCount = await stateRepo.count({
                     where: { submissionId: submission.id, stageId: stage.id, status: 'Pending' }
                 });
 
                 if (pendingCount > 0) {
-                    // Still waiting for other tasks to finish
+
                     return submission;
                 }
 
-                // Check if there are active child sub-flows still running for this submission
                 const pendingChildSubsCount = await subRepo.count({
                     where: { parentSubmissionId: submission.id, status: Not('Completed') }
                 });
                 if (pendingChildSubsCount > 0) {
-                    // Still waiting for child sub-flows to finish
+
                     return submission;
                 }
 
-                // Case C: If this is a multi-form stage and recipients/subflows just finished, return to initial owner for consolidation!
                 if (isMultiFormsStage && previousApprovedInStage.length > 0) {
                     const initialOwnerState = previousApprovedInStage[0];
                     const initialOwnerId = initialOwnerState.actionedByUserId || initialOwnerState.assignedUserId;
 
-                    // Check if current state being approved was already the consolidation review by the owner on the parent submission
                     const isConsolidationApproval = (currentState.id !== initialOwnerState.id && currentState.assignedUserId === initialOwnerId && currentState.submissionId === submission.id);
 
                     if (!isConsolidationApproval) {
-                        // Create consolidation review state for the stage owner
+
                         const consolidationState = stateRepo.create({
                             submissionId: submission.id,
                             stageId: stage.id,
                             assignedUserId: initialOwnerId,
-                            customFormIdToFill: null, // Simple consolidation approval
+                            customFormIdToFill: null,
                             status: 'Pending'
                         });
                         await stateRepo.save(consolidationState);
@@ -2738,37 +3100,47 @@ export class ProductionService {
                     }
                 }
 
-                // Case D: All tasks and consolidation finished -> Advance to next stage!
                 let currentWfId = stage.workflowId;
                 let currentStepOrder = stage.stepOrder;
                 let advanced = false;
 
                 while (currentWfId) {
-                    // Check if there is another stage within the current workflow/subflow
+
                     const nextStageInCurrentWf = await stageRepo.createQueryBuilder("stage")
                         .where("stage.workflowId = :wfId", { wfId: currentWfId })
                         .andWhere("stage.stepOrder > :stepOrder", { stepOrder: currentStepOrder })
                         .andWhere("stage.isDeleted = :isDeleted", { isDeleted: false })
                         .orderBy("stage.stepOrder", "ASC")
+                        .addOrderBy("stage.id", "ASC")
                         .getOne();
 
                     if (nextStageInCurrentWf) {
-                        // Found next stage in current workflow/subflow!
+
                         submission.currentStageId = nextStageInCurrentWf.id;
                         submission.status = 'In Progress';
                         await subRepo.save(submission);
-                        await this.createStageStates(manager, submission, nextStageInCurrentWf);
+
+                        let preferredAssigneeUserId: number | undefined = undefined;
+                        if (stage?.allowChooseNextStageAssignee) {
+                            if (!chosenNextAssignee) {
+                                throw new Error('Debe seleccionar el destinatario para la siguiente etapa.');
+                            }
+                            preferredAssigneeUserId = await this.resolveChosenAssignee(manager, submission, stage, nextStageInCurrentWf, chosenNextAssignee);
+                            if (!preferredAssigneeUserId) {
+                                throw new Error('No se pudo determinar el destinatario para la siguiente etapa a partir de la opción seleccionada.');
+                            }
+                        }
+
+                        await this.createStageStates(manager, submission, nextStageInCurrentWf, preferredAssigneeUserId);
                         advanced = true;
                         break;
                     }
 
-                    // If current workflow is the root submission workflow and has no more stages, we are done!
                     const rootWfId = submission.workflowId || (submission.form ? submission.form.workflowId : null);
                     if (currentWfId === rootWfId || !rootWfId) {
                         break;
                     }
 
-                    // Unwind to parent workflow that invoked currentWfId
                     const invokingStage = await stageRepo.findOne({
                         where: { assigneeType: 'subflow', formIdToFill: currentWfId, isDeleted: false }
                     });
@@ -2777,7 +3149,7 @@ export class ProductionService {
                         currentWfId = invokingStage.workflowId;
                         currentStepOrder = invokingStage.stepOrder;
                     } else {
-                        // Fallback to root workflow
+
                         currentWfId = rootWfId;
                         currentStepOrder = submission.currentStage?.stepOrder || 0;
                     }
@@ -2792,20 +3164,18 @@ export class ProductionService {
                 currentState.notes = notes;
                 await stateRepo.save(currentState);
 
-                // Cancel all other pending states for this stage/submission!
                 await stateRepo.update(
                     { submissionId: submission.id, stageId: stage.id, status: 'Pending' },
                     { status: 'Rejected', notes: 'Rechazado por otro aprobador' }
                 );
 
-                // Handle rejection routing
                 let targetUserId: number | null = null;
                 let targetStageId: number = stage.id;
                 let targetCustomFormIdToFill: number | null = null;
                 const targetType = stage.rejectionTargetType || 'previous_sender';
 
                 if (targetType === 'previous_sender') {
-                    // Find the state that approved this submission immediately prior
+
                     const prevState = await stateRepo.findOne({
                         where: { submissionId: submission.id, status: 'Approved' },
                         order: { updatedAt: 'DESC' },
@@ -2816,7 +3186,7 @@ export class ProductionService {
                         targetStageId = prevState.stageId;
                         targetCustomFormIdToFill = prevState.customFormIdToFill || prevState.stage?.formIdToFill || null;
                     } else if (submission.parentSubmissionId) {
-                        // Stage 1 of a child subflow/submission: look up parent submission's approved state
+
                         const parentPrevState = await stateRepo.findOne({
                             where: { submissionId: submission.parentSubmissionId, status: 'Approved' },
                             order: { updatedAt: 'DESC' },
@@ -2850,10 +3220,10 @@ export class ProductionService {
                     targetCustomFormIdToFill = stage.formIdToFill || null;
                 }
 
-                if (!targetUserId) targetUserId = submission.requesterUserId; // absolute fallback to submitter
+                if (!targetUserId) targetUserId = submission.requesterUserId;
 
                 submission.status = 'Rejected';
-                // Creator correction or assigned back
+
                 if (targetUserId === submission.requesterUserId && !targetCustomFormIdToFill && !submission.parentSubmissionId) {
                     submission.currentStageId = null;
                 } else {
@@ -2861,7 +3231,6 @@ export class ProductionService {
                 }
                 await subRepo.save(submission);
 
-                // Create workflow state for rejection recipient
                 const rejectedState = stateRepo.create({
                     submissionId: submission.id,
                     stageId: targetStageId,
@@ -2871,7 +3240,6 @@ export class ProductionService {
                 });
                 await stateRepo.save(rejectedState);
 
-                // Notify target user
                 try {
                     await notificationService.createNotification(
                         targetUserId,
@@ -2888,4 +3256,3 @@ export class ProductionService {
         });
     }
 }
-

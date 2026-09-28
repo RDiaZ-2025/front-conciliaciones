@@ -5,7 +5,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 
-// PrimeNG Imports
 import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
@@ -69,7 +68,7 @@ export class LoginComponent {
       next: (response) => {
         if (response.success) {
            this.messageService.add({ severity: 'success', summary: 'Bienvenido', detail: 'Inicio de sesión exitoso' });
-           // Small delay to show the toast
+
            setTimeout(() => {
              this.navigateBasedOnPermissions();
            }, 500);
@@ -81,9 +80,9 @@ export class LoginComponent {
       error: (err) => {
         this.loading.set(false);
         const errorMessage = err.error?.message || err.message || 'Error de conexión';
-        
-        if (errorMessage.toLowerCase().includes('deshabilitado') || 
-            errorMessage.toLowerCase().includes('sin permisos') || 
+
+        if (errorMessage.toLowerCase().includes('deshabilitado') ||
+            errorMessage.toLowerCase().includes('sin permisos') ||
             errorMessage.toLowerCase().includes('disabled')) {
           this.messageService.add({ severity: 'error', summary: 'Acceso Denegado', detail: 'Usuario deshabilitado o sin permisos. Contacte al administrador.' });
         } else {

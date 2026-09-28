@@ -27,10 +27,6 @@ export class WorkflowService {
         'completed': this.TEAM_COMERCIAL
     };
 
-    /**
-     * Determine the next stage based on the current stage and request data (e.g., budget, sales outcome).
-     * Based on rules from workflow.md
-     */
     public getNextStage(currentStage: string, request: ProductionRequest, additionalData?: Record<string, unknown>): string | null {
         if (additionalData?.targetStage === 'cancelled') return 'cancelled';
         if (additionalData?.targetStage === 'completed' && currentStage !== 'in_sell' && currentStage !== 'customer_review') return 'completed';

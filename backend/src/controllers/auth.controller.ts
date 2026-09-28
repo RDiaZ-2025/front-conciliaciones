@@ -53,21 +53,14 @@ export class AuthController {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role || 'user',
         permissions: permissions,
         teams: teams,
+        teamId: user.teamId,
         lastAccess: user.lastAccess
       }
     });
     return;
-  });
-
-  initializeUsers = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const users = await this.authService.initializeUsers();
-    res.status(200).json({
-      success: true,
-      message: 'Usuarios inicializados exitosamente',
-      users
-    });
   });
 
   async logout(req: Request, res: Response): Promise<void> {

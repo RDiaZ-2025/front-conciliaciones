@@ -3,7 +3,7 @@ import { MigrationInterface, QueryRunner, TableColumn } from "typeorm";
 export class AddRoleAndPermissionsToUsers1773700000000 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        // Add Role column to Users table
+
         await queryRunner.addColumn("Users", new TableColumn({
             name: "Role",
             type: "nvarchar",
@@ -12,7 +12,6 @@ export class AddRoleAndPermissionsToUsers1773700000000 implements MigrationInter
             default: "'user'"
         }));
 
-        // Add Permissions (comma-separated string for NOC compatibility) column to Users table
         await queryRunner.addColumn("Users", new TableColumn({
             name: "Permissions",
             type: "nvarchar",
@@ -21,7 +20,6 @@ export class AddRoleAndPermissionsToUsers1773700000000 implements MigrationInter
             default: "''"
         }));
 
-        // Seed NOC permissions into the Permissions table
         const permissions = [
             { name: 'dashboard', description: 'Acceso al Dashboard de NOC' },
             { name: 'ingresos', description: 'Acceso a los Ingresos de NOC' },
@@ -31,7 +29,7 @@ export class AddRoleAndPermissionsToUsers1773700000000 implements MigrationInter
         ];
 
         for (const perm of permissions) {
-            // Check if permission already exists to avoid duplication
+
             const existing = await queryRunner.query(
                 `SELECT * FROM Permissions WHERE Name = '${perm.name}'`
             );
@@ -45,12 +43,11 @@ export class AddRoleAndPermissionsToUsers1773700000000 implements MigrationInter
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        // Drop NOC permissions from Permissions table
+
         await queryRunner.query(
             `DELETE FROM Permissions WHERE Name IN ('dashboard', 'ingresos', 'presupuesto', 'segmentacion', 'analisis')`
         );
 
-        // Drop added columns
         await queryRunner.dropColumn("Users", "Role");
         await queryRunner.dropColumn("Users", "Permissions");
     }

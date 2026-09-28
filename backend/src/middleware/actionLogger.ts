@@ -8,10 +8,6 @@ interface LoggingRequest extends Request {
     startTime?: number;
 }
 
-/**
- * Middleware to log all user actions to the database
- * Captures request details, user information, and response data
- */
 export const actionLogger = async (req: LoggingRequest, res: Response, next: NextFunction): Promise<void> => {
     const startTime = Date.now();
     req.startTime = startTime;
@@ -84,9 +80,6 @@ export const actionLogger = async (req: LoggingRequest, res: Response, next: Nex
     next();
 };
 
-/**
- * Determine the action type based on HTTP method and path
- */
 function determineAction(method: string, path: string): string {
     const pathSegments = path.split('/').filter(segment => segment);
     const resource = pathSegments[1] || 'UNKNOWN';
@@ -111,9 +104,6 @@ function determineAction(method: string, path: string): string {
     }
 }
 
-/**
- * Extract resource type and ID from the request path and body
- */
 function extractResourceInfo(path: string, body: Record<string, unknown> | null | undefined): { type: string | null; id: string | null } {
     const pathSegments = path.split('/').filter(segment => segment);
 
@@ -164,9 +154,6 @@ function extractResourceInfo(path: string, body: Record<string, unknown> | null 
     return { type: resourceType, id: resourceId };
 }
 
-/**
- * Get client IP address from request
- */
 function getClientIpAddress(req: Request): string | null {
     const forwarded = req.headers['x-forwarded-for'];
     if (forwarded && typeof forwarded === 'string') {
@@ -175,9 +162,6 @@ function getClientIpAddress(req: Request): string | null {
     return req.connection.remoteAddress || req.socket.remoteAddress || null;
 }
 
-/**
- * Determine if request body should be logged
- */
 function shouldLogRequestBody(req: Request): boolean {
     const method = req.method.toUpperCase();
     const path = req.path;
@@ -193,9 +177,6 @@ function shouldLogRequestBody(req: Request): boolean {
     return true;
 }
 
-/**
- * Determine if response body should be logged
- */
 function shouldLogResponseBody(req: Request, res: Response): boolean {
     if (res.statusCode >= 400) {
         return true;
@@ -213,9 +194,6 @@ function shouldLogResponseBody(req: Request, res: Response): boolean {
     return false;
 }
 
-/**
- * Sanitize request body to remove sensitive information
- */
 function sanitizeRequestBody(body: unknown): unknown {
     if (!body || typeof body !== 'object') {
         return body;
@@ -233,9 +211,6 @@ function sanitizeRequestBody(body: unknown): unknown {
     return sanitized;
 }
 
-/**
- * Sanitize response body to remove sensitive information
- */
 function sanitizeResponseBody(body: unknown): unknown {
     if (!body) {
         return body;
@@ -273,9 +248,6 @@ function sanitizeResponseBody(body: unknown): unknown {
     }
 }
 
-/**
- * Extract metadata from request and response
- */
 function extractMetadata(req: Request, res: Response): Record<string, unknown> {
     return {
         contentType: req.get('Content-Type'),
@@ -287,9 +259,6 @@ function extractMetadata(req: Request, res: Response): Record<string, unknown> {
     };
 }
 
-/**
- * Extract error message from response body
- */
 function extractErrorMessage(responseBody: unknown): string | null {
     if (!responseBody) return null;
 
@@ -301,17 +270,11 @@ function extractErrorMessage(responseBody: unknown): string | null {
     }
 }
 
-/**
- * Middleware to skip logging for specific routes
- */
 export const skipLogging = (req: Request, res: Response, next: NextFunction): void => {
     (req as Request & { skipLogging?: boolean }).skipLogging = true;
     next();
 };
 
-/**
- * Check if logging should be skipped for this request
- */
 export const shouldSkipLogging = (req: Request): boolean => {
     return (req as Request & { skipLogging?: boolean }).skipLogging === true;
 };

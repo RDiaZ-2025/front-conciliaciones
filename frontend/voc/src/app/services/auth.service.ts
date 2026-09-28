@@ -9,6 +9,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  role?: string;
   permissions: string[];
   teams?: string[];
   teamId?: number;
@@ -62,12 +63,13 @@ export class AuthService extends BaseApiService {
               ? this.normalizePermissions(rawData.permissions)
               : (userData.permissions ? this.normalizePermissions(userData.permissions) : []);
 
-            // Try to preserve teamId from localStorage if backend doesn't send it in verify
             let teamId = rawData.teamId;
-            if (teamId == null && storedUser) {
+            let role = rawData.role;
+            if (storedUser) {
               try {
                 const parsedUser = JSON.parse(storedUser);
-                teamId = parsedUser.teamId;
+                if (teamId == null) teamId = parsedUser.teamId;
+                if (!role) role = parsedUser.role;
               } catch (e) { }
             }
 
@@ -75,6 +77,7 @@ export class AuthService extends BaseApiService {
               id: rawData.id,
               name: rawData.name,
               email: rawData.email,
+              role: role || 'user',
               permissions: permissions,
               teams: rawData.teams || [],
               teamId: teamId
@@ -106,6 +109,7 @@ export class AuthService extends BaseApiService {
               id: rawUser.id,
               name: rawUser.name,
               email: rawUser.email,
+              role: rawUser.role || 'user',
               permissions: permissions,
               teams: rawUser.teams || [],
               teamId: rawUser.teamId
@@ -138,5 +142,25 @@ export class AuthService extends BaseApiService {
     const user = this.currentUser();
     if (!user || !user.permissions) return false;
     return user.permissions.includes(permission.toLowerCase());
+  }
+
+  isAdmin(): boolean {
+    const user = this.currentUser();
+    if (!user) return false;
+    const role = (user.role || '').toLowerCase();
+    const isTeamAdmin = user.teamId === 7 || (user.teams || []).some(t => ['administración', 'administracion', 'admin'].includes(t.toLowerCase()));
+    return role === 'admin' || role === 'administrador' || isTeamAdmin || this.hasPermission('admin') || this.hasPermission('admin_panel') || this.hasPermission('production_admin');
+  }
+
+  isCommercial(): boolean {
+    const user = this.currentUser();
+    if (!user) return false;
+    const role = (user.role || '').toLowerCase();
+    const isTeamCommercial = user.teamId === 6 || (user.teams || []).some(t => ['comercial', 'commercial'].includes(t.toLowerCase()));
+    return role === 'comercial' || role === 'commercial' || isTeamCommercial;
+  }
+
+  isCommercialOrAdmin(): boolean {
+    return this.isAdmin() || this.isCommercial();
   }
 }

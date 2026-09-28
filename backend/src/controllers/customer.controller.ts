@@ -66,16 +66,16 @@ export class CustomerController {
     try {
       const fileBuffer = Buffer.from(fileData, 'base64');
       const results = await customerService.bulkUpload(fileBuffer, fileName);
-      
+
       if ((results as any).validationFailed) {
-        res.status(400).json({ 
-          success: false, 
+        res.status(400).json({
+          success: false,
           message: 'El archivo contiene errores de validación y no se pudo procesar.',
-          data: results 
+          data: results
         });
         return;
       }
-      
+
       res.status(200).json({ success: true, data: results });
     } catch (error: any) {
       res.status(400).json({ success: false, message: error.message || 'Error al procesar la carga masiva' });

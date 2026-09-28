@@ -6,8 +6,7 @@ export class AddResponsibleAndRoleToDynamicForms1773970000000 implements Migrati
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`ALTER TABLE "DynamicForms" ADD "Responsible" nvarchar(255) NULL`);
         await queryRunner.query(`ALTER TABLE "DynamicForms" ADD "Role" nvarchar(255) NULL`);
-        
-        // Update the seeded values
+
         await queryRunner.query(`
             UPDATE DynamicForms SET Responsible = 'Luisa Fajardo', Role = 'Coordinadora de Preventa' WHERE Name = 'CONTENT MARKETING';
             UPDATE DynamicForms SET Responsible = 'Carlos Ospina', Role = 'Líder de Analytics' WHERE Name = 'DATA';

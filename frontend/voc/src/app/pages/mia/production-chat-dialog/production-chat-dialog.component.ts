@@ -9,37 +9,21 @@ import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { DrawerModule } from 'primeng/drawer';
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Subject, Subscription, timer } from 'rxjs';
 import { takeUntil, switchMap } from 'rxjs/operators';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MarkdownPipe } from '../../../pipes/markdown.pipe';
 import { AuthService } from '../../../services/auth.service';
 import { AzureStorageService } from '../../../services/azure-storage.service';
-import { environment } from '../../../../environments/environment';
+import {
+  MiaChatService,
+  WebMessageFile,
+  WebMessageRequest,
+  ConversationItem,
+  ConversationMessage
+} from '../../../services/mia-chat.service';
 
-export interface WebMessageFile {
-  path: string;
-  name: string;
-  mimeType: string;
-  size: number;
-  extension: string;
-}
-
-export interface WebMessageContent {
-  text?: string | null;
-  type: string;
-  timestamp?: string | null;
-  file?: WebMessageFile | null;
-}
-
-export interface WebMessageRequest {
-  agentId: string;
-  conversationId?: string | null;
-  contactId: string;
-  channelId: string;
-  message: WebMessageContent;
-}
+export type { WebMessageFile, WebMessageRequest, ConversationItem, ConversationMessage };
 
 interface ChatMessageAttachment {
   type: 'image' | 'audio' | 'video' | 'document';
@@ -57,59 +41,6 @@ interface ChatMessage {
   timestamp: Date;
   ppt?: string | null;
   attachment?: ChatMessageAttachment | null;
-}
-
-interface ConversationItem {
-  id: string;
-  lastMessage: string;
-  createdAt: string;
-  updatedAt: string;
-  messageCount: number;
-  unreadCount: number;
-  status: string;
-  assignedTo: string;
-  humanAgentId: string | null;
-  secondsProcessed: number;
-  escalated: boolean;
-  solved: boolean;
-  tags: string[];
-  rating: string | null;
-  feeling: string | null;
-  summary: string | null;
-}
-
-interface ConversationMessageSender {
-  id: string;
-  phone: string;
-  name: string;
-  email: string;
-  address: string;
-  urlPhotoProfile: string | null;
-}
-
-interface ConversationMessageContent {
-  text: string;
-  type: string;
-  timestamp: number;
-  metadata: {
-    name: string;
-    extension: string;
-    size: number;
-    contentType: string;
-    mimeType: string;
-    duration: number | null;
-    path: string;
-  } | null;
-}
-
-interface ConversationMessage {
-  id: string;
-  agentId: string;
-  conversationId: string;
-  contactId: string;
-  channelId: string;
-  sender: ConversationMessageSender;
-  messageContent: ConversationMessageContent;
 }
 
 interface FileAttachment {
@@ -153,18 +84,16 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
 
   ref = inject(DynamicDialogRef, { optional: true }) as DynamicDialogRef | null;
   messageService = inject(MessageService);
-  http = inject(HttpClient);
+  private miaChatService = inject(MiaChatService);
   private authService = inject(AuthService);
   private azureService = inject(AzureStorageService);
   private sanitizer = inject(DomSanitizer);
   private hostEl = inject(ElementRef);
 
-  // Keeps a reference to the layout scroll container so we can restore it on destroy
   private scrollContainer: HTMLElement | null = null;
 
   @Output() requestCreated = new EventEmitter<any>();
 
-  // Typing status messages rotation
   private readonly typingMessages = [
     'MIA está pensando',
     'MIA está procesando tu solicitud',
@@ -186,7 +115,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   typingStatusText = signal<string>('MIA está pensando');
   private typingMessageInterval: ReturnType<typeof setInterval> | null = null;
 
-  // State
   messages = signal<ChatMessage[]>([]);
   isTyping = signal<boolean>(false);
   summary = signal<string>('');
@@ -195,21 +123,17 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   isSubmitting = signal<boolean>(false);
   inputText: string = '';
 
-  // Mobile Sidebar State
   showMobileSidebar = signal<boolean>(false);
 
-  // Attach panel and summary drawer
   attachPanelVisible = signal<boolean>(false);
   showSummaryDrawer = signal<boolean>(false);
   showHistoryDrawer = signal<boolean>(false);
 
-  // Conversations history
   conversations = signal<ConversationItem[]>([]);
   conversationsLoading = signal<boolean>(false);
   conversationMessagesLoading = signal<boolean>(false);
   selectedConversationId = signal<string | null>(null);
 
-  // Search & grouping
   searchQuery = signal<string>('');
 
   filteredConversations = computed(() => {
@@ -254,7 +178,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
 
   private readonly AGENT_ID = 'drWvQYWbVmoG8rRTxseV';
 
-  // Cancels any in-flight assistant or conversation-load request
   private cancelPending$ = new Subject<void>();
   private destroy$ = new Subject<void>();
   private blobUrls: string[] = [];
@@ -291,7 +214,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     if (!rawPath) return name || '';
     let clean = rawPath.trim();
 
-    // Extract decoded object path from Firebase Storage URL format (/o/encodedPath?...)
     if (clean.includes('/o/')) {
       const afterO = clean.split('/o/')[1];
       if (afterO) {
@@ -300,7 +222,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       }
     }
 
-    // Handle generic HTTP/HTTPS URLs by stripping protocol and host
     if (/^https?:\/\//i.test(clean)) {
       try {
         const url = new URL(clean);
@@ -310,7 +231,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         }
         return clean;
       } catch (e) {
-        // Fallback
+
       }
     }
 
@@ -328,7 +249,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   downloadDocument(attachment: ChatMessageAttachment, msgIndex: number): void {
     if (attachment.downloading) return;
 
-    // Archivo local (recién subido) — descargar directamente del blobUrl
     if (!attachment.path) {
       if (attachment.blobUrl) {
         const a = document.createElement('a');
@@ -339,14 +259,11 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       return;
     }
 
-    // Archivo remoto (cargado del historial) — descargar desde el servidor
     this.messages.update(msgs =>
       msgs.map((m, i) => i === msgIndex ? { ...m, attachment: { ...m.attachment!, downloading: true } } : m)
     );
-    const headers = new HttpHeaders({ 'x-api-key': environment.chatApiKey });
     const cleanPath = this.extractCleanPath(attachment.path, attachment.name);
-    const body = { agentId: environment.chatAgentId, channelId: environment.chatChannelId, path: cleanPath };
-    this.http.post(environment.chatDownloadFileUrl, body, { headers, responseType: 'blob' })
+    this.miaChatService.downloadFile(cleanPath)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (blob) => {
@@ -381,17 +298,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     const email = this.authService.currentUser()?.email;
     if (!email) return;
     this.conversationsLoading.set(true);
-    const headers = new HttpHeaders({ 'x-api-key': environment.chatApiKey });
-    const body = {
-      agentId: environment.chatAgentId,
-      channelId: environment.chatChannelId,
-      contactId: email
-    };
-    this.http.post<ConversationItem[]>(
-      environment.chatGetConversationsUrl,
-      body,
-      { headers }
-    ).subscribe({
+    this.miaChatService.getConversations(email).subscribe({
       next: (data) => {
         const list = Array.isArray(data) ? data : [];
         const sorted = list.sort(
@@ -399,7 +306,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         );
         this.conversations.set(sorted);
         this.conversationsLoading.set(false);
-        // Si no hay conversación seleccionada (chat nuevo), seleccionar la más reciente
+
         if (!this.selectedConversationId() && sorted.length > 0) {
           this.selectedConversationId.set(sorted[0].id);
         }
@@ -451,10 +358,8 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   private loadAttachmentsForMessages(mapped: ChatMessage[]): void {
     mapped.forEach((msg, index) => {
       if (!msg.attachment || msg.attachment.type === 'document') return;
-      const dlHeaders = new HttpHeaders({ 'x-api-key': environment.chatApiKey });
       const cleanPath = this.extractCleanPath(msg.attachment.path, msg.attachment.name);
-      const dlBody = { agentId: environment.chatAgentId, channelId: environment.chatChannelId, path: cleanPath };
-      this.http.post(environment.chatDownloadFileUrl, dlBody, { headers: dlHeaders, responseType: 'blob' })
+      this.miaChatService.downloadFile(cleanPath)
         .pipe(takeUntil(this.cancelPending$))
         .subscribe({
           next: (blob) => {
@@ -484,25 +389,15 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     if (this.isTyping()) return;
     const email = this.authService.currentUser()?.email;
     if (!email) return;
-    // Cancel any pending request or polling before starting a new conversation view
+
     this.stopPolling();
     this.cancelPending$.next();
     this.selectedConversationId.set(conv.id);
     this.conversationMessagesLoading.set(true);
     this.messages.set([]);
     this.summary.set('');
-    const headers = new HttpHeaders({ 'x-api-key': environment.chatApiKey });
-    const body = {
-      agentId: environment.chatAgentId,
-      channelId: environment.chatChannelId,
-      contactId: email,
-      conversationId: conv.id
-    };
-    this.http.post<ConversationMessage[]>(
-      environment.chatGetMessagesUrl,
-      body,
-      { headers }
-    ).pipe(takeUntil(this.cancelPending$)).subscribe({
+    this.miaChatService.getConversationMessages(email, conv.id)
+      .pipe(takeUntil(this.cancelPending$)).subscribe({
       next: (data) => {
         const mapped = this.mapApiMessagesToChatMessages(data);
         this.messages.set(mapped);
@@ -525,16 +420,8 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       return;
     }
 
-    const headers = new HttpHeaders({ 'x-api-key': environment.chatApiKey });
-    const body = {
-      agentId: environment.chatAgentId,
-      channelId: environment.chatChannelId,
-      contactId: email,
-      conversationId: targetConvId
-    };
-
     let attempts = 0;
-    const maxAttempts = 60; // Max 5 minutes (60 * 5s)
+    const maxAttempts = 60;
 
     this.pollingSubscription = timer(5000, 5000).pipe(
       takeUntil(this.cancelPending$),
@@ -543,11 +430,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         if (attempts > maxAttempts) {
           throw new Error('Polling timeout');
         }
-        return this.http.post<ConversationMessage[]>(
-          environment.chatGetMessagesUrl,
-          body,
-          { headers }
-        );
+        return this.miaChatService.getConversationMessages(email, targetConvId);
       })
     ).subscribe({
       next: (data) => {
@@ -557,7 +440,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         const unique = list.filter((m, i, arr) => arr.findIndex(x => x.id === m.id) === i);
         const sorted = unique.sort((a, b) => a.messageContent.timestamp - b.messageContent.timestamp);
 
-        // Check if there is an assistant response after/at user's message timestamp
         const hasAssistantResponse = sorted.some(m =>
           m.sender.id === m.agentId && m.messageContent.timestamp >= (sendTimeSeconds - 2)
         );
@@ -591,17 +473,14 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     });
   }
 
-  // Unique ID for the conversation session
   private memoryUniqueId: string;
 
-  // Mock computed value to enable the submit button if we have enough info
-  // For a real implementation, this would check if the required fields in summary are populated
   isRequestReady = computed(() => {
     return this.messages().length > 2 || this.summary().length > 0;
   });
 
   constructor() {
-    // Generate a unique GUID for this conversation
+
     this.memoryUniqueId = this.generateGuid();
     this.loadConversations();
   }
@@ -620,7 +499,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     this.showMobileSidebar.update(v => !v);
   }
 
-  // --- Modal Logic ---
   closeDialog() {
     if (this.ref) {
       this.ref.close();
@@ -629,29 +507,24 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     }
   }
 
-  // --- Chat Logic ---
-
   sendMessage() {
     if (!this.inputText.trim() && this.files().length === 0) return;
 
     const text = this.inputText.trim();
     this.inputText = '';
 
-    // Add user message
     this.messages.update(m => [...m, {
       role: 'user',
       content: text || (this.files().length > 0 ? `[${this.files().length} archivo(s) adjunto(s)]` : ''),
       timestamp: new Date()
     }]);
 
-    // Reset textarea height
     if (this.chatInput) {
       this.chatInput.nativeElement.style.height = '44px';
     }
 
     this.scrollToBottom();
 
-    // Process pending files and send them along with the text
     const pendingFiles = [...this.files()];
     this.files.set([]);
 
@@ -672,7 +545,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     const blobUrl = URL.createObjectURL(file);
     this.blobUrls.push(blobUrl);
 
-    // Agregar attachment al mensaje del usuario para que se vea el cuadro de documento/media
     this.messages.update(msgs => {
       const updated = [...msgs];
       const lastIdx = updated.length - 1;
@@ -753,8 +625,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    // Walk up the DOM to find the nearest scrollable layout wrapper and disable its
-    // scroll so the page never shifts — only this component disables it and restores on destroy.
+
     let p: HTMLElement | null = (this.hostEl.nativeElement as HTMLElement).parentElement;
     while (p) {
       const ov = getComputedStyle(p).overflowY;
@@ -782,8 +653,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     this.stopTypingMessageRotation();
   }
 
-  // --- Typing status rotation ---
-
   private startTypingMessageRotation(): void {
     let index = 0;
     this.typingStatusText.set(this.typingMessages[0]);
@@ -801,7 +670,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     this.typingStatusText.set('MIA está pensando');
   }
 
-  // Call the AI assistant API
   private askAssistant(userText: string, webMessageFile?: WebMessageFile | null, fileMessageType: string = 'text') {
     this.isTyping.set(true);
     this.startTypingMessageRotation();
@@ -811,24 +679,17 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     const conversationId = this.selectedConversationId();
     const sendTimeSeconds = Math.floor(Date.now() / 1000);
 
-    const payload: WebMessageRequest = {
-      agentId: environment.chatAgentId,
-      conversationId: conversationId || null,
-      contactId: email || '',
-      channelId: environment.chatChannelId,
-      message: {
-        text: userText || null,
-        type: webMessageFile ? fileMessageType : 'text',
-        timestamp: String(sendTimeSeconds),
-        file: webMessageFile || null
-      }
-    };
+    const payload = this.miaChatService.buildMessagePayload(
+      email,
+      userText,
+      conversationId,
+      webMessageFile,
+      fileMessageType,
+      sendTimeSeconds
+    );
 
-    this.http.post<any>(
-      environment.chatSendMessageUrl,
-      payload,
-      { headers: { 'x-api-key': environment.chatApiKey } }
-    ).pipe(takeUntil(this.cancelPending$)).subscribe({
+    this.miaChatService.sendMessage(payload)
+      .pipe(takeUntil(this.cancelPending$)).subscribe({
       next: (response) => {
         const convId = response?.conversationId || conversationId || this.selectedConversationId();
         if (response?.conversationId) {
@@ -836,7 +697,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         }
 
         if (convId) {
-          // Poll every 5 seconds for the assistant's response via POST /Agents/conversation-messages
+
           this.pollForAssistantResponse(convId, sendTimeSeconds);
         } else {
           this.stopTypingMessageRotation();
@@ -854,8 +715,6 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       }
     });
   }
-
-  // --- File Upload Logic ---
 
   onDragOver(event: DragEvent) {
     event.preventDefault();
@@ -883,7 +742,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     if (event.target.files) {
       this.handleFiles(event.target.files);
     }
-    // Reset input so the same file can be selected again if needed
+
     event.target.value = '';
   }
 
@@ -894,7 +753,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     ];
-    const maxFileSize = 5 * 1024 * 1024; // 5MB
+    const maxFileSize = 5 * 1024 * 1024;
     const newFiles: File[] = [];
 
     for (let i = 0; i < fileList.length; i++) {
@@ -916,7 +775,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     }
 
     if (newFiles.length > 0) {
-      // Solo un archivo por mensaje - reemplazar si ya hay uno
+
       this.files.set([newFiles[0]]);
     }
   }
@@ -929,12 +788,9 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     });
   }
 
-  // --- Submission ---
-
   submitRequest() {
     this.isSubmitting.set(true);
 
-    // Simulate API call to create request
     setTimeout(() => {
       this.isSubmitting.set(false);
       this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Solicitud creada correctamente.' });
@@ -942,7 +798,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       const result = {
         name: 'Nueva Solicitud via Chat',
         description: this.summary(),
-        // other mapped fields...
+
       };
 
       if (this.ref) {

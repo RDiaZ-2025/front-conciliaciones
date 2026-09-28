@@ -11,7 +11,7 @@ const service = new ProductionService();
 async function run() {
     try {
         await AppDataSource.initialize();
-        
+
         const luisa = await AppDataSource.getRepository(User).findOne({
             where: { name: 'Luisa Fajardo' }
         });

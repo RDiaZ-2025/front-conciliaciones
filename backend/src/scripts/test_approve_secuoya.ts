@@ -8,12 +8,12 @@ import { ProductionService } from '../services/production.service';
 async function run() {
     try {
         await AppDataSource.initialize();
-        
+
         const service = new ProductionService();
         console.log("Calling actionApproval for State 48...");
-        
+
         const stateId = 48;
-        const userId = 96; // Secuoya user ID
+        const userId = 96;
         const result = await service.actionApproval(
             stateId,
             userId,

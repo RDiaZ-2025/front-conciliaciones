@@ -10,9 +10,6 @@ export class ProductionRequestHistoryService {
     this.historyRepository = AppDataSource.getRepository(ProductionRequestHistory);
   }
 
-  /**
-   * Log a change in the production request history
-   */
   async logChange(
     productionRequestId: number,
     changeField: string,
@@ -32,9 +29,6 @@ export class ProductionRequestHistoryService {
     return await this.historyRepository.save(history);
   }
 
-  /**
-   * Get history for a specific production request
-   */
   async getHistoryByRequestId(requestId: number): Promise<ProductionRequestHistory[]> {
     if (!AppDataSource.isInitialized) {
       throw new Error('Base de datos no disponible');
@@ -47,9 +41,6 @@ export class ProductionRequestHistoryService {
     });
   }
 
-  /**
-   * Compare two objects and log differences
-   */
   async logDifferences(
     oldRequest: ProductionRequest,
     newRequest: Partial<ProductionRequest>,
@@ -61,13 +52,12 @@ export class ProductionRequestHistoryService {
     ];
 
     for (const field of fieldsToCheck) {
-      // Skip if field is not in newRequest
+
       if (newRequest[field] === undefined) continue;
 
       const oldVal = oldRequest[field];
       const newVal = newRequest[field];
 
-      // Simple comparison (needs improvement for dates and objects)
       if (this.isDifferent(oldVal, newVal)) {
         await this.logChange(
           oldRequest.id,
@@ -88,7 +78,7 @@ export class ProductionRequestHistoryService {
     if (val1 instanceof Date && typeof val2 === 'string') {
       return val1.getTime() !== new Date(val2).getTime();
     }
-    // Handle null/undefined equality
+
     if ((val1 === null || val1 === undefined) && (val2 === null || val2 === undefined)) {
       return false;
     }

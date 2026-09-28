@@ -41,6 +41,15 @@
         </small>
     </div>
 
+    <!-- Role Field -->
+    <div class="field mt-2">
+        <p-floatLabel variant="in">
+            <p-select id="role" [options]="availableRoles" formControlName="role" optionLabel="label" optionValue="value"
+                styleClass="w-full" appendTo="body"></p-select>
+            <label for="role">Rol</label>
+        </p-floatLabel>
+    </div>
+
     <!-- Permissions Field -->
     <div class="field mt-2">
         <p-floatLabel variant="in">

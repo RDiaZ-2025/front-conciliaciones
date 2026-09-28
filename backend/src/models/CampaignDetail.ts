@@ -3,9 +3,6 @@ import { ProductionRequest } from './ProductionRequest';
 import { CampaignProduct } from './CampaignProduct';
 import { Objective } from './Objective';
 
-/**
- * CampaignDetail entity representing campaign details for a production request
- */
 @Entity('CampaignDetails')
 export class CampaignDetail {
     @PrimaryGeneratedColumn({ name: 'Id' })

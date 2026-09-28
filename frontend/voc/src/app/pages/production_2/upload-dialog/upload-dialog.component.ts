@@ -45,7 +45,6 @@ export class UploadDialogComponent implements OnInit {
   private ref = inject(DynamicDialogRef);
   private config = inject(DynamicDialogConfig);
 
-  // State
   tipoUsuario = signal<'cliente' | 'agencia' | null>(null);
   activeStep = signal<number>(0);
   requestId = signal<number | null>(null);
@@ -65,12 +64,11 @@ export class UploadDialogComponent implements OnInit {
 
   guid = signal<string | null>(null);
 
-  // Computed
   isExcelStepValid = computed(() => !!this.excelFile() && this.excelUploaded());
   isPdfStepValid = computed(() => !!this.pdfFile() && this.pdfUploaded() && this.manualPdfConfirmation());
 
   ngOnInit() {
-    // Check if we have passed data if needed (e.g. request info)
+
     if (this.config.data?.request) {
       if (this.config.data.request.id) {
         this.requestId.set(this.config.data.request.id);
@@ -87,7 +85,7 @@ export class UploadDialogComponent implements OnInit {
 
   setTipoUsuario(type: 'cliente' | 'agencia') {
     this.tipoUsuario.set(type);
-    this.activeStep.set(1); // Move to next step
+    this.activeStep.set(1);
   }
 
   onActiveStepChange(step: number | undefined) {
@@ -105,11 +103,9 @@ export class UploadDialogComponent implements OnInit {
       return;
     }
 
-    // Generate GUID
     this.guid.set(crypto.randomUUID());
     this.excelFile.set(file);
 
-    // Validate
     const validation = await this.uploadService.validateExcel(file);
     if (!validation.isValid) {
       this.messageService.add({ severity: 'error', summary: 'Error de Validación', detail: validation.message });
@@ -120,7 +116,6 @@ export class UploadDialogComponent implements OnInit {
 
     this.debugExcelValues.set(validation.debugValues || []);
 
-    // Upload
     this.uploading.set(true);
     const path = this.requestId()
       ? `productionRequest/${this.requestId()}/validationOC`
@@ -149,7 +144,6 @@ export class UploadDialogComponent implements OnInit {
 
     this.pdfFile.set(file);
 
-    // Validate
     const validation = await this.uploadService.validatePdf(file);
     if (!validation.isValid) {
       this.messageService.add({ severity: 'error', summary: 'Error de Validación', detail: validation.message });
@@ -157,10 +151,8 @@ export class UploadDialogComponent implements OnInit {
       return;
     }
 
-    // Generate Thumbnail (just URL for iframe)
     this.pdfThumbnail.set(URL.createObjectURL(file));
 
-    // Upload
     this.uploading.set(true);
     const path = this.requestId()
       ? `productionRequest/${this.requestId()}/validationOC`
@@ -184,7 +176,7 @@ export class UploadDialogComponent implements OnInit {
     this.uploading.set(true);
 
     try {
-      // 1. Notify N8N
+
       const payload = {
         tipoUsuario: this.tipoUsuario(),
         excelFilename: this.excelFile()?.name,
@@ -200,12 +192,11 @@ export class UploadDialogComponent implements OnInit {
       };
 
       const n8nOk = await this.uploadService.notifyN8N(payload);
-      if (!n8nOk) console.warn('Error al notificar a N8N'); // Non-blocking warning
+      if (!n8nOk) console.warn('Error al notificar a N8N');
 
       this.envioExitoso.set(true);
       this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Proceso completado correctamente' });
 
-      // Close dialog after success
       setTimeout(() => {
         this.ref.close({ success: true, guid: this.guid() });
       }, 1500);

@@ -54,15 +54,13 @@ export class CampaignSchedulingComponent implements OnInit, OnDestroy {
   campaignForm!: FormGroup;
   teams = signal<Team[]>([]);
   loading = signal<boolean>(false);
-  
-  // Time Window State
+
   currentTime = signal<Date>(new Date());
   currentSlot = computed(() => this.determineSlot(this.currentTime()));
   isLocked = computed(() => this.currentSlot().locked);
-  
+
   private timeInterval: any;
 
-  // Traceability Data
   traceabilityData = signal<any[]>([]);
   selectedCampaign = signal<Campaign | null>(null);
   detailsVisible = signal<boolean>(false);
@@ -73,12 +71,11 @@ export class CampaignSchedulingComponent implements OnInit, OnDestroy {
     this.startTimeTicker();
     this.loadTraceability();
 
-    // Initial check
     if (this.isLocked()) {
         this.campaignForm.disable();
     } else {
         this.campaignForm.enable();
-        // Keep read-only fields disabled
+
         this.campaignForm.get('slot')?.disable();
     }
   }
@@ -95,8 +92,8 @@ export class CampaignSchedulingComponent implements OnInit, OnDestroy {
       area: [null, [Validators.required]],
       slot: [{ value: '', disabled: true }],
       copy: ['', [
-        Validators.required, 
-        Validators.maxLength(260), 
+        Validators.required,
+        Validators.maxLength(260),
         this.noSpecialCharsValidator
       ]],
       url: ['', [Validators.required, this.urlValidator]],
@@ -105,11 +102,8 @@ export class CampaignSchedulingComponent implements OnInit, OnDestroy {
       impacts: this.fb.array([])
     }, { validators: this.dateRangeValidator });
 
-    // Update slot field when computed signal changes
-    // (Though it's disabled, we want to show the value)
     this.campaignForm.patchValue({ slot: this.currentSlot().label });
-    
-    // Add initial impact row
+
     this.addImpactRow();
   }
 
@@ -117,7 +111,7 @@ export class CampaignSchedulingComponent implements OnInit, OnDestroy {
     this.timeInterval = setInterval(() => {
       const now = new Date();
       this.currentTime.set(now);
-      
+
       const slot = this.determineSlot(now);
       if (this.campaignForm.get('slot')?.value !== slot.label) {
         this.campaignForm.patchValue({ slot: slot.label });
@@ -131,7 +125,7 @@ export class CampaignSchedulingComponent implements OnInit, OnDestroy {
         this.campaignForm.get('slot')?.disable();
         this.messageService.add({ severity: 'success', summary: 'Horario Abierto', detail: 'La ventana de programación está activa.' });
       }
-    }, 1000 * 60); // Check every minute
+    }, 1000 * 60);
   }
 
   private determineSlot(date: Date): { label: string, locked: boolean, execution: string } {
@@ -139,12 +133,10 @@ export class CampaignSchedulingComponent implements OnInit, OnDestroy {
     const minutes = date.getMinutes();
     const time = hours + minutes / 60;
 
-    // Slot 1: 08:00 (8.0) - 12:00 (12.0)
     if (time >= 8 && time < 12) {
       return { label: 'Mañana (08:00 - 12:00)', locked: false, execution: 'Ejecución Tarde' };
     }
-    
-    // Slot 2: 14:00 (14.0) - 16:30 (16.5)
+
     if (time >= 14 && time < 16.5) {
       return { label: 'Tarde (14:00 - 16:30)', locked: false, execution: 'Ejecución Siguiente Mañana' };
     }
@@ -179,7 +171,6 @@ export class CampaignSchedulingComponent implements OnInit, OnDestroy {
     this.impacts.removeAt(index);
   }
 
-  // Validators
   noSpecialCharsValidator(control: AbstractControl): ValidationErrors | null {
     if (!control.value) return null;
     const regex = /^[a-zA-Z0-9\s.,-]*$/;
@@ -200,7 +191,7 @@ export class CampaignSchedulingComponent implements OnInit, OnDestroy {
   dateRangeValidator(group: AbstractControl): ValidationErrors | null {
     const start = group.get('startDate')?.value;
     const end = group.get('endDate')?.value;
-    
+
     if (start && end && new Date(end) < new Date(start)) {
       return { dateRange: true };
     }
@@ -210,7 +201,7 @@ export class CampaignSchedulingComponent implements OnInit, OnDestroy {
   validateUrl() {
     const url = this.campaignForm.get('url')?.value;
     if (!url) return;
-    
+
     if (this.campaignForm.get('url')?.valid) {
         window.open(url, '_blank');
         this.messageService.add({ severity: 'success', summary: 'URL Válida', detail: 'El enlace tiene un formato correcto.' });
@@ -244,7 +235,7 @@ export class CampaignSchedulingComponent implements OnInit, OnDestroy {
             if (response.success) {
                 this.messageService.add({ severity: 'success', summary: 'Campaña Programada', detail: 'La campaña se ha programado correctamente.' });
                 this.campaignForm.reset();
-                this.initForm(); 
+                this.initForm();
                 this.loadTraceability();
             } else {
                  this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo programar la campaña.' });
@@ -280,7 +271,7 @@ export class CampaignSchedulingComponent implements OnInit, OnDestroy {
       this.selectedCampaign.set(campaign);
       this.detailsVisible.set(true);
   }
-  
+
   getSlotBadgeSeverity(slotLabel: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" | undefined {
       if (slotLabel.includes('Mañana')) return 'info';
       if (slotLabel.includes('Tarde')) return 'warn';

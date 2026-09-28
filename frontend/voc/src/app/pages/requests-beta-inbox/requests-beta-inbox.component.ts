@@ -13,6 +13,8 @@ import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { TagModule } from 'primeng/tag';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { DatePickerModule } from 'primeng/datepicker';
+import { BadgeModule } from 'primeng/badge';
 import { MessageService } from 'primeng/api';
 import { PageHeaderComponent } from '../../components/page-header/page-header.component';
 import { LucideIconComponent } from '../../components/lucide-icon/lucide-icon.component';
@@ -39,6 +41,8 @@ import { CustomerAutocompleteComponent } from '../../components/customer-autocom
     TooltipModule,
     TagModule,
     ProgressSpinnerModule,
+    DatePickerModule,
+    BadgeModule,
     PageHeaderComponent,
     LucideIconComponent,
     CustomerAutocompleteComponent
@@ -53,20 +57,62 @@ export class RequestsBetaInboxComponent implements OnInit {
   private messageService = inject(MessageService);
   private azureService = inject(AzureStorageService);
 
-  // States
   pendingTasks = signal<any[]>([]);
   loadingTasks = signal<boolean>(false);
 
-  // Action Dialog States
   showActionDialog = signal<boolean>(false);
   loadingAction = signal<boolean>(false);
   selectedTask = signal<any>(null);
   parentFormGroups = signal<any[]>([]);
   comments = signal<string>('');
+  chosenNextAssignee: any = null;
 
-  // Submissions History States
   submissions = signal<any[]>([]);
-  filteredSubmissions = computed(() => {
+
+  // --- Filtros Integrales (Aprobaciones e Historial) ---
+  filterSearch = signal<string>('');
+  filterSelectedForms = signal<string[]>([]);
+  filterStatus = signal<string>('all');
+  filterDatePreset = signal<string>('all');
+  filterDateFrom = signal<Date | null>(null);
+  filterDateTo = signal<Date | null>(null);
+  filterRequester = signal<string>('');
+  showAdvancedFilters = signal<boolean>(false);
+
+  statusOptions = [
+    { label: 'Todos los estados', value: 'all' },
+    { label: 'Pendientes de mi Aprobación', value: 'pending_me' },
+    { label: 'En Proceso', value: 'in_progress' },
+    { label: 'Aprobadas / Completadas', value: 'completed' },
+    { label: 'Devueltas para Corrección', value: 'rejected' }
+  ];
+
+  datePresetOptions = [
+    { label: 'Cualquier fecha', value: 'all' },
+    { label: 'Hoy', value: 'today' },
+    { label: 'Últimos 7 días', value: 'week' },
+    { label: 'Este mes', value: 'month' },
+    { label: 'Personalizado (Rango)', value: 'custom' }
+  ];
+
+  activeFiltersCount = computed(() => {
+    let count = 0;
+    if (this.filterSearch().trim()) count++;
+    if (this.filterSelectedForms().length > 0) count++;
+    if (this.filterStatus() !== 'all') count++;
+    if (this.filterDatePreset() !== 'all') count++;
+    if (this.filterRequester().trim()) count++;
+    return count;
+  });
+
+  availableFormOptions = computed(() => {
+    const set = new Set<string>();
+    (this.pendingTasks() || []).forEach(t => { if (t.formName) set.add(t.formName); });
+    (this.submissions() || []).forEach(s => { if (s.formName) set.add(s.formName); });
+    return Array.from(set).sort().map(name => ({ label: name, value: name }));
+  });
+
+  baseHistorySubmissions = computed(() => {
     const pendingSubmissionIds = new Set<number>();
     (this.pendingTasks() || []).forEach(t => {
       if (t.submissionId) pendingSubmissionIds.add(t.submissionId);
@@ -87,13 +133,160 @@ export class RequestsBetaInboxComponent implements OnInit {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   });
+
+  displayedPendingTasks = computed(() => {
+    const tasks = this.pendingTasks() || [];
+    const query = this.filterSearch();
+    const forms = this.filterSelectedForms();
+    const status = this.filterStatus();
+    const datePreset = this.filterDatePreset();
+    const dateFrom = this.filterDateFrom();
+    const dateTo = this.filterDateTo();
+    const requester = this.filterRequester();
+
+    return tasks.filter(t => this.matchesFilter(t, true, query, forms, status, datePreset, dateFrom, dateTo, requester));
+  });
+
+  displayedSubmissions = computed(() => {
+    const subs = this.baseHistorySubmissions();
+    const query = this.filterSearch();
+    const forms = this.filterSelectedForms();
+    const status = this.filterStatus();
+    const datePreset = this.filterDatePreset();
+    const dateFrom = this.filterDateFrom();
+    const dateTo = this.filterDateTo();
+    const requester = this.filterRequester();
+
+    return subs.filter(s => this.matchesFilter(s, false, query, forms, status, datePreset, dateFrom, dateTo, requester));
+  });
+
+  // Alias retrocompatible
+  filteredSubmissions = computed(() => this.displayedSubmissions());
+
+  clearAllFilters() {
+    this.filterSearch.set('');
+    this.filterSelectedForms.set([]);
+    this.filterStatus.set('all');
+    this.filterDatePreset.set('all');
+    this.filterDateFrom.set(null);
+    this.filterDateTo.set(null);
+    this.filterRequester.set('');
+  }
+
+  onDatePresetChange(preset: string) {
+    this.filterDatePreset.set(preset);
+    if (preset !== 'custom') {
+      this.filterDateFrom.set(null);
+      this.filterDateTo.set(null);
+    }
+  }
+
+  private matchesFilter(
+    item: any,
+    isPendingTask: boolean,
+    query: string,
+    selectedForms: string[],
+    status: string,
+    datePreset: string,
+    dateFrom: Date | null,
+    dateTo: Date | null,
+    requester: string
+  ): boolean {
+    // 1. Filtro de Estado
+    if (status !== 'all') {
+      if (isPendingTask) {
+        if (status === 'completed') return false;
+        if (status === 'rejected' && !this.isCorrection(item)) return false;
+        if (status === 'in_progress' && this.isCorrection(item)) return false;
+      } else {
+        if (status === 'pending_me') return false;
+        const st = (item.status || '').toLowerCase();
+        if (status === 'completed' && st !== 'completed' && st !== 'approved') return false;
+        if (status === 'in_progress' && st !== 'in progress' && st !== 'in_progress') return false;
+        if (status === 'rejected' && st !== 'rejected') return false;
+      }
+    }
+
+    // 2. Filtro de Formularios
+    if (selectedForms && selectedForms.length > 0) {
+      if (!selectedForms.includes(item.formName)) return false;
+    }
+
+    // 3. Filtro de Solicitante
+    if (requester && requester.trim()) {
+      const reqQuery = requester.toLowerCase().trim();
+      const reqName = (item.requesterName || '').toLowerCase();
+      const reqEmail = (item.requesterEmail || '').toLowerCase();
+      if (!reqName.includes(reqQuery) && !reqEmail.includes(reqQuery)) return false;
+    }
+
+    // 4. Filtro de Fechas
+    if (datePreset !== 'all') {
+      const itemDate = new Date(item.createdAt);
+      if (!isNaN(itemDate.getTime())) {
+        const now = new Date();
+        if (datePreset === 'today') {
+          const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          if (itemDate < startOfToday) return false;
+        } else if (datePreset === 'week') {
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          if (itemDate < weekAgo) return false;
+        } else if (datePreset === 'month') {
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          if (itemDate < startOfMonth) return false;
+        } else if (datePreset === 'custom') {
+          if (dateFrom) {
+            const start = new Date(dateFrom);
+            start.setHours(0, 0, 0, 0);
+            if (itemDate < start) return false;
+          }
+          if (dateTo) {
+            const end = new Date(dateTo);
+            end.setHours(23, 59, 59, 999);
+            if (itemDate > end) return false;
+          }
+        }
+      }
+    }
+
+    // 5. Búsqueda de texto libre global
+    if (query && query.trim()) {
+      const cleanQ = query.toLowerCase().trim();
+      const rawId = String(item.id || item.submissionId || '');
+      if (cleanQ.startsWith('#')) {
+        const numQ = cleanQ.replace('#', '').trim();
+        if (rawId === numQ || rawId.includes(numQ)) return true;
+      } else {
+        if (rawId === cleanQ || rawId.includes(cleanQ)) return true;
+      }
+
+      if (item.formName && item.formName.toLowerCase().includes(cleanQ)) return true;
+      if (item.consecutive && item.consecutive.toLowerCase().includes(cleanQ)) return true;
+      if (item.requesterName && item.requesterName.toLowerCase().includes(cleanQ)) return true;
+      if (item.requesterEmail && item.requesterEmail.toLowerCase().includes(cleanQ)) return true;
+      if (item.assigneeName && item.assigneeName.toLowerCase().includes(cleanQ)) return true;
+      if (item.stageName && item.stageName.toLowerCase().includes(cleanQ)) return true;
+
+      // Buscar en campos dinámicos de la tarjeta
+      if (Array.isArray(item.cardFields) && item.cardFields.length > 0) {
+        for (const cf of item.cardFields) {
+          if (cf.label && cf.label.toLowerCase().includes(cleanQ)) return true;
+          const formattedVal = this.formatCardValue(cf);
+          if (formattedVal && String(formattedVal).toLowerCase().includes(cleanQ)) return true;
+        }
+      }
+
+      return false;
+    }
+
+    return true;
+  }
   loadingSubmissions = signal<boolean>(false);
   showDetailsDialog = signal<boolean>(false);
   loadingDetails = signal<boolean>(false);
   selectedDetails = signal<any>(null);
   detailsParentFormGroups = signal<any[]>([]);
 
-  // Additional form to fill at this stage
   stageFormFields = signal<any[]>([]);
   stageFormValues: Record<string, string> = {};
   loadingStageFields = signal<boolean>(false);
@@ -142,7 +335,7 @@ export class RequestsBetaInboxComponent implements OnInit {
 
   evaluateDefaultValueExpression(f: any): string {
     if (!f.defaultValueExpression) return '';
-    
+
     const now = new Date();
     const pad = (n: number) => n.toString().padStart(2, '0');
     const formattedDateTimeLocal = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
@@ -234,6 +427,26 @@ export class RequestsBetaInboxComponent implements OnInit {
     return rawValue;
   }
 
+  formatCardValue(cf: any): string {
+    if (!cf || cf.value === undefined || cf.value === null || cf.value === '') return '';
+    const raw = String(cf.value).trim();
+    if ((raw.startsWith('[') && raw.endsWith(']')) || (raw.startsWith('{') && raw.endsWith('}'))) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          if (parsed.length > 0 && parsed[0]?.name && (parsed[0]?.url || parsed[0]?.size)) {
+            return parsed.map((f: any) => f.name).join(', ');
+          }
+          if (parsed.length > 0 && typeof parsed[0] === 'object') {
+            return `${parsed.length} ítem(s)`;
+          }
+          return parsed.join(', ');
+        }
+      } catch (e) {}
+    }
+    return this.formatValue(cf);
+  }
+
   toNumber(val: any): number | null {
     if (val === undefined || val === null || String(val).trim() === '') return null;
     const num = Number(val);
@@ -243,7 +456,7 @@ export class RequestsBetaInboxComponent implements OnInit {
   setFormValue(key: string, val: any, type: 'initial' | 'stage' | 'parent') {
     const stringVal = val !== null && val !== undefined ? String(val) : '';
     if (type === 'initial') {
-      // requests-beta-inbox doesn't create requests, but has parent and stage values
+
     } else if (type === 'stage') {
       this.stageFormValues[key] = stringVal;
       this.recalculateStageFormulas();
@@ -257,6 +470,10 @@ export class RequestsBetaInboxComponent implements OnInit {
     console.log('Task selected in inbox:', task);
     this.selectedTask.set(task);
     this.comments.set('');
+    this.chosenNextAssignee = null;
+    if (task?.allowChooseNextStageAssignee && task?.nextStageAssigneeOptions?.length === 1) {
+      this.chosenNextAssignee = task.nextStageAssigneeOptions[0];
+    }
     this.stageFormFields.set([]);
     this.stageFormValues = {};
     this.showActionDialog.set(true);
@@ -420,7 +637,6 @@ export class RequestsBetaInboxComponent implements OnInit {
       return;
     }
 
-    // Validate fields if approving
     if (action === 'approve') {
       if (task.parentForms && task.parentForms.length > 0) {
         for (const frm of task.parentForms) {
@@ -502,26 +718,37 @@ export class RequestsBetaInboxComponent implements OnInit {
               const val = this.stageFormValues[field.name];
               const hasUploaded = this.getUploadedFiles(val).length > 0;
               if (files.length === 0 && !hasUploaded) {
-                this.messageService.add({ 
-                  severity: 'error', 
-                  summary: 'Validación', 
-                  detail: `El campo "${field.label}" requiere cargar al menos un archivo.` 
+                this.messageService.add({
+                  severity: 'error',
+                  summary: 'Validación',
+                  detail: `El campo "${field.label}" requiere cargar al menos un archivo.`
                 });
                 return;
               }
             } else {
               const val = this.stageFormValues[field.name];
               if (val === undefined || val === null || String(val).trim() === '') {
-                this.messageService.add({ 
-                  severity: 'error', 
-                  summary: 'Validación', 
-                  detail: `El campo "${field.label}" es requerido para continuar.` 
+                this.messageService.add({
+                  severity: 'error',
+                  summary: 'Validación',
+                  detail: `El campo "${field.label}" es requerido para continuar.`
                 });
                 return;
               }
             }
           }
         }
+      }
+    }
+
+    if (action === 'approve' && !this.isCorrection(task) && task.allowChooseNextStageAssignee && task.nextStageAssigneeOptions?.length > 0 && !task.isFinalStage) {
+      if (!this.chosenNextAssignee) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Validación',
+          detail: 'Debes seleccionar a quién se le asignará la siguiente etapa.'
+        });
+        return;
       }
     }
 
@@ -544,7 +771,6 @@ export class RequestsBetaInboxComponent implements OnInit {
     }
   }
 
-  // --- File Uploader Helpers ---
   tempFiles: Record<string, File[]> = {};
 
   onFileSelected(event: any, field: any) {
@@ -561,19 +787,16 @@ export class RequestsBetaInboxComponent implements OnInit {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
-      // Check count limit
       if (newList.length >= maxCount) {
         this.messageService.add({ severity: 'warn', summary: 'Límite excedido', detail: `Solo se permiten máximo ${maxCount} archivos en el campo "${field.label}".` });
         break;
       }
 
-      // Check size limit
       if (file.size > maxMB * 1024 * 1024) {
         this.messageService.add({ severity: 'error', summary: 'Archivo muy grande', detail: `El archivo "${file.name}" supera el peso máximo permitido de ${maxMB}MB.` });
         continue;
       }
 
-      // Check file formats
       const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
       if (allowed.length > 0 && !allowed.includes(ext)) {
         this.messageService.add({ severity: 'error', summary: 'Formato no permitido', detail: `El formato de "${file.name}" no está permitido. Formatos aceptados: ${field.metadata.allowedFormats}.` });
@@ -645,18 +868,19 @@ export class RequestsBetaInboxComponent implements OnInit {
     }
   }
 
-  downloadFormFile(file: any) {
-    if (file && file.url) {
-      window.open(file.url, '_blank');
-    }
+  downloadFormFile(file: any, event?: Event) {
+    return this.downloadStageFormFile(file, event);
   }
 
   isFileListValue(value: string): boolean {
     if (!value) return false;
     try {
       const parsed = JSON.parse(value);
-      return Array.isArray(parsed) && parsed.length > 0 && parsed[0].url !== undefined;
+      return Array.isArray(parsed) && parsed.length > 0 && (parsed[0].url !== undefined || parsed[0].name !== undefined);
     } catch(e) {
+      if (typeof value === 'string' && (value.includes('.blob.core.windows.net') || value.startsWith('http://') || value.startsWith('https://'))) {
+        return true;
+      }
       return false;
     }
   }
@@ -665,7 +889,7 @@ export class RequestsBetaInboxComponent implements OnInit {
     this.loadingAction.set(true);
 
     const fields = this.stageFormFields();
-    // 1. Upload files
+
     for (const field of fields) {
       if (field.type === 'file') {
         const filesToUpload = this.tempFiles[field.name] || [];
@@ -687,7 +911,6 @@ export class RequestsBetaInboxComponent implements OnInit {
       }
     }
 
-    // 1.5. Upload files from parent correction forms if any
     const parentForms = task.parentForms || [];
     for (const form of parentForms) {
       for (const field of form.fields) {
@@ -713,7 +936,6 @@ export class RequestsBetaInboxComponent implements OnInit {
       }
     }
 
-    // 1.8. Upload files from multi forms if any
     if (task.formIdToFill === -1 && this.getSelectedMultiForms().length > 0) {
       for (const mForm of this.getSelectedMultiForms()) {
         for (const field of mForm.fields) {
@@ -740,18 +962,25 @@ export class RequestsBetaInboxComponent implements OnInit {
       }
     }
 
-    // 2. Process action
-    this.productionService.actionApproval(task.stateId, action, notes, action === 'approve' ? this.stageFormValues : undefined).subscribe({
+    this.productionService.actionApproval(
+      task.stateId,
+      action,
+      notes,
+      action === 'approve' ? this.stageFormValues : undefined,
+      undefined,
+      action === 'approve' ? this.chosenNextAssignee : undefined
+    ).subscribe({
       next: (res) => {
         this.tempFiles = {};
+        this.chosenNextAssignee = null;
         this.showActionDialog.set(false);
         this.loadPendingTasks();
         this.loadingAction.set(false);
 
-        this.messageService.add({ 
-          severity: 'success', 
-          summary: 'Éxito', 
-          detail: action === 'approve' ? (this.isCorrection(task) ? 'Corrección enviada con éxito.' : 'Solicitud aprobada con éxito.') : 'Solicitud rechazada/devuelta.' 
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Éxito',
+          detail: action === 'approve' ? (this.isCorrection(task) ? 'Corrección enviada con éxito.' : 'Solicitud aprobada con éxito.') : 'Solicitud rechazada/devuelta.'
         });
       },
       error: () => {
@@ -871,10 +1100,40 @@ export class RequestsBetaInboxComponent implements OnInit {
     }
   }
 
+  parseNumericValue(val: any): number {
+    if (typeof val === 'number') return isNaN(val) ? NaN : val;
+    if (val === undefined || val === null) return NaN;
+    let str = String(val).trim().replace(/[^0-9.,-]/g, '');
+    if (!str) return NaN;
+
+    if (str.includes('.') && str.includes(',')) {
+      const lastDot = str.lastIndexOf('.');
+      const lastComma = str.lastIndexOf(',');
+      if (lastComma > lastDot) {
+        str = str.replace(/\./g, '').replace(',', '.');
+      } else {
+        str = str.replace(/,/g, '');
+      }
+    } else if ((str.match(/\./g) || []).length > 1) {
+      str = str.replace(/\./g, '');
+    } else if ((str.match(/,/g) || []).length > 1) {
+      str = str.replace(/,/g, '');
+    } else if (str.includes(',')) {
+      const parts = str.split(',');
+      if (parts[1] && parts[1].length === 3 && parts[0].length <= 3) {
+        str = str.replace(',', '');
+      } else {
+        str = str.replace(',', '.');
+      }
+    }
+    const n = Number(str);
+    return isNaN(n) ? NaN : n;
+  }
+
   isFieldVisible(field: any, allFields: any[], formValues: Record<string, any>, formId?: number): boolean {
     if (!field) return false;
     if (field.isActive === false) return false;
-    
+
     const dependency = field.metadata?.dependency;
     if (!dependency || !dependency.fieldName) {
       return true;
@@ -882,38 +1141,106 @@ export class RequestsBetaInboxComponent implements OnInit {
 
     const parentName = dependency.fieldName;
     const parentKey = formId ? `${formId}_${parentName}` : parentName;
-    const parentValue = formValues[parentKey];
+    let parentValue = formValues ? formValues[parentKey] : undefined;
+    if (parentValue === undefined && formValues && formId) {
+      parentValue = formValues[parentName];
+    }
+    if (parentValue === undefined && formValues && !formId) {
+      const matchKey = Object.keys(formValues).find(k => k === parentName || k.endsWith(`_${parentName}`));
+      if (matchKey) {
+        parentValue = formValues[matchKey];
+      }
+    }
 
-    if (parentValue === undefined || parentValue === null || parentValue === '') {
+    let op = dependency.operator;
+    const requiredVal = dependency.value;
+
+    if (!op) {
+      if (typeof requiredVal === 'string') {
+        const trimmed = requiredVal.trim();
+        if (trimmed.startsWith('>=')) op = 'gte';
+        else if (trimmed.startsWith('>')) op = 'gt';
+        else if (trimmed.startsWith('<=')) op = 'lte';
+        else if (trimmed.startsWith('<')) op = 'lt';
+        else if (trimmed.startsWith('!=')) op = 'neq';
+        else op = 'eq';
+      } else {
+        op = 'eq';
+      }
+    }
+
+    if (op === 'is_empty') {
+      return parentValue === undefined || parentValue === null || String(parentValue).trim() === '' || String(parentValue) === '[]';
+    }
+
+    if (op === 'is_not_empty') {
+      return parentValue !== undefined && parentValue !== null && String(parentValue).trim() !== '' && String(parentValue) !== '[]';
+    }
+
+    if (parentValue === undefined || parentValue === null || String(parentValue).trim() === '') {
       return false;
     }
 
-    const parentField = allFields.find(f => f.name === parentName);
-    const requiredVal = dependency.value;
+    if (['gt', 'gte', 'lt', 'lte'].includes(op)) {
+      const numParent = this.parseNumericValue(parentValue);
+      const numTarget = this.parseNumericValue(requiredVal);
+      if (isNaN(numParent) || isNaN(numTarget)) {
+        return false;
+      }
+      if (op === 'gt') return numParent > numTarget;
+      if (op === 'gte') return numParent >= numTarget;
+      if (op === 'lt') return numParent < numTarget;
+      if (op === 'lte') return numParent <= numTarget;
+    }
+
+    const parentField = allFields ? allFields.find(f => f.name === parentName) : null;
 
     if (parentField && (parentField.type === 'multiselect' || parentField.type === 'dynamic_list')) {
       let selectedList: string[] = [];
       try {
-        const parsed = JSON.parse(parentValue);
+        const parsed = typeof parentValue === 'string' ? JSON.parse(parentValue) : parentValue;
         if (Array.isArray(parsed)) {
-          selectedList = parsed.map(i => typeof i === 'object' ? (i.item || i.product) : i).filter(Boolean);
+          selectedList = parsed.map(i => typeof i === 'object' && i !== null ? (i.item || i.product || i.name || i.value || JSON.stringify(i)) : String(i)).filter(Boolean);
+        } else {
+          selectedList = [String(parentValue)];
         }
       } catch(e) {
         selectedList = String(parentValue).split(',').map(s => s.trim()).filter(Boolean);
       }
 
-      if (Array.isArray(requiredVal)) {
-        const cleanReq = requiredVal.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null' && v !== '_null');
-        return cleanReq.some(val => selectedList.includes(val));
+      const cleanReqList = Array.isArray(requiredVal) 
+        ? requiredVal.map(v => String(v).trim()).filter(v => v && v !== 'null' && v !== '_null')
+        : (requiredVal !== undefined && requiredVal !== null ? [String(requiredVal).trim()] : []);
+
+      if (op === 'neq') {
+        return !cleanReqList.some(val => selectedList.includes(val));
       }
-      return selectedList.includes(requiredVal);
+      return cleanReqList.some(val => selectedList.includes(val));
     }
 
+    const parentStr = String(parentValue).trim().toLowerCase();
+
     if (Array.isArray(requiredVal)) {
-      const cleanReq = requiredVal.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null' && v !== '_null');
-      return cleanReq.includes(String(parentValue));
+      const cleanReq = requiredVal
+        .map(v => String(v).trim().toLowerCase())
+        .filter(v => v && v !== 'null' && v !== '_null');
+      if (op === 'neq') {
+        return !cleanReq.includes(parentStr);
+      }
+      if (op === 'contains') {
+        return cleanReq.some(val => parentStr.includes(val));
+      }
+      return cleanReq.includes(parentStr);
     }
-    return String(parentValue) === String(requiredVal);
+
+    const targetStr = String(requiredVal ?? '').trim().toLowerCase();
+    if (op === 'neq') {
+      return parentStr !== targetStr;
+    }
+    if (op === 'contains') {
+      return parentStr.includes(targetStr);
+    }
+    return parentStr === targetStr;
   }
 
   initDynamicListField(key: string, rawVal: string) {
@@ -955,7 +1282,7 @@ export class RequestsBetaInboxComponent implements OnInit {
     });
 
     this.dynamicListRows[key] = newList;
-    
+
     const jsonVal = JSON.stringify(newList);
     valuesContainer[key] = jsonVal;
     if (key.includes('_')) {
@@ -983,7 +1310,7 @@ export class RequestsBetaInboxComponent implements OnInit {
     const list = this.dynamicListRows[key] || [];
     const removedItem = list[itemIdx];
     list.splice(itemIdx, 1);
-    
+
     if (removedItem) {
       const name = removedItem.item || removedItem.product;
       this.dynamicListSelected[key] = (this.dynamicListSelected[key] || []).filter(i => i !== name);
@@ -1104,25 +1431,74 @@ export class RequestsBetaInboxComponent implements OnInit {
     });
   }
 
+  private downloadingFileKeys = new Set<string>();
+
   getStageUploadedFiles(val: any): { name: string; url?: string; isNew?: boolean }[] {
     if (!val) return [];
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'object') return [val];
     try {
-      if (typeof val === 'string' && val.startsWith('[')) {
-        return JSON.parse(val);
-      }
-      if (typeof val === 'string') {
-        const parts = val.split(',');
-        return parts.map(p => ({ name: p.trim() }));
-      }
-    } catch {
-      return [{ name: String(val) }];
+      const parsed = typeof val === 'string' && (val.startsWith('[') || val.startsWith('{')) ? JSON.parse(val) : null;
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === 'object') return [parsed];
+    } catch { }
+
+    if (typeof val === 'string' && val.trim()) {
+      const parts = val.split(',');
+      return parts.map(p => {
+        const item = p.trim();
+        if (item.startsWith('http://') || item.startsWith('https://')) {
+          const fileName = decodeURIComponent(item.split('?')[0].split('/').pop() || 'archivo');
+          return { name: fileName, url: item };
+        }
+        return { name: item, url: item };
+      });
     }
     return [];
   }
 
-  downloadStageFormFile(file: any) {
-    if (file && file.url) {
-      window.open(file.url, '_blank');
+  async downloadStageFormFile(file: any, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    if (!file) return;
+
+    const fileUrl = file.url || (typeof file === 'string' && (file.startsWith('http://') || file.startsWith('https://')) ? file : '');
+    const fileName = file.name || (fileUrl ? decodeURIComponent(fileUrl.split('?')[0].split('/').pop() || 'archivo') : (typeof file === 'string' ? file : 'archivo'));
+    const target = fileUrl || fileName;
+
+    if (this.downloadingFileKeys.has(target)) return;
+    this.downloadingFileKeys.add(target);
+
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Descargando',
+      detail: `Iniciando descarga de ${fileName}...`,
+      life: 2500
+    });
+
+    try {
+      await this.azureService.downloadSingleFile(target, fileName);
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Éxito',
+        detail: `Archivo ${fileName} descargado correctamente.`,
+        life: 3000
+      });
+    } catch (err: any) {
+      console.warn('downloadSingleFile error, trying window.open fallback:', err);
+      if (fileUrl) {
+        window.open(fileUrl, '_blank');
+      } else {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error al descargar',
+          detail: `No se pudo descargar el archivo: ${err?.message || 'Error de almacenamiento'}`
+        });
+      }
+    } finally {
+      this.downloadingFileKeys.delete(target);
     }
   }
 
@@ -1131,7 +1507,8 @@ export class RequestsBetaInboxComponent implements OnInit {
       case 'Completed': return 'success';
       case 'In Progress': return 'info';
       case 'Pending': return 'warn';
-      case 'Rejected': return 'danger';
+      case 'Rejected':
+      case 'Blocked': return 'danger';
       default: return 'secondary';
     }
   }
@@ -1145,6 +1522,7 @@ export class RequestsBetaInboxComponent implements OnInit {
       case 'Approved': return 'Aprobado';
       case 'Draft': return 'Borrador';
       case 'Cancelled': return 'Cancelado';
+      case 'Blocked': return 'Bloqueada';
       default: return status || 'Pendiente';
     }
   }

@@ -2,7 +2,6 @@ import { Component, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
-// PrimeNG
 import { Table, TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -47,7 +46,6 @@ export class CustomersComponent implements OnInit {
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
 
-  // States
   customers = signal<Customer[]>([]);
   totalRecords = signal<number>(0);
   loading = signal<boolean>(false);
@@ -55,12 +53,10 @@ export class CustomersComponent implements OnInit {
   currentPage = signal<number>(1);
   pageSize = signal<number>(10);
 
-  // Modal Dialogs
   showEditDialog = signal<boolean>(false);
   showBulkUploadDialog = signal<boolean>(false);
   isEditMode = signal<boolean>(false);
 
-  // Form Model
   currentCustomer = signal<Partial<Customer>>({
     id: undefined,
     documentType: 'NIT',
@@ -70,12 +66,10 @@ export class CustomersComponent implements OnInit {
     phoneNumber: ''
   });
 
-  // Bulk Upload Model
   selectedFile: File | null = null;
   uploading = signal<boolean>(false);
   uploadResults = signal<any | null>(null);
 
-  // Options
   documentTypes = [
     { label: 'NIT - Número Identificación Tributaria', value: 'NIT' },
     { label: 'CC - Cédula de Ciudadanía', value: 'CC' },
@@ -147,8 +141,7 @@ export class CustomersComponent implements OnInit {
 
   saveCustomer() {
     const customer = this.currentCustomer();
-    
-    // Validations
+
     if (!customer.documentType || !customer.documentNumber?.trim()) {
       this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'El tipo y número de documento son obligatorios' });
       return;
@@ -212,7 +205,6 @@ export class CustomersComponent implements OnInit {
     });
   }
 
-  // --- Bulk Import ---
   openBulkUpload() {
     this.selectedFile = null;
     this.uploadResults.set(null);

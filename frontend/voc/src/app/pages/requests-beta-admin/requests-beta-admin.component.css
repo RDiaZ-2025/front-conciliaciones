@@ -4,3 +4,23 @@
     height: 1.8rem;
     line-height: 1.8rem;
 }
+
+/* Ensure PrimeFlex grid layout works properly inside this component */
+:host ::ng-deep .grid:not([class*="grid-cols-"]),
+.grid:not([class*="grid-cols-"]) {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    margin-right: -0.5rem;
+    margin-left: -0.5rem;
+    margin-top: -0.5rem;
+    box-sizing: border-box;
+}
+
+:host ::ng-deep .grid:not([class*="grid-cols-"]) > [class*="col-"],
+.grid:not([class*="grid-cols-"]) > [class*="col-"],
+:host ::ng-deep .grid:not([class*="grid-cols-"]) > .col,
+.grid:not([class*="grid-cols-"]) > .col {
+    box-sizing: border-box;
+    padding: 0.5rem;
+}
+

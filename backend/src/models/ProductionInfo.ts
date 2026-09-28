@@ -3,9 +3,6 @@ import { ProductionRequest } from './ProductionRequest';
 import { FormatType } from './FormatType';
 import { RightsDuration } from './RightsDuration';
 
-/**
- * ProductionInfo entity representing production specifics for a production request
- */
 @Entity('ProductionInfo')
 export class ProductionInfo {
     @PrimaryGeneratedColumn({ name: 'Id' })

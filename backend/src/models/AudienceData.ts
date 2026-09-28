@@ -4,9 +4,6 @@ import { Gender } from './Gender';
 import { AgeRange } from './AgeRange';
 import { SocioeconomicLevel } from './SocioeconomicLevel';
 
-/**
- * AudienceData entity representing audience and context for a production request
- */
 @Entity('AudienceData')
 export class AudienceData {
     @PrimaryGeneratedColumn({ name: 'Id' })

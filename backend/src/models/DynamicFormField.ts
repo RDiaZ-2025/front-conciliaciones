@@ -20,7 +20,7 @@ export class DynamicFormField {
   description!: string | null;
 
   @Column({ name: 'Type', type: 'nvarchar', length: 50, nullable: false })
-  type!: string; // 'text', 'textarea', 'date', 'datetime', 'number', 'select'
+  type!: string;
 
   @Column({ name: 'Placeholder', type: 'nvarchar', length: 255, nullable: true })
   placeholder!: string | null;
@@ -35,7 +35,7 @@ export class DynamicFormField {
   isActive!: boolean;
 
   @Column({ name: 'DefaultValueExpression', type: 'nvarchar', length: 255, nullable: true })
-  defaultValueExpression!: string | null; // '{{CURRENT_DATE_TIME}}', '{{LOGGED_USER_NAME}}'
+  defaultValueExpression!: string | null;
 
   @Column({ name: 'Metadata', type: 'nvarchar', length: 'max', nullable: true })
   metadata!: string | null;

@@ -16,7 +16,7 @@ import { SelectModule } from 'primeng/select';
   styleUrls: ['./customer-autocomplete.component.css']
 })
 export class CustomerAutocompleteComponent implements OnInit, OnChanges {
-  @Input() value: string = ''; // JSON string of selected customer
+  @Input() value: string = '';
   @Input() disabled: boolean = false;
   @Input() placeholder: string = '';
   @Output() valueChange = new EventEmitter<string>();
@@ -29,7 +29,6 @@ export class CustomerAutocompleteComponent implements OnInit, OnChanges {
   selectedCustomer: Customer | null = null;
   private debounceTimer: any = null;
 
-  // Modal properties for customer registration
   displayCreateModal: boolean = false;
   newCustomer: Partial<Customer> = {
     documentType: 'NIT',
@@ -71,7 +70,7 @@ export class CustomerAutocompleteComponent implements OnInit, OnChanges {
           return;
         }
       } catch (e) {
-        // Fallback
+
       }
     }
     this.selectedCustomer = null;
@@ -94,14 +93,13 @@ export class CustomerAutocompleteComponent implements OnInit, OnChanges {
     }
 
     this.showDropdown = true;
-    this.hasSearched = false; // Reset search state when typing continues
+    this.hasSearched = false;
     this.cdr.detectChanges();
 
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer);
     }
 
-    // 1.5 seconds debounce as requested
     this.debounceTimer = setTimeout(() => {
       this.search();
     }, 1500);
@@ -115,7 +113,7 @@ export class CustomerAutocompleteComponent implements OnInit, OnChanges {
       next: (res) => {
         this.suggestions = res.data;
         this.loading = false;
-        this.hasSearched = true; // Mark as searched only after response arrives!
+        this.hasSearched = true;
         this.cdr.detectChanges();
       },
       error: () => {
@@ -148,14 +146,13 @@ export class CustomerAutocompleteComponent implements OnInit, OnChanges {
   openCreateModal(event: MouseEvent) {
     event.preventDefault();
     event.stopPropagation();
-    
+
     this.showDropdown = false;
     this.errorMessage = '';
-    
-    // Check if searchQuery is mostly digits to pre-fill doc number, else pre-fill name
+
     const cleanSearch = this.searchQuery.trim();
     const isNumeric = /^\d+$/.test(cleanSearch);
-    
+
     this.newCustomer = {
       documentType: 'NIT',
       documentNumber: isNumeric ? cleanSearch : '',
@@ -163,15 +160,14 @@ export class CustomerAutocompleteComponent implements OnInit, OnChanges {
       email: '',
       phoneNumber: ''
     };
-    
+
     this.displayCreateModal = true;
     this.cdr.detectChanges();
   }
 
   saveNewCustomer() {
     this.errorMessage = '';
-    
-    // Validate required fields
+
     if (!this.newCustomer.documentType) {
       this.errorMessage = 'El tipo de documento es obligatorio.';
       return;
@@ -188,14 +184,13 @@ export class CustomerAutocompleteComponent implements OnInit, OnChanges {
       this.errorMessage = 'El correo electrónico es obligatorio.';
       return;
     }
-    // Basic email validation
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(this.newCustomer.email.trim())) {
       this.errorMessage = 'El formato del correo electrónico es inválido.';
       return;
     }
-    
-    // Check if phoneNumber contains only valid characters
+
     if (this.newCustomer.phoneNumber && this.newCustomer.phoneNumber.trim()) {
       const phoneClean = this.newCustomer.phoneNumber.trim();
       const phoneRegex = /^[0-9+\-\s()]+$/;
@@ -212,8 +207,7 @@ export class CustomerAutocompleteComponent implements OnInit, OnChanges {
       next: (res) => {
         this.saveLoading = false;
         this.displayCreateModal = false;
-        
-        // Select the newly created customer immediately!
+
         if (res && res.data) {
           this.selectCustomer(res.data);
         }

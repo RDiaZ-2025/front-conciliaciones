@@ -10,7 +10,6 @@ export const authGuard: CanActivateFn = (route, state) => {
     return true;
   }
 
-  // Check if token exists in localStorage as fallback (if signal not yet initialized)
   if (localStorage.getItem('auth_token')) {
     return true;
   }

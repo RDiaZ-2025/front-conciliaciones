@@ -1,0 +1,19 @@
+:host {
+  display: block;
+}
+
+::ng-deep .subteam-members-dialog {
+  .p-dialog-header {
+    border-bottom: 1px solid var(--surface-border, #e2e8f0);
+    padding: 1.25rem 1.5rem;
+  }
+
+  .p-dialog-content {
+    padding: 1.25rem 1.5rem;
+  }
+
+  .p-dialog-footer {
+    border-top: 1px solid var(--surface-border, #e2e8f0);
+    padding: 1rem 1.5rem;
+  }
+}

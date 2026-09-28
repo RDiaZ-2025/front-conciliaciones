@@ -1,33 +1,25 @@
 import { AppDataSource } from '../config/typeorm.config';
 
-/**
- * Migration utility functions
- */
 export class MigrationUtils {
-  /**
-   * Run all pending migrations
-   */
+
   static async runMigrations(): Promise<void> {
     try {
-      
+
       if (!AppDataSource.isInitialized) {
         await AppDataSource.initialize();
       }
 
       const migrations = await AppDataSource.runMigrations();
-      
+
     } catch (error) {
       console.error('❌ Error running migrations:', error);
       throw error;
     }
   }
 
-  /**
-   * Revert the last migration
-   */
   static async revertLastMigration(): Promise<void> {
     try {
-      
+
       if (!AppDataSource.isInitialized) {
         await AppDataSource.initialize();
       }
@@ -39,12 +31,9 @@ export class MigrationUtils {
     }
   }
 
-  /**
-   * Show migration status
-   */
   static async showMigrationStatus(): Promise<void> {
     try {
-      
+
       if (!AppDataSource.isInitialized) {
         await AppDataSource.initialize();
       }
@@ -61,9 +50,6 @@ export class MigrationUtils {
     }
   }
 
-  /**
-   * Check if database is up to date
-   */
   static async isDatabaseUpToDate(): Promise<boolean> {
     try {
       if (!AppDataSource.isInitialized) {
@@ -78,20 +64,15 @@ export class MigrationUtils {
     }
   }
 
-  /**
-   * Initialize database with migrations on startup
-   */
   static async initializeDatabaseWithMigrations(): Promise<void> {
     try {
-      
-      // Initialize connection
+
       if (!AppDataSource.isInitialized) {
         await AppDataSource.initialize();
       }
 
-      // Run migrations
       await this.runMigrations();
-      
+
     } catch (error) {
       console.error('❌ Database initialization failed:', error);
       throw error;

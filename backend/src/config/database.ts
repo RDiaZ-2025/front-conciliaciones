@@ -34,11 +34,9 @@ export const connectDB = async (): Promise<void> => {
     pool = new sql.ConnectionPool(config);
     await pool.connect();
 
-
-    // Configurar eventos de la conexión
     pool.on('error', (err: Error) => {
       console.error('❌ Error en la conexión de base de datos:', err);
-      // Diagnóstico adicional
+
       if (err.message.includes('ECONNCLOSED')) {
         console.error('🔎 ECONNCLOSED: La conexión con SQL Server se cerró inesperadamente. Verifica credenciales, firewall y disponibilidad de Azure SQL.');
       }
@@ -49,7 +47,7 @@ export const connectDB = async (): Promise<void> => {
       console.error('🔎 ECONNCLOSED: La conexión con SQL Server se cerró inesperadamente. Verifica credenciales, firewall y disponibilidad de Azure SQL.');
     }
     console.warn('⚠️ Continuando sin conexión a la base de datos para desarrollo');
-    // No lanzar error para permitir que el servidor inicie
+
   }
 };
 

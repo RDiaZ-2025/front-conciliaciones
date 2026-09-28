@@ -4,11 +4,9 @@ import { User, Permission, PermissionByUser } from '../models';
 import { AppDataSource } from '../config/typeorm.config';
 import { LoginRequest, LoginResponse, JWTPayload } from '../types';
 
-// Servicio de autenticación usando base de datos
-
 export class AuthService {
   private readonly SALT_ROUNDS = 12;
-  private readonly JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
+  private readonly JWT_SECRET: string;
   private readonly JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
   async login(credentials: LoginRequest): Promise<LoginResponse> {
@@ -27,7 +25,6 @@ export class AuthService {
   private async loginWithTypeORM(credentials: LoginRequest): Promise<LoginResponse> {
     const userRepository = AppDataSource.getRepository(User);
 
-    // Buscar usuario por email
     const user = await userRepository.findOne({
       where: { email: credentials.email },
       relations: ['team', 'permissions', 'permissions.permission']
@@ -40,7 +37,6 @@ export class AuthService {
       };
     }
 
-    // Si el usuario está deshabilitado
     if (user.status === 0) {
       return {
         success: false,
@@ -48,7 +44,6 @@ export class AuthService {
       };
     }
 
-    // Verificar contraseña
     const isValidPassword = await bcrypt.compare(credentials.password, user.passwordHash);
     if (!isValidPassword) {
       return {
@@ -57,35 +52,18 @@ export class AuthService {
       };
     }
 
-    // Combinar permisos del rol, permisos directos y la columna de permisos (para compatibilidad con NOC)
-    const dbPermissions = user.permissions?.map(up => up.permission.name) || [];
+    const dbPermissions = user.permissions?.map(up => up.permission?.name).filter(Boolean) || [];
     const colPermissions = user.permissionsStr
       ? user.permissionsStr.split(',').map(p => p.trim()).filter(Boolean)
       : [];
-    let permissions = Array.from(new Set([...dbPermissions, ...colPermissions]));
+    const permissions = Array.from(new Set([...dbPermissions, ...colPermissions]));
 
-    // Interceptar para compatibilidad de desarrollo / demo / admin
-    if (user.email?.toLowerCase() === 'ener28@hotmail.com' || user.role?.toLowerCase() === 'admin') {
-      permissions = Array.from(new Set([
-        ...permissions,
-        'dashboard',
-        'ingresos',
-        'presupuesto',
-        'roles',
-        'admin_panel'
-      ]));
-    }
+    const role = user.role || 'user';
 
-    // Obtener el rol del usuario
-    const role = user.role || (permissions.includes('admin_panel') ? 'admin' : 'user');
-
-    // Obtener equipos del usuario
     const teams = user.team ? [user.team.name] : [];
 
-    // Actualizar último acceso
     await userRepository.update(user.id, { lastAccess: new Date() });
 
-    // Generar token JWT con rol y permisos
     const token = this.generateToken({
       userId: user.id,
       email: user.email,
@@ -107,8 +85,6 @@ export class AuthService {
       token
     };
   }
-
-
 
   async getUserById(userId: number): Promise<User | null> {
     if (!AppDataSource.isInitialized) {
@@ -143,25 +119,12 @@ export class AuthService {
       relations: ['permission']
     });
 
-    const dbPermissions = userPermissions.map(up => up.permission.name);
+    const dbPermissions = userPermissions.map(up => up.permission?.name).filter(Boolean);
     const colPermissions = user?.permissionsStr
       ? user.permissionsStr.split(',').map(p => p.trim()).filter(Boolean)
       : [];
 
-    let permissions = Array.from(new Set([...dbPermissions, ...colPermissions]));
-
-    if (user && (user.email?.toLowerCase() === 'ener28@hotmail.com' || user.role?.toLowerCase() === 'admin')) {
-      permissions = Array.from(new Set([
-        ...permissions,
-        'dashboard',
-        'ingresos',
-        'presupuesto',
-        'roles',
-        'admin_panel'
-      ]));
-    }
-
-    return permissions;
+    return Array.from(new Set([...dbPermissions, ...colPermissions]));
   }
 
   async getUserTeams(userId: number): Promise<string[]> {
@@ -210,7 +173,7 @@ export class AuthService {
       }
 
       const permissions = await this.getUserPermissions(user.id);
-      const role = user.role || (permissions.includes('admin_panel') ? 'admin' : 'user');
+      const role = user.role || 'user';
 
       return {
         userId: user.id,
@@ -228,96 +191,16 @@ export class AuthService {
     return bcrypt.hash(password, this.SALT_ROUNDS);
   }
 
-  async initializeUsers(): Promise<string[]> {
-    if (!AppDataSource.isInitialized) {
-      throw new Error('Base de datos no disponible');
-    }
-
-    const passwordHash = await bcrypt.hash('admin123', 12);
-    const managerHash = await bcrypt.hash('manager123', 12);
-    const userHash = await bcrypt.hash('user123', 12);
-    const uploadHash = await bcrypt.hash('upload123', 12);
-    const dashboardHash = await bcrypt.hash('dashboard123', 12);
-    const qaPasswordHash = await bcrypt.hash('QA', 12);
-
-    const queryRunner = AppDataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      const userRepository = queryRunner.manager.getRepository(User);
-      const permissionRepository = queryRunner.manager.getRepository(Permission);
-      const permissionByUserRepository = queryRunner.manager.getRepository(PermissionByUser);
-
-      const users = [
-        { name: 'Administrador Test', email: 'admin@test.com', hash: passwordHash, role: 'admin', permissions: ['document_upload', 'management_dashboard', 'admin_panel'] },
-        { name: 'Manager Test', email: 'manager@test.com', hash: managerHash, role: 'user', permissions: ['document_upload', 'management_dashboard'] },
-        { name: 'Usuario Test', email: 'user@test.com', hash: userHash, role: 'user', permissions: ['management_dashboard'] },
-        { name: 'Administrador Sistema Legacy', email: 'admin@claromedia.com', hash: passwordHash, role: 'admin', permissions: ['document_upload', 'management_dashboard', 'admin_panel'] },
-        { name: 'Usuario Carga Legacy', email: 'upload@claromedia.com', hash: uploadHash, role: 'user', permissions: ['document_upload'] },
-        { name: 'Usuario Dashboard Legacy', email: 'dashboard@claromedia.com', hash: dashboardHash, role: 'user', permissions: ['management_dashboard'] },
-        { name: 'QA Admin', email: 'QA@yopmail.com', hash: qaPasswordHash, role: 'admin', permissions: ['roles', 'dashboard', 'ingresos', 'presupuesto', 'segmentacion', 'analisis', 'document_upload', 'management_dashboard', 'admin_panel'] }
-      ];
-
-      for (const userData of users) {
-        const existingUser = await userRepository.findOne({
-          where: { email: userData.email }
-        });
-
-        if (!existingUser) {
-          const newUser = userRepository.create({
-            name: userData.name,
-            email: userData.email,
-            passwordHash: userData.hash,
-            status: 1,
-            role: userData.role,
-            permissionsStr: userData.permissions.join(',')
-          });
-
-          const savedUser = await userRepository.save(newUser);
-
-          for (const permissionName of userData.permissions) {
-            const permission = await permissionRepository.findOne({
-              where: { name: permissionName }
-            });
-
-            if (permission) {
-              const permissionByUser = permissionByUserRepository.create({
-                userId: savedUser.id,
-                permissionId: permission.id
-              });
-
-              await permissionByUserRepository.save(permissionByUser);
-            }
-          }
-        }
-      }
-
-      await queryRunner.commitTransaction();
-
-      return [
-        'admin@claromedia.com / admin123 (Administrador completo)',
-        'admin@test.com / admin123 (Administrador test)',
-        'manager@test.com / manager123 (Manager)',
-        'user@test.com / user123 (Usuario básico)',
-        'upload@claromedia.com / upload123 (Solo carga)',
-        'dashboard@claromedia.com / dashboard123 (Solo dashboard)',
-        'QA@yopmail.com / QA (Usuario QA Admin)'
-      ];
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
-    }
-  }
-
   constructor() {
-
-    // Debug: verificar que JWT_SECRET esté cargado
-    if (!process.env.JWT_SECRET) {
-      console.warn('⚠️ JWT_SECRET no encontrado en variables de entorno, usando fallback');
+    const secret = process.env.JWT_SECRET;
+    if (!secret || secret === 'fallback-secret-key-for-development') {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('FATAL SECURITY ERROR: JWT_SECRET must be securely set in environment variables in production.');
+      }
+      console.warn('⚠️ ADVERTENCIA DE SEGURIDAD: JWT_SECRET no configurado, utilizando clave de desarrollo.');
+      this.JWT_SECRET = 'fallback-secret-key-for-development';
+    } else {
+      this.JWT_SECRET = secret;
     }
-
   }
 }

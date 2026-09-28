@@ -29,7 +29,6 @@ export class SolutionSelectionDialogComponent {
         { label: 'CONTENIDO RED+', value: 'CONTENT_RED_PLUS' }
     ];
 
-    // Map Category -> Types (Subcategories)
     categoryTypes: { [key: string]: any[] } = {
         'MOBILE': [
             { label: 'SMS', value: 'SMS' },
@@ -57,9 +56,8 @@ export class SolutionSelectionDialogComponent {
         ]
     };
 
-    // Map Type -> Solutions
     typeSolutions: { [key: string]: any[] } = {
-        // MOBILE (1-to-1 mapping)
+
         'SMS': [{ label: 'SMS', value: 'SMS' }],
         'RCS': [{ label: 'RCS', value: 'RCS' }],
         'SAT_PUSH': [{ label: 'SAT PUSH', value: 'SAT_PUSH' }],
@@ -70,7 +68,6 @@ export class SolutionSelectionDialogComponent {
         'EMAIL_MARKETING': [{ label: 'MARKETING POR EMAIL', value: 'EMAIL_MARKETING' }],
         'DATA_REWARDS': [{ label: 'DATA REWARDS', value: 'DATA_REWARDS' }],
 
-        // PROGRAMMATIC
         'DISPLAY': [
             { label: 'MOBILE', value: 'MOBILE_DISPLAY' },
             { label: 'DESKTOP', value: 'DESKTOP_DISPLAY' }
@@ -104,7 +101,6 @@ export class SolutionSelectionDialogComponent {
             { label: 'CTV - OTT', value: 'CTV_VIDEO' }
         ],
 
-        // CONTENT_RED_PLUS
         'CONTENIDO_RED_PLUS': [
             { label: 'Especificaciones para un content y publirreportaje', value: 'CONTENT_PUBLIRREPORTAJE' }
         ]
@@ -120,7 +116,6 @@ export class SolutionSelectionDialogComponent {
             solution: [{ value: null, disabled: true }, Validators.required]
         });
 
-        // Handle Category Change
         this.form.get('category')?.valueChanges.subscribe(category => {
             this.filteredTypes.set([]);
             this.filteredSolutions.set([]);
@@ -136,7 +131,6 @@ export class SolutionSelectionDialogComponent {
             }
         });
 
-        // Handle Type Change
         this.form.get('type')?.valueChanges.subscribe(type => {
             this.filteredSolutions.set([]);
             this.form.get('solution')?.reset();
@@ -147,7 +141,6 @@ export class SolutionSelectionDialogComponent {
                 this.filteredSolutions.set(solutions);
                 this.form.get('solution')?.enable();
 
-                // Auto-select if only one solution
                 if (solutions.length === 1) {
                     this.form.get('solution')?.setValue(solutions[0].value);
                 }

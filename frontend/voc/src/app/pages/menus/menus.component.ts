@@ -5,7 +5,6 @@ import { FormsModule } from '@angular/forms';
 import { TreeTableModule } from 'primeng/treetable';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
-import { SelectModule } from 'primeng/select';
 import { MessageService, TreeNode } from 'primeng/api';
 import { PageHeaderComponent } from '../../components/page-header/page-header.component';
 import { MenuDialogComponent } from './menu-dialog/menu-dialog.component';
@@ -24,7 +23,6 @@ import { MenuFormData } from '../../models/common/menu-form-data';
     TreeTableModule,
     ButtonModule,
     ToastModule,
-    SelectModule,
     PageHeaderComponent,
     MenuDialogComponent
   ],
@@ -45,12 +43,6 @@ export class MenusComponent implements OnInit {
   saving = signal<boolean>(false);
   editingItem = signal<MenuItem | null>(null);
 
-  selectedProject = signal<string>('voc');
-  projectOptions = [
-    { label: 'Portal VOC', value: 'voc' },
-    { label: 'Portal NOC', value: 'noc' }
-  ];
-
   parentOptions = signal<{ label: string, value: number | null }[]>([]);
   permissionOptions = signal<{ label: string, value: number }[]>([]);
 
@@ -61,7 +53,6 @@ export class MenusComponent implements OnInit {
   loadData() {
     this.loading.set(true);
 
-    // Load permissions first, then menus
     this.permissionService.getAllPermissions().subscribe({
       next: (response) => {
         if (response.success) {
@@ -72,7 +63,7 @@ export class MenusComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error loading permissions:', err);
-        // Still try to load menus even if permissions fail
+
         this.loadMenuItems();
       }
     });
@@ -80,7 +71,7 @@ export class MenusComponent implements OnInit {
 
   loadMenuItems() {
     this.loading.set(true);
-    this.menuService.getMenuItems(this.selectedProject()).subscribe({
+    this.menuService.getMenuItems().subscribe({
       next: (response) => {
         this.rawMenuItems.set(response.data);
         this.menuItems.set(this.buildTree(response.data));
@@ -92,11 +83,6 @@ export class MenusComponent implements OnInit {
         this.loading.set(false);
       }
     });
-  }
-
-  onProjectChange(newProject: string) {
-    this.selectedProject.set(newProject);
-    this.loadMenuItems();
   }
 
   updatePermissionOptions(permissions: Permission[]) {
@@ -163,9 +149,8 @@ export class MenusComponent implements OnInit {
 
   saveItem(data: MenuFormData) {
     this.saving.set(true);
-    
-    // Set project value from the current selector state
-    data.project = this.selectedProject();
+
+    data.project = this.editingItem()?.project || 'voc';
 
     const request = this.editingItem()
       ? this.menuService.updateMenuItem(this.editingItem()!.id, data)

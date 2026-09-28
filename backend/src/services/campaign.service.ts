@@ -40,8 +40,7 @@ export class CampaignService {
             createdAt: new Date(),
             updatedAt: new Date()
         });
-        
-        // Ensure impacts is stringified if it's an object/array
+
         if (data.impacts && typeof data.impacts !== 'string') {
             campaign.impacts = JSON.stringify(data.impacts);
         }

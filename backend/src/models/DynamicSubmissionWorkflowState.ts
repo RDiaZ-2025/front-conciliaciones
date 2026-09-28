@@ -19,7 +19,7 @@ export class DynamicSubmissionWorkflowState {
   assignedUserId!: number;
 
   @Column({ name: 'Status', type: 'nvarchar', length: 50, default: 'Pending' })
-  status!: string; // 'Pending', 'Approved', 'Rejected'
+  status!: string;
 
   @Column({ name: 'ActionedByUserId', type: 'int', nullable: true })
   actionedByUserId!: number | null;

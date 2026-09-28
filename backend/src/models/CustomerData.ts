@@ -1,9 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
 import { ProductionRequest } from './ProductionRequest';
 
-/**
- * CustomerData entity representing customer information for a production request
- */
 @Entity('CustomerData')
 export class CustomerData {
     @PrimaryGeneratedColumn({ name: 'Id' })

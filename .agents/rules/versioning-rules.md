@@ -1,0 +1,57 @@
+---
+trigger: always_on
+---
+
+# Reglas de Versionamiento Semántico (SemVer)
+
+Esta regla define el protocolo estricto y obligatorio de incremento y control de versiones del proyecto para la IA y cualquier agente que opere en este repositorio.
+
+## Formato de Versión
+El proyecto sigue el estándar **Semantic Versioning (SemVer)** con tres niveles:
+`MAJOR.MINOR.PATCH` (por ejemplo: `1.7.4`)
+
+* **MAJOR (Primer número - X.0.0):** Reingenierías completas, reestructuraciones estructurales profundas o incompatibilidades arquitectónicas masivas.
+* **MINOR (Segundo número - 1.Y.0):** Cambios mayores, nuevas funcionalidades completas, adición de módulos o flujos de trabajo relevantes. Reinicia `PATCH` a 0.
+* **PATCH (Tercer número / Último dígito - 1.7.Z):** Cambios menores, correcciones de errores (bug fixes), ajustes visuales, refinamientos y modificaciones puntuales.
+
+---
+
+## Protocolo Obligatorio de Decisión Autónoma de la IA
+
+La IA tiene la responsabilidad y autonomía de **evaluar y actualizar directamente la versión** en cada tarea o intervención que realice en el código (sin requerir ni esperar comandos de `git commit` o `git push`):
+
+1. **Ante un Cambio Menor:**
+   * La IA debe incrementar el **último dígito (`PATCH`)**.
+   * Aplica para: corrección de errores (bug fixes), ajustes visuales/UI, textos, limpiezas de código, micro-ajustes y modificaciones secundarias.
+   * Ejemplo: `1.7.3` $\rightarrow$ `1.7.4`.
+
+2. **Ante un Cambio Mayor:**
+   * La IA debe incrementar el **segundo dígito (`MINOR`)** y reiniciar el `PATCH` en 0.
+   * Aplica para: desarrollo de nuevas funcionalidades completas, pantallas o módulos nuevos, cambios sustanciales en la lógica de negocio o requerimientos de gran alcance.
+   * Ejemplo: `1.7.4` $\rightarrow$ `1.8.0`.
+
+3. **Ante una Reingeniería Completa:**
+   * La IA debe incrementar el **primer dígito (`MAJOR`)** y reiniciar `MINOR` y `PATCH` en 0.
+   * Aplica para: reestructuración arquitectónica radical, migración total de frameworks/bases de datos o rediseño estructural de todo el sistema.
+   * Ejemplo: `1.8.0` $\rightarrow$ `2.0.0`.
+
+4. **Registro Obligatorio de la Fecha de Versión:**
+   * **En cada actualización de versión, debe quedar registrada la fecha en que se subió o actualizó dicha versión** en formato `YYYY-MM-DD` (ejemplo: `2026-09-19`).
+   * La fecha debe reflejarse en la variable `APP_VERSION_DATE` en `backend/src/app.ts` (expuesta a través del endpoint `/health` y consumida dinámicamente en el frontend).
+
+5. **Consulta ante Incertidumbre:**
+   * Si la IA no está 100% segura de si el alcance de una tarea corresponde a un cambio menor (PATCH) o mayor (MINOR), debe consultar explícitamente al usuario antes de modificarla para confirmar la posición a incrementar.
+
+---
+
+## Archivos a Sincronizar en cada cambio de versión
+Al actualizar la versión, la modificación se realiza en **un único lugar en el código**, más los archivos de configuración `.json`:
+1. **En Código Fuente (Única Fuente de Verdad):**
+   - `backend/src/app.ts`:
+     - `const APP_VERSION = 'X.Y.Z';`
+     - `const APP_VERSION_DATE = 'YYYY-MM-DD';`
+   *(Nota: El frontend consume la versión y fecha dinámicamente a través de `SystemHealthService` desde `/health`. NO deben existir versiones hardcodeadas ni fallbacks en archivos `.ts` o `.html` del frontend).*
+2. **En Archivos de Configuración de Paquetes (`.json`):**
+   - `package.json` (raíz): `"version": "X.Y.Z"`
+   - `backend/package.json`: `"version": "X.Y.Z"`
+   - `frontend/package.json`: `"version": "X.Y.Z"`

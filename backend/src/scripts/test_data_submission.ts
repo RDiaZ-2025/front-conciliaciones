@@ -5,7 +5,7 @@ const productionService = new ProductionService();
 
 async function testSubmission() {
     await AppDataSource.initialize();
-    
+
     const values = {
         test1: 'Luisa Fajardo',
         test2: 'luisa.fajardo@claro.com.co',
@@ -16,7 +16,7 @@ async function testSubmission() {
         campo_1783348640381: 'asdasd',
         campo_1783348720950: 'asd',
     };
-    
+
     try {
         console.log('Intentando simular la creación de la solicitud...');
         const submission = await productionService.createSubmission(2, 91, values);
@@ -25,7 +25,7 @@ async function testSubmission() {
         console.error('¡ERROR AL CREAR SOLICITUD!');
         console.error(error);
     }
-    
+
     await AppDataSource.destroy();
 }
 

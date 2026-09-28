@@ -3,7 +3,7 @@ import { MigrationInterface, QueryRunner, Table, TableForeignKey, TableColumn } 
 export class CreateDynamicWorkflowsAndDecouple1790000000000 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        // 1. Create DynamicWorkflows Table
+
         const tableExists = await queryRunner.hasTable("DynamicWorkflows");
         if (!tableExists) {
             await queryRunner.createTable(new Table({
@@ -19,7 +19,6 @@ export class CreateDynamicWorkflowsAndDecouple1790000000000 implements Migration
             }), true);
         }
 
-        // 2. Add WorkflowId Column to DynamicWorkflowStages
         const stagesTable = await queryRunner.getTable("DynamicWorkflowStages");
         if (stagesTable && !stagesTable.findColumnByName("WorkflowId")) {
             await queryRunner.addColumn("DynamicWorkflowStages", new TableColumn({
@@ -36,7 +35,6 @@ export class CreateDynamicWorkflowsAndDecouple1790000000000 implements Migration
             }));
         }
 
-        // 3. Add WorkflowId Column to DynamicForms
         const formsTable = await queryRunner.getTable("DynamicForms");
         if (formsTable && !formsTable.findColumnByName("WorkflowId")) {
             await queryRunner.addColumn("DynamicForms", new TableColumn({
@@ -53,7 +51,6 @@ export class CreateDynamicWorkflowsAndDecouple1790000000000 implements Migration
             }));
         }
 
-        // 4. Add WorkflowId Column to DynamicFormSubmissions
         const subsTable = await queryRunner.getTable("DynamicFormSubmissions");
         if (subsTable && !subsTable.findColumnByName("WorkflowId")) {
             await queryRunner.addColumn("DynamicFormSubmissions", new TableColumn({
@@ -70,9 +67,8 @@ export class CreateDynamicWorkflowsAndDecouple1790000000000 implements Migration
             }));
         }
 
-        // 5. Migrate existing stage groups to independent DynamicWorkflows
         const formsWithStages = await queryRunner.query(`
-            SELECT DISTINCT f.Id, f.Name, f.Description 
+            SELECT DISTINCT f.Id, f.Name, f.Description
             FROM DynamicForms f
             INNER JOIN DynamicWorkflowStages s ON s.FormId = f.Id
         `);
@@ -95,22 +91,19 @@ export class CreateDynamicWorkflowsAndDecouple1790000000000 implements Migration
                 wfId = inserted[0].Id;
             }
 
-            // Point stages to this workflow
             await queryRunner.query(`
-                UPDATE DynamicWorkflowStages 
-                SET WorkflowId = ${wfId} 
+                UPDATE DynamicWorkflowStages
+                SET WorkflowId = ${wfId}
                 WHERE FormId = ${f.Id} AND (WorkflowId IS NULL OR WorkflowId = 0)
             `);
 
-            // Point the form to this workflow
             await queryRunner.query(`
-                UPDATE DynamicForms 
-                SET WorkflowId = ${wfId} 
+                UPDATE DynamicForms
+                SET WorkflowId = ${wfId}
                 WHERE Id = ${f.Id} AND (WorkflowId IS NULL OR WorkflowId = 0)
             `);
         }
 
-        // 6. Delete all test / active / historical submissions as requested
         const fieldValuesTable = await queryRunner.getTable("DynamicFormFieldValues");
         if (fieldValuesTable && fieldValuesTable.findColumnByName("WorkflowStateId")) {
             await queryRunner.query(`UPDATE DynamicFormFieldValues SET WorkflowStateId = NULL WHERE WorkflowStateId IS NOT NULL;`);
@@ -123,7 +116,7 @@ export class CreateDynamicWorkflowsAndDecouple1790000000000 implements Migration
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        // Drop foreign keys and tables if rolled back
+
         const subsTable = await queryRunner.getTable("DynamicFormSubmissions");
         if (subsTable && subsTable.findColumnByName("WorkflowId")) {
             await queryRunner.dropColumn("DynamicFormSubmissions", "WorkflowId");

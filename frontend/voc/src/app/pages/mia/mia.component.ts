@@ -77,8 +77,7 @@ export class MiaComponent implements OnInit, OnDestroy {
   });
 
   canCreateRequest = computed(() => {
-    const user = this.authService.currentUser();
-    return user?.teamId === 6;
+    return this.authService.isCommercialOrAdmin();
   });
 
   ref: DynamicDialogRef | undefined | null;

@@ -58,9 +58,7 @@ export class PermissionsComponent implements OnInit {
     this.permissionService.getAllPermissions().subscribe({
       next: (response) => {
         if (response.success) {
-          // Map the service response to the local model if needed
-          // The service returns data: Permission[] (from service interface)
-          // We cast or map it.
+
           this.permissions.set(response.data as unknown as Permission[]);
         }
         this.loading.set(false);
@@ -106,8 +104,6 @@ export class PermissionsComponent implements OnInit {
   savePermission(data: PermissionFormData) {
     this.saving.set(true);
 
-    // Convert PermissionFormData to Partial<Permission> (from service interface)
-    // We need to cast or ensure compatibility
     const permissionData = {
       name: data.name,
       description: data.description || undefined

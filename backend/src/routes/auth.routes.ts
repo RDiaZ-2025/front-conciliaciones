@@ -1,23 +1,28 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { AuthController } from '../controllers/auth.controller';
-import { authenticateToken, requirePermission } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 const authController = new AuthController();
 
-// Ruta de login
-router.post('/login', authController.login);
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Demasiados intentos de inicio de sesión desde esta IP. Por seguridad, intente de nuevo en 15 minutos.'
+  }
+});
 
-// Ruta para verificar token
+router.post('/login', loginLimiter, authController.login);
+
 router.get('/verify', authenticateToken, authController.me);
 
-// Ruta para obtener información del usuario actual
 router.get('/me', authenticateToken, authController.me);
 
-// Ruta de logout
 router.post('/logout', authController.logout);
-
-// Ruta para inicializar usuarios (solo para desarrollo) - requiere permisos de administrador
-router.post('/initialize-users', authenticateToken, requirePermission('admin_panel'), authController.initializeUsers);
 
 export default router;

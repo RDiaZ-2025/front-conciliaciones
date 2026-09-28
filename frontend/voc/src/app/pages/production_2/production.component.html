@@ -29,6 +29,10 @@
                 </ng-template>
 
                 <div class="flex flex-column gap-3 p-3 pt-0 flex-grow-1">
+                    <div class="flex align-items-center gap-2 text-sm text-600">
+                        <lucide-icon name="hash"></lucide-icon>
+                        <span>ID Solicitud: <strong class="font-mono text-900">#{{ request.id }}</strong></span>
+                    </div>
                     <div class="flex align-items-center gap-2 text-sm text-600" *ngIf="request.consecutive">
                         <lucide-icon name="hash"></lucide-icon>
                         <span class="font-bold text-900">Consecutivo: {{ request.consecutive }}</span>
@@ -117,7 +121,13 @@
                     <span class="font-medium text-lg text-900 text-overflow-ellipsis overflow-hidden white-space-nowrap"
                         [pTooltip]="request.name">{{ request.name }}</span>
                 </div>
-                <lucide-icon name="external-link" class="text-400"></lucide-icon>
+                <div class="flex align-items-center gap-1.5 flex-shrink-0">
+                    <span class="text-xs font-mono font-bold px-2 py-0.5 border-round surface-100 text-700 border-1 surface-border flex-shrink-0"
+                        [pTooltip]="'ID de Solicitud en BD: #' + request.id" tooltipPosition="top">
+                        #{{ request.id }}
+                    </span>
+                    <lucide-icon name="external-link" class="text-400"></lucide-icon>
+                </div>
             </div>
         </div>
     </div>

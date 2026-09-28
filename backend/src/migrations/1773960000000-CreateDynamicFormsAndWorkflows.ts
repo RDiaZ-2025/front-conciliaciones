@@ -3,7 +3,7 @@ import { MigrationInterface, QueryRunner, Table, TableForeignKey } from "typeorm
 export class CreateDynamicFormsAndWorkflows1773960000000 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        // 1. Create DynamicForms Table
+
         await queryRunner.createTable(new Table({
             name: "DynamicForms",
             columns: [
@@ -15,7 +15,6 @@ export class CreateDynamicFormsAndWorkflows1773960000000 implements MigrationInt
             ]
         }), true);
 
-        // 2. Create DynamicFormFields Table
         await queryRunner.createTable(new Table({
             name: "DynamicFormFields",
             columns: [
@@ -40,7 +39,6 @@ export class CreateDynamicFormsAndWorkflows1773960000000 implements MigrationInt
             onDelete: "CASCADE"
         }));
 
-        // 3. Create DynamicWorkflowStages Table
         await queryRunner.createTable(new Table({
             name: "DynamicWorkflowStages",
             columns: [
@@ -49,7 +47,7 @@ export class CreateDynamicFormsAndWorkflows1773960000000 implements MigrationInt
                 { name: "Name", type: "nvarchar", length: "255", isNullable: false },
                 { name: "Description", type: "nvarchar", length: "500", isNullable: true },
                 { name: "StepOrder", type: "int", default: 1 },
-                { name: "AssigneeType", type: "nvarchar", length: "50", isNullable: false }, // 'specific_user', 'team', 'requester_boss', 'dynamic_responsible'
+                { name: "AssigneeType", type: "nvarchar", length: "50", isNullable: false },
                 { name: "AssigneeUserId", type: "int", isNullable: true },
                 { name: "AssigneeTeamId", type: "int", isNullable: true },
                 { name: "FormIdToFill", type: "int", isNullable: true }
@@ -84,7 +82,6 @@ export class CreateDynamicFormsAndWorkflows1773960000000 implements MigrationInt
             onDelete: "NO ACTION"
         }));
 
-        // 4. Create DynamicFormSubmissions Table
         await queryRunner.createTable(new Table({
             name: "DynamicFormSubmissions",
             columns: [
@@ -118,7 +115,6 @@ export class CreateDynamicFormsAndWorkflows1773960000000 implements MigrationInt
             onDelete: "NO ACTION"
         }));
 
-        // 5. Create DynamicFormFieldValues Table
         await queryRunner.createTable(new Table({
             name: "DynamicFormFieldValues",
             columns: [
@@ -143,7 +139,6 @@ export class CreateDynamicFormsAndWorkflows1773960000000 implements MigrationInt
             onDelete: "NO ACTION"
         }));
 
-        // 6. Create DynamicSubmissionWorkflowState Table
         await queryRunner.createTable(new Table({
             name: "DynamicSubmissionWorkflowState",
             columns: [
@@ -151,7 +146,7 @@ export class CreateDynamicFormsAndWorkflows1773960000000 implements MigrationInt
                 { name: "SubmissionId", type: "int", isNullable: false },
                 { name: "StageId", type: "int", isNullable: false },
                 { name: "AssignedUserId", type: "int", isNullable: false },
-                { name: "Status", type: "nvarchar", length: "50", default: "'Pending'" }, // Pending, Approved, Rejected
+                { name: "Status", type: "nvarchar", length: "50", default: "'Pending'" },
                 { name: "ActionedByUserId", type: "int", isNullable: true },
                 { name: "Notes", type: "nvarchar", length: "max", isNullable: true },
                 { name: "CreatedAt", type: "datetime", default: "GETDATE()" },
@@ -187,8 +182,6 @@ export class CreateDynamicFormsAndWorkflows1773960000000 implements MigrationInt
             onDelete: "NO ACTION"
         }));
 
-        // 7. Seed Form Templates and Fields
-        // A. Insert Dynamic Forms
         await queryRunner.query(`
             INSERT INTO DynamicForms (Name, Description, IsEntryForm, IsActive) VALUES
             ('CONTENT MARKETING', 'Formulario para solicitudes de Content Marketing', 1, 1),
@@ -198,7 +191,6 @@ export class CreateDynamicFormsAndWorkflows1773960000000 implements MigrationInt
             ('TRÁFICO CALIFICADO', 'Formulario para solicitudes de Tráfico Calificado', 1, 1)
         `);
 
-        // Get inserted form IDs
         const forms = await queryRunner.query(`SELECT Id, Name FROM DynamicForms`);
         const cmFormId = forms.find((f: any) => f.Name === 'CONTENT MARKETING').Id;
         const dataFormId = forms.find((f: any) => f.Name === 'DATA').Id;
@@ -206,7 +198,6 @@ export class CreateDynamicFormsAndWorkflows1773960000000 implements MigrationInt
         const impFormId = forms.find((f: any) => f.Name === 'IMPLEMENTACIÓN DE CAMPAÑAS').Id;
         const trafFormId = forms.find((f: any) => f.Name === 'TRÁFICO CALIFICADO').Id;
 
-        // B. Insert Fields for CONTENT MARKETING
         await queryRunner.query(`
             INSERT INTO DynamicFormFields (FormId, Name, Label, Description, Type, Placeholder, IsRequired, IsReadOnly, DefaultValueExpression, DisplayOrder) VALUES
             (${cmFormId}, 'requestDate', 'Fecha de solicitud', 'Seleccione la fecha en la que realiza la solicitud.', 'datetime', NULL, 1, 1, '{{CURRENT_DATE_TIME}}', 1),
@@ -219,7 +210,6 @@ export class CreateDynamicFormsAndWorkflows1773960000000 implements MigrationInt
             (${cmFormId}, 'executionDates', 'Fechas de posible ejecución', 'Indique el rango de fechas en que podría ejecutarse el proyecto.', 'text', 'Ej: Rango de fechas o mes estimado', 1, 0, NULL, 8)
         `);
 
-        // C. Insert Fields for other Forms (Generic test fields)
         for (const fId of [dataFormId, estFormId, impFormId, trafFormId]) {
             await queryRunner.query(`
                 INSERT INTO DynamicFormFields (FormId, Name, Label, Description, Type, Placeholder, IsRequired, IsReadOnly, DefaultValueExpression, DisplayOrder) VALUES
@@ -229,7 +219,6 @@ export class CreateDynamicFormsAndWorkflows1773960000000 implements MigrationInt
             `);
         }
 
-        // 8. Seed Workflow Stages dynamically mapping emails to user IDs
         await queryRunner.query(`
             DECLARE @LuisaId INT = (SELECT TOP 1 Id FROM Users WHERE Email = 'luisa.fajardoro@claro.com.co');
             DECLARE @CarlosId INT = (SELECT TOP 1 Id FROM Users WHERE Email = 'carlos.ospina.ext@claro.com.co');

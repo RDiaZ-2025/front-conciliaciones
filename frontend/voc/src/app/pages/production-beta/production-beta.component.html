@@ -1,36 +1,198 @@
 <div class="flex flex-column gap-4 p-4 fadein animation-duration-300">
-    <app-page-header title="Gestión de Producción (Beta)"
+    <app-page-header title="Gestión de Producción"
         subtitle="Seguimiento de solicitudes en el flujo de producción"
         icon="cog">
         <div class="flex gap-2">
             <p-button [outlined]="true" (click)="slaRulesVisible.set(true)"><lucide-icon
                     name="info" class="mr-2"></lucide-icon>Reglas SLA</p-button>
-            <p-button [outlined]="true" (click)="goToAdmin()"><lucide-icon
-                    name="sliders" class="mr-2"></lucide-icon>Administrar</p-button>
+            <p-button *ngIf="canAdminForms()" [outlined]="true" (click)="goToAdmin()"><lucide-icon
+                    name="sliders" class="mr-2"></lucide-icon>Administrar Formularios</p-button>
             <p-button *ngIf="canCreateRequest()" (click)="openDialog()"><lucide-icon name="plus"
                     class="mr-2"></lucide-icon>Nueva Solicitud</p-button>
         </div>
     </app-page-header>
 
-    <div class="flex flex-column gap-4">
+    <!-- BARRA DE FILTROS INTEGRAL (Aprobaciones e Historial) -->
+    <div class="surface-card border-1 surface-border border-round-xl p-3 shadow-1 flex flex-column gap-3">
+        <!-- Fila Principal: Búsqueda Rápida + Acciones y Contadores -->
+        <div class="flex flex-column md:flex-row align-items-stretch md:align-items-center justify-content-between gap-3">
+            
+            <!-- Buscador Global -->
+            <div class="relative flex-1 flex align-items-center">
+                <lucide-icon name="search" class="text-400 absolute ml-3" style="width: 1.1rem; height: 1.1rem; pointer-events: none;"></lucide-icon>
+                <input 
+                    pInputText 
+                    [ngModel]="filterSearch()" 
+                    (input)="onSearchInput($any($event.target).value)"
+                    placeholder="Buscar por ID (#), formulario, solicitante, consecutivo, etapa o datos..." 
+                    class="w-full text-sm pl-6 pr-6 py-2 border-round-lg" />
+                <button 
+                    *ngIf="filterSearch()" 
+                    pButton 
+                    [text]="true" 
+                    [rounded]="true" 
+                    severity="secondary" 
+                    class="w-2rem h-2rem p-0 flex align-items-center justify-content-center absolute right-0 mr-2" 
+                    (click)="onSearchInput('')"
+                    pTooltip="Borrar texto">
+                    <lucide-icon name="x" style="width: 1rem; height: 1rem;"></lucide-icon>
+                </button>
+            </div>
+
+            <!-- Botones de Acción y Contadores -->
+            <div class="flex align-items-center gap-2 flex-wrap justify-content-end">
+                <!-- Toggle Filtros Avanzados -->
+                <p-button 
+                    [outlined]="!showAdvancedFilters()" 
+                    [severity]="activeFiltersCount() > 0 ? 'primary' : 'secondary'"
+                    size="small" 
+                    (onClick)="showAdvancedFilters.set(!showAdvancedFilters())"
+                    [pTooltip]="showAdvancedFilters() ? 'Ocultar filtros avanzados' : 'Mostrar filtros avanzados'">
+                    <lucide-icon name="sliders-horizontal" class="mr-2" style="width: 1rem; height: 1rem;"></lucide-icon>
+                    <span>Filtros</span>
+                    <p-badge *ngIf="activeFiltersCount() > 0" [value]="activeFiltersCount().toString()" severity="info" class="ml-2"></p-badge>
+                </p-button>
+
+                <!-- Limpiar todos los filtros -->
+                <p-button 
+                    *ngIf="activeFiltersCount() > 0" 
+                    [text]="true" 
+                    severity="danger" 
+                    size="small" 
+                    (onClick)="clearAllFilters()"
+                    pTooltip="Restablecer todos los filtros">
+                    <lucide-icon name="rotate-ccw" class="mr-1" style="width: 0.9rem; height: 0.9rem;"></lucide-icon>
+                    Limpiar Filtros
+                </p-button>
+
+                <!-- Resumen rápido de resultados -->
+                <div class="hidden lg:flex align-items-center gap-2 pl-2 border-left-1 surface-border">
+                    <span class="text-xs text-500 font-medium">Aprobaciones:</span>
+                    <p-tag [severity]="approvalsTotal() > 0 ? 'warn' : 'secondary'" 
+                           [value]="approvalsTotal() + ' total'"></p-tag>
+                    <span class="text-xs text-500 font-medium ml-2">Historial:</span>
+                    <p-tag [severity]="historyTotal() > 0 ? 'info' : 'secondary'" 
+                           [value]="historyTotal() + ' total'"></p-tag>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Filtros Avanzados (Desplegable) -->
+        <div *ngIf="showAdvancedFilters()" class="pt-3 border-top-1 surface-border grid p-fluid align-items-end">
+            <!-- Filtro: Formulario / Tipo -->
+            <div class="col-12 sm:col-6 md:col-3 flex flex-column gap-1">
+                <label class="text-xs font-semibold text-700">Formulario / Flujo:</label>
+                <p-multiSelect 
+                    [options]="availableFormOptions()" 
+                    [(ngModel)]="filterSelectedForms" 
+                    (onChange)="onFilterChange()"
+                    optionLabel="label" 
+                    optionValue="value" 
+                    placeholder="Todos los formularios" 
+                    display="chip" 
+                    [showClear]="true"
+                    styleClass="p-inputtext-sm w-full"
+                    appendTo="body">
+                </p-multiSelect>
+            </div>
+
+            <!-- Filtro: Estado -->
+            <div class="col-12 sm:col-6 md:col-3 flex flex-column gap-1">
+                <label class="text-xs font-semibold text-700">Estado de Solicitud:</label>
+                <p-select 
+                    [options]="statusOptions" 
+                    [(ngModel)]="filterStatus" 
+                    (onChange)="onFilterChange()"
+                    optionLabel="label" 
+                    optionValue="value" 
+                    styleClass="p-inputtext-sm w-full"
+                    appendTo="body">
+                </p-select>
+            </div>
+
+            <!-- Filtro: Período de Fecha -->
+            <div class="col-12 sm:col-6 md:col-3 flex flex-column gap-1">
+                <label class="text-xs font-semibold text-700">Fecha de Creación:</label>
+                <p-select 
+                    [options]="datePresetOptions" 
+                    [(ngModel)]="filterDatePreset" 
+                    (onChange)="onDatePresetChange($event.value)"
+                    optionLabel="label" 
+                    optionValue="value" 
+                    styleClass="p-inputtext-sm w-full"
+                    appendTo="body">
+                </p-select>
+            </div>
+
+            <!-- Filtro: Solicitante -->
+            <div class="col-12 sm:col-6 md:col-3 flex flex-column gap-1">
+                <label class="text-xs font-semibold text-700">Solicitante:</label>
+                <div class="relative flex align-items-center">
+                    <input 
+                        pInputText 
+                        [ngModel]="filterRequester()" 
+                        (input)="filterRequester.set($any($event.target).value); onFilterChange()"
+                        placeholder="Nombre o correo..." 
+                        class="p-inputtext-sm w-full pr-5" />
+                    <button 
+                        *ngIf="filterRequester()" 
+                        pButton 
+                        [text]="true" 
+                        [rounded]="true" 
+                        severity="secondary" 
+                        class="w-1.5rem h-1.5rem p-0 flex align-items-center justify-content-center absolute right-0 mr-1" 
+                        (click)="filterRequester.set(''); onFilterChange()">
+                        <lucide-icon name="x" style="width: 0.8rem; height: 0.8rem;"></lucide-icon>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Campos de fecha personalizada (si se seleccionó 'custom') -->
+            <div *ngIf="filterDatePreset() === 'custom'" class="col-12 sm:col-6 md:col-3 flex flex-column gap-1 mt-1">
+                <label class="text-xs font-semibold text-700">Desde:</label>
+                <p-datepicker [(ngModel)]="filterDateFrom" (onSelect)="onFilterChange()" (onClearClick)="onFilterChange()" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" placeholder="dd/mm/aaaa" styleClass="p-inputtext-sm w-full"></p-datepicker>
+            </div>
+            <div *ngIf="filterDatePreset() === 'custom'" class="col-12 sm:col-6 md:col-3 flex flex-column gap-1 mt-1">
+                <label class="text-xs font-semibold text-700">Hasta:</label>
+                <p-datepicker [(ngModel)]="filterDateTo" (onSelect)="onFilterChange()" (onClearClick)="onFilterChange()" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" placeholder="dd/mm/aaaa" styleClass="p-inputtext-sm w-full"></p-datepicker>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex flex-column gap-3">
         <!-- SECCIÓN 1: APROBACIONES Y TAREAS PENDIENTES (SCROLL HORIZONTAL) -->
         <div class="flex flex-column">
-            <h3 class="text-xl font-bold text-900 mb-3 flex align-items-center gap-2">
-                <lucide-icon name="inbox" class="text-primary" style="width: 1.5rem; height: 1.5rem;"></lucide-icon>
-                <span>Aprobaciones y Tareas Pendientes</span>
-            </h3>
+            <div class="flex align-items-center justify-content-between mb-3">
+                <h3 class="text-xl font-bold text-900 m-0 flex align-items-center gap-2">
+                    <lucide-icon name="inbox" class="text-primary" style="width: 1.5rem; height: 1.5rem;"></lucide-icon>
+                    <span>Aprobaciones y Tareas Pendientes</span>
+                    <p-badge [value]="approvalsTotal().toString()" [severity]="approvalsTotal() > 0 ? 'warn' : 'secondary'"></p-badge>
+                </h3>
+            </div>
             
-            <div *ngIf="pendingTasks().length === 0 && !loadingTasks()" class="text-center p-5 border-round surface-card border-1 surface-border">
+            <!-- Caso A: No hay tareas pendientes en absoluto -->
+            <div *ngIf="approvalsTotal() === 0 && !loadingTasks() && activeFiltersCount() === 0" class="text-center p-5 border-round surface-card border-1 surface-border">
                 <lucide-icon name="check-circle" class="text-4xl text-green-500 mb-2 block"></lucide-icon>
                 <p class="text-600 m-0 font-medium">¡Al día! No tienes tareas ni aprobaciones pendientes.</p>
+            </div>
+
+            <!-- Caso B: Hay filtros aplicados y 0 coinciden -->
+            <div *ngIf="approvalsTotal() === 0 && !loadingTasks() && activeFiltersCount() > 0" class="text-center p-5 border-round surface-card border-1 surface-border">
+                <lucide-icon name="search-x" class="text-4xl text-400 mb-2 block"></lucide-icon>
+                <h4 class="text-700 m-0">No se encontraron aprobaciones con los filtros aplicados</h4>
+                <p class="text-500 text-sm mt-1 mb-3">No hay aprobaciones pendientes que coincidan con la búsqueda actual.</p>
+                <p-button [outlined]="true" severity="secondary" size="small" (onClick)="clearAllFilters()">
+                    <lucide-icon name="rotate-ccw" class="mr-2"></lucide-icon>
+                    Restablecer Filtros
+                </p-button>
             </div>
 
             <div *ngIf="loadingTasks()" class="flex justify-content-center p-5">
                 <p-progressSpinner styleClass="w-3rem h-3rem"></p-progressSpinner>
             </div>
 
-            <div *ngIf="pendingTasks().length > 0 && !loadingTasks()" class="flex flex-row overflow-x-auto gap-3 pb-3 w-full" style="scroll-behavior: smooth; -webkit-overflow-scrolling: touch;">
-                <div *ngFor="let task of pendingTasks()" class="flex-shrink-0 pb-1" style="width: 320px;">
+            <div *ngIf="displayedPendingTasks().length > 0 && !loadingTasks()" class="flex flex-row overflow-x-auto gap-3 pb-3 w-full" style="scroll-behavior: smooth; -webkit-overflow-scrolling: touch;">
+                <div *ngFor="let task of displayedPendingTasks()" class="flex-shrink-0 pb-1" style="width: 310px;">
                     <p-card [style]="{ height: '100%', display: 'flex', flexDirection: 'column' }"
                         styleClass="flex flex-column h-full shadow-2 hover:shadow-6 transition-duration-200 border-round-xl">
                         <ng-template pTemplate="header">
@@ -43,7 +205,20 @@
                             </div>
                         </ng-template>
 
-                        <div class="flex flex-column gap-3 p-3 pt-3 flex-grow-1">
+                        <div class="flex flex-column gap-2 p-3 pt-2 flex-grow-1">
+                            <div class="flex align-items-center gap-2 text-sm text-600">
+                                <lucide-icon name="hash"></lucide-icon>
+                                <span>ID Solicitud: <strong class="font-mono text-900">#{{ task.submissionId || task.id }}</strong></span>
+                            </div>
+
+                            <!-- Campos configurados para mostrarse en tarjeta -->
+                            <ng-container *ngIf="task.cardFields && task.cardFields.length > 0">
+                                <div *ngFor="let cf of task.cardFields" class="flex align-items-center gap-2 text-sm text-600">
+                                    <lucide-icon name="tag" class="text-primary" style="width: 1rem; height: 1rem;"></lucide-icon>
+                                    <span>{{ cf.label }}: <strong class="text-900">{{ formatCardValue(cf) }}</strong></span>
+                                </div>
+                            </ng-container>
+
                             <div class="flex align-items-center gap-2 text-sm text-600">
                                 <lucide-icon name="user"></lucide-icon>
                                 <span>Solicitante: <strong>{{ task.requesterName }}</strong></span>
@@ -61,7 +236,7 @@
                         </div>
 
                         <ng-template pTemplate="footer">
-                            <div class="flex justify-content-end border-top-1 surface-border pt-3">
+                            <div class="flex justify-content-end border-top-1 surface-border pt-2 pb-1">
                                 <p-button [severity]="isCorrection(task) ? 'danger' : 'primary'" size="small" (onClick)="openActionDialog(task)">
                                     <lucide-icon [name]="isCorrection(task) ? 'edit-3' : 'search'" class="mr-2"></lucide-icon>
                                     {{ isCorrection(task) ? 'Corregir Solicitud' : 'Revisar y Decidir' }}
@@ -71,75 +246,132 @@
                     </p-card>
                 </div>
             </div>
+
+            <!-- Paginador Real para Aprobaciones -->
+            <div *ngIf="approvalsTotal() > 0 && !loadingTasks()" class="mt-2 flex justify-content-end">
+                <p-paginator 
+                    [first]="(approvalsPage() - 1) * approvalsLimit()" 
+                    [rows]="approvalsLimit()" 
+                    [totalRecords]="approvalsTotal()" 
+                    [rowsPerPageOptions]="[4, 8, 12, 20]"
+                    (onPageChange)="onApprovalsPageChange($event)"
+                    styleClass="surface-card border-round border-1 surface-border py-1 px-2 text-sm">
+                </p-paginator>
+            </div>
         </div>
 
         <!-- SECCIÓN 2: HISTORIAL Y SEGUIMIENTO DE SOLICITUDES (CUADRÍCULA VERTICAL) -->
         <div class="flex flex-column mt-3">
-            <h3 class="text-xl font-bold text-900 mb-3 flex align-items-center gap-2">
-                <lucide-icon name="history" class="text-secondary" style="width: 1.5rem; height: 1.5rem;"></lucide-icon>
-                <span>Historial y Seguimiento de Solicitudes</span>
-            </h3>
+            <div class="flex align-items-center justify-content-between mb-3">
+                <h3 class="text-xl font-bold text-900 m-0 flex align-items-center gap-2">
+                    <lucide-icon name="history" class="text-secondary" style="width: 1.5rem; height: 1.5rem;"></lucide-icon>
+                    <span>Historial y Seguimiento de Solicitudes</span>
+                    <p-badge [value]="historyTotal().toString()" severity="info"></p-badge>
+                </h3>
+            </div>
 
             <div *ngIf="loading()" class="flex justify-content-center p-5">
                 <p-progressSpinner></p-progressSpinner>
             </div>
 
             <div *ngIf="!loading()" class="w-full">
-                <div *ngIf="sortedAllSubmissions().length === 0" class="text-center p-5 border-round surface-card border-1 surface-border">
-                    <lucide-icon name="archive" class="text-4xl text-400 mb-2"></lucide-icon>
-                    <p class="text-600 m-0">No hay solicitudes registradas.</p>
+                <!-- Caso A: No hay solicitudes en el historial en absoluto -->
+                <div *ngIf="historyTotal() === 0 && activeFiltersCount() === 0" class="text-center p-5 border-round surface-card border-1 surface-border">
+                    <lucide-icon name="archive" class="text-4xl text-400 mb-2 block"></lucide-icon>
+                    <p class="text-600 m-0 font-medium">No hay solicitudes registradas.</p>
                 </div>
 
-                <div *ngIf="sortedAllSubmissions().length > 0" class="grid">
-                <div *ngFor="let sub of sortedAllSubmissions()" class="col-12 md:col-6 lg:col-4 xl:col-3">
-                    <p-card [style]="{ height: '100%', display: 'flex', flexDirection: 'column' }"
-                        styleClass="flex flex-column h-full shadow-2 hover:shadow-6 transition-duration-200 border-round-xl">
-                        <ng-template pTemplate="header">
-                            <div class="flex justify-content-between align-items-start p-3 pb-0">
-                                <h3 class="text-lg font-bold m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap flex-1 mr-2"
-                                    [pTooltip]="sub.formName">
-                                    <lucide-icon [name]="getFormIcon(sub)" [class]="getFormIconColor(sub) + ' mr-2'"></lucide-icon>{{ sub.formName }}
-                                </h3>
-                                <p-tag [severity]="getStatusSeverity(sub.status)" [value]="getStatusLabel(sub.status)"></p-tag>
-                            </div>
-                        </ng-template>
+                <!-- Caso B: Hay filtros aplicados y 0 coinciden -->
+                <div *ngIf="historyTotal() === 0 && activeFiltersCount() > 0" class="text-center p-5 border-round surface-card border-1 surface-border">
+                    <lucide-icon name="search-x" class="text-4xl text-400 mb-2 block"></lucide-icon>
+                    <h4 class="text-700 m-0">No se encontraron solicitudes con los filtros aplicados</h4>
+                    <p class="text-500 text-sm mt-1 mb-3">No hay solicitudes registradas que coincidan con la búsqueda actual.</p>
+                    <p-button [outlined]="true" severity="secondary" size="small" (onClick)="clearAllFilters()">
+                        <lucide-icon name="rotate-ccw" class="mr-2"></lucide-icon>
+                        Restablecer Filtros
+                    </p-button>
+                </div>
 
-                        <div class="flex flex-column gap-3 p-3 pt-3 flex-grow-1">
-                            <div class="flex align-items-center gap-2 text-sm text-600">
-                                <lucide-icon name="calendar"></lucide-icon>
-                                <span>Solicitado: <strong>{{ sub.createdAt | date:'dd/MM/yyyy HH:mm' }}</strong></span>
-                            </div>
+                <div *ngIf="displayedSubmissions().length > 0" class="grid">
+                    <div *ngFor="let sub of displayedSubmissions()" class="col-12 md:col-6 lg:col-4 xl:col-3">
+                        <p-card [style]="{ height: '100%', display: 'flex', flexDirection: 'column' }"
+                            styleClass="flex flex-column h-full shadow-2 hover:shadow-6 transition-duration-200 border-round-xl">
+                            <ng-template pTemplate="header">
+                                <div class="flex justify-content-between align-items-start p-3 pb-0">
+                                    <h3 class="text-lg font-bold m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap flex-1 mr-2"
+                                        [pTooltip]="sub.formName">
+                                        <lucide-icon [name]="getFormIcon(sub)" [class]="getFormIconColor(sub) + ' mr-2'"></lucide-icon>{{ sub.formName }}
+                                    </h3>
+                                    <p-tag [severity]="getStatusSeverity(sub.status)" [value]="getStatusLabel(sub.status)"></p-tag>
+                                </div>
+                            </ng-template>
 
-                            <div class="flex align-items-center gap-2 text-sm text-600">
-                                <lucide-icon name="cog"></lucide-icon>
-                                <span>Etapa actual: <strong>{{ sub.stageName }}</strong></span>
-                            </div>
+                            <div class="flex flex-column gap-2 p-3 pt-2 flex-grow-1">
+                                <div class="flex align-items-center gap-2 text-sm text-600">
+                                    <lucide-icon name="hash"></lucide-icon>
+                                    <span>ID Solicitud: <strong class="font-mono text-900">#{{ sub.id }}</strong></span>
+                                </div>
 
-                            <div class="flex align-items-center gap-2 text-sm text-green-700 font-bold" *ngIf="sub.consecutive">
-                                <lucide-icon name="hash"></lucide-icon>
-                                <span>Consecutivo: <strong>{{ sub.consecutive }}</strong></span>
-                            </div>
+                                <!-- Campos configurados para mostrarse en tarjeta -->
+                                <ng-container *ngIf="sub.cardFields && sub.cardFields.length > 0">
+                                    <div *ngFor="let cf of sub.cardFields" class="flex align-items-center gap-2 text-sm text-600">
+                                        <lucide-icon name="tag" class="text-primary" style="width: 1rem; height: 1rem;"></lucide-icon>
+                                        <span>{{ cf.label }}: <strong class="text-900">{{ formatCardValue(cf) }}</strong></span>
+                                    </div>
+                                </ng-container>
 
-                            <div class="flex align-items-center gap-2 text-sm text-600">
-                                <lucide-icon name="user"></lucide-icon>
-                                <div class="flex flex-column">
-                                    <span>Asignado a: <strong>{{ sub.assigneeName }}</strong></span>
-                                    <span *ngIf="sub.assigneeEmail" class="text-xs text-500 font-medium">{{ sub.assigneeEmail }}</span>
+                                <div class="flex align-items-center gap-2 text-sm text-600" *ngIf="sub.requesterName">
+                                    <lucide-icon name="user"></lucide-icon>
+                                    <span>Solicitante: <strong>{{ sub.requesterName }}</strong></span>
+                                </div>
+
+                                <div class="flex align-items-center gap-2 text-sm text-600">
+                                    <lucide-icon name="calendar"></lucide-icon>
+                                    <span>Solicitado: <strong>{{ sub.createdAt | date:'dd/MM/yyyy HH:mm' }}</strong></span>
+                                </div>
+
+                                <div class="flex align-items-center gap-2 text-sm text-600">
+                                    <lucide-icon name="cog"></lucide-icon>
+                                    <span>Etapa actual: <strong>{{ sub.stageName }}</strong></span>
+                                </div>
+
+                                <div class="flex align-items-center gap-2 text-sm text-green-700 font-bold" *ngIf="sub.consecutive">
+                                    <lucide-icon name="hash"></lucide-icon>
+                                    <span>Consecutivo: <strong>{{ sub.consecutive }}</strong></span>
+                                </div>
+
+                                <div class="flex align-items-center gap-2 text-sm text-600">
+                                    <lucide-icon name="user-check"></lucide-icon>
+                                    <div class="flex flex-column">
+                                        <span>Asignado a: <strong>{{ sub.assigneeName }}</strong></span>
+                                        <span *ngIf="sub.assigneeEmail" class="text-xs text-500 font-medium">{{ sub.assigneeEmail }}</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <ng-template pTemplate="footer">
-                            <div class="flex justify-content-end border-top-1 surface-border pt-3">
-                                <p-button size="small" [outlined]="true" (onClick)="viewSubmissionDetails(sub.id)">
-                                    <lucide-icon name="eye" class="mr-2"></lucide-icon>
-                                    Ver Detalles
-                                </p-button>
-                            </div>
-                        </ng-template>
-                    </p-card>
+                            <ng-template pTemplate="footer">
+                                <div class="flex justify-content-end border-top-1 surface-border pt-2 pb-1">
+                                    <p-button size="small" [outlined]="true" (onClick)="viewSubmissionDetails(sub.id)">
+                                        <lucide-icon name="eye" class="mr-2"></lucide-icon>
+                                        Ver Detalles
+                                    </p-button>
+                                </div>
+                            </ng-template>
+                        </p-card>
+                    </div>
                 </div>
-            </div>
+
+                <!-- Paginador Real para Historial -->
+                <div *ngIf="historyTotal() > 0 && !loading()" class="mt-3 flex justify-content-end">
+                    <p-paginator 
+                        [first]="(historyPage() - 1) * historyLimit()" 
+                        [rows]="historyLimit()" 
+                        [totalRecords]="historyTotal()" 
+                        [rowsPerPageOptions]="[8, 12, 24, 48]"
+                        (onPageChange)="onHistoryPageChange($event)"
+                        styleClass="surface-card border-round border-1 surface-border py-1 px-2 text-sm">
+                    </p-paginator>
+                </div>
             </div>
         </div>
     </div>
@@ -167,7 +399,7 @@
 
     <!-- Modal: Nueva Solicitud (Formulario Inicial Dinámico + Selección de Áreas) -->
     <p-dialog header="Nueva Solicitud" [(visible)]="showTypeSelectionDialog" [modal]="true"
-        [style]="{width: '650px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false"
+        [style]="{width: '780px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false"
         styleClass="p-fluid border-round-xl">
         <div class="flex flex-column gap-3 px-4 py-2">
             
@@ -183,6 +415,7 @@
                         <span>1. Formulario de Solicitud Inicial *</span>
                     </label>
                     <p-select id="initialFormSelect" [options]="initialForms()" [(ngModel)]="selectedInitialFormId"
+                              (onChange)="onInitialFormChange()"
                               optionLabel="name" optionValue="id" optionDisabled="disabled"
                               placeholder="Seleccione el formulario inicial a diligenciar..."
                               class="w-full" styleClass="w-full" [appendTo]="'body'">
@@ -455,45 +688,123 @@
                         <span class="text-600 font-medium text-xs">Selecciona el o los equipos que deben procesar esta solicitud (la primera etapa llegará al líder del equipo):</span>
                     </div>
 
-                    <div class="grid mt-1">
-                        <div *ngFor="let team of teams()" class="col-12 md:col-6">
-                            <div class="flex align-items-center p-3 border-round-lg border-1 surface-border hover:surface-100 transition-colors gap-3 h-full"
-                                [class.surface-100]="team.selected"
-                                [class.border-primary]="team.selected"
-                                [class.opacity-50]="!isTeamEnabled(team)"
-                                [class.cursor-not-allowed]="!isTeamEnabled(team)"
-                                [class.cursor-pointer]="isTeamEnabled(team)"
-                                [pTooltip]="getTeamDisabledReason(team)"
-                                [tooltipDisabled]="isTeamEnabled(team)"
-                                tooltipPosition="top"
-                                (click)="isTeamEnabled(team) ? (team.selected = !team.selected) : null">
-                                <p-checkbox [(ngModel)]="team.selected" [binary]="true" [inputId]="'team-' + team.id"
-                                    [disabled]="!isTeamEnabled(team)"
-                                    (click)="$event.stopPropagation()"></p-checkbox>
-                                <div class="flex flex-column flex-1">
-                                    <div class="flex align-items-center justify-content-between gap-2 flex-wrap">
-                                        <label [for]="'team-' + team.id" [class.cursor-pointer]="isTeamEnabled(team)" [class.cursor-not-allowed]="!isTeamEnabled(team)" class="font-bold text-sm text-900 mb-0">{{ team.name }}</label>
-                                        
-                                        <!-- Botón Interactivo para Ciclar el Modo de Asignación de la Etapa 1 -->
-                                        <button type="button"
-                                                *ngIf="isTeamEnabled(team)"
-                                                (click)="cycleTeamAssignmentMode(team, $event)"
-                                                [pTooltip]="getTeamAssignmentBadge(team).tooltip"
-                                                tooltipPosition="left"
-                                                class="border-round-lg border-1 px-2 py-1 text-xs font-semibold flex align-items-center gap-1 cursor-pointer transition-all shadow-none"
-                                                [ngClass]="[getTeamAssignmentBadge(team).bgClass, getTeamAssignmentBadge(team).textClass, getTeamAssignmentBadge(team).borderClass]"
-                                                style="outline: none;">
-                                            <lucide-icon [name]="getTeamAssignmentBadge(team).icon" style="width: 0.9rem; height: 0.9rem;"></lucide-icon>
-                                            <span>{{ getTeamAssignmentBadge(team).label }}</span>
-                                            <i class="pi pi-refresh text-xs opacity-60 ml-1"></i>
-                                        </button>
-                                    </div>
+                    <div class="teams-selection-grid mt-2" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; width: 100%; align-items: stretch;">
+                        <div *ngFor="let team of teams()"
+                            class="team-selection-card flex align-items-start p-3 border-round-xl border-1 surface-border hover:surface-100 transition-colors gap-3"
+                            style="width: 100%; height: auto; min-height: 4.5rem; box-sizing: border-box;"
+                            [class.surface-100]="team.selected"
+                            [class.border-primary]="team.selected"
+                            [class.shadow-1]="team.selected"
+                            [class.opacity-50]="!isTeamEnabled(team)"
+                            [class.cursor-not-allowed]="!isTeamEnabled(team)"
+                            [class.cursor-pointer]="isTeamEnabled(team)"
+                            [pTooltip]="getTeamDisabledReason(team)"
+                            [tooltipDisabled]="isTeamEnabled(team)"
+                            tooltipPosition="top"
+                            (click)="isTeamEnabled(team) ? (team.selected = !team.selected) : null">
+                            
+                            <p-checkbox [(ngModel)]="team.selected" [binary]="true" [inputId]="'team-' + team.id"
+                                [disabled]="!isTeamEnabled(team)"
+                                class="mt-1 flex-shrink-0"
+                                (click)="$event.stopPropagation()"></p-checkbox>
 
-                                    <div class="mt-1 flex flex-wrap gap-1 align-items-center" *ngIf="!isTeamConditionMet(team)">
-                                        <span class="text-xs text-orange-700 bg-orange-50 border-1 border-orange-200 px-2 py-1 border-round font-semibold flex align-items-center gap-1">
-                                            <i class="pi pi-ban text-xs"></i> No cumple condiciones
+                            <div class="flex flex-column flex-1 w-full" style="min-width: 0;">
+                                <div class="flex align-items-center justify-content-between gap-2 flex-wrap">
+                                    <div class="flex align-items-center gap-1 flex-wrap">
+                                        <label [for]="'team-' + team.id" [class.cursor-pointer]="isTeamEnabled(team)" [class.cursor-not-allowed]="!isTeamEnabled(team)" class="font-bold text-sm text-900 mb-0">{{ team.name }}</label>
+                                        <span *ngIf="team.subteams && team.subteams.length > 0" class="text-xs text-purple-700 bg-purple-50 border-1 border-purple-200 px-1.5 py-0.5 border-round font-medium flex align-items-center gap-1">
+                                            <lucide-icon name="layers" style="width: 0.75rem; height: 0.75rem;"></lucide-icon>
+                                            <span>{{ team.subteams.length }} {{ team.subteams.length === 1 ? 'subequipo' : 'subequipos' }}</span>
                                         </span>
                                     </div>
+                                    
+                                    <!-- Botón Interactivo para Ciclar el Modo de Asignación de la Etapa 1 -->
+                                    <button type="button"
+                                            *ngIf="isTeamEnabled(team)"
+                                            (click)="cycleTeamAssignmentMode(team, $event)"
+                                            [pTooltip]="getTeamAssignmentBadge(team).tooltip"
+                                            tooltipPosition="top"
+                                            class="border-round-lg border-1 px-2 py-1 text-xs font-semibold flex align-items-center gap-1 cursor-pointer transition-all shadow-none"
+                                            [ngClass]="[getTeamAssignmentBadge(team).bgClass, getTeamAssignmentBadge(team).textClass, getTeamAssignmentBadge(team).borderClass]"
+                                            style="outline: none;">
+                                        <lucide-icon [name]="getTeamAssignmentBadge(team).icon" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                        <span>{{ getTeamAssignmentBadge(team).label }}</span>
+                                        <i class="pi pi-refresh text-xs opacity-60 ml-1"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Selector opcional de Ámbito Aleatorio (Equipo Principal o Subequipo) SOLO si assignmentMode === 'random' y el equipo tiene subequipos -->
+                                <div *ngIf="team.selected && team.assignmentMode === 'random' && team.subteams && team.subteams.length > 0" 
+                                     class="mt-2 pt-2 border-top-1 surface-border flex flex-column gap-1 w-full" 
+                                     (click)="$event.stopPropagation()">
+                                    <div class="flex align-items-center justify-content-between">
+                                        <span class="text-xs font-bold text-700 flex align-items-center gap-1">
+                                            <lucide-icon name="shuffle" style="width: 0.8rem; height: 0.8rem;" class="text-purple-600"></lucide-icon>
+                                            <span>Asignación aleatoria entre:</span>
+                                        </span>
+                                        <span class="text-xs text-purple-700 bg-purple-50 px-2 py-0.5 border-round font-semibold">
+                                            🎲 Sorteo al azar
+                                        </span>
+                                    </div>
+                                    <p-select 
+                                        [(ngModel)]="team.selectedSubteamId" 
+                                        [options]="getSubteamOptionsForTeam(team)" 
+                                        optionLabel="label" 
+                                        optionValue="value" 
+                                        placeholder="Seleccionar ámbito..." 
+                                        appendTo="body"
+                                        styleClass="w-full text-xs">
+                                        <ng-template #selectedItem let-selected>
+                                            <div *ngIf="selected" class="flex align-items-center gap-2">
+                                                <lucide-icon [name]="selected.isMain ? 'users' : 'layers'" class="text-purple-600 text-xs"></lucide-icon>
+                                                <span class="font-medium text-xs">{{ selected.label }}</span>
+                                            </div>
+                                        </ng-template>
+                                        <ng-template #item let-opt>
+                                            <div class="flex align-items-center justify-content-between w-full">
+                                                <div class="flex align-items-center gap-2">
+                                                    <lucide-icon [name]="opt.isMain ? 'users' : 'layers'" class="text-purple-600 text-xs"></lucide-icon>
+                                                    <span class="text-xs font-medium">{{ opt.label }}</span>
+                                                </div>
+                                            </div>
+                                        </ng-template>
+                                    </p-select>
+                                    <span *ngIf="team.selectedSubteamId && team.selectedSubteamId > 0" class="text-xs text-500 italic mt-1">
+                                        La solicitud se asignará a un miembro al azar del subequipo seleccionado.
+                                    </span>
+                                    <span *ngIf="!team.selectedSubteamId || team.selectedSubteamId === 0" class="text-xs text-500 italic mt-1">
+                                        La solicitud se asignará a un miembro al azar del equipo principal.
+                                    </span>
+                                </div>
+
+                                <!-- Indicador si está en modo aleatorio pero el equipo no tiene subequipos -->
+                                <div *ngIf="team.selected && team.assignmentMode === 'random' && (!team.subteams || team.subteams.length === 0)" class="mt-2 pt-1 border-top-1 surface-border w-full">
+                                    <span class="text-xs text-500 italic flex align-items-center gap-1">
+                                        <i class="pi pi-shuffle text-xs text-purple-600"></i>
+                                        <span>Se asignará al azar entre los {{ team.users?.length || 0 }} miembros del equipo principal.</span>
+                                    </span>
+                                </div>
+
+                                <!-- Indicador si está en modo Líder -->
+                                <div *ngIf="team.selected && team.assignmentMode === 'leader'" class="mt-2 pt-1 border-top-1 surface-border w-full">
+                                    <span class="text-xs text-500 italic flex align-items-center gap-1">
+                                        <i class="pi pi-user text-xs text-blue-600"></i>
+                                        <span>Se asignará al líder del equipo{{ team.leader ? ': ' + team.leader.name : ' (sin líder asignado)' }}.</span>
+                                    </span>
+                                </div>
+
+                                <!-- Indicador si está en modo Según Flujo -->
+                                <div *ngIf="team.selected && team.assignmentMode === 'workflow'" class="mt-2 pt-1 border-top-1 surface-border w-full">
+                                    <span class="text-xs text-500 italic flex align-items-center gap-1">
+                                        <i class="pi pi-sitemap text-xs text-orange-600"></i>
+                                        <span>Se asignará según las reglas configuradas en la Etapa 1 del Flujo de Trabajo.</span>
+                                    </span>
+                                </div>
+
+                                <div class="mt-2 flex flex-wrap gap-1 align-items-center w-full" *ngIf="!isTeamConditionMet(team)">
+                                    <span class="text-xs text-orange-700 bg-orange-50 border-1 border-orange-200 px-2 py-0.5 border-round font-semibold flex align-items-center gap-1">
+                                        <i class="pi pi-ban text-xs"></i> No cumple condiciones
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -592,9 +903,9 @@
                                 <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                                 <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                     <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                        <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                        <p-button [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)">
-                                            <lucide-icon name="download"></lucide-icon>
+                                        <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                        <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
+                                            <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
                                         </p-button>
                                     </div>
                                 </div>
@@ -647,9 +958,9 @@
                             <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                             <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                 <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                    <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                    <p-button [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)">
-                                        <lucide-icon name="download"></lucide-icon>
+                                    <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                    <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
+                                        <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
                                     </p-button>
                                 </div>
                             </div>
@@ -717,9 +1028,9 @@
                                     <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                                     <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                         <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                            <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                            <p-button [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)">
-                                                <lucide-icon name="download"></lucide-icon>
+                                            <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                            <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
+                                                <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
                                             </p-button>
                                         </div>
                                     </div>
@@ -997,9 +1308,9 @@
                                             <!-- Uploaded files list (for viewing/downloading) -->
                                             <div class="flex flex-column gap-1 mt-1" *ngIf="getStageUploadedFiles(stageFormValues[form.formId + '_' + field.name]).length > 0">
                                                 <div *ngFor="let file of getStageUploadedFiles(stageFormValues[form.formId + '_' + field.name])" class="flex justify-content-between align-items-center bg-blue-50 p-2 border-round text-sm border-1 border-blue-200">
-                                                    <span class="font-medium text-blue-700"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                                    <p-button [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)">
-                                                        <lucide-icon name="download"></lucide-icon>
+                                                    <span class="font-medium text-blue-700 cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                                    <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
+                                                        <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
                                                     </p-button>
                                                 </div>
                                             </div>
@@ -1235,9 +1546,9 @@
                                         <!-- Uploaded files list (for viewing/downloading) -->
                                         <div class="flex flex-column gap-1 mt-1" *ngIf="getStageUploadedFiles(stageFormValues[field.name]).length > 0">
                                             <div *ngFor="let file of getStageUploadedFiles(stageFormValues[field.name])" class="flex justify-content-between align-items-center bg-blue-50 p-2 border-round text-sm border-1 border-blue-200">
-                                                <span class="font-medium text-blue-700"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                                <p-button [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)">
-                                                    <lucide-icon name="download"></lucide-icon>
+                                                <span class="font-medium text-blue-700 cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                                <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
+                                                    <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
                                                 </p-button>
                                             </div>
                                         </div>
@@ -1493,8 +1804,24 @@
                     </ng-container>
                 </div>
             </div>
-                                    
-              <!-- Section 3: Comments -->
+            <!-- Section: Chosen Next Stage Assignee -->
+            <div class="flex flex-column gap-2 mt-2 bg-indigo-50 border-1 border-indigo-200 border-round p-3" 
+                 *ngIf="!isCorrection(selectedTask()) && selectedTask()?.allowChooseNextStageAssignee && selectedTask()?.nextStageAssigneeOptions?.length > 0 && !selectedTask()?.isFinalStage">
+                <label class="font-bold text-sm text-indigo-900 flex align-items-center gap-2">
+                    <i class="pi pi-user-plus text-indigo-600"></i>
+                    <span>Destinatario de la siguiente etapa *</span>
+                </label>
+                <p-select [options]="selectedTask()?.nextStageAssigneeOptions" 
+                          [(ngModel)]="chosenNextAssignee" 
+                          optionLabel="displayLabel" 
+                          placeholder="Seleccione a quién asignar la siguiente etapa..." 
+                          class="w-full"
+                          [appendTo]="'body'">
+                </p-select>
+                <small class="text-xs text-indigo-700">Esta etapa requiere que selecciones quién recibirá y gestionará la siguiente etapa del flujo.</small>
+            </div>
+
+            <!-- Section 3: Comments -->
             <div class="flex flex-column gap-2 mt-2">
                 <label for="comments" class="font-bold text-sm text-900">{{ isCorrection(selectedTask()) ? 'Notas de la Corrección (Opcional)' : 'Comentarios / Observaciones' }}</label>
                 <textarea id="comments" class="w-full p-inputtext border-round" [(ngModel)]="comments" rows="2" [placeholder]="isCorrection(selectedTask()) ? 'Explica brevemente los cambios realizados...' : 'Escribe notas adicionales o la razón en caso de rechazo...'" style="resize: vertical; font-family: inherit;"></textarea>
@@ -1571,6 +1898,19 @@
                 </div>
             </div>
 
+            <!-- Banner de Solicitud Bloqueada -->
+            <div *ngIf="selectedDetails().status === 'Blocked'" class="bg-red-50 border-1 border-red-300 border-round p-3 flex align-items-start gap-3 shadow-1">
+                <span class="inline-flex align-items-center justify-content-center border-circle w-2rem h-2rem bg-red-100 text-red-700 flex-shrink-0">
+                    <lucide-icon name="alert-triangle" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+                </span>
+                <div class="flex flex-column gap-1">
+                    <span class="font-bold text-sm text-red-900">Solicitud Bloqueada</span>
+                    <span class="text-xs text-red-700 line-height-3">
+                        Esta solicitud fue bloqueada y cerrada automáticamente debido a que el flujo de trabajo original fue modificado o eliminado mientras la solicitud estaba en proceso. Para continuar con este requerimiento, debe iniciar una nueva solicitud.
+                    </span>
+                </div>
+            </div>
+
             <!-- Section 0: Datos del Requerimiento Inicial (Stacked initial forms values) -->
             <div class="flex flex-column gap-3" *ngIf="detailsParentFormGroups() && detailsParentFormGroups().length > 0">
                 <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">Datos del Requerimiento Inicial</span>
@@ -1590,9 +1930,9 @@
                                 <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                                 <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                     <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                        <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                        <p-button [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)">
-                                            <lucide-icon name="download"></lucide-icon>
+                                        <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                        <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
+                                            <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
                                         </p-button>
                                     </div>
                                 </div>
@@ -1645,9 +1985,9 @@
                             <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                             <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                 <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                    <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                    <p-button [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)">
-                                        <lucide-icon name="download"></lucide-icon>
+                                    <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                    <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
+                                        <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
                                     </p-button>
                                 </div>
                             </div>
@@ -1717,9 +2057,9 @@
                                     <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                                     <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                         <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                            <span class="font-medium text-blue-700 text-xs truncate max-w-15rem"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                            <p-button [text]="true" severity="primary" size="small" (onClick)="downloadStageFormFile(file)">
-                                                <lucide-icon name="download"></lucide-icon>
+                                            <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                            <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
+                                                <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
                                             </p-button>
                                         </div>
                                     </div>

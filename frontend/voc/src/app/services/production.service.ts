@@ -1,6 +1,6 @@
 import { BaseApiService } from './base-api.service';
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { ProductionRequest } from '../models/common/production-request';
@@ -18,7 +18,7 @@ import { Status } from '../models/common/status';
   providedIn: 'root'
 })
 export class ProductionService extends BaseApiService {
-  private apiUrl = `${environment.apiUrl}/production`; // Updated to match likely route mount point
+  private apiUrl = `${environment.apiUrl}/production`;
   private objectiveUrl = `${environment.apiUrl}/objectives`;
   private audienceUrl = `${environment.apiUrl}/audience`;
   private statusUrl = `${environment.apiUrl}/statuses`;
@@ -31,7 +31,6 @@ export class ProductionService extends BaseApiService {
     return this.http.get<ProductionRequest>(`${this.apiUrl}/${id}`);
   }
 
-  // Alias for compatibility
   getProductionRequestById(id: number): Observable<ProductionRequest> {
     return this.getProductionRequest(id);
   }
@@ -91,13 +90,11 @@ export class ProductionService extends BaseApiService {
   getProducts(): Observable<Product[]> {
     return this.http.get<Product[]>(`${this.apiUrl}/products`);
   }
-  
-  // Objective methods
+
   getObjectives(): Observable<Objective[]> {
     return this.http.get<Objective[]>(this.objectiveUrl);
   }
 
-  // Audience methods
   getGenders(): Observable<Gender[]> {
     return this.http.get<Gender[]>(`${this.audienceUrl}/genders`);
   }
@@ -110,7 +107,6 @@ export class ProductionService extends BaseApiService {
     return this.http.get<SocioeconomicLevel[]>(`${this.audienceUrl}/socioeconomic-levels`);
   }
 
-  // Production Options methods
   getFormatTypes(): Observable<FormatType[]> {
     return this.http.get<FormatType[]>(`${this.apiUrl}/format-types`);
   }
@@ -142,27 +138,41 @@ export class ProductionService extends BaseApiService {
   }
 
   submitDynamicForm(
-    formId: number, 
-    values: any, 
-    targetFormIds?: number[], 
-    submissions?: any[], 
-    targetTeamIds?: number[], 
-    targetTeams?: Array<{ teamId: number; assignmentMode?: string }>,
+    formId: number,
+    values: any,
+    targetFormIds?: number[],
+    submissions?: any[],
+    targetTeamIds?: number[],
+    targetTeams?: Array<{ teamId: number; subteamId?: number | null; assignmentMode?: string }>,
     closingConfig?: { formId?: number | null; workflowId?: number | null }
   ): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/submissions`, { 
-      formId, 
-      values, 
-      targetFormIds, 
-      submissions, 
-      targetTeamIds, 
+    return this.http.post<any>(`${this.apiUrl}/submissions`, {
+      formId,
+      values,
+      targetFormIds,
+      submissions,
+      targetTeamIds,
       targetTeams,
       closingConfig
     });
   }
 
-  getDynamicSubmissions(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/submissions`);
+  getDynamicSubmissions(params?: any): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params) {
+      Object.keys(params).forEach(key => {
+        if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+          if (Array.isArray(params[key])) {
+            if (params[key].length > 0) {
+              httpParams = httpParams.set(key, params[key].join(','));
+            }
+          } else {
+            httpParams = httpParams.set(key, String(params[key]));
+          }
+        }
+      });
+    }
+    return this.http.get<any>(`${this.apiUrl}/submissions`, { params: httpParams });
   }
 
   adminGetForms(): Observable<any[]> {
@@ -195,7 +205,6 @@ export class ProductionService extends BaseApiService {
     return this.http.post<any[]>(`${this.apiUrl}/admin/forms/${formId}/stages`, stages);
   }
 
-  // --- Independent Workflows ---
   adminGetWorkflows(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/admin/workflows`);
   }
@@ -224,11 +233,25 @@ export class ProductionService extends BaseApiService {
     return this.http.get<any>(`${this.apiUrl}/submissions/${submissionId}`);
   }
 
-  getPendingApprovals(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/approvals/pending`);
+  getPendingApprovals(params?: any): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params) {
+      Object.keys(params).forEach(key => {
+        if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+          if (Array.isArray(params[key])) {
+            if (params[key].length > 0) {
+              httpParams = httpParams.set(key, params[key].join(','));
+            }
+          } else {
+            httpParams = httpParams.set(key, String(params[key]));
+          }
+        }
+      });
+    }
+    return this.http.get<any>(`${this.apiUrl}/approvals/pending`, { params: httpParams });
   }
 
-  actionApproval(stateId: number, action: 'approve' | 'reject', notes: string, formValues?: any, consecutive?: string): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/approvals/${stateId}/action`, { action, notes, formValues, consecutive });
+  actionApproval(stateId: number, action: 'approve' | 'reject', notes: string, formValues?: any, consecutive?: string, chosenNextAssignee?: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/approvals/${stateId}/action`, { action, notes, formValues, consecutive, chosenNextAssignee });
   }
 }

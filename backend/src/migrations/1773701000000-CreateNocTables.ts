@@ -3,7 +3,7 @@ import { MigrationInterface, QueryRunner } from "typeorm";
 export class CreateNocTables1773701000000 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        // 1. module_states
+
         await queryRunner.query(`
             IF OBJECT_ID('module_states', 'U') IS NULL
             BEGIN
@@ -16,11 +16,10 @@ export class CreateNocTables1773701000000 implements MigrationInterface {
             END
         `);
 
-        // Seed initial module states if the table was empty or newly created
         const existingStates = await queryRunner.query("SELECT COUNT(*) as count FROM module_states");
         if (existingStates && existingStates[0] && existingStates[0].count === 0) {
             await queryRunner.query(`
-                INSERT INTO module_states (code, is_under_maintenance, is_disabled) VALUES 
+                INSERT INTO module_states (code, is_under_maintenance, is_disabled) VALUES
                 ('dashboard', 0, 0),
                 ('ingresos', 0, 0),
                 ('presupuesto', 0, 0),
@@ -29,7 +28,6 @@ export class CreateNocTables1773701000000 implements MigrationInterface {
             `);
         }
 
-        // 2. dashboard_data
         await queryRunner.query(`
             IF OBJECT_ID('dashboard_data', 'U') IS NULL
             BEGIN
@@ -57,7 +55,6 @@ export class CreateNocTables1773701000000 implements MigrationInterface {
             END
         `);
 
-        // 3. entities
         await queryRunner.query(`
             IF OBJECT_ID('entities', 'U') IS NULL
             BEGIN
@@ -69,13 +66,12 @@ export class CreateNocTables1773701000000 implements MigrationInterface {
                     is_principal BIT NOT NULL DEFAULT 0,
                     semantic_score FLOAT NULL,
                     syntactic_score FLOAT NULL,
-                    CONSTRAINT FK_entities_dashboard_data FOREIGN KEY (dashboard_data_id) 
+                    CONSTRAINT FK_entities_dashboard_data FOREIGN KEY (dashboard_data_id)
                         REFERENCES dashboard_data(id) ON DELETE CASCADE
                 )
             END
         `);
 
-        // 4. presupuesto
         await queryRunner.query(`
             IF OBJECT_ID('presupuesto', 'U') IS NULL
             BEGIN
@@ -90,7 +86,6 @@ export class CreateNocTables1773701000000 implements MigrationInterface {
             END
         `);
 
-        // 5. ingreso_portal
         await queryRunner.query(`
             IF OBJECT_ID('ingreso_portal', 'U') IS NULL
             BEGIN
@@ -107,7 +102,6 @@ export class CreateNocTables1773701000000 implements MigrationInterface {
             END
         `);
 
-        // 6. ingreso_redes
         await queryRunner.query(`
             IF OBJECT_ID('ingreso_redes', 'U') IS NULL
             BEGIN
@@ -126,7 +120,6 @@ export class CreateNocTables1773701000000 implements MigrationInterface {
             END
         `);
 
-        // 7. precio_dolar
         await queryRunner.query(`
             IF OBJECT_ID('precio_dolar', 'U') IS NULL
             BEGIN

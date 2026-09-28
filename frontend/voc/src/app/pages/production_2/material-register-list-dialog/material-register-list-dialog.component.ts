@@ -12,7 +12,6 @@ import { ProductionRequest } from '../../../models/common/production-request';
 import { ProductionService } from '../../../services/production.service';
 import { AzureStorageService } from '../../../services/azure-storage.service';
 
-// Dialog Components
 import { SolutionSelectionDialogComponent } from '../solution-selection-dialog/solution-selection-dialog.component';
 import { SmsDialogComponent } from '../solution-selection-dialog/sms-dialog/sms-dialog.component';
 import { RcsDialogComponent } from '../solution-selection-dialog/rcs-dialog/rcs-dialog.component';
@@ -56,7 +55,6 @@ export class MaterialRegisterListDialogComponent implements OnInit {
     registers: MaterialRegister[] = [];
     isDownloading: { [key: number]: boolean } = {};
 
-    // Keep track of secondary dialog ref
     dialogRef: DynamicDialogRef | undefined | null;
 
     ngOnInit() {
@@ -96,7 +94,7 @@ export class MaterialRegisterListDialogComponent implements OnInit {
         const solution = selection.solution;
 
         switch (solution) {
-            // Mobile
+
             case 'SMS': component = SmsDialogComponent; header = 'SMS'; break;
             case 'RCS': component = RcsDialogComponent; header = 'RCS'; break;
             case 'SAT_PUSH': component = SatPushDialogComponent; header = 'SAT Push'; break;
@@ -107,7 +105,6 @@ export class MaterialRegisterListDialogComponent implements OnInit {
             case 'EMAIL_MARKETING': component = EmailMarketingDialogComponent; header = 'Email Marketing'; break;
             case 'DATA_REWARDS': component = DataRewardsDialogComponent; header = 'Data Rewards'; break;
 
-            // Programmatic
             case 'PMAX_AD': component = PmaxDialogComponent; header = 'PMAX'; break;
             case 'NATIVE_ADS': component = NativeAdsDialogComponent; header = 'Native Ads'; break;
             case 'FACEBOOK_INSTAGRAM': component = MetaAdsDialogComponent; header = 'Facebook & Instagram'; break;
@@ -117,10 +114,8 @@ export class MaterialRegisterListDialogComponent implements OnInit {
             case 'UNSKIPPABLE_IN_STREAM':
                 component = YoutubeDialogComponent; header = 'YouTube'; break;
 
-            // Content Red+
             case 'CONTENT_PUBLIRREPORTAJE': component = ContentRedplusDialogComponent; header = 'Contenido Red+'; break;
 
-            // Generic / Others
             default:
                 component = GenericUploadDialogComponent;
                 header = `Carga de Material: ${solution}`;
@@ -173,7 +168,7 @@ export class MaterialRegisterListDialogComponent implements OnInit {
                             } else {
                                 this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Registro agregado' });
                             }
-                            this.loadRegisters(); // Refresh the list
+                            this.loadRegisters();
                         },
                         error: (err) => {
                             console.error('Error adding material register:', err);
@@ -209,7 +204,7 @@ export class MaterialRegisterListDialogComponent implements OnInit {
             const downloadPromises = blobs.map(async (blobName) => {
                 const blobData = await this.azureService.downloadBlob(blobName, 'private');
                 if (blobData) {
-                    // Extract just the file name from the full blob path
+
                     const fileName = blobName.split('/').pop() || 'archivo_desconocido';
                     zip.file(fileName, blobData);
                 }

@@ -507,7 +507,7 @@ export class ProductionDialogComponent implements OnInit {
   }
 
   enableIncompleteSteps(data: ProductionRequest) {
-    // Enable form groups to check validity based on current values
+
     const customerGroup = this.form.get('customerData');
     customerGroup?.enable();
     if (customerGroup?.valid && data.customerData && Object.keys(data.customerData).length > 0) {
@@ -565,10 +565,7 @@ export class ProductionDialogComponent implements OnInit {
           if (!prodDetailsValid) prodInfo?.get('productionDetails')?.markAsDirty();
         }
       } else {
-        // If some steps are enabled (incomplete), we just need to make sure the enabled parts are valid.
-        // If the whole form is disabled, it will be valid.
-        // We can just use this.form.valid, but if we want to only check enabled controls:
-        // Angular forms consider a form group valid if all its enabled controls are valid.
+
         isValid = this.form.valid;
       }
     } else {

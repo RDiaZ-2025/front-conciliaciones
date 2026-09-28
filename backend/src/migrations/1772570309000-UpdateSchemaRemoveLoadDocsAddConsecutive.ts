@@ -3,13 +3,12 @@ import { MigrationInterface, QueryRunner, TableColumn } from "typeorm";
 export class UpdateSchemaRemoveLoadDocsAddConsecutive1772570309000 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        // 1. Drop the LoadDocumentsOcByUser table
+
         const table = await queryRunner.getTable("LoadDocumentsOcByUser");
         if (table) {
             await queryRunner.dropTable("LoadDocumentsOcByUser", true);
         }
 
-        // 2. Add Consecutive column to ProductionRequests table
         const productionRequestsTable = await queryRunner.getTable("ProductionRequests");
         if (productionRequestsTable) {
             const consecutiveColumn = productionRequestsTable.findColumnByName("Consecutive");
@@ -18,14 +17,14 @@ export class UpdateSchemaRemoveLoadDocsAddConsecutive1772570309000 implements Mi
                     name: "Consecutive",
                     type: "int",
                     isNullable: true,
-                    isGenerated: false // Not auto-increment
+                    isGenerated: false
                 }));
             }
         }
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        // 1. Remove Consecutive column
+
         const productionRequestsTable = await queryRunner.getTable("ProductionRequests");
         if (productionRequestsTable) {
             const consecutiveColumn = productionRequestsTable.findColumnByName("Consecutive");
@@ -34,7 +33,6 @@ export class UpdateSchemaRemoveLoadDocsAddConsecutive1772570309000 implements Mi
             }
         }
 
-        // 2. Recreate LoadDocumentsOcByUser table (Simplified recreation for rollback)
         await queryRunner.query(`
             CREATE TABLE "LoadDocumentsOcByUser" (
                 "Id" int NOT NULL IDENTITY(1,1),
@@ -46,11 +44,10 @@ export class UpdateSchemaRemoveLoadDocsAddConsecutive1772570309000 implements Mi
                 CONSTRAINT "PK_LoadDocumentsOcByUser" PRIMARY KEY ("Id")
             )
         `);
-        
-        // Add FK
+
         await queryRunner.query(`
-            ALTER TABLE "LoadDocumentsOcByUser" 
-            ADD CONSTRAINT "FK_LoadDocumentsOcByUser_User" 
+            ALTER TABLE "LoadDocumentsOcByUser"
+            ADD CONSTRAINT "FK_LoadDocumentsOcByUser_User"
             FOREIGN KEY ("IdUser") REFERENCES "Users" ("Id")
         `);
     }

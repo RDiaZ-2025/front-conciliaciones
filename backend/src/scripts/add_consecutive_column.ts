@@ -8,11 +8,10 @@ async function migrate() {
     try {
         await AppDataSource.initialize();
         const queryRunner = AppDataSource.createQueryRunner();
-        
-        // Check if column exists
+
         const table = await queryRunner.getTable("DynamicForms");
         const hasCol = table?.findColumnByName("RequireConsecutive");
-        
+
         if (!hasCol) {
             console.log("Adding column 'RequireConsecutive' to 'DynamicForms'...");
             await queryRunner.query('ALTER TABLE "DynamicForms" ADD "RequireConsecutive" bit NOT NULL DEFAULT 1');
@@ -20,7 +19,7 @@ async function migrate() {
         } else {
             console.log("Column 'RequireConsecutive' already exists.");
         }
-        
+
         await AppDataSource.destroy();
     } catch (e) {
         console.error(e);

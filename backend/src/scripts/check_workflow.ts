@@ -11,7 +11,7 @@ import { User } from '../models/User';
 async function run() {
     try {
         await AppDataSource.initialize();
-        
+
         console.log("=== WORKFLOW STAGES ===");
         const stages = await AppDataSource.getRepository(DynamicWorkflowStage).find({
             relations: ['form', 'formToFill', 'assigneeUser', 'assigneeTeam'],

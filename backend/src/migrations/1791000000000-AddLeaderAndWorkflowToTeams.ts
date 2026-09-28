@@ -5,7 +5,7 @@ export class AddLeaderAndWorkflowToTeams1791000000000 implements MigrationInterf
     public async up(queryRunner: QueryRunner): Promise<void> {
         const teamsTable = await queryRunner.getTable("Teams");
         if (teamsTable) {
-            // 1. Add LeaderId column if it doesn't exist
+
             if (!teamsTable.findColumnByName("LeaderId")) {
                 await queryRunner.addColumn("Teams", new TableColumn({
                     name: "LeaderId",
@@ -21,7 +21,6 @@ export class AddLeaderAndWorkflowToTeams1791000000000 implements MigrationInterf
                 }));
             }
 
-            // 2. Add DefaultWorkflowId column if it doesn't exist
             if (!teamsTable.findColumnByName("DefaultWorkflowId")) {
                 await queryRunner.addColumn("Teams", new TableColumn({
                     name: "DefaultWorkflowId",

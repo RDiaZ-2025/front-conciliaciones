@@ -14,6 +14,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TagModule } from 'primeng/tag';
 import { BadgeModule } from 'primeng/badge';
 import { TooltipModule } from 'primeng/tooltip';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { PageHeaderComponent } from '../../components/page-header/page-header.component';
@@ -22,6 +23,7 @@ import { ProductionService } from '../../services/production.service';
 import { UserService, User } from '../../services/user.service';
 import { TeamService } from '../../services/team.service';
 import { AuthService } from '../../services/auth.service';
+import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
 interface FormFieldItem {
@@ -33,6 +35,7 @@ interface FormFieldItem {
   placeholder: string;
   isRequired: boolean;
   isReadOnly: boolean;
+  showInCard: boolean;
   isActive: boolean;
   defaultValueExpression: string;
   displayOrder: number;
@@ -48,14 +51,24 @@ interface MultiFormOptionConfig {
   targetFormIdToFill: number | null;
 }
 
+interface NextStageAssigneeOptionConfig {
+  id?: string;
+  type: 'specific_user' | 'team_random' | 'subteam_random' | 'team_leader' | 'team_workload' | 'requester' | 'requester_boss';
+  userId?: number | null;
+  teamId?: number | null;
+  subteamId?: number | null;
+  label?: string;
+}
+
 interface WorkflowStageItem {
   id?: number;
   name: string;
   description: string;
   stepOrder: number;
-  assigneeType: 'specific_user' | 'requester' | 'requester_boss' | 'team' | 'team_random' | 'team_workload' | 'team_leader' | 'subflow' | 'multiple_users' | 'previous_stage_actioner' | 'previous_stage_team_random';
+  assigneeType: 'specific_user' | 'requester' | 'requester_boss' | 'team' | 'team_random' | 'team_workload' | 'team_leader' | 'subflow' | 'multiple_users' | 'previous_stage_actioner' | 'previous_stage_team_random' | 'subteam_random' | 'chosen_by_previous_stage';
   assigneeUserId: number | null;
   assigneeTeamId: number | null;
+  assigneeSubteamId?: number | null;
   formIdToFill: number | null;
   rejectionTargetType: 'previous_sender' | 'specific_user' | 'team_random';
   rejectionTargetUserId: number | null;
@@ -67,6 +80,8 @@ interface WorkflowStageItem {
   customForms?: { [userId: number]: number | null };
   multiFormsConfig?: MultiFormOptionConfig[];
   maxSelectedForms?: number | null;
+  allowChooseNextStageAssignee?: boolean;
+  nextStageAssigneeOptions?: NextStageAssigneeOptionConfig[];
 }
 
 @Component({
@@ -89,6 +104,7 @@ interface WorkflowStageItem {
     TagModule,
     BadgeModule,
     TooltipModule,
+    ProgressSpinnerModule,
     PageHeaderComponent,
     LucideIconComponent
   ],
@@ -103,27 +119,25 @@ export class RequestsBetaAdminComponent implements OnInit {
   private authService = inject(AuthService);
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
+  private router = inject(Router);
 
   currentUser = computed(() => this.authService.currentUser());
 
-  // States
   activeTab = signal<string>('forms');
   forms = signal<any[]>([]);
   activeForms = computed(() => this.forms().filter(f => f.isActive !== false));
   entryForms = computed(() => this.activeForms().filter(f => f.isEntryForm));
   internalForms = computed(() => this.activeForms().filter(f => !f.isEntryForm));
-  
-  // Users & Teams
+
   users = signal<User[]>([]);
   teams = signal<any[]>([]);
 
-  // Dialog states for Form metadata
   showFormDialog = signal<boolean>(false);
   isNewForm = signal<boolean>(false);
   formMetadataText = '';
   initialFormsFields = signal<any[]>([]);
   conditionsList = signal<any[]>([]);
-  
+
   operatorOptions = [
     { label: 'Contiene', value: 'contains' },
     { label: 'Igual (=)', value: 'eq' },
@@ -156,15 +170,19 @@ export class RequestsBetaAdminComponent implements OnInit {
   ];
 
   getTeamWorkflow(teamId: number): number | null {
-    return this.formTeamWorkflows()[teamId] ?? null;
+    const wfs = this.formTeamWorkflows();
+    const val = wfs[teamId] ?? (wfs as any)[String(teamId)] ?? null;
+    return val !== null && val !== undefined ? Number(val) : null;
   }
 
-  setTeamWorkflow(teamId: number, workflowId: number | null) {
+  setTeamWorkflow(teamId: number, workflowId: any) {
     const current = { ...this.formTeamWorkflows() };
-    if (workflowId) {
-      current[teamId] = workflowId;
+    const numId = Number(teamId);
+    if (workflowId !== null && workflowId !== undefined && (workflowId as any) !== '' && !isNaN(Number(workflowId))) {
+      current[numId] = Number(workflowId);
     } else {
-      delete current[teamId];
+      delete current[numId];
+      delete (current as any)[String(teamId)];
     }
     this.formTeamWorkflows.set(current);
   }
@@ -183,42 +201,63 @@ export class RequestsBetaAdminComponent implements OnInit {
     { label: 'Carpeta', value: 'folder' }
   ];
 
-  // Fields editor state
   showFieldsDialog = signal<boolean>(false);
+  loadingFields = signal<boolean>(false);
+  savingFields = signal<boolean>(false);
   editingFormForFields = signal<any>(null);
   formFields = signal<FormFieldItem[]>([]);
+  fieldFilterText = signal<string>('');
 
-  // File configuration editor state
+  filteredFormFields = computed(() => {
+    const query = this.fieldFilterText().toLowerCase().trim();
+    const fields = this.formFields();
+    if (!query) return fields;
+    return fields.filter(f => 
+      (f.label && f.label.toLowerCase().includes(query)) ||
+      (f.name && f.name.toLowerCase().includes(query)) ||
+      (f.type && f.type.toLowerCase().includes(query)) ||
+      (f.description && f.description.toLowerCase().includes(query))
+    );
+  });
+
   showFileConfigDialog = signal<boolean>(false);
   selectedFieldForFileConfig = signal<any>(null);
 
-  // Select option configuration editor state
   showSelectConfigDialog = signal<boolean>(false);
   selectedFieldForSelectConfig = signal<any>(null);
   tempSelectOptions = signal<{ value: string }[]>([]);
   showExpressionsHelpDialog = signal<boolean>(false);
 
-  // Dynamic list option configuration editor state
   showDynamicListConfigDialog = signal<boolean>(false);
   selectedFieldForDynamicListConfig = signal<any>(null);
   tempDynamicListOptions = signal<{ value: string }[]>([]);
   tempDynamicListSubFields = signal<{ name: string; label: string; type: string }[]>([]);
 
-  // Formula editor state
   showFormulaConfigDialog = signal<boolean>(false);
   selectedFieldForFormulaConfig = signal<any>(null);
   tempFormulaExpression = signal<string>('');
   tempFormulaRounding = signal<number>(2);
   showFormulaHelpDialog = signal<boolean>(false);
 
-  // Dependency/Conditional visibility configuration state
   showDependencyConfigDialog = signal<boolean>(false);
   selectedFieldForDependencyConfig = signal<any>(null);
   tempDependencyFieldName = signal<string>('');
+  tempDependencyOperator = signal<string>('eq');
   tempDependencyValue = signal<string>('');
   tempDependencySelectedOptions = signal<string[]>([]);
 
-  // Number formatting configuration state
+  dependencyOperatorOptions = [
+    { label: 'Igual a (=)', value: 'eq' },
+    { label: 'Diferente de (≠)', value: 'neq' },
+    { label: 'Mayor que (>)', value: 'gt' },
+    { label: 'Mayor o igual que (≥)', value: 'gte' },
+    { label: 'Menor que (<)', value: 'lt' },
+    { label: 'Menor o igual que (≤)', value: 'lte' },
+    { label: 'Contiene', value: 'contains' },
+    { label: 'Tiene algún valor (No vacío)', value: 'is_not_empty' },
+    { label: 'Está vacío', value: 'is_empty' }
+  ];
+
   showNumberConfigDialog = signal<boolean>(false);
   selectedFieldForNumberConfig = signal<any | null>(null);
   tempNumberFormat = 'none';
@@ -230,7 +269,6 @@ export class RequestsBetaAdminComponent implements OnInit {
     { label: 'Separador de miles (Coma) - 123,456', value: 'thousands_comma' }
   ];
 
-  // Workflows state
   workflows = signal<any[]>([]);
   activeWorkflows = computed(() => this.workflows().filter(w => w.isActive !== false));
   selectedWorkflowId = signal<number | null>(null);
@@ -260,7 +298,6 @@ export class RequestsBetaAdminComponent implements OnInit {
 
   loadingForms = signal<boolean>(false);
 
-  // Field type options
   fieldTypeOptions = [
     { label: 'Texto Corto', value: 'text' },
     { label: 'Párrafo / Textarea', value: 'textarea' },
@@ -277,11 +314,12 @@ export class RequestsBetaAdminComponent implements OnInit {
     { label: 'Cliente (Autocompletar)', value: 'customer' }
   ];
 
-  // Assignee & Rejection Type options
   assigneeTypeOptions = [
+    { label: '⚡ Dinámico (Escogido en la etapa anterior)', value: 'chosen_by_previous_stage' },
     { label: 'Usuario Específico', value: 'specific_user' },
     { label: '👔 Líder de Equipo', value: 'team_leader' },
     { label: 'Equipo / Rol (Al Azar)', value: 'team_random' },
+    { label: '👥 Subequipo (Al Azar)', value: 'subteam_random' },
     { label: 'Equipo / Rol (Menor Carga)', value: 'team_workload' },
     { label: 'Equipo / Rol (Todos en Paralelo)', value: 'team' },
     { label: '🎲 Al Azar del Equipo del Aprobador Anterior', value: 'previous_stage_team_random' },
@@ -305,11 +343,35 @@ export class RequestsBetaAdminComponent implements OnInit {
     { label: 'Integrante al Azar del Equipo', value: 'team_random' }
   ];
 
+  nextStageAssigneeTypes = [
+    { label: '👤 Usuario Específico', value: 'specific_user' },
+    { label: '🎲 Al Azar de un Equipo', value: 'team_random' },
+    { label: '👔 Líder del Equipo', value: 'team_leader' },
+    { label: '⚖️ Menor Carga del Equipo', value: 'team_workload' },
+    { label: '👥 Al Azar de un Subequipo', value: 'subteam_random' },
+    { label: '👤 Creador de la Solicitud (Solicitante)', value: 'requester' },
+    { label: '👔 Jefe Directo del Solicitante', value: 'requester_boss' }
+  ];
+
   ngOnInit() {
+    if (!this.authService.isCommercialOrAdmin()) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Acceso Restringido',
+        detail: 'No tienes permisos para administrar formularios.'
+      });
+      this.router.navigate(['/requests-beta']);
+      return;
+    }
+
     this.loadForms();
     this.loadUsersAndTeams();
     this.loadInitialFormsFields();
     this.loadWorkflows();
+  }
+
+  goToProduction() {
+    this.router.navigate(['/requests-beta']);
   }
 
   loadForms() {
@@ -340,7 +402,7 @@ export class RequestsBetaAdminComponent implements OnInit {
       next: (forms: any[]) => {
         const formsList = Array.isArray(forms) ? forms : (forms ? [forms] : []);
         if (formsList.length > 0) {
-          const fieldsObservables = formsList.map(form => 
+          const fieldsObservables = formsList.map(form =>
             this.productionService.getDynamicFormFields(form.id)
           );
           forkJoin(fieldsObservables).subscribe({
@@ -409,14 +471,18 @@ export class RequestsBetaAdminComponent implements OnInit {
     this.isNewForm.set(false);
     this.selectedForm.set({ ...form });
     this.formMetadataText = form.metadata ? (typeof form.metadata === 'object' ? JSON.stringify(form.metadata, null, 2) : form.metadata) : '';
-    
+
     let teamWfs: { [teamId: number]: number | null } = {};
     let closingCfg: any = null;
     if (form.metadata) {
       try {
         const meta = typeof form.metadata === 'object' ? form.metadata : JSON.parse(form.metadata);
         if (meta && meta.teamWorkflows && typeof meta.teamWorkflows === 'object') {
-          teamWfs = { ...meta.teamWorkflows };
+          for (const [k, v] of Object.entries(meta.teamWorkflows)) {
+            if (v !== null && v !== undefined && v !== '') {
+              teamWfs[Number(k)] = Number(v);
+            }
+          }
         }
         if (meta && meta.closingConfig) {
           closingCfg = meta.closingConfig;
@@ -459,6 +525,20 @@ export class RequestsBetaAdminComponent implements OnInit {
         meta = {};
       }
     }
+
+    if (data.isInitialForm) {
+      const cleanWfs: { [teamId: number]: number } = {};
+      const currentWfs = this.formTeamWorkflows();
+      for (const [teamIdStr, wfId] of Object.entries(currentWfs)) {
+        if (wfId !== null && wfId !== undefined && (wfId as any) !== '' && !isNaN(Number(wfId))) {
+          cleanWfs[Number(teamIdStr)] = Number(wfId);
+        }
+      }
+      meta.teamWorkflows = cleanWfs;
+    } else {
+      delete meta.teamWorkflows;
+    }
+
     const requireClosing = this.formRequireClosingStep();
     meta.closingConfig = {
       requireClosingStep: requireClosing,
@@ -540,14 +620,16 @@ export class RequestsBetaAdminComponent implements OnInit {
     });
   }
 
-  // --- Field Configurator ---
   openFieldsConfigurator(form: any) {
     this.editingFormForFields.set(form);
     this.formFields.set([]);
+    this.fieldFilterText.set('');
+    this.loadingFields.set(true);
     this.showFieldsDialog.set(true);
 
     this.productionService.getDynamicFormFields(form.id, true).subscribe({
       next: (data) => {
+        this.loadingFields.set(false);
         this.formFields.set(data.map(f => {
           let meta = f.metadata ? (typeof f.metadata === 'string' ? JSON.parse(f.metadata) : f.metadata) : {};
           if (meta.options && Array.isArray(meta.options)) {
@@ -557,21 +639,33 @@ export class RequestsBetaAdminComponent implements OnInit {
               .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
           }
           if (meta.dependency) {
-            if (Array.isArray(meta.dependency.value)) {
-              meta.dependency.value = meta.dependency.value
-                .map((v: any) => typeof v === 'object' && v !== null ? (v.value ?? v.label ?? '') : String(v ?? ''))
-                .map((s: string) => s.trim())
-                .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
-              if (meta.dependency.value.length === 1) meta.dependency.value = meta.dependency.value[0];
-              else if (meta.dependency.value.length === 0) meta.dependency.value = '';
-            } else if (typeof meta.dependency.value === 'string') {
-              const clean = meta.dependency.value
-                .split(',')
-                .map((s: string) => s.trim())
-                .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
-              meta.dependency.value = clean.length > 1 ? clean : (clean[0] || '');
-            } else if (meta.dependency.value === null || meta.dependency.value === undefined) {
+            const op = meta.dependency.operator || 'eq';
+            meta.dependency.operator = op;
+            if (op === 'is_empty' || op === 'is_not_empty') {
               meta.dependency.value = '';
+            } else if (['gt', 'gte', 'lt', 'lte'].includes(op)) {
+              if (typeof meta.dependency.value === 'string') {
+                meta.dependency.value = meta.dependency.value.trim();
+              } else if (meta.dependency.value === null || meta.dependency.value === undefined) {
+                meta.dependency.value = '';
+              }
+            } else {
+              if (Array.isArray(meta.dependency.value)) {
+                meta.dependency.value = meta.dependency.value
+                  .map((v: any) => typeof v === 'object' && v !== null ? (v.value ?? v.label ?? '') : String(v ?? ''))
+                  .map((s: string) => s.trim())
+                  .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+                if (meta.dependency.value.length === 1) meta.dependency.value = meta.dependency.value[0];
+                else if (meta.dependency.value.length === 0) meta.dependency.value = '';
+              } else if (typeof meta.dependency.value === 'string') {
+                const clean = meta.dependency.value
+                  .split(',')
+                  .map((s: string) => s.trim())
+                  .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+                meta.dependency.value = clean.length > 1 ? clean : (clean[0] || '');
+              } else if (meta.dependency.value === null || meta.dependency.value === undefined) {
+                meta.dependency.value = '';
+              }
             }
           }
           return {
@@ -583,6 +677,7 @@ export class RequestsBetaAdminComponent implements OnInit {
             placeholder: f.placeholder || '',
             isRequired: !!f.isRequired,
             isReadOnly: !!f.isReadOnly,
+            showInCard: !!(meta?.showInCard || (f as any).showInCard),
             isActive: f.isActive !== false,
             defaultValueExpression: f.defaultValueExpression || '',
             displayOrder: f.displayOrder,
@@ -590,11 +685,15 @@ export class RequestsBetaAdminComponent implements OnInit {
           };
         }));
       },
-      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los campos del formulario.' })
+      error: () => {
+        this.loadingFields.set(false);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los campos del formulario.' });
+      }
     });
   }
 
   addField() {
+    this.fieldFilterText.set('');
     const currentFields = this.formFields();
     this.formFields.set([
       ...currentFields,
@@ -606,6 +705,7 @@ export class RequestsBetaAdminComponent implements OnInit {
         placeholder: '',
         isRequired: false,
         isReadOnly: false,
+        showInCard: false,
         isActive: true,
         defaultValueExpression: '',
         displayOrder: currentFields.length + 1,
@@ -713,7 +813,7 @@ export class RequestsBetaAdminComponent implements OnInit {
       const opts = this.tempDynamicListOptions()
         .map(opt => opt.value.trim())
         .filter(val => val.length > 0);
-      
+
       const subFields = this.tempDynamicListSubFields()
         .map(sf => ({
           name: sf.name.trim() || `col_${Date.now()}`,
@@ -744,7 +844,7 @@ export class RequestsBetaAdminComponent implements OnInit {
   getAvailableFormulaFields(): any[] {
     const current = this.selectedFieldForFormulaConfig();
     if (!current) return [];
-    // Return all active fields in the form that are number or decimal fields and are not the current field itself
+
     return this.formFields().filter(f => f.name !== current.name && f.isActive && (f.type === 'number' || f.type === 'decimal'));
   }
 
@@ -759,7 +859,7 @@ export class RequestsBetaAdminComponent implements OnInit {
       if (!field.metadata) field.metadata = {};
       field.metadata.formula = this.tempFormulaExpression().trim();
       field.metadata.formulaRounding = this.tempFormulaRounding();
-      // Ensure the field is read-only since it is a formula calculated field
+
       field.isReadOnly = true;
     }
     this.showFormulaConfigDialog.set(false);
@@ -771,28 +871,53 @@ export class RequestsBetaAdminComponent implements OnInit {
       try { field.metadata = JSON.parse(field.metadata); } catch(e){}
     }
     if (!field.metadata.dependency) {
-      field.metadata.dependency = { fieldName: '', value: '' };
+      field.metadata.dependency = { fieldName: '', operator: 'eq', value: '' };
     }
-    
+
     this.selectedFieldForDependencyConfig.set(field);
     this.tempDependencyFieldName.set(field.metadata.dependency.fieldName || '');
-    
-    const val = field.metadata.dependency.value;
-    let arrVal: string[] = [];
-    if (Array.isArray(val)) {
-      arrVal = val
-        .map((v: any) => typeof v === 'object' && v !== null ? (v.value ?? v.label ?? '') : String(v ?? ''))
-        .map((v: string) => v.trim())
-        .filter((v: string) => v && v !== 'null' && v !== '_null' && v !== 'undefined');
-    } else if (val !== undefined && val !== null && val !== '') {
-      arrVal = String(val)
-        .split(',')
-        .map(s => s.trim())
-        .filter(s => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+
+    let op = field.metadata.dependency.operator;
+    const rawVal = field.metadata.dependency.value;
+
+    if (!op) {
+      if (typeof rawVal === 'string') {
+        const trimmed = rawVal.trim();
+        if (trimmed.startsWith('>=')) op = 'gte';
+        else if (trimmed.startsWith('>')) op = 'gt';
+        else if (trimmed.startsWith('<=')) op = 'lte';
+        else if (trimmed.startsWith('<')) op = 'lt';
+        else if (trimmed.startsWith('!=')) op = 'neq';
+        else op = 'eq';
+      } else {
+        op = 'eq';
+      }
     }
-    this.tempDependencySelectedOptions.set(arrVal);
-    this.tempDependencyValue.set(arrVal.join(', '));
-    
+    this.tempDependencyOperator.set(op);
+
+    const isNumericOp = ['gt', 'gte', 'lt', 'lte'].includes(op);
+
+    if (isNumericOp) {
+      const cleanVal = (rawVal !== undefined && rawVal !== null) ? String(rawVal).replace(/^[><=!]+/, '').trim() : '';
+      this.tempDependencyValue.set(cleanVal);
+      this.tempDependencySelectedOptions.set([]);
+    } else {
+      let arrVal: string[] = [];
+      if (Array.isArray(rawVal)) {
+        arrVal = rawVal
+          .map((v: any) => typeof v === 'object' && v !== null ? (v.value ?? v.label ?? '') : String(v ?? ''))
+          .map((v: string) => v.trim())
+          .filter((v: string) => v && v !== 'null' && v !== '_null' && v !== 'undefined');
+      } else if (rawVal !== undefined && rawVal !== null && rawVal !== '') {
+        arrVal = String(rawVal)
+          .split(',')
+          .map(s => s.trim())
+          .filter(s => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+      }
+      this.tempDependencySelectedOptions.set(arrVal);
+      this.tempDependencyValue.set(arrVal.join(', '));
+    }
+
     this.showDependencyConfigDialog.set(true);
   }
 
@@ -807,12 +932,12 @@ export class RequestsBetaAdminComponent implements OnInit {
     if (!parentName) return [];
     const parentField = this.formFields().find(f => f.name === parentName);
     if (!parentField) return [];
-    
+
     let metadataObj = parentField.metadata;
     if (typeof metadataObj === 'string') {
       try { metadataObj = JSON.parse(metadataObj); } catch(e) {}
     }
-    
+
     if (metadataObj && Array.isArray(metadataObj.options)) {
       return metadataObj.options
         .map((opt: any) => typeof opt === 'object' && opt !== null ? (opt.value ?? opt.label ?? '') : String(opt ?? ''))
@@ -829,43 +954,52 @@ export class RequestsBetaAdminComponent implements OnInit {
       if (typeof field.metadata === 'string') {
         try { field.metadata = JSON.parse(field.metadata); } catch(e){}
       }
-      
+
       const parentName = this.tempDependencyFieldName();
       if (!parentName) {
         delete field.metadata.dependency;
       } else {
-        const parentField = this.formFields().find(f => f.name === parentName);
-        let hasOptions = false;
-        if (parentField) {
-          let meta = parentField.metadata;
-          if (typeof meta === 'string') {
-            try { meta = JSON.parse(meta); } catch(e){}
-          }
-          if (meta && Array.isArray(meta.options)) {
-            hasOptions = true;
-          }
-        }
-           
-        let val: any;
-        if (hasOptions) {
-          const selected = this.tempDependencySelectedOptions()
-            .map((s: string) => s.trim())
-            .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
-          val = selected.length === 1 ? selected[0] : (selected.length === 0 ? '' : selected);
+        const op = this.tempDependencyOperator() || 'eq';
+        let val: any = '';
+
+        if (op === 'is_empty' || op === 'is_not_empty') {
+          val = '';
+        } else if (['gt', 'gte', 'lt', 'lte'].includes(op)) {
+          val = this.tempDependencyValue().trim();
         } else {
-          const raw = this.tempDependencyValue().trim();
-          const cleanList = raw.split(',').map(s => s.trim()).filter(s => s && s !== 'null' && s !== '_null' && s !== 'undefined');
-          if (cleanList.length === 1) {
-            val = cleanList[0];
-          } else if (cleanList.length === 0) {
-            val = '';
+          const parentField = this.formFields().find(f => f.name === parentName);
+          let hasOptions = false;
+          if (parentField) {
+            let meta = parentField.metadata;
+            if (typeof meta === 'string') {
+              try { meta = JSON.parse(meta); } catch(e){}
+            }
+            if (meta && Array.isArray(meta.options)) {
+              hasOptions = true;
+            }
+          }
+
+          if (hasOptions && ['eq', 'neq', 'contains'].includes(op)) {
+            const selected = this.tempDependencySelectedOptions()
+              .map((s: string) => s.trim())
+              .filter((s: string) => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+            val = selected.length === 1 ? selected[0] : (selected.length === 0 ? '' : selected);
           } else {
-            val = cleanList;
+            const raw = this.tempDependencyValue().trim();
+            const cleanList = raw.split(',').map(s => s.trim()).filter(s => s && s !== 'null' && s !== '_null' && s !== 'undefined');
+            if (cleanList.length === 1) {
+              val = cleanList[0];
+            } else if (cleanList.length === 0) {
+              val = '';
+            } else {
+              val = cleanList;
+            }
           }
         }
-        
+
         field.metadata.dependency = {
           fieldName: parentName,
+          operator: op,
           value: val
         };
       }
@@ -931,8 +1065,11 @@ export class RequestsBetaAdminComponent implements OnInit {
     });
   }
 
-  confirmPhysicalDeleteField(index: number) {
-    const field = this.formFields()[index];
+  confirmPhysicalDeleteField(fieldOrIndex: any) {
+    const fields = this.formFields();
+    const index = typeof fieldOrIndex === 'number' ? fieldOrIndex : fields.indexOf(fieldOrIndex);
+    if (index < 0) return;
+    const field = fields[index];
     this.confirmationService.confirm({
       message: `¡CUIDADO! Esta acción eliminará FÍSICAMENTE el campo "${field.label}" de la base de datos y BORRARÁ permanentemente todos los datos históricos llenados para este campo en solicitudes anteriores de forma irreversible. ¿Deseas continuar?`,
       header: 'Confirmar eliminación definitiva',
@@ -947,34 +1084,43 @@ export class RequestsBetaAdminComponent implements OnInit {
   removeField(index: number) {
     const currentFields = [...this.formFields()];
     currentFields.splice(index, 1);
-    // Re-adjust display orders
+
     currentFields.forEach((f, i) => f.displayOrder = i + 1);
     this.formFields.set(currentFields);
   }
 
-  moveFieldUp(index: number) {
-    if (index <= 0) return;
+  isFirstField(field: FormFieldItem): boolean {
+    return this.formFields().indexOf(field) === 0;
+  }
+
+  isLastField(field: FormFieldItem): boolean {
+    const fields = this.formFields();
+    return fields.indexOf(field) === fields.length - 1;
+  }
+
+  moveFieldUp(fieldOrIndex: any) {
     const fields = [...this.formFields()];
+    const index = typeof fieldOrIndex === 'number' ? fieldOrIndex : fields.indexOf(fieldOrIndex);
+    if (index <= 0) return;
     const temp = fields[index];
     fields[index] = fields[index - 1];
     fields[index - 1] = temp;
-    
-    // Update displayOrder values based on their new indices
+
     fields.forEach((f, idx) => {
       f.displayOrder = idx + 1;
     });
-    
+
     this.formFields.set(fields);
   }
 
-  moveFieldDown(index: number) {
+  moveFieldDown(fieldOrIndex: any) {
     const fields = [...this.formFields()];
-    if (index >= fields.length - 1) return;
+    const index = typeof fieldOrIndex === 'number' ? fieldOrIndex : fields.indexOf(fieldOrIndex);
+    if (index < 0 || index >= fields.length - 1) return;
     const temp = fields[index];
     fields[index] = fields[index + 1];
     fields[index + 1] = temp;
 
-    // Update displayOrder values based on their new indices
     fields.forEach((f, idx) => {
       f.displayOrder = idx + 1;
     });
@@ -986,27 +1132,79 @@ export class RequestsBetaAdminComponent implements OnInit {
     const form = this.editingFormForFields();
     const fields = this.formFields();
 
-    // Basic check
+    // 1. Validar que todos los campos tengan una etiqueta visible válida
     for (const f of fields) {
-      if (!f.label.trim()) {
+      if (!f.label || !f.label.trim()) {
         this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'Todos los campos deben tener una etiqueta válida.' });
         return;
       }
-      if (!f.name.trim()) {
-        f.name = f.label.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    }
+
+    // Helper para normalizar y generar un slug técnico limpio
+    const generateSlug = (label: string): string => {
+      const normalized = (label || '')
+        .toLowerCase()
+        .trim()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Quitar tildes / diacríticos
+        .replace(/[^a-z0-9]+/g, '_')     // Reemplazar caracteres no alfanuméricos por guiones bajos
+        .replace(/^_+|_+$/g, '');       // Quitar guiones bajos al inicio o al final
+      return normalized || 'campo';
+    };
+
+    // 2. Registrar nombres técnicos de campos existentes para no colisionar ni alterar campos históricos
+    const usedNames = new Set<string>();
+    for (const f of fields) {
+      if (f.id && f.name && f.name.trim() && !f.name.startsWith('campo_')) {
+        usedNames.add(f.name.trim());
       }
     }
 
+    // 3. Procesar campos: asignar o preservar name y actualizar dependencias si cambió el identificador temporal
+    for (const f of fields) {
+      if (!f.metadata) f.metadata = {};
+      f.metadata.showInCard = !!f.showInCard;
+
+      const hasEstablishedName = f.id && f.name && f.name.trim() && !f.name.startsWith('campo_');
+      if (hasEstablishedName) {
+        f.name = f.name.trim();
+      } else {
+        const oldName = f.name;
+        const baseSlug = generateSlug(f.label);
+        let candidate = baseSlug;
+        let counter = 1;
+        while (usedNames.has(candidate)) {
+          counter++;
+          candidate = `${baseSlug}_${counter}`;
+        }
+        usedNames.add(candidate);
+        f.name = candidate;
+
+        // Si el campo tenía un identificador temporal previo y otras dependencias apuntaban a él, actualizarlas
+        if (oldName && oldName !== candidate) {
+          for (const other of fields) {
+            if (other.metadata?.dependency?.fieldName === oldName) {
+              other.metadata.dependency.fieldName = candidate;
+            }
+          }
+        }
+      }
+    }
+
+    this.savingFields.set(true);
     this.productionService.adminSaveFields(form.id, fields).subscribe({
       next: () => {
+        this.savingFields.set(false);
         this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Campos guardados y actualizados exitosamente.' });
         this.showFieldsDialog.set(false);
       },
-      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron guardar los campos.' })
+      error: () => {
+        this.savingFields.set(false);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron guardar los campos.' });
+      }
     });
   }
 
-  // --- Workflow Configurator (Independent Workflows) ---
   loadWorkflows() {
     this.productionService.adminGetWorkflows().subscribe({
       next: (data) => {
@@ -1114,15 +1312,15 @@ export class RequestsBetaAdminComponent implements OnInit {
     this.loadingStages.set(true);
     this.productionService.adminGetWorkflowStages(workflowId).subscribe({
       next: (data) => {
-        this.workflowStages.set(data.map(s => {
+        const loadedStages: WorkflowStageItem[] = data.map(s => {
           let selectedUserIds: number[] = [];
           let customForms: Record<number, number | null> = {};
           let multiFormsConfig: MultiFormOptionConfig[] = [];
           let maxSelectedForms: number | null = null;
           if (s.assigneeUserIds) {
             try {
-              const parsed = typeof s.assigneeUserIds === 'string' 
-                ? JSON.parse(s.assigneeUserIds) 
+              const parsed = typeof s.assigneeUserIds === 'string'
+                ? JSON.parse(s.assigneeUserIds)
                 : s.assigneeUserIds;
               if (Array.isArray(parsed)) {
                 if (parsed.length > 0 && (parsed[0].sourceFormId !== undefined || parsed[0].targetFormIdToFill !== undefined || parsed[0].targetSubflowFormId !== undefined || parsed[0].targetSubflowWorkflowId !== undefined)) {
@@ -1174,6 +1372,29 @@ export class RequestsBetaAdminComponent implements OnInit {
               }
             } catch(e) {}
           }
+          let assigneeTeamId = s.assigneeTeamId;
+          if (!assigneeTeamId && s.assigneeSubteamId) {
+            for (const team of this.teams()) {
+              if (team.subteams && team.subteams.some((st: any) => st.id === s.assigneeSubteamId)) {
+                assigneeTeamId = team.id;
+                break;
+              }
+            }
+          }
+          let nextStageAssigneeOptions: NextStageAssigneeOptionConfig[] = [];
+          if (s.nextStageAssigneeOptions) {
+            try {
+              nextStageAssigneeOptions = typeof s.nextStageAssigneeOptions === 'string'
+                ? JSON.parse(s.nextStageAssigneeOptions)
+                : s.nextStageAssigneeOptions;
+              if (!Array.isArray(nextStageAssigneeOptions)) {
+                nextStageAssigneeOptions = [];
+              }
+            } catch(e) {
+              nextStageAssigneeOptions = [];
+            }
+          }
+
           return {
             id: s.id,
             name: s.name,
@@ -1181,7 +1402,8 @@ export class RequestsBetaAdminComponent implements OnInit {
             stepOrder: s.stepOrder,
             assigneeType: s.assigneeType,
             assigneeUserId: s.assigneeUserId,
-            assigneeTeamId: s.assigneeTeamId,
+            assigneeTeamId: assigneeTeamId,
+            assigneeSubteamId: s.assigneeSubteamId || null,
             formIdToFill: s.formIdToFill,
             rejectionTargetType: s.rejectionTargetType || 'previous_sender',
             rejectionTargetUserId: s.rejectionTargetUserId,
@@ -1191,9 +1413,13 @@ export class RequestsBetaAdminComponent implements OnInit {
             selectedUserIds,
             customForms,
             multiFormsConfig,
-            maxSelectedForms
+            maxSelectedForms,
+            allowChooseNextStageAssignee: !!s.allowChooseNextStageAssignee,
+            nextStageAssigneeOptions
           };
-        }));
+        });
+        this.refreshDynamicAssignees(loadedStages);
+        this.workflowStages.set(loadedStages);
         this.loadingStages.set(false);
       },
       error: () => {
@@ -1208,28 +1434,153 @@ export class RequestsBetaAdminComponent implements OnInit {
     return u ? u.name : `Usuario #${userId}`;
   }
 
+  getTeamName(teamId: number | null | undefined): string {
+    if (!teamId) return '';
+    const team = this.teams().find(t => t.id === teamId);
+    return team ? team.name : `Equipo #${teamId}`;
+  }
+
+  getSubteamName(teamId: number | null | undefined, subteamId: number | null | undefined): string {
+    if (!subteamId) return '';
+    const subteams = this.getSubteamsForTeam(teamId);
+    const sub = subteams.find((st: any) => st.id === subteamId);
+    return sub ? sub.name : `Subequipo #${subteamId}`;
+  }
+
+  getNextStageOptionPlaceholder(opt: NextStageAssigneeOptionConfig): string {
+    if (opt.type === 'specific_user' && opt.userId) {
+      return this.getUserName(opt.userId);
+    }
+    if (opt.type === 'team_random' && opt.teamId) {
+      return `Al azar de ${this.getTeamName(opt.teamId)}`;
+    }
+    if (opt.type === 'team_leader' && opt.teamId) {
+      return `Líder de ${this.getTeamName(opt.teamId)}`;
+    }
+    if (opt.type === 'team_workload' && opt.teamId) {
+      return `Menor carga de ${this.getTeamName(opt.teamId)}`;
+    }
+    if (opt.type === 'subteam_random' && opt.subteamId) {
+      return `Al azar de ${this.getSubteamName(opt.teamId, opt.subteamId)}`;
+    }
+    if (opt.type === 'requester') {
+      return 'Creador de la Solicitud';
+    }
+    if (opt.type === 'requester_boss') {
+      return 'Jefe del Solicitante';
+    }
+    return 'Ej: Asignar a Analista Senior';
+  }
+
+  addNextStageAssigneeOption(stage: WorkflowStageItem) {
+    if (!stage.nextStageAssigneeOptions) {
+      stage.nextStageAssigneeOptions = [];
+    }
+    const id = 'opt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+    stage.nextStageAssigneeOptions.push({
+      id,
+      type: 'specific_user',
+      userId: null,
+      teamId: null,
+      subteamId: null,
+      label: ''
+    });
+  }
+
+  removeNextStageAssigneeOption(stage: WorkflowStageItem, index: number) {
+    if (stage.nextStageAssigneeOptions) {
+      stage.nextStageAssigneeOptions.splice(index, 1);
+    }
+  }
+
+  onNextStageOptionTypeChange(opt: NextStageAssigneeOptionConfig) {
+    opt.userId = null;
+    opt.teamId = null;
+    opt.subteamId = null;
+  }
+
+  onNextStageOptionTeamChange(opt: NextStageAssigneeOptionConfig) {
+    opt.subteamId = null;
+  }
+
+  getSubteamsForTeam(teamId: number | null | undefined): any[] {
+    if (!teamId) return [];
+    const team = this.teams().find(t => t.id === teamId);
+    return team && team.subteams ? team.subteams.filter((st: any) => st.isActive !== false) : [];
+  }
+
+  onStageTeamChange(stage: WorkflowStageItem) {
+    stage.assigneeSubteamId = null;
+  }
+
+  isStageAssigneeDynamic(index: number): boolean {
+    if (index <= 0) return false;
+    const stages = this.workflowStages();
+    const prevStage = stages[index - 1];
+    return !!(prevStage && prevStage.allowChooseNextStageAssignee);
+  }
+
+  getPrecedingStageName(index: number): string {
+    if (index <= 0) return '';
+    const stages = this.workflowStages();
+    const prevStage = stages[index - 1];
+    return prevStage ? (prevStage.name || `Etapa ${prevStage.stepOrder}`) : '';
+  }
+
+  onAllowChooseNextStageAssigneeChange(stage: WorkflowStageItem, index: number) {
+    const stages = [...this.workflowStages()];
+    if (stage.allowChooseNextStageAssignee) {
+      if (!stage.nextStageAssigneeOptions || stage.nextStageAssigneeOptions.length === 0) {
+        this.addNextStageAssigneeOption(stage);
+      }
+    }
+    this.refreshDynamicAssignees(stages);
+    this.workflowStages.set(stages);
+  }
+
+  refreshDynamicAssignees(stages: WorkflowStageItem[]) {
+    if (stages.length > 0) {
+      stages[stages.length - 1].allowChooseNextStageAssignee = false;
+    }
+    for (let idx = 0; idx < stages.length; idx++) {
+      const isDynamic = idx > 0 && !!stages[idx - 1]?.allowChooseNextStageAssignee;
+      if (isDynamic) {
+        stages[idx].assigneeType = 'chosen_by_previous_stage';
+        stages[idx].assigneeUserId = null;
+        stages[idx].assigneeTeamId = null;
+        stages[idx].assigneeSubteamId = null;
+        stages[idx].selectedUserIds = [];
+      } else if (stages[idx].assigneeType === 'chosen_by_previous_stage') {
+        stages[idx].assigneeType = 'specific_user';
+      }
+    }
+  }
+
   addStage() {
     const current = this.workflowStages();
-    this.workflowStages.set([
-      ...current,
-      {
-        name: `Etapa ${current.length + 1}`,
-        description: '',
-        stepOrder: current.length + 1,
-        assigneeType: 'specific_user',
-        assigneeUserId: null,
-        assigneeTeamId: null,
-        formIdToFill: null,
-        rejectionTargetType: 'previous_sender',
-        rejectionTargetUserId: null,
-        rejectionTargetTeamId: null,
-        requireCommentOnApprove: true,
-        excludeTeamLeader: false,
-        selectedUserIds: [],
-        customForms: {},
-        multiFormsConfig: []
-      }
-    ]);
+    const newStage: WorkflowStageItem = {
+      name: `Etapa ${current.length + 1}`,
+      description: '',
+      stepOrder: current.length + 1,
+      assigneeType: 'specific_user',
+      assigneeUserId: null,
+      assigneeTeamId: null,
+      assigneeSubteamId: null,
+      formIdToFill: null,
+      rejectionTargetType: 'previous_sender',
+      rejectionTargetUserId: null,
+      rejectionTargetTeamId: null,
+      requireCommentOnApprove: true,
+      excludeTeamLeader: false,
+      selectedUserIds: [],
+      customForms: {},
+      multiFormsConfig: [],
+      allowChooseNextStageAssignee: false,
+      nextStageAssigneeOptions: []
+    };
+    const updated = [...current, newStage];
+    this.refreshDynamicAssignees(updated);
+    this.workflowStages.set(updated);
   }
 
   addMultiFormOption(stage: WorkflowStageItem) {
@@ -1270,6 +1621,7 @@ export class RequestsBetaAdminComponent implements OnInit {
     const current = [...this.workflowStages()];
     current.splice(index, 1);
     current.forEach((s, i) => s.stepOrder = i + 1);
+    this.refreshDynamicAssignees(current);
     this.workflowStages.set(current);
   }
 
@@ -1279,8 +1631,9 @@ export class RequestsBetaAdminComponent implements OnInit {
     const temp = current[index];
     current[index] = current[index - 1];
     current[index - 1] = temp;
-    // Update orders
+
     current.forEach((s, i) => s.stepOrder = i + 1);
+    this.refreshDynamicAssignees(current);
     this.workflowStages.set(current);
   }
 
@@ -1290,8 +1643,9 @@ export class RequestsBetaAdminComponent implements OnInit {
     const temp = current[index];
     current[index] = current[index + 1];
     current[index + 1] = temp;
-    // Update orders
+
     current.forEach((s, i) => s.stepOrder = i + 1);
+    this.refreshDynamicAssignees(current);
     this.workflowStages.set(current);
   }
 
@@ -1300,50 +1654,65 @@ export class RequestsBetaAdminComponent implements OnInit {
     if (!workflowId) return;
 
     const stages = this.workflowStages();
+    this.refreshDynamicAssignees(stages);
 
-    // Basic check: verify assignees are set where needed
-    for (const s of stages) {
+    for (let idx = 0; idx < stages.length; idx++) {
+      const s = stages[idx];
+      const isDynamic = this.isStageAssigneeDynamic(idx);
+
       if (!s.name.trim()) {
         this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'Todas las etapas deben tener un nombre.' });
         return;
       }
-      if (s.assigneeType === 'specific_user' && !s.assigneeUserId) {
-        this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere un aprobador específico.` });
-        return;
-      }
-      if (s.assigneeType === 'multiple_users' && (!s.selectedUserIds || s.selectedUserIds.length === 0)) {
-        this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere seleccionar al menos un aprobador en Usuarios Múltiples.` });
-        return;
-      }
-      if ((s.assigneeType === 'team' || s.assigneeType === 'team_random' || s.assigneeType === 'team_workload' || s.assigneeType === 'team_leader') && !s.assigneeTeamId) {
-        this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere asociar un equipo aprobador.` });
-        return;
-      }
-      if (s.assigneeType === 'subflow' && !s.formIdToFill) {
-        this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere seleccionar el flujo de trabajo a invocar.` });
-        return;
+      if (!isDynamic) {
+        if (s.assigneeType === 'specific_user' && !s.assigneeUserId) {
+          this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere un aprobador específico.` });
+          return;
+        }
+        if (s.assigneeType === 'multiple_users' && (!s.selectedUserIds || s.selectedUserIds.length === 0)) {
+          this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere seleccionar al menos un aprobador en Usuarios Múltiples.` });
+          return;
+        }
+        if ((s.assigneeType === 'team' || s.assigneeType === 'team_random' || s.assigneeType === 'team_workload' || s.assigneeType === 'team_leader') && !s.assigneeTeamId) {
+          this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere asociar un equipo aprobador.` });
+          return;
+        }
+        if (s.assigneeType === 'subteam_random') {
+          if (!s.assigneeTeamId) {
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere asociar un equipo.` });
+            return;
+          }
+          if (!s.assigneeSubteamId) {
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere asociar un subequipo.` });
+            return;
+          }
+        }
+        if (s.assigneeType === 'subflow' && !s.formIdToFill) {
+          this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" requiere seleccionar el flujo de trabajo a invocar.` });
+          return;
+        }
       }
       if (s.formIdToFill === -1) {
         if (!s.multiFormsConfig || s.multiFormsConfig.length === 0) {
           this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" está configurada con múltiples formularios pero no tiene ninguna opción agregada.` });
           return;
         }
-        for (let idx = 0; idx < s.multiFormsConfig.length; idx++) {
-          const opt = s.multiFormsConfig[idx];
+        for (let optIdx = 0; optIdx < s.multiFormsConfig.length; optIdx++) {
+          const opt = s.multiFormsConfig[optIdx];
           if (!opt.sourceFormId) {
-            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${idx + 1} de formularios múltiples debe tener seleccionado el formulario inicial.` });
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${optIdx + 1} de formularios múltiples debe tener seleccionado el formulario inicial.` });
             return;
           }
           if (opt.targetType === 'subflow' && !opt.targetSubflowFormId) {
-            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${idx + 1} debe seleccionar el sub-flujo a disparar.` });
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${optIdx + 1} debe seleccionar el sub-flujo a disparar.` });
             return;
           }
           if (opt.targetType === 'user' && !opt.assignedUserId) {
-            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${idx + 1} debe seleccionar el usuario destinatario.` });
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${optIdx + 1} debe seleccionar el usuario destinatario.` });
             return;
           }
           if ((opt.targetType === 'team_random' || opt.targetType === 'team_leader') && !opt.assignedTeamId) {
-            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${idx + 1} debe seleccionar el equipo destinatario.` });
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${optIdx + 1} debe seleccionar el equipo destinatario.` });
             return;
           }
         }
@@ -1356,37 +1725,70 @@ export class RequestsBetaAdminComponent implements OnInit {
         this.messageService.add({ severity: 'error', summary: 'Validación', detail: `El rechazo de la etapa "${s.name}" requiere un equipo de retorno.` });
         return;
       }
+      if (s.allowChooseNextStageAssignee && idx < stages.length - 1) {
+        if (!s.nextStageAssigneeOptions || s.nextStageAssigneeOptions.length === 0) {
+          this.messageService.add({ severity: 'error', summary: 'Validación', detail: `La etapa "${s.name}" tiene habilitada la selección de destinatario pero no tiene opciones configuradas.` });
+          return;
+        }
+        for (let optIdx = 0; optIdx < s.nextStageAssigneeOptions.length; optIdx++) {
+          const opt = s.nextStageAssigneeOptions[optIdx];
+          if (opt.type === 'specific_user' && !opt.userId) {
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${optIdx + 1} de destinatario requiere un usuario específico.` });
+            return;
+          }
+          if ((opt.type === 'team_random' || opt.type === 'team_leader' || opt.type === 'team_workload') && !opt.teamId) {
+            this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${optIdx + 1} de destinatario requiere un equipo.` });
+            return;
+          }
+          if (opt.type === 'subteam_random') {
+            if (!opt.teamId) {
+              this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${optIdx + 1} de destinatario requiere un equipo.` });
+              return;
+            }
+            if (!opt.subteamId) {
+              this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${optIdx + 1} de destinatario requiere un subequipo.` });
+              return;
+            }
+          }
+        }
+      }
     }
 
-    // Convert selectedUserIds and customForms or multiFormsConfig to the expected assigneeUserIds JSON-serializable structure
-    const payload = stages.map(s => {
+    const payload = stages.map((s, idx) => {
+      const isDynamic = this.isStageAssigneeDynamic(idx);
+      const isLastStage = (idx === stages.length - 1);
       let assigneeUserIdsObj: any = null;
-      if (s.formIdToFill === -1) {
-        assigneeUserIdsObj = {
-          multiFormsConfig: s.multiFormsConfig || [],
-          maxSelectedForms: s.maxSelectedForms || null
-        };
-      } else if (s.assigneeType === 'multiple_users' && s.selectedUserIds) {
-        assigneeUserIdsObj = s.selectedUserIds.map((uid: number) => ({
-          userId: uid,
-          formId: s.customForms ? s.customForms[uid] || null : null
-        }));
+      if (!isDynamic) {
+        if (s.formIdToFill === -1) {
+          assigneeUserIdsObj = {
+            multiFormsConfig: s.multiFormsConfig || [],
+            maxSelectedForms: s.maxSelectedForms || null
+          };
+        } else if (s.assigneeType === 'multiple_users' && s.selectedUserIds) {
+          assigneeUserIdsObj = s.selectedUserIds.map((uid: number) => ({
+            userId: uid,
+            formId: s.customForms ? s.customForms[uid] || null : null
+          }));
+        }
       }
       return {
         id: s.id,
         name: s.name,
         description: s.description,
         stepOrder: s.stepOrder,
-        assigneeType: s.assigneeType,
-        assigneeUserId: s.assigneeUserId,
-        assigneeTeamId: s.assigneeTeamId,
+        assigneeType: isDynamic ? 'chosen_by_previous_stage' : s.assigneeType,
+        assigneeUserId: isDynamic ? null : s.assigneeUserId,
+        assigneeTeamId: isDynamic ? null : s.assigneeTeamId,
+        assigneeSubteamId: isDynamic ? null : (s.assigneeType === 'subteam_random' ? (s.assigneeSubteamId || null) : null),
         formIdToFill: s.formIdToFill,
         rejectionTargetType: s.rejectionTargetType,
         rejectionTargetUserId: s.rejectionTargetUserId,
         rejectionTargetTeamId: s.rejectionTargetTeamId,
         requireCommentOnApprove: !!s.requireCommentOnApprove,
-        excludeTeamLeader: !!s.excludeTeamLeader,
-        assigneeUserIds: assigneeUserIdsObj
+        excludeTeamLeader: isDynamic ? false : !!s.excludeTeamLeader,
+        assigneeUserIds: assigneeUserIdsObj,
+        allowChooseNextStageAssignee: !isLastStage && !!s.allowChooseNextStageAssignee,
+        nextStageAssigneeOptions: !isLastStage && s.allowChooseNextStageAssignee && s.nextStageAssigneeOptions ? JSON.stringify(s.nextStageAssigneeOptions) : null
       };
     });
 

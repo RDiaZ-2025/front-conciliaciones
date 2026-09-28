@@ -1,0 +1,123 @@
+<p-dialog 
+  [(visible)]="visible" 
+  [header]="subteam ? 'Editar Subequipo' : ('Nuevo Subequipo para ' + (team?.name || 'Equipo'))"
+  [modal]="true" 
+  [style]="{ width: '560px', maxWidth: '95vw' }" 
+  [draggable]="false" 
+  [resizable]="false"
+  (onHide)="cancel()">
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-column gap-3 pt-2">
+    
+    <!-- Nombre del Subequipo -->
+    <div class="flex flex-column gap-1">
+      <label for="subteam-name" class="font-bold text-sm text-900">
+        Nombre del Subequipo <span class="text-red-500">*</span>
+      </label>
+      <input 
+        pInputText 
+        id="subteam-name" 
+        formControlName="name" 
+        placeholder="Ej: Frontend, Facturación, Mesa de Ayuda..." 
+        class="w-full"
+        [class.ng-invalid]="form.get('name')?.invalid && form.get('name')?.touched" />
+      <small *ngIf="form.get('name')?.invalid && form.get('name')?.touched" class="text-red-500 text-xs">
+        El nombre del subequipo es obligatorio.
+      </small>
+    </div>
+
+    <!-- Descripción -->
+    <div class="flex flex-column gap-1">
+      <label for="subteam-desc" class="font-bold text-sm text-900">Descripción</label>
+      <textarea 
+        pTextarea 
+        id="subteam-desc" 
+        formControlName="description" 
+        rows="2" 
+        placeholder="Breve propósito o función de este subequipo..."
+        class="w-full"></textarea>
+    </div>
+
+    <!-- Líder del Subequipo (Opcional) -->
+    <div class="flex flex-column gap-1">
+      <label for="subteam-leader" class="font-bold text-sm text-900">Líder del Subequipo (Opcional)</label>
+      <p-select 
+        id="subteam-leader"
+        formControlName="leaderId" 
+        [options]="users()" 
+        optionLabel="name" 
+        optionValue="id"
+        [filter]="true" 
+        filterBy="name,email"
+        placeholder="Selecciona un líder para el subequipo..."
+        [showClear]="true"
+        appendTo="body"
+        styleClass="w-full">
+        <ng-template #selectedItem let-selected>
+          <div *ngIf="selected" class="flex align-items-center gap-2">
+            <lucide-icon name="user-check" class="text-primary text-xs"></lucide-icon>
+            <span class="font-medium text-sm">{{ selected.name }}</span>
+          </div>
+        </ng-template>
+        <ng-template #item let-user>
+          <div class="flex flex-column">
+            <span class="font-medium text-sm text-900">{{ user.name }}</span>
+            <span class="text-xs text-500">{{ user.email }}</span>
+          </div>
+        </ng-template>
+      </p-select>
+    </div>
+
+    <!-- Miembros del Subequipo (Multiselect Flexible) -->
+    <div class="flex flex-column gap-1">
+      <div class="flex align-items-center justify-content-between">
+        <label for="subteam-users" class="font-bold text-sm text-900">
+          Miembros del Subequipo
+        </label>
+        <span class="text-xs text-primary font-semibold">
+          {{ form.get('userIds')?.value?.length || 0 }} seleccionados
+        </span>
+      </div>
+      <p-multiSelect 
+        id="subteam-users"
+        formControlName="userIds" 
+        [options]="users()" 
+        optionLabel="name" 
+        optionValue="id"
+        [filter]="true" 
+        filterBy="name,email"
+        placeholder="Selecciona los miembros del subequipo..."
+        display="chip"
+        appendTo="body"
+        styleClass="w-full">
+        <ng-template #item let-user>
+          <div class="flex flex-column">
+            <span class="font-medium text-sm text-900">{{ user.name }}</span>
+            <span class="text-xs text-500">{{ user.email }}</span>
+          </div>
+        </ng-template>
+      </p-multiSelect>
+      <div class="flex align-items-center gap-1 mt-1 text-xs text-500">
+        <lucide-icon name="info" class="text-primary" style="width: 0.85rem; height: 0.85rem; flex-shrink: 0;"></lucide-icon>
+        <span>Los usuarios pueden asignarse a este subequipo independientemente de si pertenecen o no al equipo principal.</span>
+      </div>
+    </div>
+
+    <!-- Botones de Acción -->
+    <div class="flex justify-content-end gap-2 mt-3 pt-3 border-top-1 surface-border">
+      <p-button 
+        label="Cancelar" 
+        [text]="true" 
+        severity="secondary" 
+        (onClick)="cancel()" 
+        [disabled]="saving()"></p-button>
+      <p-button 
+        type="submit" 
+        [label]="subteam ? 'Actualizar Subequipo' : 'Crear Subequipo'" 
+        icon="pi pi-check" 
+        [loading]="saving()" 
+        [disabled]="form.invalid || saving()"></p-button>
+    </div>
+
+  </form>
+</p-dialog>

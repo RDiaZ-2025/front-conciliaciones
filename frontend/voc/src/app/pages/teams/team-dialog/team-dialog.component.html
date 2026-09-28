@@ -48,7 +48,7 @@
               <span>Condiciones para Habilitar Envío a este Equipo</span>
             </span>
             <span class="text-xs text-600 mt-1">
-              Configure qué respuestas del formulario inicial deben cumplirse para permitir enviar solicitudes a este equipo.
+              Configure qué respuestas del formulario inicial deben cumplirse para permitir enviar solicitudes a este equipo. Cada regla se evaluará únicamente cuando se diligencie el formulario inicial al que corresponde su campo.
             </span>
           </div>
           <p-button size="small" [outlined]="true" (onClick)="addCondition()">
@@ -88,6 +88,7 @@
                      pInputText
                      type="text"
                      [(ngModel)]="cond.value"
+                     (ngModelChange)="cond.selectedValues = []"
                      [ngModelOptions]="{standalone: true}"
                      placeholder="Escriba el valor esperado..."
                      class="w-full condition-input"

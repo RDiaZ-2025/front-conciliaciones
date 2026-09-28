@@ -3,6 +3,7 @@ import { DynamicForm } from './DynamicForm';
 import { DynamicWorkflow } from './DynamicWorkflow';
 import { User } from './User';
 import { Team } from './Team';
+import { Subteam } from './Subteam';
 
 @Entity('DynamicWorkflowStages')
 export class DynamicWorkflowStage {
@@ -28,13 +29,16 @@ export class DynamicWorkflowStage {
   stepOrder!: number;
 
   @Column({ name: 'AssigneeType', type: 'nvarchar', length: 50, nullable: false })
-  assigneeType!: string; // 'specific_user', 'team', 'team_random', 'team_workload', 'team_leader', 'subflow', 'requester_boss', 'requester', 'previous_stage_actioner', 'previous_stage_team_random', 'multiple_users'
+  assigneeType!: string;
 
   @Column({ name: 'AssigneeUserId', type: 'int', nullable: true })
   assigneeUserId!: number | null;
 
   @Column({ name: 'AssigneeTeamId', type: 'int', nullable: true })
   assigneeTeamId!: number | null;
+
+  @Column({ name: 'AssigneeSubteamId', type: 'int', nullable: true })
+  assigneeSubteamId!: number | null;
 
   @Column({ name: 'FormIdToFill', type: 'int', nullable: true })
   formIdToFill!: number | null;
@@ -57,6 +61,12 @@ export class DynamicWorkflowStage {
   @Column({ name: 'AssigneeUserIds', type: 'nvarchar', length: 'max', nullable: true })
   assigneeUserIds!: string | null;
 
+  @Column({ name: 'AllowChooseNextStageAssignee', type: 'bit', default: false, nullable: true })
+  allowChooseNextStageAssignee!: boolean;
+
+  @Column({ name: 'NextStageAssigneeOptions', type: 'nvarchar', length: 'max', nullable: true })
+  nextStageAssigneeOptions!: string | null;
+
   @ManyToOne(() => DynamicWorkflow, (workflow) => workflow.stages)
   @JoinColumn({ name: 'WorkflowId' })
   workflow!: DynamicWorkflow | null;
@@ -72,6 +82,10 @@ export class DynamicWorkflowStage {
   @ManyToOne(() => Team)
   @JoinColumn({ name: 'AssigneeTeamId' })
   assigneeTeam!: Team | null;
+
+  @ManyToOne(() => Subteam)
+  @JoinColumn({ name: 'AssigneeSubteamId' })
+  assigneeSubteam!: Subteam | null;
 
   @ManyToOne(() => DynamicForm)
   @JoinColumn({ name: 'FormIdToFill' })

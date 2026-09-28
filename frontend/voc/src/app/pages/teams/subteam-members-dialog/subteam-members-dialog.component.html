@@ -1,0 +1,223 @@
+<p-dialog 
+  [(visible)]="visible" 
+  [modal]="true" 
+  [style]="{ width: '820px', maxWidth: '96vw' }" 
+  [draggable]="false" 
+  [resizable]="false"
+  styleClass="subteam-members-dialog"
+  (onHide)="close()">
+
+  <!-- Header Personalizado -->
+  <ng-template pTemplate="header">
+    <div class="flex align-items-center justify-content-between w-full pr-3">
+      <div class="flex align-items-center gap-3">
+        <div class="flex align-items-center justify-content-center bg-indigo-50 text-indigo-700 border-round-xl p-2.5 border-1 border-indigo-200">
+          <lucide-icon name="users" style="width: 1.5rem; height: 1.5rem;"></lucide-icon>
+        </div>
+        <div class="flex flex-column gap-1">
+          <div class="flex align-items-center gap-2 flex-wrap">
+            <span class="text-xl font-bold text-900">
+              Integrantes de "{{ subteam?.name || 'Subequipo' }}"
+            </span>
+            <span *ngIf="team" class="inline-flex align-items-center gap-1.5 px-2 py-0.5 border-round text-xs font-semibold bg-blue-50 text-blue-700 border-1 border-blue-200">
+              <lucide-icon name="network" style="width: 0.8rem; height: 0.8rem;"></lucide-icon>
+              Equipo: {{ team.name }}
+            </span>
+          </div>
+          <span class="text-xs text-500">
+            {{ subteam?.description || 'Gestiona y visualiza qué usuarios forman parte de este subequipo.' }}
+          </span>
+        </div>
+      </div>
+      <div class="hidden sm:flex align-items-center gap-2">
+        <p-badge [value]="(members().length || 0).toString()" severity="info"></p-badge>
+        <span class="text-xs text-600 font-semibold">{{ members().length === 1 ? 'participante' : 'participantes' }}</span>
+      </div>
+    </div>
+  </ng-template>
+
+  <div class="flex flex-column gap-3 pt-2">
+
+    <!-- Tarjeta Superior: Agregar Nuevos Participantes -->
+    <div class="surface-ground p-3 border-round-xl border-1 surface-border flex flex-column gap-2">
+      <div class="flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="flex align-items-center gap-2">
+          <lucide-icon name="user-plus" class="text-primary" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+          <span class="font-bold text-sm text-800">Agregar Nuevos Participantes al Subequipo</span>
+        </div>
+        <span class="text-xs text-500">
+          {{ availableUsersToAdd().length }} usuarios activos disponibles
+        </span>
+      </div>
+
+      <div class="flex flex-column sm:flex-row gap-2 mt-1">
+        <div class="flex-1">
+          <p-multiSelect 
+            [(ngModel)]="selectedUserIdsToAdd" 
+            [options]="availableUsersToAdd()" 
+            optionLabel="name" 
+            optionValue="id"
+            [filter]="true" 
+            filterBy="name,email"
+            placeholder="Seleccionar usuarios para incorporar..."
+            display="chip"
+            appendTo="body"
+            styleClass="w-full text-sm"
+            [maxSelectedLabels]="3">
+            <ng-template let-user pTemplate="item">
+              <div class="flex flex-column gap-1">
+                <span class="font-semibold text-sm text-900">{{ user.name }}</span>
+                <span class="text-xs text-500">{{ getUserTeam(user) }} | {{ user.email }}</span>
+              </div>
+            </ng-template>
+          </p-multiSelect>
+        </div>
+        <p-button 
+          [loading]="saving()" 
+          [disabled]="saving() || selectedUserIdsToAdd().length === 0"
+          (onClick)="addMembers()"
+          styleClass="white-space-nowrap">
+          <lucide-icon name="plus" class="mr-2" style="width: 1rem; height: 1rem;"></lucide-icon>
+          <span>Agregar al Subequipo</span>
+        </p-button>
+      </div>
+    </div>
+
+    <!-- Barra de Búsqueda y Filtro de Integrantes Existentes -->
+    <div class="flex align-items-center justify-content-between flex-wrap gap-2 pt-1">
+      <div class="flex align-items-center gap-2 flex-1 min-w-14rem">
+        <div class="relative w-full sm:w-20rem flex align-items-center">
+          <lucide-icon name="search" class="text-400 absolute ml-3" style="width: 1rem; height: 1rem; pointer-events: none;"></lucide-icon>
+          <input 
+            pInputText 
+            [(ngModel)]="searchTerm" 
+            placeholder="Buscar por nombre, correo o equipo..." 
+            class="w-full text-sm p-inputtext-sm pl-6" />
+        </div>
+        <button 
+          *ngIf="searchTerm()" 
+          pButton 
+          [text]="true" 
+          [rounded]="true" 
+          severity="secondary" 
+          class="w-2rem h-2rem p-0 flex align-items-center justify-content-center" 
+          (click)="searchTerm.set('')"
+          pTooltip="Limpiar filtro">
+          <lucide-icon name="x" style="width: 0.9rem; height: 0.9rem;"></lucide-icon>
+        </button>
+      </div>
+
+      <div class="flex align-items-center gap-2 text-xs text-500">
+        <span *ngIf="searchTerm() && filteredMembers().length !== members().length">
+          Mostrando {{ filteredMembers().length }} de {{ members().length }}
+        </span>
+        <span *ngIf="!searchTerm()">
+          Total: <strong class="text-900">{{ members().length }}</strong> integrantes
+        </span>
+      </div>
+    </div>
+
+    <!-- Tabla de Integrantes del Subequipo -->
+    <div class="border-round-xl border-1 surface-border overflow-hidden">
+      <p-table 
+        [value]="filteredMembers()" 
+        [loading]="loadingMembers()" 
+        styleClass="p-datatable-sm p-datatable-striped" 
+        responsiveLayout="scroll"
+        [paginator]="filteredMembers().length > 6"
+        [rows]="6"
+        [rowsPerPageOptions]="[6, 12, 24]">
+
+        <ng-template pTemplate="header">
+          <tr>
+            <th style="min-width: 14rem;">Usuario</th>
+            <th style="min-width: 11rem;">Equipo Principal</th>
+            <th class="text-center" style="width: 8rem;">Rol Subequipo</th>
+            <th class="text-center" style="width: 6rem;">Acción</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-user>
+          <tr>
+            <!-- Columna Usuario: Avatar + Nombre + Email -->
+            <td>
+              <div class="flex align-items-center gap-2 py-1">
+                <div class="flex align-items-center justify-content-center text-xs font-bold border-circle text-primary surface-100" style="width: 2.25rem; height: 2.25rem; flex-shrink: 0;">
+                  {{ getInitials(user.name) }}
+                </div>
+                <div class="flex flex-column">
+                  <span class="font-bold text-sm text-900 line-height-2">{{ user.name }}</span>
+                  <span class="text-xs text-500">{{ user.email }}</span>
+                </div>
+              </div>
+            </td>
+
+            <!-- Columna Equipo Principal -->
+            <td>
+              <div class="flex align-items-center gap-1.5 text-xs text-700">
+                <lucide-icon name="users" class="text-400" style="width: 0.95rem; height: 0.95rem;"></lucide-icon>
+                <span>{{ getUserTeam(user) }}</span>
+              </div>
+            </td>
+
+            <!-- Columna Rol en Subequipo -->
+            <td class="text-center">
+              <span *ngIf="isLeader(user)" class="inline-flex align-items-center gap-1 px-2 py-0.5 border-round-xl text-xs font-bold bg-amber-50 text-amber-700 border-1 border-amber-300">
+                <lucide-icon name="crown" style="width: 0.85rem; height: 0.85rem;" class="text-amber-500"></lucide-icon>
+                Líder
+              </span>
+              <span *ngIf="!isLeader(user)" class="inline-flex align-items-center gap-1 px-2 py-0.5 border-round-xl text-xs font-medium text-600 surface-100 border-1 surface-200">
+                Miembro
+              </span>
+            </td>
+
+            <!-- Columna Acción: Remover -->
+            <td class="text-center">
+              <p-button 
+                severity="danger" 
+                [text]="true" 
+                [rounded]="true"
+                [disabled]="saving()"
+                (onClick)="confirmRemoveMember(user)"
+                pTooltip="Remover del subequipo" 
+                tooltipPosition="left">
+                <lucide-icon name="trash-2"></lucide-icon>
+              </p-button>
+            </td>
+          </tr>
+        </ng-template>
+
+        <!-- Estado Vacío -->
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="4" class="p-4 text-center">
+              <div class="flex flex-column align-items-center justify-content-center gap-2 py-3">
+                <lucide-icon name="users" class="text-300" style="width: 2.5rem; height: 2.5rem;"></lucide-icon>
+                <span class="font-semibold text-sm text-700">
+                  {{ searchTerm() ? 'No se encontraron participantes que coincidan con la búsqueda.' : 'No hay participantes asignados a este subequipo.' }}
+                </span>
+                <span class="text-xs text-500 max-w-22rem">
+                  {{ searchTerm() ? 'Intenta buscar con otros términos.' : 'Utiliza el selector superior para agregar miembros y permitir asignaciones automáticas.' }}
+                </span>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+
+      </p-table>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <ng-template pTemplate="footer">
+    <div class="flex justify-content-between align-items-center w-full pt-2">
+      <div class="flex align-items-center gap-2 text-xs text-500">
+        <lucide-icon name="shield-check" class="text-primary text-xs" style="width: 0.95rem; height: 0.95rem;"></lucide-icon>
+        <span>Los cambios se guardan automáticamente en tiempo real.</span>
+      </div>
+      <p-button label="Cerrar" icon="pi pi-check" (onClick)="close()"></p-button>
+    </div>
+  </ng-template>
+
+</p-dialog>

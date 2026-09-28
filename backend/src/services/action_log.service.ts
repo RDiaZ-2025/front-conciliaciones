@@ -31,9 +31,6 @@ export class ActionLogService {
         this.actionLogRepository = AppDataSource.getRepository(UserActionLog);
     }
 
-    /**
-     * Get action logs with filtering and pagination
-     */
     async getActionLogs(filters: ActionLogFilters = {}): Promise<ActionLogResponse> {
         const {
             userId,
@@ -73,23 +70,14 @@ export class ActionLogService {
         };
     }
 
-    /**
-     * Get action logs for a specific user
-     */
     async getUserActionLogs(userId: number, filters: Omit<ActionLogFilters, 'userId'> = {}): Promise<ActionLogResponse> {
         return this.getActionLogs({ ...filters, userId });
     }
 
-    /**
-     * Get action logs by action type
-     */
     async getActionLogsByType(action: string, filters: Omit<ActionLogFilters, 'action'> = {}): Promise<ActionLogResponse> {
         return this.getActionLogs({ ...filters, action });
     }
 
-    /**
-     * Get failed action logs (status code >= 400)
-     */
     async getFailedActionLogs(filters: ActionLogFilters = {}): Promise<ActionLogResponse> {
         const queryBuilder = this.actionLogRepository
             .createQueryBuilder('log')
@@ -118,9 +106,6 @@ export class ActionLogService {
         };
     }
 
-    /**
-     * Get action statistics
-     */
     async getActionStatistics(filters: ActionLogFilters = {}): Promise<Record<string, unknown>> {
         const queryBuilder = this.actionLogRepository
             .createQueryBuilder('log');
@@ -166,9 +151,6 @@ export class ActionLogService {
         };
     }
 
-    /**
-     * Delete old action logs (older than specified days)
-     */
     async cleanupOldLogs(daysToKeep: number = 90): Promise<number> {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
@@ -182,9 +164,6 @@ export class ActionLogService {
         return result.affected || 0;
     }
 
-    /**
-     * Apply filters to query builder
-     */
     private applyFilters(
         queryBuilder: SelectQueryBuilder<UserActionLog>,
         filters: ActionLogFilters,

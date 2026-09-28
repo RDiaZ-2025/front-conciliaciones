@@ -3,15 +3,16 @@ import { CoreDialogService } from '../../services/core-dialog.service';
 import { Component, inject, OnInit, OnDestroy, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin, of, firstValueFrom } from 'rxjs';
+import { forkJoin, of, firstValueFrom, Subject, Subscription } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { filter, take } from 'rxjs/operators';
+import { filter, take, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
-import { ChipModule } from 'primeng/chip'; // Or TagModule
+import { ChipModule } from 'primeng/chip';
 import { TagModule } from 'primeng/tag';
 import { MenuModule } from 'primeng/menu';
 import { ToastModule } from 'primeng/toast';
+import { PaginatorModule } from 'primeng/paginator';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { BadgeModule } from 'primeng/badge';
@@ -46,6 +47,7 @@ import { AssignImplementationDialogComponent } from '../production_2/assign-impl
 import { MaterialRegisterListDialogComponent } from '../production_2/material-register-list-dialog/material-register-list-dialog.component';
 
 import { CustomerAutocompleteComponent } from '../../components/customer-autocomplete/customer-autocomplete.component';
+import { DatePickerModule } from 'primeng/datepicker';
 
 @Component({
   selector: 'app-production-beta',
@@ -72,8 +74,10 @@ import { CustomerAutocompleteComponent } from '../../components/customer-autocom
     SelectModule,
     MultiSelectModule,
     InputNumberModule,
+    DatePickerModule,
     FormsModule,
-    CustomerAutocompleteComponent
+    CustomerAutocompleteComponent,
+    PaginatorModule
   ],
   providers: [DialogService, ConfirmationService, MessageService],
   templateUrl: './production-beta.component.html',
@@ -91,34 +95,171 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
   requests = signal<ProductionRequest[]>([]);
   dynamicSubmissions = signal<any[]>([]);
-  sortedAllSubmissions = computed(() => {
-    const pendingSubmissionIds = new Set<number>();
-    (this.pendingTasks() || []).forEach(t => {
-      if (t.submissionId) pendingSubmissionIds.add(t.submissionId);
-      if (t.parentSubmissionId) pendingSubmissionIds.add(t.parentSubmissionId);
-    });
 
-    const all = this.dynamicSubmissions().filter(s => {
-      if (pendingSubmissionIds.has(s.id)) return false;
-      if (s.parentSubmissionId && pendingSubmissionIds.has(s.parentSubmissionId)) return false;
-      return true;
-    });
-    return all.sort((a, b) => {
-      const aActive = a.status !== 'Completed' && a.status !== 'Approved';
-      const bActive = b.status !== 'Completed' && b.status !== 'Approved';
-      if (aActive && !bActive) return -1;
-      if (!aActive && bActive) return 1;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+  // --- Filtros Integrales (Aprobaciones e Historial) ---
+  filterSearch = signal<string>('');
+  filterSelectedForms = signal<string[]>([]);
+  filterStatus = signal<string>('all');
+  filterDatePreset = signal<string>('all');
+  filterDateFrom = signal<Date | null>(null);
+  filterDateTo = signal<Date | null>(null);
+  filterRequester = signal<string>('');
+  showAdvancedFilters = signal<boolean>(false);
+
+  statusOptions = [
+    { label: 'Todos los estados', value: 'all' },
+    { label: 'Pendientes de mi Aprobación', value: 'pending_me' },
+    { label: 'En Proceso', value: 'in_progress' },
+    { label: 'Aprobadas / Completadas', value: 'completed' },
+    { label: 'Devueltas para Corrección', value: 'rejected' }
+  ];
+
+  datePresetOptions = [
+    { label: 'Cualquier fecha', value: 'all' },
+    { label: 'Hoy', value: 'today' },
+    { label: 'Últimos 7 días', value: 'week' },
+    { label: 'Este mes', value: 'month' },
+    { label: 'Personalizado (Rango)', value: 'custom' }
+  ];
+
+  // --- Paginación Real del Servidor ---
+  approvalsPage = signal<number>(1);
+  approvalsLimit = signal<number>(4);
+  approvalsTotal = signal<number>(0);
+
+  historyPage = signal<number>(1);
+  historyLimit = signal<number>(8);
+  historyTotal = signal<number>(0);
+
+  allFormOptions = signal<{ label: string; value: string }[]>([]);
+  private searchSubject = new Subject<string>();
+  private searchSub?: Subscription;
+
+  activeFiltersCount = computed(() => {
+    let count = 0;
+    if (this.filterSearch().trim()) count++;
+    if (this.filterSelectedForms().length > 0) count++;
+    if (this.filterStatus() !== 'all') count++;
+    if (this.filterDatePreset() !== 'all') count++;
+    if (this.filterRequester().trim()) count++;
+    return count;
   });
-  
-  // Inbox Integration State
+
+  availableFormOptions = computed(() => {
+    const set = new Set<string>();
+    this.allFormOptions().forEach(f => set.add(f.value));
+    (this.pendingTasks() || []).forEach(t => { if (t.formName) set.add(t.formName); });
+    (this.dynamicSubmissions() || []).forEach(s => { if (s.formName) set.add(s.formName); });
+    return Array.from(set).sort().map(name => ({ label: name, value: name }));
+  });
+
+  baseHistorySubmissions = computed(() => this.dynamicSubmissions());
+  displayedPendingTasks = computed(() => this.pendingTasks());
+  displayedSubmissions = computed(() => this.dynamicSubmissions());
+  sortedAllSubmissions = computed(() => this.displayedSubmissions());
+
+  onSearchInput(value: string) {
+    this.filterSearch.set(value);
+    this.searchSubject.next(value);
+  }
+
+  onFilterChange() {
+    this.approvalsPage.set(1);
+    this.historyPage.set(1);
+    this.loadPendingTasks();
+    this.loadRequests();
+  }
+
+  clearAllFilters() {
+    this.filterSearch.set('');
+    this.filterSelectedForms.set([]);
+    this.filterStatus.set('all');
+    this.filterDatePreset.set('all');
+    this.filterDateFrom.set(null);
+    this.filterDateTo.set(null);
+    this.filterRequester.set('');
+    this.approvalsPage.set(1);
+    this.historyPage.set(1);
+    this.loadPendingTasks();
+    this.loadRequests();
+  }
+
+  onDatePresetChange(preset: string) {
+    this.filterDatePreset.set(preset);
+    if (preset !== 'custom') {
+      this.filterDateFrom.set(null);
+      this.filterDateTo.set(null);
+      this.onFilterChange();
+    }
+  }
+
+  onApprovalsPageChange(event: any) {
+    this.approvalsPage.set((event.page || 0) + 1);
+    this.approvalsLimit.set(event.rows || 4);
+    this.loadPendingTasks();
+  }
+
+  onHistoryPageChange(event: any) {
+    this.historyPage.set((event.page || 0) + 1);
+    this.historyLimit.set(event.rows || 8);
+    this.loadRequests();
+  }
+
+  loadAllForms() {
+    this.productionService.adminGetForms().subscribe({
+      next: (forms) => {
+        if (Array.isArray(forms)) {
+          this.allFormOptions.set(forms.filter(f => f.isActive !== false).map(f => ({ label: f.name, value: f.name })));
+        }
+      },
+      error: () => {}
+    });
+  }
+
+  private buildFilterParams(page: number, limit: number) {
+    const params: any = {
+      page,
+      limit
+    };
+
+    const q = this.filterSearch();
+    if (q && q.trim()) params.search = q.trim();
+
+    const forms = this.filterSelectedForms();
+    if (forms && forms.length > 0) params.forms = forms;
+
+    const status = this.filterStatus();
+    if (status && status !== 'all') params.status = status;
+
+    const requester = this.filterRequester();
+    if (requester && requester.trim()) params.requester = requester.trim();
+
+    const preset = this.filterDatePreset();
+    if (preset === 'today') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      params.dateFrom = today.toISOString();
+    } else if (preset === 'week') {
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      params.dateFrom = weekAgo.toISOString();
+    } else if (preset === 'month') {
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      params.dateFrom = startOfMonth.toISOString();
+    } else if (preset === 'custom') {
+      if (this.filterDateFrom()) params.dateFrom = this.filterDateFrom()!.toISOString();
+      if (this.filterDateTo()) params.dateTo = this.filterDateTo()!.toISOString();
+    }
+
+    return params;
+  }
+
   pendingTasks = signal<any[]>([]);
   loadingTasks = signal<boolean>(false);
   showActionDialog = signal<boolean>(false);
   loadingAction = signal<boolean>(false);
   selectedTask = signal<any>(null);
   comments = signal<string>('');
+  chosenNextAssignee: any = null;
   stageFormFields = signal<any[]>([]);
   stageFormValues: Record<string, string> = {};
   loadingStageFields = signal<boolean>(false);
@@ -127,15 +268,12 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   loading = signal<boolean>(true);
   loading$ = toObservable(this.loading);
 
-  // Preview state
   previewFile = signal<File | string | null>(null);
   previewVisible = signal<boolean>(false);
   isPreviewLoading = signal<boolean>(false);
 
-  // SLA Rules state
   slaRulesVisible = signal<boolean>(false);
 
-  // Historical View state
   showHistorical = signal<boolean>(false);
   showDetailsDialog = signal<boolean>(false);
   loadingDetails = signal<boolean>(false);
@@ -143,35 +281,33 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
   workflowStages: { id: string; label: string }[] = [];
 
-  // Computed lists
   activeRequests = computed(() => this.requests().filter(r => r.stage !== 'completed'));
   historicalRequests = computed(() => this.requests().filter(r => r.stage === 'completed'));
 
   canViewHistory = computed(() => {
     const user = this.authService.currentUser();
-    // Allow if user has 'production_management' permission (Area Head/Supervisor)
-    // Or if user is an admin
+
     return user?.permissions?.some(p =>
       ['production_management', 'admin_panel'].includes(p.toLowerCase())
     ) ?? false;
   });
 
   canCreateRequest = computed(() => {
-    const user = this.authService.currentUser();
-    return user?.teamId === 6;
+    return this.authService.isCommercialOrAdmin();
+  });
+
+  canAdminForms = computed(() => {
+    return this.authService.isCommercialOrAdmin();
   });
 
   ref: DynamicDialogRef | undefined | null;
 
-  // SLA Monitoring
   now = signal<Date>(new Date());
   private intervalId: any;
-  private alertedRequests = new Set<number>(); // Track alerted requests to avoid spam
+  private alertedRequests = new Set<number>();
 
-  // Local Logic State
   campaignTypeSelectionVisible = signal<boolean>(false);
 
-  // Beta Wizard State
   showTypeSelectionDialog = signal<boolean>(false);
   loadingRequestTypes = signal<boolean>(false);
   requestTypes = signal<any[]>([]);
@@ -191,7 +327,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   isProcessingMove = signal<boolean>(false);
   currentRequestProcessing: ProductionRequest | null = null;
 
-  // Step 3: Closing Step for Requester
   requireClosingStep = signal<boolean>(false);
   selectedClosingType = signal<'form' | 'workflow'>('form');
   selectedClosingFormId = signal<number | null>(null);
@@ -240,18 +375,24 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.searchSub = this.searchSubject.pipe(
+      debounceTime(350),
+      distinctUntilChanged()
+    ).subscribe(() => {
+      this.onFilterChange();
+    });
+
+    this.loadAllForms();
     this.loadRequests();
     this.loadWorkflowStages();
     this.loadPendingTasks();
 
-    // Handle deep linking
     this.route.queryParams.subscribe(params => {
       if (params['action'] === 'open' && params['requestName']) {
         this.handleDeepLink(params['requestName']);
       }
     });
 
-    // Update time every minute
     this.intervalId = setInterval(() => {
       this.now.set(new Date());
       this.checkSLAAlerts();
@@ -275,7 +416,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     const request = this.requests().find(r => r.name === name);
     if (request) {
       this.openDialog(request);
-      // Clear query params
+
       this.router.navigate([], {
         queryParams: { action: null, requestName: null },
         queryParamsHandling: 'merge'
@@ -290,6 +431,9 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    if (this.searchSub) {
+      this.searchSub.unsubscribe();
+    }
     if (this.intervalId) {
       clearInterval(this.intervalId);
     }
@@ -297,9 +441,16 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
   loadRequests() {
     this.loading.set(true);
-    this.productionService.getDynamicSubmissions().subscribe({
-      next: (subs) => {
-        this.dynamicSubmissions.set(subs);
+    const params = this.buildFilterParams(this.historyPage(), this.historyLimit());
+    this.productionService.getDynamicSubmissions(params).subscribe({
+      next: (res) => {
+        if (res && res.data) {
+          this.dynamicSubmissions.set(res.data);
+          this.historyTotal.set(res.total || 0);
+        } else if (Array.isArray(res)) {
+          this.dynamicSubmissions.set(res);
+          this.historyTotal.set(res.length);
+        }
         this.loading.set(false);
       },
       error: (err) => {
@@ -320,21 +471,19 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ... (rest of the methods)
-
   getSLAStatus(deliveryDate?: string): 'success' | 'warn' | 'danger' {
-    if (!deliveryDate) return 'success'; // No deadline, so technically "on time" or N/A
+    if (!deliveryDate) return 'success';
 
     const deadline = new Date(deliveryDate).getTime();
     const now = this.now().getTime();
     const diff = deadline - now;
 
     if (diff < 0) {
-      return 'danger'; // Overdue
-    } else if (diff < 24 * 60 * 60 * 1000) { // Less than 24 hours
-      return 'warn'; // Approaching deadline
+      return 'danger';
+    } else if (diff < 24 * 60 * 60 * 1000) {
+      return 'warn';
     } else {
-      return 'success'; // On time
+      return 'success';
     }
   }
 
@@ -387,7 +536,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       const deadline = new Date(request.deliveryDate).getTime();
       const diff = deadline - now;
 
-      // Trigger alert if within 2 hours and not overdue yet (or just about to be)
       if (diff > 0 && diff <= twoHours) {
         this.messageService.add({
           severity: 'warn',
@@ -399,7 +547,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     });
   }
-
 
   authService = inject(AuthService);
 
@@ -423,7 +570,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       if (this.ref) {
         this.ref.onClose.subscribe((result: Partial<ProductionRequest>) => {
           if (result) {
-            // Reload requests to ensure we have the latest data and correct status mapping
+
             this.loadRequests();
           }
         });
@@ -433,7 +580,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
   evaluateDefaultValueExpression(f: any): string {
     if (!f.defaultValueExpression) return '';
-    
+
     const now = new Date();
     const pad = (n: number) => n.toString().padStart(2, '0');
     const formattedDateTimeLocal = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
@@ -485,10 +632,10 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         }
 
         if (formsList.length > 0) {
-          const fieldsObservables = formsList.map(form => 
+          const fieldsObservables = formsList.map(form =>
             this.productionService.getDynamicFormFields(form.id)
           );
-          
+
           forkJoin(fieldsObservables).subscribe({
             next: (allFieldsArray: any[][]) => {
               const vals: Record<string, string> = {};
@@ -516,7 +663,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
                     this.initMultiselectField(form.id + '_' + f.name, vals[form.id + '_' + f.name]);
                   }
                 });
-                form.fields = fields; // store fields inside form object
+                form.fields = fields;
               });
               this.initialFormValues.set(vals);
               this.loadingRequestTypes.set(false);
@@ -538,7 +685,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Load forms and workflows for Step 3 (Closing step)
     this.requireClosingStep.set(false);
     this.selectedClosingType.set('form');
     this.selectedClosingFormId.set(null);
@@ -571,7 +717,8 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
             return {
               ...t,
               selected: false,
-              assignmentMode: defaultMode
+              assignmentMode: defaultMode,
+              selectedSubteamId: 0
             };
           }));
         }
@@ -603,27 +750,26 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Validate fields for selected initial form
     const values = this.initialFormValues();
     for (const field of (form.fields || [])) {
       if (field.isRequired && field.type !== 'section_header' && this.isFieldVisible(field, form.fields, values, form.id)) {
         if (field.type === 'file') {
           const files = this.getInitialSelectedFiles(form.id, field.name);
           if (files.length === 0) {
-            this.messageService.add({ 
-              severity: 'error', 
-              summary: 'Error de Validación', 
-              detail: `El campo "${field.label}" requiere cargar al menos un archivo.` 
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error de Validación',
+              detail: `El campo "${field.label}" requiere cargar al menos un archivo.`
             });
             return;
           }
         } else {
           const val = values[form.id + '_' + field.name];
           if (val === undefined || val === null || String(val).trim() === '') {
-            this.messageService.add({ 
-              severity: 'error', 
-              summary: 'Error de Validación', 
-              detail: `El campo "${field.label}" es obligatorio.` 
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error de Validación',
+              detail: `El campo "${field.label}" es obligatorio.`
             });
             return;
           }
@@ -631,20 +777,18 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     }
 
-    // Validate teams selected
     const selectedTeams = this.teams().filter(t => t.selected);
     if (selectedTeams.length === 0) {
-      this.messageService.add({ 
-        severity: 'warn', 
-        summary: 'Atención', 
-        detail: 'Debe seleccionar al menos un Equipo / Área destinataria para procesar la solicitud.' 
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Atención',
+        detail: 'Debe seleccionar al menos un Equipo / Área destinataria para procesar la solicitud.'
       });
       return;
     }
 
     this.loadingRequestTypes.set(true);
 
-    // Upload files for initial form if any
     for (const field of (form.fields || [])) {
       if (field.type === 'file') {
         const fileKey = form.id + '_' + field.name;
@@ -667,10 +811,15 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     }
 
-    const targetTeams = selectedTeams.map(t => ({
-      teamId: t.id,
-      assignmentMode: t.assignmentMode || 'leader'
-    }));
+    const targetTeams = selectedTeams.map(t => {
+      const isRandom = t.assignmentMode === 'random';
+      const hasSubteam = isRandom && t.selectedSubteamId && t.selectedSubteamId > 0;
+      return {
+        teamId: t.id,
+        subteamId: hasSubteam ? t.selectedSubteamId : null,
+        assignmentMode: hasSubteam ? 'subteam_random' : (t.assignmentMode || 'leader')
+      };
+    });
     const targetTeamIds = selectedTeams.map(t => t.id);
 
     let closingConfig: any = {
@@ -691,7 +840,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       } catch(e) {}
     }
 
-    // Build the submissions array payload
     const formValues: Record<string, string> = {};
     (form.fields || []).forEach((f: any) => {
       formValues[f.name] = values[form.id + '_' + f.name];
@@ -701,13 +849,13 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.productionService.submitDynamicForm(form.id, formValues, undefined, submissions, targetTeamIds, targetTeams, closingConfig).subscribe({
       next: () => {
         this.showTypeSelectionDialog.set(false);
-        this.messageService.add({ 
-          severity: 'success', 
-          summary: 'Éxito', 
-          detail: 'Solicitud enviada exitosamente a los equipos seleccionados.' 
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Éxito',
+          detail: 'Solicitud enviada exitosamente a los equipos seleccionados.'
         });
-        this.tempFiles = {}; // Clear temp files
-        this.loadRequests(); // Reload list
+        this.tempFiles = {};
+        this.loadRequests();
         this.loadingRequestTypes.set(false);
       },
       error: () => {
@@ -772,8 +920,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }
     this.selectedRequestTypes.set(selected);
     this.showTypeSelectionDialog.set(false);
-    
-    // Start form dialog flow
+
     this.currentFormIndex.set(0);
     this.loadFormFieldsForIndex(0);
     this.showFormDialog.set(true);
@@ -792,20 +939,20 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           const val = this.formValues[field.name];
           const hasUploaded = this.getUploadedFiles(val).length > 0;
           if (files.length === 0 && !hasUploaded) {
-            this.messageService.add({ 
-              severity: 'error', 
-              summary: 'Error de Validación', 
-              detail: `El campo "${field.label}" requiere cargar al menos un archivo.` 
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error de Validación',
+              detail: `El campo "${field.label}" requiere cargar al menos un archivo.`
             });
             return;
           }
         } else {
           const val = this.formValues[field.name];
           if (val === undefined || val === null || String(val).trim() === '') {
-            this.messageService.add({ 
-              severity: 'error', 
-              summary: 'Error de Validación', 
-              detail: `El campo "${field.label}" es obligatorio.` 
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error de Validación',
+              detail: `El campo "${field.label}" es obligatorio.`
             });
             return;
           }
@@ -817,7 +964,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.uploadFilesAndSubmit(currentForm);
   }
 
-  // --- File Uploader Helpers ---
   tempFiles: Record<string, File[]> = {};
 
   onFileSelected(event: any, field: any) {
@@ -834,19 +980,16 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
-      // Check count limit
       if (newList.length >= maxCount) {
         this.messageService.add({ severity: 'warn', summary: 'Límite excedido', detail: `Solo se permiten máximo ${maxCount} archivos en el campo "${field.label}".` });
         break;
       }
 
-      // Check size limit
       if (file.size > maxMB * 1024 * 1024) {
         this.messageService.add({ severity: 'error', summary: 'Archivo muy grande', detail: `El archivo "${file.name}" supera el peso máximo permitido de ${maxMB}MB.` });
         continue;
       }
 
-      // Check file formats
       const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
       if (allowed.length > 0 && !allowed.includes(ext)) {
         this.messageService.add({ severity: 'error', summary: 'Formato no permitido', detail: `El formato de "${file.name}" no está permitido. Formatos aceptados: ${field.metadata.allowedFormats}.` });
@@ -929,17 +1072,15 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }
   }
 
-  downloadFormFile(file: any) {
-    if (file && file.url) {
-      window.open(file.url, '_blank');
-    }
+  downloadFormFile(file: any, event?: Event) {
+    return this.downloadStageFormFile(file, event);
   }
 
   async uploadFilesAndSubmit(currentForm: any) {
     this.loadingRequestTypes.set(true);
 
     const fields = this.currentFormFields();
-    // 1. Upload files
+
     for (const field of fields) {
       if (field.type === 'file') {
         const filesToUpload = this.tempFiles[field.name] || [];
@@ -961,7 +1102,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     }
 
-    // 2. Submit the form
     this.productionService.submitDynamicForm(currentForm.id, this.formValues).subscribe({
       next: (res) => {
         this.tempFiles = {};
@@ -972,12 +1112,12 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           this.loadFormFieldsForIndex(nextIndex);
         } else {
           this.showFormDialog.set(false);
-          this.messageService.add({ 
-            severity: 'success', 
-            summary: 'Éxito', 
-            detail: 'Formularios enviados y registrados en base de datos exitosamente.' 
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Éxito',
+            detail: 'Formularios enviados y registrados en base de datos exitosamente.'
           });
-          this.loadRequests(); // Reload submissions list
+          this.loadRequests();
         }
       },
       error: (err) => {
@@ -1024,7 +1164,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     if (s === 'approved' || s === 'completed') return 'success';
     if (s === 'in progress') return 'info';
     if (s === 'pending') return 'warn';
-    if (s === 'rejected') return 'danger';
+    if (s === 'rejected' || s === 'blocked') return 'danger';
     return 'secondary';
   }
 
@@ -1038,6 +1178,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       case 'Approved': return 'Aprobado';
       case 'Draft': return 'Borrador';
       case 'Cancelled': return 'Cancelado';
+      case 'Blocked': return 'Bloqueada';
       default: return status;
     }
   }
@@ -1196,7 +1337,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     const currentStage = request.stage;
     let nextStageId = '';
 
-    // Budget cleaning helper
     const getBudget = (req: ProductionRequest): number => {
       const budgetStr = String(req.campaignDetail?.budget || '0');
       const cleanBudget = budgetStr.replace(/[^0-9]/g, '');
@@ -1205,7 +1345,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
     switch (currentStage) {
       case 'request':
-        // Skip quotation, go directly to in_sell or get_data based on budget
+
         const budget = getBudget(request);
         if (budget < 50000000) {
           nextStageId = 'get_data';
@@ -1215,7 +1355,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         break;
 
       case 'quotation':
-        // Legacy path, just in case
+
         const budgetQ = getBudget(request);
         if (budgetQ < 50000000) {
           nextStageId = 'get_data';
@@ -1228,12 +1368,11 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         this.openStageTransitionUploadDialog(request, 'get_data');
         return;
 
-      case 'get_data': // formerly obtener_datos
+      case 'get_data':
         this.openStageTransitionUploadDialog(request, 'in_sell');
         return;
 
-
-      case 'in_sell': // formerly venta
+      case 'in_sell':
         this.ref = this.dialogService.open(InSellActionDialogComponent, {
           header: 'Confirmar Venta',
           width: '400px',
@@ -1249,7 +1388,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
               } else if (result.action === 'not_sold') {
                 this.performMove(request, 'completed');
               }
-              // 'cancel' or other results do nothing
+
             }
           });
         }
@@ -1273,7 +1412,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         return;
 
       case 'material_preparation':
-        // Left here for backward compatibility if any request is currently in this stage
+
         this.openAssignImplementationDialog(request);
         return;
 
@@ -1312,7 +1451,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         return;
 
       default:
-        // Fallback for any other stage
+
         const currentIndex = this.workflowStages.findIndex(s => s.id === request.stage);
         if (currentIndex !== -1 && currentIndex < this.workflowStages.length - 1) {
           nextStageId = String(this.workflowStages[currentIndex + 1].id);
@@ -1356,7 +1495,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     return this.workflowStages.find(s => s.id === stageId)?.label || stageId;
   }
 
-  // Method to get severity for Tag based on stage (optional but nice)
   getStageSeverity(stageId: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' | undefined {
     switch (stageId) {
       case 'completed': return 'success';
@@ -1416,12 +1554,18 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }
   }
 
-  // --- Inbox Integration Logic ---
   loadPendingTasks() {
     this.loadingTasks.set(true);
-    this.productionService.getPendingApprovals().subscribe({
-      next: (data) => {
-        this.pendingTasks.set(data);
+    const params = this.buildFilterParams(this.approvalsPage(), this.approvalsLimit());
+    this.productionService.getPendingApprovals(params).subscribe({
+      next: (res) => {
+        if (res && res.data) {
+          this.pendingTasks.set(res.data);
+          this.approvalsTotal.set(res.total || 0);
+        } else if (Array.isArray(res)) {
+          this.pendingTasks.set(res);
+          this.approvalsTotal.set(res.length);
+        }
         this.loadingTasks.set(false);
       },
       error: () => {
@@ -1501,6 +1645,26 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     return rawValue;
   }
 
+  formatCardValue(cf: any): string {
+    if (!cf || cf.value === undefined || cf.value === null || cf.value === '') return '';
+    const raw = String(cf.value).trim();
+    if ((raw.startsWith('[') && raw.endsWith(']')) || (raw.startsWith('{') && raw.endsWith('}'))) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          if (parsed.length > 0 && parsed[0]?.name && (parsed[0]?.url || parsed[0]?.size)) {
+            return parsed.map((f: any) => f.name).join(', ');
+          }
+          if (parsed.length > 0 && typeof parsed[0] === 'object') {
+            return `${parsed.length} ítem(s)`;
+          }
+          return parsed.join(', ');
+        }
+      } catch (e) {}
+    }
+    return this.formatValue(cf);
+  }
+
   toNumber(val: any): number | null {
     if (val === undefined || val === null || String(val).trim() === '') return null;
     const num = Number(val);
@@ -1527,6 +1691,10 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     console.log('Task selected in dashboard inbox:', task);
     this.selectedTask.set(task);
     this.comments.set('');
+    this.chosenNextAssignee = null;
+    if (task?.allowChooseNextStageAssignee && task?.nextStageAssigneeOptions?.length === 1) {
+      this.chosenNextAssignee = task.nextStageAssigneeOptions[0];
+    }
     this.stageFormFields.set([]);
     this.stageFormValues = {};
     this.showActionDialog.set(true);
@@ -1771,26 +1939,37 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
               const val = this.stageFormValues[field.name];
               const hasUploaded = this.getStageUploadedFiles(val).length > 0;
               if (files.length === 0 && !hasUploaded) {
-                this.messageService.add({ 
-                  severity: 'error', 
-                  summary: 'Validación', 
-                  detail: `El campo "${field.label}" requiere cargar al menos un archivo.` 
+                this.messageService.add({
+                  severity: 'error',
+                  summary: 'Validación',
+                  detail: `El campo "${field.label}" requiere cargar al menos un archivo.`
                 });
                 return;
               }
             } else {
               const val = this.stageFormValues[field.name];
               if (val === undefined || val === null || String(val).trim() === '') {
-                this.messageService.add({ 
-                  severity: 'error', 
-                  summary: 'Validación', 
-                  detail: `El campo "${field.label}" es requerido para continuar.` 
+                this.messageService.add({
+                  severity: 'error',
+                  summary: 'Validación',
+                  detail: `El campo "${field.label}" es requerido para continuar.`
                 });
                 return;
               }
             }
           }
         }
+      }
+    }
+
+    if (action === 'approve' && !this.isCorrection(task) && task.allowChooseNextStageAssignee && task.nextStageAssigneeOptions?.length > 0 && !task.isFinalStage) {
+      if (!this.chosenNextAssignee) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Validación',
+          detail: 'Debes seleccionar a quién se le asignará la siguiente etapa.'
+        });
+        return;
       }
     }
 
@@ -1899,19 +2078,74 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.stageTempFiles[fieldName] = current;
   }
 
-  getStageUploadedFiles(valueStr: string): any[] {
+  private downloadingFileKeys = new Set<string>();
+
+  getStageUploadedFiles(valueStr: any): any[] {
     if (!valueStr) return [];
+    if (Array.isArray(valueStr)) return valueStr;
+    if (typeof valueStr === 'object') return [valueStr];
     try {
-      const parsed = JSON.parse(valueStr);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      return [];
+      const parsed = typeof valueStr === 'string' && (valueStr.startsWith('[') || valueStr.startsWith('{')) ? JSON.parse(valueStr) : null;
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === 'object') return [parsed];
+    } catch (e) {}
+
+    if (typeof valueStr === 'string' && valueStr.trim()) {
+      const parts = valueStr.split(',');
+      return parts.map(p => {
+        const item = p.trim();
+        if (item.startsWith('http://') || item.startsWith('https://')) {
+          const fileName = decodeURIComponent(item.split('?')[0].split('/').pop() || 'archivo');
+          return { name: fileName, url: item };
+        }
+        return { name: item, url: item };
+      });
     }
+    return [];
   }
 
-  downloadStageFormFile(file: any) {
-    if (file && file.url) {
-      window.open(file.url, '_blank');
+  async downloadStageFormFile(file: any, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    if (!file) return;
+
+    const fileUrl = file.url || (typeof file === 'string' && (file.startsWith('http://') || file.startsWith('https://')) ? file : '');
+    const fileName = file.name || (fileUrl ? decodeURIComponent(fileUrl.split('?')[0].split('/').pop() || 'archivo') : (typeof file === 'string' ? file : 'archivo'));
+    const target = fileUrl || fileName;
+
+    if (this.downloadingFileKeys.has(target)) return;
+    this.downloadingFileKeys.add(target);
+
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Descargando',
+      detail: `Iniciando descarga de ${fileName}...`,
+      life: 2500
+    });
+
+    try {
+      await this.azureService.downloadSingleFile(target, fileName);
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Éxito',
+        detail: `Archivo ${fileName} descargado correctamente.`,
+        life: 3000
+      });
+    } catch (err: any) {
+      console.warn('downloadSingleFile error, trying window.open fallback:', err);
+      if (fileUrl) {
+        window.open(fileUrl, '_blank');
+      } else {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error al descargar',
+          detail: `No se pudo descargar el archivo: ${err?.message || 'Error de almacenamiento'}`
+        });
+      }
+    } finally {
+      this.downloadingFileKeys.delete(target);
     }
   }
 
@@ -1919,8 +2153,11 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     if (!value) return false;
     try {
       const parsed = JSON.parse(value);
-      return Array.isArray(parsed) && parsed.length > 0 && parsed[0].url !== undefined;
+      return Array.isArray(parsed) && parsed.length > 0 && (parsed[0].url !== undefined || parsed[0].name !== undefined);
     } catch(e) {
+      if (typeof value === 'string' && (value.includes('.blob.core.windows.net') || value.startsWith('http://') || value.startsWith('https://'))) {
+        return true;
+      }
       return false;
     }
   }
@@ -1950,7 +2187,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     }
 
-    // 1.5. Upload files from parent correction forms if any
     const parentForms = task.parentForms || [];
     for (const form of parentForms) {
       for (const field of form.fields) {
@@ -1976,7 +2212,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     }
 
-    // 1.8. Upload files from multi forms if any
     if (task.formIdToFill === -1 && this.getSelectedMultiForms().length > 0) {
       for (const mForm of this.getSelectedMultiForms()) {
         for (const field of mForm.fields) {
@@ -2003,18 +2238,26 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     }
 
-    this.productionService.actionApproval(task.stateId, action, notes, action === 'approve' ? this.stageFormValues : undefined).subscribe({
+    this.productionService.actionApproval(
+      task.stateId,
+      action,
+      notes,
+      action === 'approve' ? this.stageFormValues : undefined,
+      undefined,
+      action === 'approve' ? this.chosenNextAssignee : undefined
+    ).subscribe({
       next: (res) => {
         this.stageTempFiles = {};
+        this.chosenNextAssignee = null;
         this.showActionDialog.set(false);
         this.loadPendingTasks();
         this.loadRequests();
         this.loadingAction.set(false);
 
-        this.messageService.add({ 
-          severity: 'success', 
-          summary: 'Éxito', 
-          detail: action === 'approve' ? (this.isCorrection(task) ? 'Corrección enviada con éxito.' : 'Solicitud aprobada con éxito.') : 'Solicitud rechazada/devuelta.' 
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Éxito',
+          detail: action === 'approve' ? (this.isCorrection(task) ? 'Corrección enviada con éxito.' : 'Solicitud aprobada con éxito.') : 'Solicitud rechazada/devuelta.'
         });
       },
       error: () => {
@@ -2121,7 +2364,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       this.initialFormValues.set({ ...values });
     }
 
-    // Validate teams selected options against enabling conditions
     const currentTeams = this.teams();
     let teamsChanged = false;
     for (const t of currentTeams) {
@@ -2221,10 +2463,40 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }
   }
 
+  parseNumericValue(val: any): number {
+    if (typeof val === 'number') return isNaN(val) ? NaN : val;
+    if (val === undefined || val === null) return NaN;
+    let str = String(val).trim().replace(/[^0-9.,-]/g, '');
+    if (!str) return NaN;
+
+    if (str.includes('.') && str.includes(',')) {
+      const lastDot = str.lastIndexOf('.');
+      const lastComma = str.lastIndexOf(',');
+      if (lastComma > lastDot) {
+        str = str.replace(/\./g, '').replace(',', '.');
+      } else {
+        str = str.replace(/,/g, '');
+      }
+    } else if ((str.match(/\./g) || []).length > 1) {
+      str = str.replace(/\./g, '');
+    } else if ((str.match(/,/g) || []).length > 1) {
+      str = str.replace(/,/g, '');
+    } else if (str.includes(',')) {
+      const parts = str.split(',');
+      if (parts[1] && parts[1].length === 3 && parts[0].length <= 3) {
+        str = str.replace(',', '');
+      } else {
+        str = str.replace(',', '.');
+      }
+    }
+    const n = Number(str);
+    return isNaN(n) ? NaN : n;
+  }
+
   isFieldVisible(field: any, allFields: any[], formValues: Record<string, any>, formId?: number): boolean {
     if (!field) return false;
     if (field.isActive === false) return false;
-    
+
     const dependency = field.metadata?.dependency;
     if (!dependency || !dependency.fieldName) {
       return true;
@@ -2232,38 +2504,106 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
     const parentName = dependency.fieldName;
     const parentKey = formId ? `${formId}_${parentName}` : parentName;
-    const parentValue = formValues[parentKey];
+    let parentValue = formValues ? formValues[parentKey] : undefined;
+    if (parentValue === undefined && formValues && formId) {
+      parentValue = formValues[parentName];
+    }
+    if (parentValue === undefined && formValues && !formId) {
+      const matchKey = Object.keys(formValues).find(k => k === parentName || k.endsWith(`_${parentName}`));
+      if (matchKey) {
+        parentValue = formValues[matchKey];
+      }
+    }
 
-    if (parentValue === undefined || parentValue === null || parentValue === '') {
+    let op = dependency.operator;
+    const requiredVal = dependency.value;
+
+    if (!op) {
+      if (typeof requiredVal === 'string') {
+        const trimmed = requiredVal.trim();
+        if (trimmed.startsWith('>=')) op = 'gte';
+        else if (trimmed.startsWith('>')) op = 'gt';
+        else if (trimmed.startsWith('<=')) op = 'lte';
+        else if (trimmed.startsWith('<')) op = 'lt';
+        else if (trimmed.startsWith('!=')) op = 'neq';
+        else op = 'eq';
+      } else {
+        op = 'eq';
+      }
+    }
+
+    if (op === 'is_empty') {
+      return parentValue === undefined || parentValue === null || String(parentValue).trim() === '' || String(parentValue) === '[]';
+    }
+
+    if (op === 'is_not_empty') {
+      return parentValue !== undefined && parentValue !== null && String(parentValue).trim() !== '' && String(parentValue) !== '[]';
+    }
+
+    if (parentValue === undefined || parentValue === null || String(parentValue).trim() === '') {
       return false;
     }
 
-    const parentField = allFields.find(f => f.name === parentName);
-    const requiredVal = dependency.value;
+    if (['gt', 'gte', 'lt', 'lte'].includes(op)) {
+      const numParent = this.parseNumericValue(parentValue);
+      const numTarget = this.parseNumericValue(requiredVal);
+      if (isNaN(numParent) || isNaN(numTarget)) {
+        return false;
+      }
+      if (op === 'gt') return numParent > numTarget;
+      if (op === 'gte') return numParent >= numTarget;
+      if (op === 'lt') return numParent < numTarget;
+      if (op === 'lte') return numParent <= numTarget;
+    }
+
+    const parentField = allFields ? allFields.find(f => f.name === parentName) : null;
 
     if (parentField && (parentField.type === 'multiselect' || parentField.type === 'dynamic_list')) {
       let selectedList: string[] = [];
       try {
-        const parsed = JSON.parse(parentValue);
+        const parsed = typeof parentValue === 'string' ? JSON.parse(parentValue) : parentValue;
         if (Array.isArray(parsed)) {
-          selectedList = parsed.map(i => typeof i === 'object' ? (i.item || i.product) : i).filter(Boolean);
+          selectedList = parsed.map(i => typeof i === 'object' && i !== null ? (i.item || i.product || i.name || i.value || JSON.stringify(i)) : String(i)).filter(Boolean);
+        } else {
+          selectedList = [String(parentValue)];
         }
       } catch(e) {
         selectedList = String(parentValue).split(',').map(s => s.trim()).filter(Boolean);
       }
 
-      if (Array.isArray(requiredVal)) {
-        const cleanReq = requiredVal.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null' && v !== '_null');
-        return cleanReq.some(val => selectedList.includes(val));
+      const cleanReqList = Array.isArray(requiredVal) 
+        ? requiredVal.map(v => String(v).trim()).filter(v => v && v !== 'null' && v !== '_null')
+        : (requiredVal !== undefined && requiredVal !== null ? [String(requiredVal).trim()] : []);
+
+      if (op === 'neq') {
+        return !cleanReqList.some(val => selectedList.includes(val));
       }
-      return selectedList.includes(requiredVal);
+      return cleanReqList.some(val => selectedList.includes(val));
     }
 
+    const parentStr = String(parentValue).trim().toLowerCase();
+
     if (Array.isArray(requiredVal)) {
-      const cleanReq = requiredVal.filter(v => v !== null && v !== undefined && v !== '' && v !== 'null' && v !== '_null');
-      return cleanReq.includes(String(parentValue));
+      const cleanReq = requiredVal
+        .map(v => String(v).trim().toLowerCase())
+        .filter(v => v && v !== 'null' && v !== '_null');
+      if (op === 'neq') {
+        return !cleanReq.includes(parentStr);
+      }
+      if (op === 'contains') {
+        return cleanReq.some(val => parentStr.includes(val));
+      }
+      return cleanReq.includes(parentStr);
     }
-    return String(parentValue) === String(requiredVal);
+
+    const targetStr = String(requiredVal ?? '').trim().toLowerCase();
+    if (op === 'neq') {
+      return parentStr !== targetStr;
+    }
+    if (op === 'contains') {
+      return parentStr.includes(targetStr);
+    }
+    return parentStr === targetStr;
   }
 
   initDynamicListField(key: string, rawVal: string) {
@@ -2305,7 +2645,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     });
 
     this.dynamicListRows[key] = newList;
-    
+
     const jsonVal = JSON.stringify(newList);
     if (containerType === 'initial') {
       const vals = this.initialFormValues();
@@ -2339,7 +2679,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     const list = this.dynamicListRows[key] || [];
     const removedItem = list[itemIdx];
     list.splice(itemIdx, 1);
-    
+
     if (removedItem) {
       const name = removedItem.item || removedItem.product;
       this.dynamicListSelected[key] = (this.dynamicListSelected[key] || []).filter(i => i !== name);
@@ -2452,10 +2792,54 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       nextMode = 'leader';
     }
     team.assignmentMode = nextMode;
+    if (nextMode !== 'random') {
+      team.selectedSubteamId = 0;
+    }
+  }
+
+  getSubteamOptionsForTeam(team: any): { label: string; value: number; memberCount: number; isMain: boolean }[] {
+    const mainCount = Array.isArray(team?.users) ? team.users.length : 0;
+    const options: Array<{ label: string; value: number; memberCount: number; isMain: boolean }> = [
+      {
+        label: `Equipo Principal (${mainCount} ${mainCount === 1 ? 'miembro' : 'miembros'})`,
+        value: 0,
+        memberCount: mainCount,
+        isMain: true
+      }
+    ];
+
+    if (team && Array.isArray(team.subteams)) {
+      for (const s of team.subteams) {
+        if (s.isActive !== false) {
+          const count = Array.isArray(s.subteamUsers) ? s.subteamUsers.length : 0;
+          options.push({
+            label: `Subequipo: ${s.name} (${count} ${count === 1 ? 'miembro' : 'miembros'})`,
+            value: s.id,
+            memberCount: count,
+            isMain: false
+          });
+        }
+      }
+    }
+
+    return options;
   }
 
   getTeamAssignmentBadge(team: any): { label: string; icon: string; severity: 'info' | 'success' | 'warn' | 'danger' | 'secondary' | 'contrast'; tooltip: string; bgClass: string; textClass: string; borderClass: string } {
     const mode = team.assignmentMode || 'leader';
+
+    if (mode === 'workflow') {
+      return {
+        label: 'Según Flujo (Etapa 1)',
+        icon: 'git-branch',
+        severity: 'warn',
+        tooltip: 'Asignación según Flujo: La etapa 1 se asignará según la regla configurada en la Etapa 1 del Flujo de Trabajo. Haz clic para alternar modo.',
+        bgClass: 'bg-orange-50',
+        textClass: 'text-orange-800',
+        borderClass: 'border-orange-200'
+      };
+    }
+
     if (mode === 'leader') {
       if (team.leader) {
         return {
@@ -2472,41 +2856,52 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           label: 'Líder (Sin asignar)',
           icon: 'user-check',
           severity: 'warn',
-          tooltip: 'Asignar a Líder: Este equipo no tiene líder asignado (se intentará miembro aleatorio o flujo). Haz clic para alternar modo.',
+          tooltip: 'Asignar a Líder: Este equipo no tiene líder asignado. Haz clic para alternar modo.',
           bgClass: 'bg-amber-50',
           textClass: 'text-amber-800',
           borderClass: 'border-amber-200'
         };
       }
-    } else if (mode === 'random') {
-      const count = team.users?.length || 0;
-      return {
-        label: `Aleatorio (${count} miembros)`,
-        icon: 'shuffle',
-        severity: 'success',
-        tooltip: `Asignación Aleatoria: La etapa 1 se asignará al azar entre los ${count} miembros del equipo. Haz clic para alternar modo.`,
-        bgClass: 'bg-purple-50',
-        textClass: 'text-purple-700',
-        borderClass: 'border-purple-200'
-      };
-    } else {
-      return {
-        label: 'Según Flujo (Etapa 1)',
-        icon: 'git-branch',
-        severity: 'warn',
-        tooltip: 'Asignación según Flujo: La etapa 1 se asignará según la regla configurada en la Etapa 1 del Flujo de Trabajo. Haz clic para alternar modo.',
-        bgClass: 'bg-orange-50',
-        textClass: 'text-orange-800',
-        borderClass: 'border-orange-200'
-      };
     }
+
+    // Modo 'random'
+    if (team.selectedSubteamId && team.selectedSubteamId > 0 && Array.isArray(team.subteams)) {
+      const sub = team.subteams.find((s: any) => s.id === team.selectedSubteamId);
+      if (sub) {
+        const count = Array.isArray(sub.subteamUsers) ? sub.subteamUsers.length : 0;
+        return {
+          label: `Azar en Subequipo: ${sub.name} (${count})`,
+          icon: 'shuffle',
+          severity: 'success',
+          tooltip: `Asignación Aleatoria al Subequipo: La etapa 1 se asignará al azar entre los ${count} miembros de "${sub.name}". Haz clic para alternar modo.`,
+          bgClass: 'bg-purple-50',
+          textClass: 'text-purple-700',
+          borderClass: 'border-purple-200'
+        };
+      }
+    }
+
+    const mainCount = Array.isArray(team.users) ? team.users.length : 0;
+    return {
+      label: `Azar en Equipo Principal (${mainCount})`,
+      icon: 'shuffle',
+      severity: 'success',
+      tooltip: `Asignación Aleatoria: La etapa 1 se asignará al azar entre los ${mainCount} miembros del equipo principal. Haz clic para alternar modo.`,
+      bgClass: 'bg-purple-50',
+      textClass: 'text-purple-700',
+      borderClass: 'border-purple-200'
+    };
   }
 
   getTeamDisabledReason(team: any): string | undefined {
     if (!this.isTeamConditionMet(team)) {
-      return 'No cumple con las condiciones configuradas en el formulario inicial.';
+      return 'No cumple con las condiciones configuradas para este formulario inicial.';
     }
     return undefined;
+  }
+
+  onInitialFormChange() {
+    this.recalculateInitialFormulas();
   }
 
   isTeamEnabled(team: any): boolean {
@@ -2523,11 +2918,68 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       return true;
     }
 
+    const currentFormId = this.selectedInitialFormId();
+    if (!currentFormId) {
+      return true;
+    }
+
+    const currentForm = this.selectedInitialForm();
+    const currentFormFields = currentForm?.fields || [];
+    const currentFormFieldNames = new Set<string>(currentFormFields.map((f: any) => f.name));
+
+    // Filtrar únicamente las condiciones que pertenecen al formulario inicial que se está llenando
+    const applicableConditions = meta.enableConditions.filter((cond: any) => {
+      if (!cond) return false;
+
+      const keys: string[] = cond.fieldKeys && Array.isArray(cond.fieldKeys) && cond.fieldKeys.length > 0
+        ? cond.fieldKeys
+        : (cond.fieldKey ? [cond.fieldKey] : []);
+
+      // 1. Detección por prefijo numérico en fieldKey (ej: "42_campo_...").
+      // Este prefijo es la fuente de verdad definitiva sobre a qué formulario pertenece el campo configurado.
+      let condFormId: number | null = null;
+      for (const key of keys) {
+        if (typeof key === 'string') {
+          const match = key.match(/^(\d+)_(.+)$/);
+          if (match) {
+            condFormId = Number(match[1]);
+            break;
+          }
+        }
+      }
+
+      // 2. Si no tenía prefijo numérico en la key, verificar por formId explícito
+      if (condFormId === null && cond.formId !== undefined && cond.formId !== null && cond.formId !== '') {
+        condFormId = Number(cond.formId);
+      }
+
+      // Si se determinó un formId (por prefijo o explícito), comparar estrictamente con el formulario activo
+      if (condFormId !== null) {
+        return Number(condFormId) === Number(currentFormId);
+      }
+
+      // 3. Fallback: verificar si el nombre del campo sin prefijo existe en el formulario actual
+      for (const key of keys) {
+        if (typeof key === 'string') {
+          const cleanKey = key.includes('_') ? key.split('_').slice(1).join('_') : key;
+          if (currentFormFieldNames.has(key) || currentFormFieldNames.has(cleanKey)) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    });
+
+    // Si el formulario actual no tiene filtros configurados para este equipo, no se restringe
+    if (applicableConditions.length === 0) {
+      return true;
+    }
+
     const values = this.initialFormValues();
     const removeAccents = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    
-    // Check all conditions (AND logic)
-    for (const cond of meta.enableConditions) {
+
+    for (const cond of applicableConditions) {
       let val: any = undefined;
       const keys = cond.fieldKeys || (cond.fieldKey ? [cond.fieldKey] : []);
       for (const key of keys) {
@@ -2535,13 +2987,13 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           val = values[key];
           break;
         }
-        // Also check with selected initial form prefix
+
         const formId = this.selectedInitialFormId();
         if (formId && values[`${formId}_${key}`] !== undefined && values[`${formId}_${key}`] !== null && values[`${formId}_${key}`] !== '') {
           val = values[`${formId}_${key}`];
           break;
         }
-        // Check cleanKey without form prefix
+
         const cleanKey = key.includes('_') ? key.split('_').slice(1).join('_') : key;
         if (formId && values[`${formId}_${cleanKey}`] !== undefined && values[`${formId}_${cleanKey}`] !== null && values[`${formId}_${cleanKey}`] !== '') {
           val = values[`${formId}_${cleanKey}`];
@@ -2570,7 +3022,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         return false;
       }
 
-      // Extract cond values array
       let condValuesArray: string[] = [];
       if (Array.isArray(condVal)) {
         condValuesArray = condVal.map(v => removeAccents(String(v)).toLowerCase().trim());
@@ -2585,7 +3036,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         condValuesArray = [removeAccents(String(condVal)).toLowerCase().trim()];
       }
 
-      // Extract user values array
       let userValuesArray: string[] = [];
       if (Array.isArray(val)) {
         userValuesArray = val.map(v => typeof v === 'object' && v !== null ? (v.item || v.product || v.name || JSON.stringify(v)) : String(v));
@@ -2621,27 +3071,27 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           return false;
         }
       } else if (op === 'gt') {
-        const numVal = Number(String(val).replace(/[^0-9.-]/g, ''));
-        const numCond = Number(condVal);
-        if (isNaN(numVal) || numVal <= numCond) {
+        const numVal = this.parseNumericValue(val);
+        const numCond = this.parseNumericValue(condVal);
+        if (isNaN(numVal) || isNaN(numCond) || numVal <= numCond) {
           return false;
         }
       } else if (op === 'lt') {
-        const numVal = Number(String(val).replace(/[^0-9.-]/g, ''));
-        const numCond = Number(condVal);
-        if (isNaN(numVal) || numVal >= numCond) {
+        const numVal = this.parseNumericValue(val);
+        const numCond = this.parseNumericValue(condVal);
+        if (isNaN(numVal) || isNaN(numCond) || numVal >= numCond) {
           return false;
         }
       } else if (op === 'gte') {
-        const numVal = Number(String(val).replace(/[^0-9.-]/g, ''));
-        const numCond = Number(condVal);
-        if (isNaN(numVal) || numVal < numCond) {
+        const numVal = this.parseNumericValue(val);
+        const numCond = this.parseNumericValue(condVal);
+        if (isNaN(numVal) || isNaN(numCond) || numVal < numCond) {
           return false;
         }
       } else if (op === 'lte') {
-        const numVal = Number(String(val).replace(/[^0-9.-]/g, ''));
-        const numCond = Number(condVal);
-        if (isNaN(numVal) || numVal > numCond) {
+        const numVal = this.parseNumericValue(val);
+        const numCond = this.parseNumericValue(condVal);
+        if (isNaN(numVal) || isNaN(numCond) || numVal > numCond) {
           return false;
         }
       }

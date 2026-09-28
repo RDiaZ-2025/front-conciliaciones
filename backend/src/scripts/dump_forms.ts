@@ -8,7 +8,7 @@ import { DynamicForm } from '../models/DynamicForm';
 async function run() {
     try {
         await AppDataSource.initialize();
-        
+
         const forms = await AppDataSource.getRepository(DynamicForm).find({
             order: { id: 'ASC' }
         });

@@ -5,7 +5,7 @@ import { authenticateToken } from '../middleware/auth';
 const router = Router();
 const campaignController = new CampaignController();
 
-router.use(authenticateToken); // Protect all campaign routes
+router.use(authenticateToken);
 
 router.get('/', campaignController.getAll);
 router.get('/:id', campaignController.getById);

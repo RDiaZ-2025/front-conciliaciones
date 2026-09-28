@@ -39,7 +39,8 @@ export const routes: Routes = [
       },
       {
         path: 'requests-beta/inbox',
-        loadComponent: () => import('./pages/requests-beta-inbox/requests-beta-inbox.component').then(m => m.RequestsBetaInboxComponent)
+        redirectTo: 'requests-beta',
+        pathMatch: 'full'
       },
       {
         path: 'campaign-scheduling',
@@ -82,6 +83,15 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/teams/teams.component').then(m => m.TeamsComponent)
       },
       {
+        path: 'system-health',
+        loadComponent: () => import('./pages/system-health/system-health.component').then(m => m.SystemHealthComponent)
+      },
+      {
+        path: 'health',
+        redirectTo: 'system-health',
+        pathMatch: 'full'
+      },
+      {
         path: 'portada',
         redirectTo: 'cover15minutes',
         pathMatch: 'full'
@@ -102,6 +112,48 @@ export const routes: Routes = [
         path: 'customers',
         loadComponent: () => import('./pages/customers/customers.component').then(m => m.CustomersComponent)
       },
+      {
+        path: 'portal',
+        children: [
+          { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+          {
+            path: 'dashboard',
+            loadComponent: () => import('./pages/portal/dashboard/dashboard.component').then(m => m.DashboardComponent)
+          },
+          {
+            path: 'ingresos',
+            loadComponent: () => import('./pages/portal/ingresos/ingresos.component').then(m => m.Ingresos)
+          },
+          {
+            path: 'presupuesto',
+            loadComponent: () => import('./pages/portal/presupuesto/presupuesto.component').then(m => m.Presupuesto)
+          }
+        ]
+      },
+      {
+        path: 'news',
+        children: [
+          { path: '', redirectTo: 'auto-generar', pathMatch: 'full' },
+          {
+            path: 'auto-generar',
+            loadComponent: () => import('./pages/noticias/auto-generar/auto-generar.component').then(m => m.AutoGenerarComponent)
+          }
+        ]
+      },
+      {
+        path: 'messages',
+        children: [
+          { path: '', redirectTo: 'segmentacion-bases', pathMatch: 'full' },
+          {
+            path: 'segmentacion-bases',
+            loadComponent: () => import('./pages/mensajeria/segmentacion-bases/segmentacion-bases.component').then(m => m.SegmentacionBasesComponent)
+          },
+          {
+            path: 'analisis-sms',
+            loadComponent: () => import('./pages/mensajeria/analisis-sms/analisis-sms.component').then(m => m.AnalisisSmsComponent)
+          }
+        ]
+      }
     ]
   },
 

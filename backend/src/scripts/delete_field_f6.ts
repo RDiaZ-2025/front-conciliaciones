@@ -9,7 +9,7 @@ import { DynamicFormFieldValue } from '../models/DynamicFormFieldValue';
 async function test() {
     try {
         await AppDataSource.initialize();
-        
+
         const valRepo = AppDataSource.getRepository(DynamicFormFieldValue);
         const fieldRepo = AppDataSource.getRepository(DynamicFormField);
 

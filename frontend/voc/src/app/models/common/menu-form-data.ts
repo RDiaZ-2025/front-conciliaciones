@@ -6,5 +6,5 @@ export interface MenuFormData {
     displayOrder: number;
     isActive: boolean;
     permissionId: number | null;
-    project: string;
+    project?: string;
 }

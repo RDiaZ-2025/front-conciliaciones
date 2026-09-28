@@ -61,7 +61,7 @@ export class EmailMarketingDialogComponent {
 
     constructor() {
         this.form = this.fb.group({
-            solutionCategory: ['MOBILE'], // Or generic category
+            solutionCategory: ['MOBILE'],
             solutionType: ['EMAIL_MARKETING'],
             email_template: ['', Validators.required],
             email_trackingUrls: ['', [Validators.pattern(/https?:\/\/.+/)]],
@@ -72,7 +72,7 @@ export class EmailMarketingDialogComponent {
             email_support_links: ['', [Validators.pattern(/https?:\/\/.+/)]],
             email_legal_text: ['', Validators.required],
             email_dnsConfig: ['', Validators.required],
-            
+
             email_ctas_list: this.fb.array([]),
             email_social_list: this.fb.array([])
         });
@@ -119,7 +119,7 @@ export class EmailMarketingDialogComponent {
 
     onUpload(event: any, category: string = 'email_logo') {
         for (let file of event.files) {
-            file.category = category; // Tag file
+            file.category = category;
             this.uploadedFiles.push(file);
         }
         this.messageService.add({ severity: 'info', summary: 'File Uploaded', detail: '' });
@@ -130,7 +130,7 @@ export class EmailMarketingDialogComponent {
             const img = new Image();
             img.onload = () => {
                 URL.revokeObjectURL(img.src);
-                // Basic check, max width 600px for email logo
+
                 if (category === 'email_logo' && img.width > 600) {
                      this.messageService.add({ severity: 'error', summary: 'Error', detail: `El logo excede el ancho máximo de 600px. (${img.width}px)` });
                      resolve(false);
@@ -148,14 +148,13 @@ export class EmailMarketingDialogComponent {
 
     async submit() {
         if (this.form.valid) {
-            // Check required file
+
             const logo = this.uploadedFiles.find(f => f.category === 'email_logo');
             if (!logo) {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Falta el Logo (PNG/JPG, Máx 600px).' });
                 return;
             }
 
-            // Validate dimensions
             this.isUploading.set(true);
             const isValid = await this.validateImageDimensions(logo, 'email_logo');
             this.isUploading.set(false);

@@ -6,7 +6,6 @@ import { Component, inject, signal, computed, effect, OnInit } from '@angular/co
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, Router } from '@angular/router';
 
-// PrimeNG Imports
 import { DrawerModule } from 'primeng/drawer';
 import { ToolbarModule } from 'primeng/toolbar';
 import { ButtonModule } from 'primeng/button';
@@ -21,9 +20,11 @@ import { MenuItem as PrimeMenuItem } from 'primeng/api';
 import { AuthService } from '../../services/auth.service';
 import { MenuService, MenuItem } from '../../services/menu.service';
 import { NotificationService, Notification } from '../../services/notification.service';
-;
 import { ProductionService } from '../../services/production.service';
 import { ProductionDialogComponent } from '../../pages/production_2/production-dialog/production-dialog.component';
+import { SystemHealthModalComponent } from '../system-health-modal/system-health-modal.component';
+import { SystemHealthService } from '../../services/system-health.service';
+import { PERMISSIONS } from '../../constants/permissions';
 
 @Component({
   selector: 'app-layout',
@@ -41,7 +42,8 @@ import { ProductionDialogComponent } from '../../pages/production_2/production-d
     StyleClassModule,
     PopoverModule,
     BadgeModule,
-    MenuModule
+    MenuModule,
+    SystemHealthModalComponent
   ],
   providers: [DialogService],
   templateUrl: './layout.component.html',
@@ -54,23 +56,27 @@ export class LayoutComponent implements OnInit {
   private productionService = inject(ProductionService);
   private dialogService = inject(CoreDialogService);
   private router = inject(Router);
+  private healthService = inject(SystemHealthService);
+
+  appVersion = this.healthService.appVersion;
 
   menuItems = signal<MenuItem[]>([]);
   loading = signal(true);
   error = signal<string | null>(null);
 
-  // Auth signals
   currentUser = this.authService.currentUser;
+  isAdmin = computed(() => this.authService.isAdmin());
+  canViewHealthBottom = computed(() => 
+    this.authService.isAdmin() && this.authService.hasPermission(PERMISSIONS.HEALTH_CHECKER)
+  );
 
-  // Notification signals
   notifications = this.notificationService.notifications;
   unreadCount = this.notificationService.unreadCount;
 
-  // Expanded menu items state
   expandedItems = signal<Set<number>>(new Set());
 
-  // Drawer state
   isDrawerOpen = false;
+  showHealthModal = signal(false);
 
   isDarkMode = signal(false);
 
@@ -89,6 +95,7 @@ export class LayoutComponent implements OnInit {
   ngOnInit() {
     this.fetchMenuItems();
     this.notificationService.loadNotifications();
+    this.healthService.getHealth().subscribe();
   }
 
   logout() {
@@ -102,10 +109,9 @@ export class LayoutComponent implements OnInit {
   }
 
   handleNotificationClick(notification: Notification) {
-    // Always mark as read
+
     this.markAsRead(notification);
 
-    // Open modal directly on current page
     if (notification.title === 'Nueva Solicitud Asignada') {
       const match = notification.message.match(/Se te ha asignado la solicitud de producción: (.*)/);
       if (match && match[1]) {
@@ -153,7 +159,6 @@ export class LayoutComponent implements OnInit {
     }
   }
 
-
   initTheme() {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
@@ -164,6 +169,10 @@ export class LayoutComponent implements OnInit {
 
   toggleDrawer() {
     this.isDrawerOpen = !this.isDrawerOpen;
+  }
+
+  openHealthModal() {
+    this.showHealthModal.set(true);
   }
 
   onDrawerVisibleChange(isVisible: boolean) {
@@ -187,12 +196,11 @@ export class LayoutComponent implements OnInit {
   }
 
   hasPermission(item: MenuItem): boolean {
-    // If item has a specific permission name attached from backend
+
     if (item.permissionName) {
       return this.authService.hasPermission(item.permissionName);
     }
 
-    // If no permission required/found, show it
     return true;
   }
 
@@ -226,54 +234,43 @@ export class LayoutComponent implements OnInit {
 
   private fetchMenuItems() {
     this.loading.set(true);
-    this.menuService.getAllMenuItems('voc').subscribe({
+    this.menuService.getAllMenuItems().subscribe({
       next: (response) => {
         if (response.success) {
           const allItems = response.data;
 
-          // Check if the response is a flat list (contains items with parentId)
-          // If yes, we need to build the tree.
-          // If no (only roots), we assume it's already a tree structure.
           const isFlatList = allItems.some(item => !!item.parentId);
 
           if (isFlatList) {
-            // Logic for Flat List -> Tree
+
             const activeItems = allItems.filter(item => item.isActive !== false);
 
-            // Find parents (roots)
             const parents = activeItems.filter(item => !item.parentId);
 
-            // Attach children
             parents.forEach(parent => {
-              // Loose equality to handle string/number mismatch
+
               parent.children = activeItems.filter(child => child.parentId == parent.id);
-              // Sort children
+
               parent.children.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
             });
 
-            // Sort parents
             parents.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
 
             this.menuItems.set(parents);
           } else {
-            // Logic for Pre-built Tree (only roots at top level)
-            // We assume the children are already nested in item.children
 
-            // Filter active roots
             let roots = allItems.filter(item => item.isActive !== false);
 
-            // Sort roots
             roots.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
 
-            // Recursively sort and filter active children (optional but good practice)
             const processChildren = (items: MenuItem[]) => {
               items.forEach(item => {
                 if (item.children) {
-                  // Filter active children
+
                   item.children = item.children.filter(child => child.isActive !== false);
-                  // Sort children
+
                   item.children.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-                  // Recurse
+
                   processChildren(item.children);
                 }
               });
