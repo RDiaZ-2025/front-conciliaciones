@@ -1,46 +1,40 @@
-# ☁️ Aprovisionamiento de Azure Service Bus con Terraform (NOC Scheduler)
+# VOC Azure Infrastructure (Terraform)
 
-Este módulo de Terraform aprovisiona la infraestructura necesaria en **Microsoft Azure** para el agendamiento y ejecución automática de noticias sin polling (Event-Driven / Scheduled Messages).
+Módulo completo de infraestructura como código (IaC) para el proyecto VOC en Microsoft Azure.
+
+## Recursos desplegados
+
+1. **Resource Group**: `voc-project` (o existente).
+2. **App Service Plan & Web Apps**:
+   - `voc-backend` (Producción, Windows Node.js 20, configurado con IISNode).
+   - `voc-backend-test` (Test).
+   - Configuración automática de variables de entorno (DB, Storage, Service Bus, JWT).
+3. **Azure SQL Database & Server**:
+   - SQL Server con TLS 1.2 y regla de firewall para servicios de Azure.
+   - Base de datos `voc_db` lista para TypeORM.
+4. **Azure Storage Account**:
+   - Contenedores de Blobs: `public` y `private`.
+   - File Share: `conciliaciones-share`.
+5. **Azure Service Bus**:
+   - Namespace + Cola `noc-news-schedules` + SAS Rule para backend.
+6. **Azure Static Web Apps**:
+   - `frontend` (Producción).
+   - `voc-frontend-test` (Test).
+7. **OIDC Managed Identity**:
+   - Identidad administrada con credenciales federadas para ramas `main` y `test` en GitHub Actions (`RDiaZ-2025/front-conciliaciones`).
+   - Rol `Website Contributor` asignado.
+8. **Monitoreo**:
+   - Log Analytics Workspace + Application Insights para Node.js.
 
 ---
 
-## 📦 Recursos que aprovisiona:
+## Ejecución Rápida
 
-1. **`azurerm_servicebus_namespace`**: Espacio de nombres de Service Bus (SKU Básico o Estándar).
-2. **`azurerm_servicebus_queue`**: Cola `noc-news-schedules` con configuración de TTL (14 días), Dead Lettering y retención de mensajes programados.
-3. **`azurerm_servicebus_namespace_authorization_rule`**: Llave de acceso `NocBackendAccessKey` con permisos `Send` y `Listen` para conectar el backend de forma segura.
+Ejecute en PowerShell:
 
----
-
-## 🚀 Pasos de Ejecución:
-
-### 1. Iniciar sesión en Azure CLI:
-```bash
-az login
-az account set --subscription "TU_SUBSCRIPTION_ID_O_NAME"
-```
-
-### 2. Configurar variables:
-Copia el archivo de ejemplo y ajusta los valores (nombre del Resource Group y Región):
-```bash
-cp terraform.tfvars.example terraform.tfvars
-```
-
-### 3. Inicializar y aplicar Terraform:
-```bash
+```powershell
 cd terraform
-terraform init
-terraform plan
-terraform apply
+./deploy.ps1
 ```
 
-### 4. Obtener las variables de entorno para el Backend:
-Para ver el snippet listo para pegar en `backend/.env`:
-```bash
-terraform output -raw env_configuration_snippet
-```
-
-O para obtener únicamente la cadena de conexión:
-```bash
-terraform output -raw servicebus_primary_connection_string
-```
+Al terminar, el script imprime directamente los tokens y secretos listos para pegar en GitHub Repository Secrets.

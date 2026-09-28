@@ -1,8 +1,23 @@
-# Valores preconfigurados para VOC/NOC
-create_resource_group     = false
-resource_group_name       = "voc-project"
-location                  = "eastus"
-environment               = "prod"
-servicebus_namespace_name = "sb-voc-project"
-servicebus_sku            = "Basic"
-queue_name                = "noc-news-schedules"
+# Archivo de variables de ejemplo para VOC Infraestructura
+# Renombrar a terraform.tfvars antes de ejecutar 'terraform apply'
+
+resource_group_name = "voc-project"
+location            = "eastus"
+environment         = "prod"
+
+# SQL Database Credentials (CAMBIAR POR CONTRASEÑA SEGURA)
+sql_admin_username  = "vocadmin"
+sql_admin_password  = "VocSqlP@ssw0rd2026!"
+sql_database_name   = "voc_db"
+sql_sku             = "Basic"
+
+# Backend & Service Bus
+app_service_sku     = "B1"
+create_test_backend = true
+servicebus_sku      = "Basic"
+queue_name          = "noc-news-schedules"
+
+# GitHub Repo para OIDC
+github_org          = "RDiaZ-2025"
+github_repo         = "front-conciliaciones"
+deploy_branches     = ["main", "test"]

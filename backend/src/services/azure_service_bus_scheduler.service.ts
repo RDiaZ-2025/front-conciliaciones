@@ -141,7 +141,7 @@ export class AzureServiceBusSchedulerService {
             this.isListening = true;
 
             this.receiver.subscribe({
-                processMessage: async (message) => {
+                processMessage: async (message: any) => {
                     const body = message.body;
                     const scheduleId = body?.scheduleId;
 
@@ -156,7 +156,7 @@ export class AzureServiceBusSchedulerService {
                         }
                     }
                 },
-                processError: async (args) => {
+                processError: async (args: any) => {
                     this.lastError = `receiver error: ${args.error?.message || args.error}`;
                     console.error(`❌ [Azure Service Bus] Error en el receptor de la cola ${this.queueName}:`, args.error);
                 }
