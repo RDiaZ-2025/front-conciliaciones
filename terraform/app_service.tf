@@ -27,7 +27,7 @@ resource "azurerm_windows_web_app" "backend_test" {
   app_settings = {
     "NODE_ENV"                              = "test"
     "WEBSITE_NODE_DEFAULT_VERSION"         = "~20"
-    "SCM_DO_BUILD_DURING_DEPLOYMENT"        = "true"
+    "SCM_DO_BUILD_DURING_DEPLOYMENT"        = "false"
     "PORT"                                  = "22741"
     "DB_SERVER"                             = azurerm_mssql_server.sql_server_test.fully_qualified_domain_name
     "DB_PORT"                               = "1433"
