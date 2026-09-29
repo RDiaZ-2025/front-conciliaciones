@@ -30,10 +30,12 @@ export const errorHandler = (err: Error | unknown, req: Request, res: Response, 
 
     const stack = err instanceof Error ? err.stack : undefined;
 
+    const isDevOrTest = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+
     return res.status(500).json({
         success: false,
         message: 'Internal Server Error',
-        error: process.env.NODE_ENV === 'development' ? message : 'An unexpected error occurred',
-        stack: process.env.NODE_ENV === 'development' ? stack : undefined
+        error: isDevOrTest ? message : 'An unexpected error occurred',
+        stack: isDevOrTest ? stack : undefined
     });
 };

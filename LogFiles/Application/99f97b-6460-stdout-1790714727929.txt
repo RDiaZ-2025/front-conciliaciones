@@ -1,0 +1,15 @@
+◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
+✅ [Azure Service Bus] Cliente inicializado sobre WebSockets (puerto 443 vía ws) usando variable 'AZURE_SERVICE_BUS_CONNECTION_STRING' para cola 'noc-news-schedules'
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+✅ Base de datos conectada
+👂 [Azure Service Bus] Receptor escuchando activamente mensajes en la cola: noc-news-schedules
+🚀 Servidor backend escuchando en el puerto \\.\pipe\bbec7850-c0d8-4797-8b98-d5e7ef8ed36e
+📝 Ambiente: test
+167.0.85.237:63714 - - [29/Sep/2026:20:46:03 +0000] "GET /health HTTP/1.1" 200 646 "-" "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.9549"
+query failed: DECLARE @OutputTable TABLE ("Id" int, "CreatedAt" datetime);
+
+INSERT INTO "UserActionLogs"("UserId", "Method", "Url", "Action", "ResourceType", "ResourceId", "StatusCode", "IpAddress", "UserAgent", "RequestBody", "ResponseBody", "Metadata", "Duration", "ErrorMessage", "CreatedAt") OUTPUT INSERTED."Id", INSERTED."CreatedAt" INTO @OutputTable VALUES (@0, @1, @2, @3, @4, @5, @6, @7, @8, @9, @10, @11, @12, @13, DEFAULT);
+
+SELECT * FROM @OutputTable -- PARAMETERS: [{"value":null,"type":"int","params":[]},{"value":"GET","type":"varchar","params":["10"]},{"value":"/health","type":"varchar","params":["500"]},{"value":"HEALTH_CHECK","type":"varchar","params":["100"]},{"value":null,"type":"varchar","params":["50"]},{"value":null,"type":"varchar","params":["50"]},{"value":200,"type":"int","params":[]},{"value":"167.0.85.237:63714","type":"varchar","params":["45"]},{"value":"Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.9549","type":"varchar","params":["500"]},{"value":null,"type":"text","params":[]},{"value":null,"type":"text","params":[]},{"value":"{\"contentLength\":\"0\"}","type":"text","params":[]},{"value":20,"type":"int","params":[]},{"value":null,"type":"text","params":[]}]
+error: QueryFailedError: Error: Invalid object name 'UserActionLogs'.

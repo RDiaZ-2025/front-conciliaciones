@@ -1,0 +1,8 @@
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+✅ [Azure Service Bus] Cliente inicializado sobre WebSockets (puerto 443 vía ws) usando variable 'AZURE_SERVICE_BUS_CONNECTION_STRING' para cola 'noc-news-schedules'
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+✅ Base de datos conectada
+👂 [Azure Service Bus] Receptor escuchando activamente mensajes en la cola: noc-news-schedules
+🚀 Servidor backend escuchando en el puerto 22741
+📝 Ambiente: test

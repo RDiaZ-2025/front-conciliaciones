@@ -32,6 +32,17 @@ const app = express();
 
 app.set('trust proxy', 1);
 
+app.use((req, res, next) => {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string') {
+    req.headers['x-forwarded-for'] = forwarded
+      .split(',')
+      .map(ip => ip.trim().replace(/:\d+$/, ''))
+      .join(', ');
+  }
+  next();
+});
+
 const isProduction = process.env.NODE_ENV === 'production';
 
 const allowedOrigins: string[] = [
@@ -79,6 +90,7 @@ const limiter = rateLimit({
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '1000'),
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { ip: false },
   message: {
     success: false,
     message: 'Demasiadas solicitudes desde esta IP, intenta de nuevo más tarde.'
@@ -127,7 +139,7 @@ const formatUptime = (seconds: number): string => {
   return parts.join(' ');
 };
 
-const APP_VERSION = '1.10.4';
+const APP_VERSION = '1.10.5';
 const APP_VERSION_DATE = '2026-09-29';
 
 const getHealthPayload = () => {

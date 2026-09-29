@@ -11,6 +11,7 @@ const loginLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { ip: false },
   message: {
     success: false,
     message: 'Demasiados intentos de inicio de sesión desde esta IP. Por seguridad, intente de nuevo en 15 minutos.'
