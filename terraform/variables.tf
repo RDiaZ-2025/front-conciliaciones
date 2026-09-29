@@ -100,8 +100,8 @@ variable "github_repo" {
   default     = "front-conciliaciones"
 }
 
-variable "deploy_branch" {
-  type        = string
-  description = "Rama de GitHub para pruebas."
-  default     = "test"
+variable "deploy_branches" {
+  type        = list(string)
+  description = "Ramas de GitHub autorizadas para OIDC."
+  default     = ["test", "main"]
 }

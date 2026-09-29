@@ -7,14 +7,15 @@ resource "azurerm_user_assigned_identity" "github_deployer_test" {
   tags = local.tags
 }
 
-# 2. Credencial federada OIDC exclusiva para la rama 'test'
-resource "azurerm_federated_identity_credential" "github_test_branch" {
-  name                = "gh-deploy-test"
+# 2. Credenciales federadas OIDC para las ramas autorizadas (test y main)
+resource "azurerm_federated_identity_credential" "github_branches" {
+  for_each            = toset(var.deploy_branches)
+  name                = "gh-deploy-${each.key}"
   resource_group_name = local.rg_name
   parent_id           = azurerm_user_assigned_identity.github_deployer_test.id
   audience            = ["api://AzureADTokenExchange"]
   issuer              = "https://token.actions.githubusercontent.com"
-  subject             = "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/${var.deploy_branch}"
+  subject             = "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/${each.key}"
 }
 
 # 3. Permisos de despliegue sobre el Resource Group para el Web App de Test
