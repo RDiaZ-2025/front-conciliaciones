@@ -24,7 +24,7 @@
                     pInputText 
                     [ngModel]="filterSearch()" 
                     (input)="onSearchInput($any($event.target).value)"
-                    placeholder="Buscar por ID (#), formulario, solicitante, consecutivo, etapa o datos..." 
+                    placeholder="Buscar por ID (#), formulario, solicitante, etapa o datos..." 
                     class="w-full text-sm pl-6 pr-6 py-2 border-round-lg" />
                 <button 
                     *ngIf="filterSearch()" 
@@ -333,11 +333,6 @@
                                 <div class="flex align-items-center gap-2 text-sm text-600">
                                     <lucide-icon name="cog"></lucide-icon>
                                     <span>Etapa actual: <strong>{{ sub.stageName }}</strong></span>
-                                </div>
-
-                                <div class="flex align-items-center gap-2 text-sm text-green-700 font-bold" *ngIf="sub.consecutive">
-                                    <lucide-icon name="hash"></lucide-icon>
-                                    <span>Consecutivo: <strong>{{ sub.consecutive }}</strong></span>
                                 </div>
 
                                 <div class="flex align-items-center gap-2 text-sm text-600">
@@ -1871,25 +1866,18 @@
             
             <!-- Metadata summary grid -->
             <div class="grid row-gap-2 surface-50 p-3 border-round border-1 surface-border">
-                <div class="col-6 flex flex-column gap-1">
-                    <span class="text-xs text-500 font-medium">Consecutivo</span>
-                    <span class="text-sm font-bold text-900">
-                        <lucide-icon name="hash" class="mr-1" style="width: 1.1rem; height: 1.1rem; display: inline-block; vertical-align: middle;"></lucide-icon>
-                        {{ selectedDetails().consecutive || 'Sin consecutivo' }}
-                    </span>
-                </div>
-                <div class="col-6 flex flex-column gap-1">
+                <div class="col-12 sm:col-4 flex flex-column gap-1">
                     <span class="text-xs text-500 font-medium">Estado General</span>
                     <div>
                         <p-tag [severity]="getStatusSeverity(selectedDetails().status)" 
                                [value]="getStatusLabel(selectedDetails().status)"></p-tag>
                     </div>
                 </div>
-                <div class="col-6 flex flex-column gap-1">
+                <div class="col-12 sm:col-4 flex flex-column gap-1">
                     <span class="text-xs text-500 font-medium">Fecha Creación</span>
                     <span class="text-sm font-semibold text-700">{{ selectedDetails().createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
                 </div>
-                <div class="col-6 flex flex-column gap-1">
+                <div class="col-12 sm:col-4 flex flex-column gap-1">
                     <span class="text-xs text-500 font-medium">Etapa Actual</span>
                     <span class="text-sm font-semibold text-700">
                         <lucide-icon name="info" class="mr-1" style="width: 1.1rem; height: 1.1rem; display: inline-block; vertical-align: middle;"></lucide-icon>

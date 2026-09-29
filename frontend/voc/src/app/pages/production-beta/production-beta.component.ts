@@ -297,7 +297,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   });
 
   canAdminForms = computed(() => {
-    return this.authService.isCommercialOrAdmin();
+    return this.authService.canAdminForms();
   });
 
   ref: DynamicDialogRef | undefined | null;

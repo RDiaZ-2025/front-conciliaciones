@@ -354,7 +354,7 @@ export class RequestsBetaAdminComponent implements OnInit {
   ];
 
   ngOnInit() {
-    if (!this.authService.isCommercialOrAdmin()) {
+    if (!this.authService.canAdminForms()) {
       this.messageService.add({
         severity: 'warn',
         summary: 'Acceso Restringido',
