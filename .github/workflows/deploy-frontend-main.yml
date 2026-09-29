@@ -5,14 +5,14 @@ on:
     branches:
       - main
     paths:
-      - 'frontend/voc/**'
+      - 'frontend/**'
       - '.github/workflows/deploy-frontend-main.yml'
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
       - main
     paths:
-      - 'frontend/voc/**'
+      - 'frontend/**'
       - '.github/workflows/deploy-frontend-main.yml'
   workflow_dispatch:
 
@@ -39,7 +39,7 @@ jobs:
           app_location: "frontend"
           api_location: ""
           output_location: "dist/voc/browser"
-          app_build_command: "npm run build:voc"
+          app_build_command: "npm run build:prod"
         env:
           NODE_VERSION: '22.22.0'
 

@@ -1,19 +1,6 @@
-const resolveApiUrl = (): string => {
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname.toLowerCase();
-    if (host === 'localhost' || host === '127.0.0.1') {
-      return 'http://localhost:22741/api';
-    }
-    if (host.includes('wonderful-coast') || host.includes('test')) {
-      return 'https://voc-backend-test.azurewebsites.net/api';
-    }
-  }
-  return 'http://localhost:22741/api';
-};
-
 export const environment = {
   production: false,
-  apiUrl: resolveApiUrl(),
+  apiUrl: 'https://voc-backend-test.azurewebsites.net/api',
   festivosApiKey: 'fs_3mNHbhSyjhJyTtdhiKhQjtAC6LWj1MAc',
   festivosApiUrl: 'https://festivos.com.co/api/v1/festivos',
   uploadNotifyUrl: 'https://renediaz2025.app.n8n.cloud/webhook/a4784977-134a-4f09-9ea3-04c85c5ba3b7',

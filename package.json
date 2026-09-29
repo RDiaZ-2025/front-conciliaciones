@@ -1,6 +1,6 @@
 {
   "name": "voc-monorepo",
-  "version": "1.10.2",
+  "version": "1.10.3",
   "description": "VOC Sistema de Conciliaciones - Monorepo",
   "private": true,
   "workspaces": [
@@ -17,6 +17,8 @@
     "dev:frontend": "npm run dev:voc --workspace=frontend",
     "dev:backend": "npm run dev --workspace=backend",
     "build:voc": "npm run build:voc --workspace=frontend && npm run build --workspace=backend",
+    "build:voc:test": "npm run build:test --workspace=frontend",
+    "build:voc:prod": "npm run build:prod --workspace=frontend",
     "build:noc": "npm run build:voc --workspace=frontend && npm run build --workspace=backend",
     "build:backend": "npm run build --workspace=backend",
     "lint": "npm run lint --workspace=frontend",

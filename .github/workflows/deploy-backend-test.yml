@@ -38,6 +38,7 @@ jobs:
           cp backend/web.config deploy-package/
           echo "[config]" > deploy-package/.deployment
           echo "SCM_DO_BUILD_DURING_DEPLOYMENT = false" >> deploy-package/.deployment
+          echo "command = echo \"Pre-built package with node_modules deployed successfully.\"" >> deploy-package/.deployment
           cd deploy-package
           npm install --omit=dev --no-audit --no-fund
 
