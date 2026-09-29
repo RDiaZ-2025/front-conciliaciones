@@ -1851,9 +1851,9 @@ export class ProductionService {
             } else {
                 console.log(`ℹ️ [Workflow Stages] No hay cambios estructurales en el flujo ${workflowId}. No se bloquea ninguna solicitud.`);
             }
-
-            return savedStages;
         });
+
+        return await this.adminGetWorkflowStages(workflowId);
     }
 
     async adminGetStages(formId: number) {

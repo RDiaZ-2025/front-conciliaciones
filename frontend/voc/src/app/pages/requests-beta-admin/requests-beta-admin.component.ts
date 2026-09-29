@@ -1419,7 +1419,7 @@ export class RequestsBetaAdminComponent implements OnInit {
             assigneeUserId: s.assigneeUserId,
             assigneeTeamId: assigneeTeamId,
             assigneeSubteamId: s.assigneeSubteamId || null,
-            formIdToFill: s.formIdToFill,
+            formIdToFill: (multiFormsConfig && multiFormsConfig.length > 0) ? -1 : s.formIdToFill,
             rejectionTargetType: s.rejectionTargetType || 'previous_sender',
             rejectionTargetUserId: s.rejectionTargetUserId,
             rejectionTargetTeamId: s.rejectionTargetTeamId,
@@ -1773,18 +1773,18 @@ export class RequestsBetaAdminComponent implements OnInit {
       const isDynamic = this.isStageAssigneeDynamic(idx);
       const isLastStage = (idx === stages.length - 1);
       let assigneeUserIdsObj: any = null;
-      if (!isDynamic) {
-        if (s.formIdToFill === -1) {
-          assigneeUserIdsObj = {
-            multiFormsConfig: s.multiFormsConfig || [],
-            maxSelectedForms: s.maxSelectedForms || null
-          };
-        } else if (s.assigneeType === 'multiple_users' && s.selectedUserIds) {
-          assigneeUserIdsObj = s.selectedUserIds.map((uid: number) => ({
-            userId: uid,
-            formId: s.customForms ? s.customForms[uid] || null : null
-          }));
-        }
+      if (s.formIdToFill === -1) {
+        assigneeUserIdsObj = {
+          multiFormsConfig: s.multiFormsConfig || [],
+          maxSelectedForms: s.maxSelectedForms || null,
+          selectedUserIds: s.selectedUserIds || [],
+          customForms: s.customForms || {}
+        };
+      } else if (!isDynamic && s.assigneeType === 'multiple_users' && s.selectedUserIds) {
+        assigneeUserIdsObj = s.selectedUserIds.map((uid: number) => ({
+          userId: uid,
+          formId: s.customForms ? s.customForms[uid] || null : null
+        }));
       }
       return {
         id: s.id,
