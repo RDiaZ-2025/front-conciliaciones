@@ -1209,8 +1209,8 @@ export class RequestsBetaAdminComponent implements OnInit {
     this.productionService.adminGetWorkflows().subscribe({
       next: (data) => {
         this.workflows.set(data);
-        if (data.length > 0 && !this.selectedWorkflowId()) {
-          this.selectedWorkflowId.set(data[0].id);
+        if (data.length > 0 && !this.getSelectedWorkflowId()) {
+          this.setSelectedWorkflowId(data[0].id);
           this.loadWorkflowStages(data[0].id);
         }
       },
@@ -1220,9 +1220,24 @@ export class RequestsBetaAdminComponent implements OnInit {
     });
   }
 
+  getSelectedWorkflowId(): number | null {
+    if (typeof this.selectedWorkflowId === 'function') {
+      return this.selectedWorkflowId();
+    }
+    return (this as any).selectedWorkflowId || null;
+  }
+
+  setSelectedWorkflowId(id: number | null) {
+    if (typeof this.selectedWorkflowId === 'function') {
+      this.selectedWorkflowId.set(id);
+    } else {
+      (this as any).selectedWorkflowId = id;
+    }
+  }
+
   onWorkflowChange(event: any) {
-    const workflowId = event.value;
-    this.selectedWorkflowId.set(workflowId);
+    const workflowId = event?.value !== undefined ? event.value : event;
+    this.setSelectedWorkflowId(workflowId);
     if (!workflowId) {
       this.workflowStages.set([]);
       return;
@@ -1237,7 +1252,7 @@ export class RequestsBetaAdminComponent implements OnInit {
   }
 
   openEditWorkflowDialog() {
-    const wf = this.workflows().find(w => w.id === this.selectedWorkflowId());
+    const wf = this.workflows().find(w => w.id === this.getSelectedWorkflowId());
     if (!wf) return;
     this.isNewWorkflow.set(false);
     this.selectedWorkflow.set({
@@ -1260,7 +1275,7 @@ export class RequestsBetaAdminComponent implements OnInit {
           this.messageService.add({ severity: 'success', summary: 'Creado', detail: 'Flujo de trabajo creado exitosamente.' });
           this.showWorkflowDialog.set(false);
           this.loadWorkflows();
-          this.selectedWorkflowId.set(created.id);
+          this.setSelectedWorkflowId(created.id);
           this.loadWorkflowStages(created.id);
         },
         error: () => {
@@ -1283,7 +1298,7 @@ export class RequestsBetaAdminComponent implements OnInit {
   }
 
   deleteCurrentWorkflow() {
-    const wfId = this.selectedWorkflowId();
+    const wfId = this.getSelectedWorkflowId();
     if (!wfId) return;
     const wf = this.workflows().find(w => w.id === wfId);
     this.confirmationService.confirm({
@@ -1296,7 +1311,7 @@ export class RequestsBetaAdminComponent implements OnInit {
         this.productionService.adminDeleteWorkflow(wfId).subscribe({
           next: () => {
             this.messageService.add({ severity: 'success', summary: 'Eliminado', detail: 'Flujo de trabajo eliminado.' });
-            this.selectedWorkflowId.set(null);
+            this.setSelectedWorkflowId(null);
             this.workflowStages.set([]);
             this.loadWorkflows();
           },
@@ -1650,7 +1665,7 @@ export class RequestsBetaAdminComponent implements OnInit {
   }
 
   saveWorkflow() {
-    const workflowId = this.selectedWorkflowId();
+    const workflowId = this.getSelectedWorkflowId();
     if (!workflowId) return;
 
     const stages = this.workflowStages();
@@ -1792,12 +1807,35 @@ export class RequestsBetaAdminComponent implements OnInit {
       };
     });
 
+    this.confirmationService.confirm({
+      header: 'Confirmar Modificación de Flujo de Trabajo',
+      message: 'Atención: Al guardar modificaciones en las etapas de este flujo de trabajo, si se detectan cambios en su estructura o aprobadores, todas las solicitudes que actualmente se encuentren en proceso serán BLOQUEADAS automáticamente por seguridad. ¿Está seguro de que desea continuar?',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí, Guardar y Aplicar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger',
+      rejectButtonStyleClass: 'p-button-secondary p-button-outlined',
+      accept: () => {
+        this.executeSaveWorkflow(workflowId, payload);
+      }
+    });
+  }
+
+  executeSaveWorkflow(workflowId: number, payload: any[]) {
     this.productionService.adminSaveWorkflowStages(workflowId, payload as any).subscribe({
       next: () => {
         this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Flujo de trabajo guardado exitosamente.' });
         this.loadWorkflowStages(workflowId);
       },
-      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar el flujo de trabajo.' })
+      error: (err: any) => {
+        const detailMsg = err?.error?.message || 'Ocurrió un error al guardar las etapas del flujo de trabajo. Por favor contacte al administrador del sistema.';
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error del Sistema',
+          detail: detailMsg,
+          life: 6000
+        });
+      }
     });
   }
 }

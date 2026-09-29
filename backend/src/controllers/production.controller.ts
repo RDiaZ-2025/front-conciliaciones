@@ -215,8 +215,17 @@ export const adminGetWorkflowStages = asyncHandler(async (req: Request, res: Res
 
 export const adminSaveWorkflowStages = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
     const { id } = req.params;
-    const stages = await productionService.adminSaveWorkflowStages(parseInt(id), req.body);
-    return res.json(stages);
+    try {
+        const stages = await productionService.adminSaveWorkflowStages(parseInt(id), req.body);
+        return res.json(stages);
+    } catch (error: any) {
+        console.error(`❌ Error al guardar etapas del flujo ${id}:`, error);
+        return res.status(500).json({
+            success: false,
+            message: 'Ocurrió un error al guardar las etapas del flujo de trabajo. Por favor contacte al administrador del sistema.',
+            error: error?.message || String(error)
+        });
+    }
 });
 
 export const getPendingApprovals = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
