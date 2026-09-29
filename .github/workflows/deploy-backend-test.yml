@@ -9,6 +9,10 @@ on:
       - '.github/workflows/deploy-backend-test.yml'
   workflow_dispatch:
 
+concurrency:
+  group: deploy-backend-test
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -68,13 +72,6 @@ jobs:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_TEST }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_TEST }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_TEST }}
-
-      - name: Ensure Kudu build is disabled on App Service
-        run: |
-          az webapp config appsettings set \
-            --name "${{ vars.AZUREAPPSERVICE_APPNAME_TEST || 'voc-backend-test' }}" \
-            --resource-group "${{ vars.AZUREAPPSERVICE_RESOURCEGROUP_TEST || 'voc-project' }}" \
-            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
