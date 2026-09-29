@@ -69,6 +69,13 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_MAIN || secrets.AZUREAPPSERVICE_TENANTID_EC1F12A7860844638668E27F3777D0E7 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_MAIN || secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_55435E58914E475F8CCF09AEC5D3D083 }}
 
+      - name: Ensure Kudu build is disabled on App Service
+        run: |
+          az webapp config appsettings set \
+            --name 'voc-backend' \
+            --resource-group "${{ vars.AZUREAPPSERVICE_RESOURCEGROUP_MAIN || 'voc-project' }}" \
+            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false
+
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp

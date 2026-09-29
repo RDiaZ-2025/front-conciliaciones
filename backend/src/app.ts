@@ -38,7 +38,9 @@ const allowedOrigins: string[] = [
   'https://vocclaromedia.com',
   'https://www.vocclaromedia.com',
   'https://blue-pebble-080603f0f.3.azurestaticapps.net',
-  'https://wonderful-coast-0c074260f.7.azurestaticapps.net'
+  'https://wonderful-coast-0c074260f.7.azurestaticapps.net',
+  'https://brave-bay-060ae030f.2.azurestaticapps.net',
+  'https://brave-bay-060ae030f.azurestaticapps.net'
 ];
 
 if (process.env.FRONTEND_URL) {
@@ -52,7 +54,7 @@ if (!isProduction || process.env.ALLOW_LOCALHOST_CORS === 'true') {
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
+    if (allowedOrigins.includes(origin) || origin.endsWith('.azurestaticapps.net')) {
       return callback(null, true);
     }
     if (!isProduction && (
@@ -125,7 +127,7 @@ const formatUptime = (seconds: number): string => {
   return parts.join(' ');
 };
 
-const APP_VERSION = '1.10.3';
+const APP_VERSION = '1.10.4';
 const APP_VERSION_DATE = '2026-09-29';
 
 const getHealthPayload = () => {

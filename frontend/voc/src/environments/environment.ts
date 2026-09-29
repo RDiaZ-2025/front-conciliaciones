@@ -4,7 +4,7 @@ const resolveApiUrl = (): string => {
     if (host === 'localhost' || host === '127.0.0.1') {
       return 'http://localhost:22741/api';
     }
-    if (host.includes('wonderful-coast') || host.includes('test')) {
+    if (host.includes('wonderful-coast') || host.includes('brave-bay') || host.includes('test')) {
       return 'https://voc-backend-test.azurewebsites.net/api';
     }
   }
