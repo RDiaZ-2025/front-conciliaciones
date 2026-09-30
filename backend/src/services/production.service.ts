@@ -1748,7 +1748,7 @@ export class ProductionService {
                         rejectionTargetTeamId: s.rejectionTargetTeamId || null,
                         requireCommentOnApprove: !!s.requireCommentOnApprove,
                         excludeTeamLeader: !!s.excludeTeamLeader,
-                        assigneeUserIds: s.assigneeUserIds ? JSON.stringify(s.assigneeUserIds) : null,
+                        assigneeUserIds: s.assigneeUserIds ? (typeof s.assigneeUserIds === 'string' ? s.assigneeUserIds : JSON.stringify(s.assigneeUserIds)) : null,
                         allowChooseNextStageAssignee: !!s.allowChooseNextStageAssignee,
                         nextStageAssigneeOptions: s.nextStageAssigneeOptions ? (typeof s.nextStageAssigneeOptions === 'string' ? s.nextStageAssigneeOptions : JSON.stringify(s.nextStageAssigneeOptions)) : null
                     });
@@ -1769,7 +1769,9 @@ export class ProductionService {
                     if (s.rejectionTargetTeamId !== undefined) stageEntity.rejectionTargetTeamId = s.rejectionTargetTeamId;
                     if (s.requireCommentOnApprove !== undefined) stageEntity.requireCommentOnApprove = s.requireCommentOnApprove;
                     if (s.excludeTeamLeader !== undefined) stageEntity.excludeTeamLeader = !!s.excludeTeamLeader;
-                    if (s.assigneeUserIds !== undefined) stageEntity.assigneeUserIds = s.assigneeUserIds ? JSON.stringify(s.assigneeUserIds) : null;
+                    if (s.assigneeUserIds !== undefined) {
+                        stageEntity.assigneeUserIds = s.assigneeUserIds ? (typeof s.assigneeUserIds === 'string' ? s.assigneeUserIds : JSON.stringify(s.assigneeUserIds)) : null;
+                    }
                     if (s.allowChooseNextStageAssignee !== undefined) stageEntity.allowChooseNextStageAssignee = !!s.allowChooseNextStageAssignee;
                     if (s.nextStageAssigneeOptions !== undefined) {
                         stageEntity.nextStageAssigneeOptions = s.nextStageAssigneeOptions ? (typeof s.nextStageAssigneeOptions === 'string' ? s.nextStageAssigneeOptions : JSON.stringify(s.nextStageAssigneeOptions)) : null;
@@ -1779,15 +1781,79 @@ export class ProductionService {
                 savedStages.push(await stageRepo.save(stageEntity));
             }
 
-            // Bloquear cualquier solicitud en curso que dependa de este flujo de trabajo modificado
-            await this.blockActiveSubmissionsForWorkflow(
-                manager,
-                workflowId,
-                'Solicitud bloqueada: El flujo de trabajo original fue modificado mientras la solicitud estaba en proceso. Debe iniciar una solicitud nueva.'
-            );
+            const activeExistingStages = existingStages.filter(es => !es.isDeleted);
+            let hasStructuralChanges = false;
 
-            return savedStages;
+            if (activeExistingStages.length !== stages.length) {
+                hasStructuralChanges = true;
+            } else {
+                const parseSafe = (val: any) => {
+                    if (!val) return null;
+                    if (typeof val === 'string') {
+                        try { return JSON.parse(val); } catch (e) { return val; }
+                    }
+                    return val;
+                };
+
+                for (let i = 0; i < stages.length; i++) {
+                    const inc = stages[i];
+                    if (!inc.id) {
+                        hasStructuralChanges = true;
+                        break;
+                    }
+                    const ext = activeExistingStages.find(e => e.id === inc.id);
+                    if (!ext) {
+                        hasStructuralChanges = true;
+                        break;
+                    }
+                    if ((inc.name || '').trim() !== (ext.name || '').trim() ||
+                        (inc.description || '').trim() !== (ext.description || '').trim() ||
+                        (inc.stepOrder ?? (i + 1)) !== ext.stepOrder ||
+                        inc.assigneeType !== ext.assigneeType ||
+                        (inc.assigneeUserId || null) !== (ext.assigneeUserId || null) ||
+                        (inc.assigneeTeamId || null) !== (ext.assigneeTeamId || null) ||
+                        (inc.assigneeSubteamId || null) !== (ext.assigneeSubteamId || null) ||
+                        ((inc.formIdToFill && inc.formIdToFill > 0) ? inc.formIdToFill : null) !== ((ext.formIdToFill && ext.formIdToFill > 0) ? ext.formIdToFill : null) ||
+                        (inc.rejectionTargetType || 'previous_sender') !== (ext.rejectionTargetType || 'previous_sender') ||
+                        (inc.rejectionTargetUserId || null) !== (ext.rejectionTargetUserId || null) ||
+                        (inc.rejectionTargetTeamId || null) !== (ext.rejectionTargetTeamId || null) ||
+                        !!inc.requireCommentOnApprove !== !!ext.requireCommentOnApprove ||
+                        !!inc.excludeTeamLeader !== !!ext.excludeTeamLeader ||
+                        !!inc.allowChooseNextStageAssignee !== !!ext.allowChooseNextStageAssignee) {
+                        hasStructuralChanges = true;
+                        break;
+                    }
+
+                    const incNextOpts = parseSafe(inc.nextStageAssigneeOptions);
+                    const extNextOpts = parseSafe(ext.nextStageAssigneeOptions);
+                    if (JSON.stringify(incNextOpts) !== JSON.stringify(extNextOpts)) {
+                        hasStructuralChanges = true;
+                        break;
+                    }
+
+                    const incUserIds = parseSafe(inc.assigneeUserIds);
+                    const extUserIds = parseSafe(ext.assigneeUserIds);
+                    if (JSON.stringify(incUserIds) !== JSON.stringify(extUserIds)) {
+                        hasStructuralChanges = true;
+                        break;
+                    }
+                }
+            }
+
+            // Solo bloquear solicitudes en curso si hubo cambios estructurales en el flujo de trabajo
+            if (hasStructuralChanges) {
+                console.log(`⚠️ [Workflow Stages] Se detectaron modificaciones estructurales en el flujo ${workflowId}. Bloqueando solicitudes activas.`);
+                await this.blockActiveSubmissionsForWorkflow(
+                    manager,
+                    workflowId,
+                    'Solicitud bloqueada: El flujo de trabajo original fue modificado mientras la solicitud estaba en proceso. Debe iniciar una solicitud nueva.'
+                );
+            } else {
+                console.log(`ℹ️ [Workflow Stages] No hay cambios estructurales en el flujo ${workflowId}. No se bloquea ninguna solicitud.`);
+            }
         });
+
+        return await this.adminGetWorkflowStages(workflowId);
     }
 
     async adminGetStages(formId: number) {
