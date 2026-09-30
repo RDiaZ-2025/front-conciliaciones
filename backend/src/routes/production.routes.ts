@@ -3,7 +3,7 @@ import { ProductionController, getAllProductionRequests, getProductionRequestByI
 import { addMaterialRegister, getMaterialRegisters } from '../controllers/material_register.controller';
 import { RequestsReportController } from '../controllers/requests_report.controller';
 import { getProductionRequestHistory } from '../controllers/production_request_history.controller';
-import { authenticateToken, requirePermission } from '../middleware/auth';
+import { authenticateToken, requirePermission, requireAnyPermission } from '../middleware/auth';
 
 const router = Router();
 const productionController = new ProductionController();
@@ -22,20 +22,22 @@ router.post('/submissions', createSubmission);
 router.get('/submissions', getSubmissions);
 router.get('/submissions/:submissionId', getSubmissionDetails);
 
-router.get('/admin/forms', adminGetForms);
-router.post('/admin/forms', adminCreateForm);
-router.put('/admin/forms/:id', adminUpdateForm);
-router.delete('/admin/forms/:id', adminDeleteForm);
-router.post('/admin/forms/:id/fields', adminSaveFields);
-router.get('/admin/forms/:id/stages', adminGetStages);
-router.post('/admin/forms/:id/stages', adminSaveStages);
+const adminFormsAuth = requireAnyPermission(['Admin Formularios (Beta).', 'production_admin']);
 
-router.get('/admin/workflows', adminGetWorkflows);
-router.post('/admin/workflows', adminCreateWorkflow);
-router.put('/admin/workflows/:id', adminUpdateWorkflow);
-router.delete('/admin/workflows/:id', adminDeleteWorkflow);
-router.get('/admin/workflows/:id/stages', adminGetWorkflowStages);
-router.post('/admin/workflows/:id/stages', adminSaveWorkflowStages);
+router.get('/admin/forms', adminFormsAuth, adminGetForms);
+router.post('/admin/forms', adminFormsAuth, adminCreateForm);
+router.put('/admin/forms/:id', adminFormsAuth, adminUpdateForm);
+router.delete('/admin/forms/:id', adminFormsAuth, adminDeleteForm);
+router.post('/admin/forms/:id/fields', adminFormsAuth, adminSaveFields);
+router.get('/admin/forms/:id/stages', adminFormsAuth, adminGetStages);
+router.post('/admin/forms/:id/stages', adminFormsAuth, adminSaveStages);
+
+router.get('/admin/workflows', adminFormsAuth, adminGetWorkflows);
+router.post('/admin/workflows', adminFormsAuth, adminCreateWorkflow);
+router.put('/admin/workflows/:id', adminFormsAuth, adminUpdateWorkflow);
+router.delete('/admin/workflows/:id', adminFormsAuth, adminDeleteWorkflow);
+router.get('/admin/workflows/:id/stages', adminFormsAuth, adminGetWorkflowStages);
+router.post('/admin/workflows/:id/stages', adminFormsAuth, adminSaveWorkflowStages);
 
 router.get('/approvals/pending', getPendingApprovals);
 router.post('/approvals/:stateId/action', actionApproval);

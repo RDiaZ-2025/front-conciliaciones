@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { LoginComponent } from './pages/login/login.component';
 import { LayoutComponent } from './components/layout/layout.component';
 import { authGuard } from './guards/auth-guard';
+import { adminFormsGuard } from './guards/admin-forms.guard';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -35,7 +36,8 @@ export const routes: Routes = [
       },
       {
         path: 'requests-beta/admin',
-        loadComponent: () => import('./pages/requests-beta-admin/requests-beta-admin.component').then(m => m.RequestsBetaAdminComponent)
+        loadComponent: () => import('./pages/requests-beta-admin/requests-beta-admin.component').then(m => m.RequestsBetaAdminComponent),
+        canActivate: [adminFormsGuard]
       },
       {
         path: 'requests-beta/inbox',

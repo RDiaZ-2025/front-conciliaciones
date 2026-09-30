@@ -141,7 +141,8 @@ export class AuthService extends BaseApiService {
   hasPermission(permission: string): boolean {
     const user = this.currentUser();
     if (!user || !user.permissions) return false;
-    return user.permissions.includes(permission.toLowerCase());
+    const target = permission.toLowerCase().trim();
+    return user.permissions.some(p => (p || '').toLowerCase().trim() === target);
   }
 
   isAdmin(): boolean {
@@ -162,5 +163,9 @@ export class AuthService extends BaseApiService {
 
   isCommercialOrAdmin(): boolean {
     return this.isAdmin() || this.isCommercial();
+  }
+
+  canAdminForms(): boolean {
+    return this.isAdmin() || this.hasPermission('Admin Formularios (Beta).') || this.hasPermission('admin_forms');
   }
 }
