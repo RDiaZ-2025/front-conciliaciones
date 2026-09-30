@@ -53,3 +53,43 @@ export const markAllAsRead = asyncHandler(async (req: Request, res: Response) =>
 
     return res.json({ success: true, message: 'Todas las notificaciones fueron marcadas como leídas' });
 });
+
+export const streamNotifications = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user?.userId;
+    if (!userId) {
+        res.status(401).json({ success: false, message: 'No autorizado' });
+        return;
+    }
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    // Notificar al cliente que la conexión fue exitosa
+    res.write(`data: ${JSON.stringify({ type: 'connected', userId, timestamp: new Date().toISOString() })}\n\n`);
+    if (typeof (res as any).flush === 'function') {
+        (res as any).flush();
+    }
+
+    notificationService.addSSEClient(userId, res);
+
+    // Enviar heartbeat cada 25 segundos para mantener la conexión viva
+    const heartbeat = setInterval(() => {
+        try {
+            res.write(': keep-alive\n\n');
+            if (typeof (res as any).flush === 'function') {
+                (res as any).flush();
+            }
+        } catch {
+            clearInterval(heartbeat);
+        }
+    }, 25000);
+
+    req.on('close', () => {
+        clearInterval(heartbeat);
+        notificationService.removeSSEClient(userId, res);
+    });
+});
+

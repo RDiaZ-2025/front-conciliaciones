@@ -20,6 +20,14 @@
                      (onClick)="markAllAsRead()" styleClass="p-0 text-sm"></p-button>
                </div>
 
+               <div *ngIf="browserPermission() !== 'granted'" class="flex align-items-center justify-content-between p-2 surface-100 border-round border-1 surface-border">
+                  <div class="flex align-items-center gap-2">
+                     <lucide-icon name="bell" class="text-primary text-sm"></lucide-icon>
+                     <span class="text-xs text-700">Notificaciones de escritorio</span>
+                  </div>
+                  <p-button label="Activar" [text]="true" size="small" (onClick)="requestNotificationPermission()" styleClass="p-0 text-xs font-semibold"></p-button>
+               </div>
+
                <div class="flex flex-column gap-2" style="max-height: 400px; overflow-y: auto">
                   <div *ngIf="notifications().length === 0" class="text-center p-3 text-500">
                      No tienes notificaciones

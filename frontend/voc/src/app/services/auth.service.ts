@@ -5,6 +5,8 @@ import { Router } from '@angular/router';
 import { Observable, tap, of, catchError } from 'rxjs';
 import { environment } from '../../environments/environment';
 
+import { NotificationService } from './notification.service';
+
 export interface User {
   id: string;
   name: string;
@@ -28,6 +30,7 @@ export interface LoginResponse {
 })
 export class AuthService extends BaseApiService {
   private router = inject(Router);
+  private notificationService = inject(NotificationService);
   private apiUrl = `${environment.apiUrl}/auth`;
 
   currentUser = signal<User | null>(null);
@@ -124,6 +127,11 @@ export class AuthService extends BaseApiService {
   }
 
   logout(): void {
+    try {
+      this.notificationService.stopRealtime();
+    } catch (e) {
+      console.error('Error stopping realtime notifications on logout:', e);
+    }
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user');
     this.currentUser.set(null);

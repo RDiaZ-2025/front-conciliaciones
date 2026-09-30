@@ -110,7 +110,14 @@ app.use(helmet({
   }
 }));
 app.use(cors(corsOptions));
-app.use(compression());
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers.accept && req.headers.accept.includes('text/event-stream')) {
+      return false;
+    }
+    return compression.filter(req, res);
+  }
+}));
 app.use(morgan('combined'));
 if (process.env.NODE_ENV === 'production') {
   app.use(limiter);
@@ -139,7 +146,7 @@ const formatUptime = (seconds: number): string => {
   return parts.join(' ');
 };
 
-const APP_VERSION = '1.10.11';
+const APP_VERSION = '1.11.0';
 const APP_VERSION_DATE = '2026-09-29';
 
 const getHealthPayload = () => {
