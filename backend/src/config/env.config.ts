@@ -30,7 +30,7 @@ const envSchema = z.object({
   AZURE_AUTOCONSUMO_CONTAINER_NAME: z.string().optional(),
 
   AZURE_SERVICE_BUS_CONNECTION_STRING: z.string().optional(),
-  AZURE_SERVICE_BUS_QUEUE_NAME: z.string().optional().default('noc-news-schedules'),
+  AZURE_SERVICE_BUS_QUEUE_NAME: z.string().optional(),
 
   RATE_LIMIT_WINDOW_MS: z.string().optional().default('900000'),
   RATE_LIMIT_MAX_REQUESTS: z.string().optional().default('100'),

@@ -36,10 +36,14 @@ export class StorageService {
    */
   generateSasToken(requestedContainer?: string, user?: any): SasTokenResult {
     const allowedContainers = ['private', 'public', 'autoconsumoshared'];
-    let containerName = requestedContainer;
+    let containerName = requestedContainer?.trim();
 
     if (!containerName || !allowedContainers.includes(containerName)) {
-      containerName = process.env.AZURE_STORAGE_CONTAINER_NAME || 'private';
+      const defaultContainer = process.env.AZURE_STORAGE_CONTAINER_NAME?.trim();
+      if (!defaultContainer) {
+        throw new Error('La variable de entorno AZURE_STORAGE_CONTAINER_NAME es requerida y no está configurada o es inválida.');
+      }
+      containerName = defaultContainer;
     }
 
     if (containerName === 'autoconsumoshared') {
@@ -55,11 +59,14 @@ export class StorageService {
         throw err;
       }
 
-      const commAccountName = process.env.AZURE_AUTOCONSUMO_ACCOUNT_NAME || 'autoconsumofileserver';
-      const commAccountKey = process.env.AZURE_AUTOCONSUMO_ACCOUNT_KEY;
+      const commAccountName = process.env.AZURE_AUTOCONSUMO_ACCOUNT_NAME?.trim();
+      const commAccountKey = process.env.AZURE_AUTOCONSUMO_ACCOUNT_KEY?.trim();
 
+      if (!commAccountName) {
+        throw new Error('La variable de entorno AZURE_AUTOCONSUMO_ACCOUNT_NAME es requerida y no está configurada o es inválida.');
+      }
       if (!commAccountKey) {
-        throw new Error('Commercial storage configuration missing');
+        throw new Error('La variable de entorno AZURE_AUTOCONSUMO_ACCOUNT_KEY es requerida y no está configurada o es inválida.');
       }
 
       const sharedKeyCredential = new ShareSharedKeyCredential(commAccountName, commAccountKey);
@@ -90,11 +97,14 @@ export class StorageService {
       };
     }
 
-    const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME || 'vocprojectstorage';
-    const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY;
+    const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME?.trim();
+    const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY?.trim();
 
+    if (!accountName) {
+      throw new Error('La variable de entorno AZURE_STORAGE_ACCOUNT_NAME es requerida y no está configurada o es inválida.');
+    }
     if (!accountKey) {
-      throw new Error('Azure Storage configuration missing (Account Key)');
+      throw new Error('La variable de entorno AZURE_STORAGE_ACCOUNT_KEY es requerida y no está configurada o es inválida.');
     }
 
     const sharedKeyCredential = new StorageSharedKeyCredential(accountName, accountKey);
@@ -130,12 +140,18 @@ export class StorageService {
    * Lista archivos y carpetas del Repositorio Comercial en Azure File Share
    */
   async listCommercialFiles(folderPath: string = ''): Promise<StorageFileItem[]> {
-    const accountName = process.env.AZURE_AUTOCONSUMO_ACCOUNT_NAME || 'autoconsumofileserver';
-    const accountKey = process.env.AZURE_AUTOCONSUMO_ACCOUNT_KEY;
-    const shareName = process.env.AZURE_AUTOCONSUMO_CONTAINER_NAME || 'autoconsumoshared';
+    const accountName = process.env.AZURE_AUTOCONSUMO_ACCOUNT_NAME?.trim();
+    const accountKey = process.env.AZURE_AUTOCONSUMO_ACCOUNT_KEY?.trim();
+    const shareName = process.env.AZURE_AUTOCONSUMO_CONTAINER_NAME?.trim();
 
+    if (!accountName) {
+      throw new Error('La variable de entorno AZURE_AUTOCONSUMO_ACCOUNT_NAME es requerida y no está configurada o es inválida.');
+    }
     if (!accountKey) {
-      throw new Error('Storage configuration missing');
+      throw new Error('La variable de entorno AZURE_AUTOCONSUMO_ACCOUNT_KEY es requerida y no está configurada o es inválida.');
+    }
+    if (!shareName) {
+      throw new Error('La variable de entorno AZURE_AUTOCONSUMO_CONTAINER_NAME es requerida y no está configurada o es inválida.');
     }
 
     const credential = new ShareSharedKeyCredential(accountName, accountKey);
@@ -165,12 +181,18 @@ export class StorageService {
    * Obtiene stream descargable de un archivo en el Repositorio Comercial
    */
   async getCommercialFileDownload(filePath: string) {
-    const accountName = process.env.AZURE_AUTOCONSUMO_ACCOUNT_NAME || 'autoconsumofileserver';
-    const accountKey = process.env.AZURE_AUTOCONSUMO_ACCOUNT_KEY;
-    const shareName = process.env.AZURE_AUTOCONSUMO_CONTAINER_NAME || 'autoconsumoshared';
+    const accountName = process.env.AZURE_AUTOCONSUMO_ACCOUNT_NAME?.trim();
+    const accountKey = process.env.AZURE_AUTOCONSUMO_ACCOUNT_KEY?.trim();
+    const shareName = process.env.AZURE_AUTOCONSUMO_CONTAINER_NAME?.trim();
 
+    if (!accountName) {
+      throw new Error('La variable de entorno AZURE_AUTOCONSUMO_ACCOUNT_NAME es requerida y no está configurada o es inválida.');
+    }
     if (!accountKey) {
-      throw new Error('Storage configuration missing');
+      throw new Error('La variable de entorno AZURE_AUTOCONSUMO_ACCOUNT_KEY es requerida y no está configurada o es inválida.');
+    }
+    if (!shareName) {
+      throw new Error('La variable de entorno AZURE_AUTOCONSUMO_CONTAINER_NAME es requerida y no está configurada o es inválida.');
     }
 
     const credential = new ShareSharedKeyCredential(accountName, accountKey);
@@ -203,15 +225,21 @@ export class StorageService {
   /**
    * Descarga segura de archivos Blob (privados/públicos)
    */
-  async getBlobFileDownload(filePath: string, requestedContainer: string = 'private') {
-    const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME || 'vocprojectstorage';
-    const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY;
+  async getBlobFileDownload(filePath: string, requestedContainer?: string) {
+    const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME?.trim();
+    const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY?.trim();
 
+    if (!accountName) {
+      throw new Error('La variable de entorno AZURE_STORAGE_ACCOUNT_NAME es requerida y no está configurada o es inválida.');
+    }
     if (!accountKey) {
-      throw new Error('Azure Storage configuration missing');
+      throw new Error('La variable de entorno AZURE_STORAGE_ACCOUNT_KEY es requerida y no está configurada o es inválida.');
     }
 
-    let containerName = requestedContainer || 'private';
+    let containerName = requestedContainer?.trim() || process.env.AZURE_STORAGE_CONTAINER_NAME?.trim();
+    if (!containerName) {
+      throw new Error('La variable de entorno AZURE_STORAGE_CONTAINER_NAME es requerida y no está configurada o es inválida.');
+    }
     let resolvedBlobName = filePath;
 
     if (/^https?:\/\//i.test(filePath)) {
