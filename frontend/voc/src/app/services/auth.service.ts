@@ -165,7 +165,14 @@ export class AuthService extends BaseApiService {
     return this.isAdmin() || this.isCommercial();
   }
 
+  hasAdminRole(): boolean {
+    const user = this.currentUser();
+    if (!user) return false;
+    const role = (user.role || '').toLowerCase().trim();
+    return role === 'admin' || role === 'administrador';
+  }
+
   canAdminForms(): boolean {
-    return this.isAdmin() || this.hasPermission('Admin Formularios (Beta).') || this.hasPermission('admin_forms');
+    return this.hasAdminRole();
   }
 }

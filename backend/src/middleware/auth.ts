@@ -141,6 +141,31 @@ export const requireAnyPermission = (permissions: string[]) => {
   };
 };
 
+export const requireRole = (allowedRoles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: 'Token de acceso requerido'
+      });
+      return;
+    }
+
+    const userRole = (req.user.role || '').toLowerCase().trim();
+    const isAllowed = allowedRoles.some(r => r.toLowerCase().trim() === userRole);
+
+    if (!isAllowed) {
+      res.status(403).json({
+        success: false,
+        message: `Acceso denegado: se requiere rol de administrador`
+      });
+      return;
+    }
+
+    next();
+  };
+};
+
 export const requireAllPermissions = (permissions: string[]) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {

@@ -1188,6 +1188,9 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   }
 
   goToAdmin() {
+    if (!this.authService.canAdminForms()) {
+      return;
+    }
     this.router.navigate(['/requests-beta/admin']);
   }
 

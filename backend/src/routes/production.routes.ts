@@ -3,7 +3,7 @@ import { ProductionController, getAllProductionRequests, getProductionRequestByI
 import { addMaterialRegister, getMaterialRegisters } from '../controllers/material_register.controller';
 import { RequestsReportController } from '../controllers/requests_report.controller';
 import { getProductionRequestHistory } from '../controllers/production_request_history.controller';
-import { authenticateToken, requirePermission, requireAnyPermission } from '../middleware/auth';
+import { authenticateToken, requirePermission, requireAnyPermission, requireRole } from '../middleware/auth';
 
 const router = Router();
 const productionController = new ProductionController();
@@ -22,7 +22,7 @@ router.post('/submissions', createSubmission);
 router.get('/submissions', getSubmissions);
 router.get('/submissions/:submissionId', getSubmissionDetails);
 
-const adminFormsAuth = requireAnyPermission(['Admin Formularios (Beta).', 'production_admin']);
+const adminFormsAuth = requireRole(['admin', 'administrador']);
 
 router.get('/admin/forms', adminFormsAuth, adminGetForms);
 router.post('/admin/forms', adminFormsAuth, adminCreateForm);
