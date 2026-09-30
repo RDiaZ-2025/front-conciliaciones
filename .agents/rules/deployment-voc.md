@@ -21,9 +21,9 @@ This rule outlines the deployment process for VOC frontend and backend component
 The VOC frontend is an Angular application in `frontend/voc/`.
 
 ### Automated Deployment (GitHub Actions)
-- **Production (`main`):** [.github/workflows/azure-static-web-apps-blue-pebble-080603f0f.yml](file:///c:/source/Voc/.github/workflows/azure-static-web-apps-blue-pebble-080603f0f.yml)
+- **Production (`main`):** [.github/workflows/deploy-frontend-main.yml](file:///c:/source/Voc/.github/workflows/deploy-frontend-main.yml)
   - **Trigger:** Push to `main` affecting `frontend/voc/**`, or manual dispatch.
-  - **Secret:** `AZURE_STATIC_WEB_APPS_API_TOKEN_BLUE_PEBBLE_080603F0F` or `AZURE_STATIC_WEB_APPS_API_TOKEN_MAIN`.
+  - **Secret:** `AZURE_STATIC_WEB_APPS_API_TOKEN_MAIN`.
 - **Test (`test`):** [.github/workflows/deploy-frontend-test.yml](file:///c:/source/Voc/.github/workflows/deploy-frontend-test.yml)
   - **Trigger:** Push to `test` affecting `frontend/voc/**`, or manual dispatch.
   - **Secret:** `AZURE_STATIC_WEB_APPS_API_TOKEN_TEST`.

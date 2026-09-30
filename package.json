@@ -1,6 +1,6 @@
 {
   "name": "voc-monorepo",
-  "version": "1.10.6",
+  "version": "1.10.7",
   "description": "VOC Sistema de Conciliaciones - Monorepo",
   "private": true,
   "workspaces": [

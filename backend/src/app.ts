@@ -139,7 +139,7 @@ const formatUptime = (seconds: number): string => {
   return parts.join(' ');
 };
 
-const APP_VERSION = '1.10.6';
+const APP_VERSION = '1.10.7';
 const APP_VERSION_DATE = '2026-09-29';
 
 const getHealthPayload = () => {
