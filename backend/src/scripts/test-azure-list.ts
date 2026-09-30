@@ -5,13 +5,13 @@ import * as path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 async function listBlobs() {
-  const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME || 'vocprojectstorage';
+  const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
   const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY;
   const containerName = 'autoconsumoshared';
   const prefix = 'Comercial/Repositorio Comercial/';
 
-  if (!accountKey) {
-    console.error('No account key found');
+  if (!accountName || !accountKey) {
+    console.error('AZURE_STORAGE_ACCOUNT_NAME or AZURE_STORAGE_ACCOUNT_KEY missing');
     return;
   }
 

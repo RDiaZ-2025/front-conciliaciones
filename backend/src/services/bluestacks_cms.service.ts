@@ -16,14 +16,45 @@ export class BluestacksCmsService {
     private tokenExpiry: number = 0;
 
     constructor() {
-        const rawCmd = (process.env.BLUESTACK_CMD_URL || 'dev-claroco.cms-medios.com').replace(/^https?:\/\//, '').replace(/\/+$/, '');
+        const cmdUrl = process.env.BLUESTACK_CMD_URL?.trim();
+        if (!cmdUrl) {
+            throw new Error('La variable de entorno BLUESTACK_CMD_URL es requerida y no está configurada o es inválida.');
+        }
+
+        const username = process.env.BLUESTACK_USERNAME?.trim();
+        if (!username) {
+            throw new Error('La variable de entorno BLUESTACK_USERNAME es requerida y no está configurada o es inválida.');
+        }
+
+        const password = process.env.BLUESTACK_PASSWORD?.trim();
+        if (!password) {
+            throw new Error('La variable de entorno BLUESTACK_PASSWORD es requerida y no está configurada o es inválida.');
+        }
+
+        const site = process.env.BLUESTACK_SITE?.trim();
+        if (!site) {
+            throw new Error('La variable de entorno BLUESTACK_SITE es requerida y no está configurada o es inválida.');
+        }
+
+        const publication = process.env.BLUESTACK_PUBLICATION?.trim();
+        if (!publication) {
+            throw new Error('La variable de entorno BLUESTACK_PUBLICATION es requerida y no está configurada o es inválida.');
+        }
+
+        const securityToken = process.env.BLUESTACK_SECURITY_TOKEN?.trim();
+        if (!securityToken) {
+            throw new Error('La variable de entorno BLUESTACK_SECURITY_TOKEN es requerida y no está configurada o es inválida.');
+        }
+
+        const cleanCmd = cmdUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+
         this.config = {
-            cmdUrl: rawCmd,
-            username: process.env.BLUESTACK_USERNAME || 'webservicesclaro',
-            password: process.env.BLUESTACK_PASSWORD || '1YNtsbcjR0qZ',
-            site: process.env.BLUESTACK_SITE || '/sites/redmas/',
-            publication: process.env.BLUESTACK_PUBLICATION || '1',
-            securityToken: process.env.BLUESTACK_SECURITY_TOKEN || 'mjGyLwS7kG7j23He4fdEG'
+            cmdUrl: cleanCmd,
+            username,
+            password,
+            site,
+            publication,
+            securityToken
         };
     }
 

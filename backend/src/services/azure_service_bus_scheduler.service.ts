@@ -13,7 +13,11 @@ export class AzureServiceBusSchedulerService {
     private triggerCallback: ((scheduleId: string) => Promise<void>) | null = null;
 
     constructor() {
-        this.queueName = process.env.AZURE_SERVICE_BUS_QUEUE_NAME || 'noc-news-schedules';
+        const queue = process.env.AZURE_SERVICE_BUS_QUEUE_NAME?.trim();
+        if (!queue) {
+            throw new Error('La variable de entorno AZURE_SERVICE_BUS_QUEUE_NAME es requerida y no está configurada o es inválida.');
+        }
+        this.queueName = queue;
         this.initClient();
     }
 
@@ -43,12 +47,15 @@ export class AzureServiceBusSchedulerService {
     }
 
     private initClient(): boolean {
-        const connectionString = this.getConnectionString();
-        this.queueName = process.env.AZURE_SERVICE_BUS_QUEUE_NAME || 'noc-news-schedules';
+        const queue = process.env.AZURE_SERVICE_BUS_QUEUE_NAME?.trim();
+        if (!queue) {
+            throw new Error('La variable de entorno AZURE_SERVICE_BUS_QUEUE_NAME es requerida y no está configurada o es inválida.');
+        }
+        this.queueName = queue;
 
+        const connectionString = this.getConnectionString();
         if (!connectionString) {
-            console.log('ℹ️ [Azure Service Bus] No se configuró ninguna variable de Connection String para Service Bus.');
-            return false;
+            throw new Error('La variable de entorno AZURE_SERVICE_BUS_CONNECTION_STRING es requerida y no está configurada o es inválida.');
         }
 
         try {
@@ -66,25 +73,21 @@ export class AzureServiceBusSchedulerService {
             console.error('❌ [Azure Service Bus] Error inicializando cliente:', error);
             this.client = null;
             this.sender = null;
-            return false;
+            throw error;
         }
     }
 
-    private ensureSender(): ServiceBusSender | null {
+    private ensureSender(): ServiceBusSender {
         if (this.sender) return this.sender;
-        if (this.initClient() && this.sender) {
+        this.initClient();
+        if (this.sender) {
             return this.sender;
         }
-        return null;
+        throw new Error(`[Azure Service Bus] Sender no disponible para cola '${this.queueName}'. Error: ${this.lastError}`);
     }
 
-    async scheduleExecution(scheduleId: string, executeAt: Date): Promise<string | null> {
+    async scheduleExecution(scheduleId: string, executeAt: Date): Promise<string> {
         const sender = this.ensureSender();
-        if (!sender) {
-            console.warn(`⚠️ [Azure Service Bus] No se puede agendar ${scheduleId}: sender no disponible. Variable detectada: ${this.detectedVarName}, Error: ${this.lastError}`);
-            return null;
-        }
-
         try {
 
             const now = new Date();
@@ -106,15 +109,15 @@ export class AzureServiceBusSchedulerService {
         } catch (error: any) {
             this.lastError = `scheduleMessages error: ${error?.message || error}`;
             console.error(`❌ [Azure Service Bus] Error programando mensaje para agendamiento ${scheduleId}:`, error);
-            return null;
+            throw error;
         }
     }
 
     async cancelScheduledExecution(sequenceNumberStr: string | null | undefined): Promise<void> {
-        const sender = this.ensureSender();
-        if (!sender || !sequenceNumberStr) {
+        if (!sequenceNumberStr) {
             return;
         }
+        const sender = this.ensureSender();
 
         try {
             const sequenceNumber = Long.fromString(sequenceNumberStr);
@@ -132,7 +135,11 @@ export class AzureServiceBusSchedulerService {
             this.initClient();
         }
 
-        if (!this.client || this.isListening) {
+        if (!this.client) {
+            throw new Error('No se pudo inicializar el cliente de Azure Service Bus para el receptor.');
+        }
+
+        if (this.isListening) {
             return;
         }
 
@@ -166,6 +173,7 @@ export class AzureServiceBusSchedulerService {
         } catch (error: any) {
             this.lastError = `startListener error: ${error?.message || error}`;
             console.error('❌ [Azure Service Bus] Error iniciando receptor:', error);
+            throw error;
         }
     }
 

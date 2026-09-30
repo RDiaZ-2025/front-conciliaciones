@@ -1,7 +1,5 @@
 import { Repository } from 'typeorm';
 import axios from 'axios';
-import * as fs from 'fs';
-import * as path from 'path';
 import {
     BlobServiceClient,
     StorageSharedKeyCredential,
@@ -68,28 +66,52 @@ export interface UpdateNewsScheduleDto {
 
 export class NocNewsSchedulerService {
 
-    private get extractNewsUrl(): string | undefined {
-        return process.env.N8N_AI_EXTRACT_NEWS_URL;
+    private get extractNewsUrl(): string {
+        const url = process.env.N8N_AI_EXTRACT_NEWS_URL?.trim();
+        if (!url) {
+            throw new Error('La variable de entorno N8N_AI_EXTRACT_NEWS_URL es requerida y no está configurada o es inválida.');
+        }
+        return url;
     }
 
-    private get draftArticleUrl(): string | undefined {
-        return process.env.N8N_AI_DRAFT_ARTICLE_URL;
+    private get draftArticleUrl(): string {
+        const url = process.env.N8N_AI_DRAFT_ARTICLE_URL?.trim();
+        if (!url) {
+            throw new Error('La variable de entorno N8N_AI_DRAFT_ARTICLE_URL es requerida y no está configurada o es inválida.');
+        }
+        return url;
     }
 
-    private get generateImageUrl(): string | undefined {
-        return process.env.N8N_AI_GENERATE_IMAGE_URL;
+    private get generateImageUrl(): string {
+        const url = process.env.N8N_AI_GENERATE_IMAGE_URL?.trim();
+        if (!url) {
+            throw new Error('La variable de entorno N8N_AI_GENERATE_IMAGE_URL es requerida y no está configurada o es inválida.');
+        }
+        return url;
     }
 
-    private get adjustParagraphUrl(): string | undefined {
-        return process.env.N8N_AI_ADJUST_PARAGRAPH_URL;
+    private get adjustParagraphUrl(): string {
+        const url = process.env.N8N_AI_ADJUST_PARAGRAPH_URL?.trim();
+        if (!url) {
+            throw new Error('La variable de entorno N8N_AI_ADJUST_PARAGRAPH_URL es requerida y no está configurada o es inválida.');
+        }
+        return url;
     }
 
-    private get regenerateImageUrl(): string | undefined {
-        return process.env.N8N_AI_REGENERATE_IMAGE_URL;
+    private get regenerateImageUrl(): string {
+        const url = process.env.N8N_AI_REGENERATE_IMAGE_URL?.trim();
+        if (!url) {
+            throw new Error('La variable de entorno N8N_AI_REGENERATE_IMAGE_URL es requerida y no está configurada o es inválida.');
+        }
+        return url;
     }
 
-    private get adjustArticleUrl(): string | undefined {
-        return process.env.N8N_AI_ADJUST_ARTICLE_URL;
+    private get adjustArticleUrl(): string {
+        const url = process.env.N8N_AI_ADJUST_ARTICLE_URL?.trim();
+        if (!url) {
+            throw new Error('La variable de entorno N8N_AI_ADJUST_ARTICLE_URL es requerida y no está configurada o es inválida.');
+        }
+        return url;
     }
 
     private get repository(): Repository<NocNewsScheduler> {
@@ -264,7 +286,7 @@ export class NocNewsSchedulerService {
             topic: dto.topic,
             userInstructions: dto.userInstructions || null,
             sources: JSON.stringify(dto.sources || []),
-            url: this.extractNewsUrl || 'local_orchestrator',
+            url: this.extractNewsUrl,
             method: 'POST',
             startAt: startAtDate,
             intervalMinutes: intervalMin,
@@ -946,89 +968,78 @@ export class NocNewsSchedulerService {
             return imageUrl;
         }
 
-        if (imageUrl.includes('.blob.core.windows.net') || imageUrl.startsWith('/uploads/')) {
+        if (imageUrl.includes('.blob.core.windows.net')) {
             return imageUrl;
         }
 
         if (!this.isSafeImageUrl(imageUrl)) {
-            console.warn(`⚠️ [Security Alert] Rechazada URL sospechosa de SSRF en persistImage: ${imageUrl}`);
-            return imageUrl;
+            throw new Error(`[Security Alert] Rechazada URL sospechosa de SSRF en persistImage: ${imageUrl}`);
         }
 
-        try {
-            console.log(`📥 [Storage Persistence] Downloading image from: ${imageUrl.substring(0, 80)}...`);
-            const response = await axios.get(imageUrl, {
-                responseType: 'arraybuffer',
-                timeout: 45000,
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-                },
-                maxContentLength: 20 * 1024 * 1024
-            });
+        console.log(`📥 [Storage Persistence] Downloading image from: ${imageUrl.substring(0, 80)}...`);
+        const response = await axios.get(imageUrl, {
+            responseType: 'arraybuffer',
+            timeout: 45000,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+            },
+            maxContentLength: 20 * 1024 * 1024
+        });
 
-            const buffer = Buffer.from(response.data);
-            const fileName = `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.jpg`;
+        const buffer = Buffer.from(response.data);
+        const fileName = `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.jpg`;
 
-            const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME || 'vocprojectstorage';
-            const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY;
-            const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME || 'public';
+        const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME?.trim();
+        const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY?.trim();
+        const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME?.trim();
 
-            if (accountName && accountKey) {
-                try {
-                    const sharedKeyCredential = new StorageSharedKeyCredential(accountName, accountKey);
-                    const blobServiceClient = new BlobServiceClient(
-                        `https://${accountName}.blob.core.windows.net`,
-                        sharedKeyCredential
-                    );
-                    const containerClient = blobServiceClient.getContainerClient(containerName);
-
-                    await containerClient.createIfNotExists({ access: 'blob' });
-
-                    const blobPath = `noc-news/${fileName}`;
-                    const blockBlobClient = containerClient.getBlockBlobClient(blobPath);
-
-                    await blockBlobClient.uploadData(buffer, {
-                        blobHTTPHeaders: {
-                            blobContentType: 'image/jpeg',
-                            blobCacheControl: 'public, max-age=31536000'
-                        }
-                    });
-
-                    const startDate = new Date();
-                    startDate.setMinutes(startDate.getMinutes() - 15);
-                    const expiryDate = new Date();
-                    expiryDate.setFullYear(expiryDate.getFullYear() + 5);
-
-                    const sasOptions = {
-                        containerName,
-                        blobName: blobPath,
-                        permissions: BlobSASPermissions.parse("r"),
-                        startsOn: startDate,
-                        expiresOn: expiryDate,
-                        protocol: SASProtocol.Https
-                    };
-
-                    const sasToken = generateBlobSASQueryParameters(sasOptions, sharedKeyCredential).toString();
-                    const permanentUrl = `${blockBlobClient.url}?${sasToken}`;
-                    console.log(`☁️ [Storage Persistence] Image successfully saved in Azure Blob Storage: ${blockBlobClient.url}`);
-                    return permanentUrl;
-                } catch (azureErr: any) {
-                    console.warn(`⚠️ [Storage Persistence] Azure upload warning (${azureErr.message}), saving to local storage fallback`);
-                }
-            }
-
-            const uploadsDir = path.join(process.cwd(), 'uploads', 'noc-news');
-            if (!fs.existsSync(uploadsDir)) {
-                fs.mkdirSync(uploadsDir, { recursive: true });
-            }
-            const localFilePath = path.join(uploadsDir, fileName);
-            fs.writeFileSync(localFilePath, buffer);
-            console.log(`💾 [Storage Persistence] Image saved locally to ${localFilePath}`);
-            return `/uploads/noc-news/${fileName}`;
-        } catch (err: any) {
-            console.error(`❌ [Storage Persistence] Error downloading/persisting image:`, err.message);
-            return imageUrl;
+        if (!accountName) {
+            throw new Error('La variable de entorno AZURE_STORAGE_ACCOUNT_NAME es requerida y no está configurada o es inválida.');
         }
+        if (!accountKey) {
+            throw new Error('La variable de entorno AZURE_STORAGE_ACCOUNT_KEY es requerida y no está configurada o es inválida.');
+        }
+        if (!containerName) {
+            throw new Error('La variable de entorno AZURE_STORAGE_CONTAINER_NAME es requerida y no está configurada o es inválida.');
+        }
+
+        const sharedKeyCredential = new StorageSharedKeyCredential(accountName, accountKey);
+        const blobServiceClient = new BlobServiceClient(
+            `https://${accountName}.blob.core.windows.net`,
+            sharedKeyCredential
+        );
+        const containerClient = blobServiceClient.getContainerClient(containerName);
+
+        await containerClient.createIfNotExists({ access: 'blob' });
+
+        const blobPath = `noc-news/${fileName}`;
+        const blockBlobClient = containerClient.getBlockBlobClient(blobPath);
+
+        await blockBlobClient.uploadData(buffer, {
+            blobHTTPHeaders: {
+                blobContentType: 'image/jpeg',
+                blobCacheControl: 'public, max-age=31536000'
+            }
+        });
+
+        const startDate = new Date();
+        startDate.setMinutes(startDate.getMinutes() - 15);
+        const expiryDate = new Date();
+        expiryDate.setFullYear(expiryDate.getFullYear() + 5);
+
+        const sasOptions = {
+            containerName,
+            blobName: blobPath,
+            permissions: BlobSASPermissions.parse("r"),
+            startsOn: startDate,
+            expiresOn: expiryDate,
+            protocol: SASProtocol.Https
+        };
+
+        const sasToken = generateBlobSASQueryParameters(sasOptions, sharedKeyCredential).toString();
+        const permanentUrl = `${blockBlobClient.url}?${sasToken}`;
+        console.log(`☁️ [Storage Persistence] Image successfully saved in Azure Blob Storage: ${blockBlobClient.url}`);
+        return permanentUrl;
     }
 
     private async step3_generateImage(prompt: string, contextTopic: string): Promise<string> {
