@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "1.10.7",
+  "version": "1.10.8",
   "scripts": {
     "ng": "ng",
     "start": "ng serve voc",
