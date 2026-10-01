@@ -146,8 +146,8 @@ const formatUptime = (seconds: number): string => {
   return parts.join(' ');
 };
 
-const APP_VERSION = '1.11.0';
-const APP_VERSION_DATE = '2026-09-29';
+const APP_VERSION = '1.11.1';
+const APP_VERSION_DATE = '2026-09-30';
 
 const getHealthPayload = () => {
   const mem = process.memoryUsage();

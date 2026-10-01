@@ -260,6 +260,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   selectedTask = signal<any>(null);
   comments = signal<string>('');
   chosenNextAssignee: any = null;
+  chosenMemberUserId: number | null = null;
   stageFormFields = signal<any[]>([]);
   stageFormValues: Record<string, string> = {};
   loadingStageFields = signal<boolean>(false);
@@ -1695,6 +1696,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.selectedTask.set(task);
     this.comments.set('');
     this.chosenNextAssignee = null;
+    this.chosenMemberUserId = null;
     if (task?.allowChooseNextStageAssignee && task?.nextStageAssigneeOptions?.length === 1) {
       this.chosenNextAssignee = task.nextStageAssigneeOptions[0];
     }
@@ -1803,6 +1805,10 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         }
       });
     }
+  }
+
+  onChosenNextAssigneeChange() {
+    this.chosenMemberUserId = null;
   }
 
   selectedMultiFormIds = signal<number[]>([]);
@@ -1971,6 +1977,14 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           severity: 'error',
           summary: 'Validación',
           detail: 'Debes seleccionar a quién se le asignará la siguiente etapa.'
+        });
+        return;
+      }
+      if ((this.chosenNextAssignee.type === 'team_members' || this.chosenNextAssignee.type === 'subteam_members') && !this.chosenMemberUserId) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Validación',
+          detail: 'Debes seleccionar el integrante del equipo o subequipo a quien se asignará la siguiente etapa.'
         });
         return;
       }
@@ -2241,17 +2255,22 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     }
 
+    const nextAssigneePayload = (action === 'approve' && this.chosenNextAssignee)
+      ? { ...this.chosenNextAssignee, selectedUserId: this.chosenMemberUserId }
+      : undefined;
+
     this.productionService.actionApproval(
       task.stateId,
       action,
       notes,
       action === 'approve' ? this.stageFormValues : undefined,
       undefined,
-      action === 'approve' ? this.chosenNextAssignee : undefined
+      nextAssigneePayload
     ).subscribe({
       next: (res) => {
         this.stageTempFiles = {};
         this.chosenNextAssignee = null;
+        this.chosenMemberUserId = null;
         this.showActionDialog.set(false);
         this.loadPendingTasks();
         this.loadRequests();

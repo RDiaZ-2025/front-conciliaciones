@@ -53,7 +53,7 @@ interface MultiFormOptionConfig {
 
 interface NextStageAssigneeOptionConfig {
   id?: string;
-  type: 'specific_user' | 'team_random' | 'subteam_random' | 'team_leader' | 'team_workload' | 'requester' | 'requester_boss';
+  type: 'specific_user' | 'team_random' | 'team_members' | 'subteam_random' | 'subteam_members' | 'team_leader' | 'team_workload' | 'requester' | 'requester_boss';
   userId?: number | null;
   teamId?: number | null;
   subteamId?: number | null;
@@ -346,9 +346,11 @@ export class RequestsBetaAdminComponent implements OnInit {
   nextStageAssigneeTypes = [
     { label: '👤 Usuario Específico', value: 'specific_user' },
     { label: '🎲 Al Azar de un Equipo', value: 'team_random' },
+    { label: '👥 Miembros de un Equipo', value: 'team_members' },
     { label: '👔 Líder del Equipo', value: 'team_leader' },
     { label: '⚖️ Menor Carga del Equipo', value: 'team_workload' },
-    { label: '👥 Al Azar de un Subequipo', value: 'subteam_random' },
+    { label: '🎲 Al Azar de un Subequipo', value: 'subteam_random' },
+    { label: '👥 Miembros de un Subequipo', value: 'subteam_members' },
     { label: '👤 Creador de la Solicitud (Solicitante)', value: 'requester' },
     { label: '👔 Jefe Directo del Solicitante', value: 'requester_boss' }
   ];
@@ -1469,6 +1471,9 @@ export class RequestsBetaAdminComponent implements OnInit {
     if (opt.type === 'team_random' && opt.teamId) {
       return `Al azar de ${this.getTeamName(opt.teamId)}`;
     }
+    if (opt.type === 'team_members' && opt.teamId) {
+      return `Miembros de ${this.getTeamName(opt.teamId)}`;
+    }
     if (opt.type === 'team_leader' && opt.teamId) {
       return `Líder de ${this.getTeamName(opt.teamId)}`;
     }
@@ -1477,6 +1482,9 @@ export class RequestsBetaAdminComponent implements OnInit {
     }
     if (opt.type === 'subteam_random' && opt.subteamId) {
       return `Al azar de ${this.getSubteamName(opt.teamId, opt.subteamId)}`;
+    }
+    if (opt.type === 'subteam_members' && opt.subteamId) {
+      return `Miembros de ${this.getSubteamName(opt.teamId, opt.subteamId)}`;
     }
     if (opt.type === 'requester') {
       return 'Creador de la Solicitud';
@@ -1751,11 +1759,11 @@ export class RequestsBetaAdminComponent implements OnInit {
             this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${optIdx + 1} de destinatario requiere un usuario específico.` });
             return;
           }
-          if ((opt.type === 'team_random' || opt.type === 'team_leader' || opt.type === 'team_workload') && !opt.teamId) {
+          if ((opt.type === 'team_random' || opt.type === 'team_leader' || opt.type === 'team_workload' || opt.type === 'team_members') && !opt.teamId) {
             this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${optIdx + 1} de destinatario requiere un equipo.` });
             return;
           }
-          if (opt.type === 'subteam_random') {
+          if (opt.type === 'subteam_random' || opt.type === 'subteam_members') {
             if (!opt.teamId) {
               this.messageService.add({ severity: 'error', summary: 'Validación', detail: `En la etapa "${s.name}", la opción #${optIdx + 1} de destinatario requiere un equipo.` });
               return;
