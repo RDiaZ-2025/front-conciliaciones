@@ -6,8 +6,16 @@ on:
       - test
     paths:
       - 'backend/**'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/deploy-backend-test.yml'
   workflow_dispatch:
+    inputs:
+      force_deps:
+        description: 'Force reinstall and upload of node_modules'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy-backend-test
@@ -21,6 +29,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Set up Node.js version
         uses: actions/setup-node@v4
@@ -28,6 +38,30 @@ jobs:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: package-lock.json
+
+      - name: Check for dependency changes
+        id: check_deps
+        run: |
+          if [ "${{ github.event.inputs.force_deps }}" = "true" ]; then
+            echo "CHANGED=true" >> "$GITHUB_OUTPUT"
+            echo "Dependencies forcefully included via workflow_dispatch."
+          elif git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+            LOCK_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E "^(package-lock\.json|backend/package-lock\.json)$" || true)
+            DEPS_DIFF=$(git diff -U0 HEAD~1 HEAD -- package.json backend/package.json 2>/dev/null | grep -E '^[-+][ ]*"' | grep -vE '"version"|"versionDate"' || true)
+            if [ -n "$LOCK_CHANGED" ] || [ -n "$DEPS_DIFF" ]; then
+              echo "CHANGED=true" >> "$GITHUB_OUTPUT"
+              echo "Dependency changes detected in commit:"
+              [ -n "$LOCK_CHANGED" ] && echo "- Lockfile modified: $LOCK_CHANGED"
+              [ -n "$DEPS_DIFF" ] && echo "- Package diff: $DEPS_DIFF"
+              echo "node_modules will be installed and synchronized."
+            else
+              echo "CHANGED=false" >> "$GITHUB_OUTPUT"
+              echo "No dependency changes detected (version bump / code only). Fast code-only deployment."
+            fi
+          else
+            echo "CHANGED=true" >> "$GITHUB_OUTPUT"
+            echo "No parent commit found. Defaulting to full deployment with dependencies."
+          fi
 
       - name: Install dependencies and build backend
         run: |
@@ -40,12 +74,19 @@ jobs:
           cp -r backend/dist deploy-package/dist
           cp backend/package.json deploy-package/
           cp backend/web.config deploy-package/
+          cp backend/deploy.cmd deploy-package/
           echo "[config]" > deploy-package/.deployment
+          echo "command = deploy.cmd" >> deploy-package/.deployment
           echo "SCM_DO_BUILD_DURING_DEPLOYMENT = false" >> deploy-package/.deployment
-          echo "command = echo \"Pre-built package with node_modules deployed successfully.\"" >> deploy-package/.deployment
           cd deploy-package
-          npm install --omit=dev --no-audit --no-fund
-          zip -q -r ../deploy-package.zip .
+          if [ "${{ steps.check_deps.outputs.CHANGED }}" = "true" ]; then
+            echo "Packaging dependencies into deployment bundle..."
+            npm install --omit=dev --no-audit --no-fund
+          else
+            echo "Skipping node_modules packaging (differential deployment)."
+          fi
+          shopt -s dotglob
+          zip -q -r ../deploy-package.zip *
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
