@@ -146,8 +146,16 @@ const formatUptime = (seconds: number): string => {
   return parts.join(' ');
 };
 
-const APP_VERSION = '1.11.2';
-const APP_VERSION_DATE = '2026-10-01';
+const packageJson = (() => {
+  try {
+    return require('../package.json');
+  } catch {
+    return null;
+  }
+})();
+
+const APP_VERSION = packageJson?.version;
+const APP_VERSION_DATE = packageJson?.versionDate;
 
 const getHealthPayload = () => {
   const mem = process.memoryUsage();
@@ -159,7 +167,9 @@ const getHealthPayload = () => {
     success: true,
     status: (dbConnected && (!sbStatus.hasConnectionString || sbStatus.receiverListening)) ? 'healthy' : 'degraded',
     version: APP_VERSION,
+    backendVersion: APP_VERSION,
     versionDate: APP_VERSION_DATE,
+    backendVersionDate: APP_VERSION_DATE,
     message: 'Servidor funcionando correctamente',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',

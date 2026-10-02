@@ -1,6 +1,7 @@
 {
   "name": "voc-monorepo",
-  "version": "1.11.2",
+  "version": "1.10.11",
+  "versionDate": "2026-10-01",
   "description": "VOC Sistema de Conciliaciones - Monorepo",
   "private": true,
   "workspaces": [
@@ -8,6 +9,9 @@
     "backend"
   ],
   "scripts": {
+    "version:sync": "node scripts/sync-version.js",
+    "prebuild": "node scripts/sync-version.js",
+    "predev": "node scripts/sync-version.js",
     "install:all": "npm install",
     "dev": "concurrently \"npm run dev --workspace=frontend\" \"npm run dev --workspace=backend\"",
     "dev:voc": "concurrently \"npm run dev --workspace=frontend\" \"npm run dev --workspace=backend\"",

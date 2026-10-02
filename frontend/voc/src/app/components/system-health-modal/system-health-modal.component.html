@@ -14,10 +14,13 @@
           <lucide-icon name="activity" class="text-base"></lucide-icon>
         </span>
         <div>
-          <div class="flex align-items-center gap-2">
+          <div class="flex align-items-center gap-2 flex-wrap">
             <span class="font-bold text-lg text-900 line-height-1">Estado del Sistema</span>
-            <span *ngIf="healthData()?.version" class="text-xs px-2 py-0.5 border-round font-bold bg-blue-50 text-blue-700 border-1 border-blue-200">
-              v{{ healthData()?.version }}
+            <span class="text-xs px-2 py-0.5 border-round font-bold bg-teal-50 text-teal-700 border-1 border-teal-200" title="Versión del Frontend">
+              <i class="pi pi-desktop mr-1"></i>Front: v{{ frontendVersion() }}
+            </span>
+            <span *ngIf="backendVersion()" class="text-xs px-2 py-0.5 border-round font-bold bg-blue-50 text-blue-700 border-1 border-blue-200" title="Versión del Backend (API)">
+              <i class="pi pi-server mr-1"></i>Back: v{{ backendVersion() }}
             </span>
           </div>
           <span class="text-xs text-500">Telemetría y sonda de salud en vivo (Azure Cloud)</span>
@@ -42,7 +45,7 @@
     </div>
 
     <!-- Spinner de carga inicial si aún no hay datos -->
-    <div *ngIf="loading() && !healthData()" class="flex flex-column align-items-center justify-content-center py-6 gap-2">
+    <div *ngIf="loading() && !healthData()" class="flex flex-column align-items-center justify-center py-6 gap-2">
       <lucide-icon name="loader-2" class="text-2xl text-primary animate-spin"></lucide-icon>
       <span class="text-sm text-600">Consultando estado del servidor...</span>
     </div>
@@ -55,16 +58,27 @@
           <div>
             <div class="flex align-items-center justify-content-between mb-2">
               <span class="font-semibold text-sm text-800 flex align-items-center gap-2">
-                <lucide-icon name="server" class="text-primary text-sm"></lucide-icon> Servidor Web
+                <lucide-icon name="server" class="text-primary text-sm"></lucide-icon> Servidor Web & API
               </span>
               <span class="text-xs text-green-600 font-bold bg-green-50 px-2 py-1 border-round border-1 border-green-200">
                 HTTP 200 OK
               </span>
             </div>
             <div class="flex flex-column gap-1 text-xs text-700">
-              <div class="flex justify-content-between">
-                <span class="text-500">Versión del Sistema:</span>
-                <span class="font-bold text-primary"><ng-container *ngIf="healthData.version">v{{ healthData.version }} </ng-container><span *ngIf="healthData.versionDate" class="text-xs font-normal text-500">({{ healthData.versionDate }})</span></span>
+              <div *ngIf="frontendVersion()" class="flex justify-content-between">
+                <span class="text-500">Versión Frontend (UI):</span>
+                <span class="font-bold text-teal-700">v{{ frontendVersion() }} <span *ngIf="frontendVersionDate()" class="text-xs font-normal text-500">({{ frontendVersionDate() }})</span></span>
+              </div>
+              <div *ngIf="backendVersion()" class="flex justify-content-between">
+                <span class="text-500">Versión Backend (API):</span>
+                <span class="font-bold text-primary">v{{ backendVersion() }} <span *ngIf="backendVersionDate()" class="text-xs font-normal text-500">({{ backendVersionDate() }})</span></span>
+              </div>
+              <div *ngIf="frontendVersion() && backendVersion()" class="flex justify-content-between">
+                <span class="text-500">Sincronización:</span>
+                <span class="font-bold"
+                      [class]="frontendVersion() === backendVersion() ? 'text-green-700' : 'text-yellow-700'">
+                  {{ frontendVersion() === backendVersion() ? 'Sincronizados' : 'Diferentes Versiones' }}
+                </span>
               </div>
               <div class="flex justify-content-between">
                 <span class="text-500">Entorno:</span>

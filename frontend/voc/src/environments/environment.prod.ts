@@ -1,5 +1,9 @@
+import { APP_FRONTEND_VERSION, APP_FRONTEND_VERSION_DATE } from './version';
+
 export const environment = {
   production: true,
+  version: APP_FRONTEND_VERSION,
+  versionDate: APP_FRONTEND_VERSION_DATE,
   apiUrl: 'https://voc-backend.azurewebsites.net/api',
   festivosApiKey: 'fs_3mNHbhSyjhJyTtdhiKhQjtAC6LWj1MAc',
   festivosApiUrl: 'https://festivos.com.co/api/v1/festivos',
