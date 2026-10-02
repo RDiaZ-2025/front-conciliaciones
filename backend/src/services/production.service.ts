@@ -685,15 +685,35 @@ export class ProductionService {
                 where: { assignedUserId: userId, status: 'Pending' },
                 select: ['submissionId']
             });
-            const pendingSubIds = new Set<number>();
+            const directlyPendingSubIds = new Set<number>();
             for (const ps of userPendingStates) {
                 if (ps.submissionId) {
-                    pendingSubIds.add(ps.submissionId);
-                    const tree = await this.getSubmissionTreeIds(ps.submissionId);
-                    tree.forEach(id => pendingSubIds.add(id));
+                    directlyPendingSubIds.add(ps.submissionId);
+                    let curr = subMap.get(ps.submissionId);
+                    if (!curr) {
+                        curr = (await subRepo.findOne({ where: { id: ps.submissionId } })) || undefined;
+                    }
+                    while (curr && curr.parentSubmissionId) {
+                        let parent = subMap.get(curr.parentSubmissionId);
+                        if (!parent) {
+                            parent = (await subRepo.findOne({ where: { id: curr.parentSubmissionId } })) || undefined;
+                        }
+                        if (parent && (parent.workflowId !== null || parent.currentStageId !== null)) {
+                            directlyPendingSubIds.add(parent.id);
+                            curr = parent;
+                        } else {
+                            break;
+                        }
+                    }
                 }
             }
-            candidateSubmissions = candidateSubmissions.filter(s => !pendingSubIds.has(s.id) && !(s.parentSubmissionId && pendingSubIds.has(s.parentSubmissionId)));
+            candidateSubmissions = candidateSubmissions.filter(s => {
+                // Las solicitudes completadas o aprobadas NUNCA deben excluirse del historial
+                if (s.status === 'Completed' || s.status === 'Approved') {
+                    return true;
+                }
+                return !directlyPendingSubIds.has(s.id);
+            });
         }
 
         // 2. Ordenar: Activas primero, luego fecha descendente
@@ -770,6 +790,7 @@ export class ProductionService {
             candidateSubmissions = candidateSubmissions.filter(s => {
                 const idStr = String(s.id);
                 if (idStr === searchNum || idStr.includes(searchNum)) return true;
+                if (s.parentSubmissionId && (String(s.parentSubmissionId) === searchNum || String(s.parentSubmissionId).includes(searchNum))) return true;
                 if (s.form?.name && s.form.name.toLowerCase().includes(cleanQ)) return true;
                 if (s.consecutive && s.consecutive.toLowerCase().includes(cleanQ)) return true;
                 if (s.requesterUser?.name && s.requesterUser.name.toLowerCase().includes(cleanQ)) return true;
