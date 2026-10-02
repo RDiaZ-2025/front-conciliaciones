@@ -42,10 +42,10 @@ jobs:
           cp backend/web.config deploy-package/
           echo "[config]" > deploy-package/.deployment
           echo "SCM_DO_BUILD_DURING_DEPLOYMENT = false" >> deploy-package/.deployment
-          echo "command = echo \"Pre-built package with node_modules deployed successfully.\"" >> deploy-package/.deployment
           cd deploy-package
           npm install --omit=dev --no-audit --no-fund
-          zip -q -r ../deploy-package.zip .
+          shopt -s dotglob
+          zip -q -r ../deploy-package.zip *
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
