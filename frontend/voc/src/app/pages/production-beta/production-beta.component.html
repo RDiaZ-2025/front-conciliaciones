@@ -868,25 +868,18 @@
     <ng-template #requestReadOnlyView let-req="req" let-parentGroups="parentGroups">
         <!-- Metadata summary grid -->
         <div class="grid row-gap-2 surface-50 p-3 border-round border-1 surface-border">
-            <div class="col-6 flex flex-column gap-1">
-                <span class="text-xs text-500 font-medium">Consecutivo</span>
-                <span class="text-sm font-bold text-900">
-                    <lucide-icon name="hash" class="mr-1" style="width: 1.1rem; height: 1.1rem; display: inline-block; vertical-align: middle;"></lucide-icon>
-                    {{ req.consecutive || 'Sin consecutivo' }}
-                </span>
-            </div>
-            <div class="col-6 flex flex-column gap-1">
+            <div class="col-12 sm:col-4 flex flex-column gap-1">
                 <span class="text-xs text-500 font-medium">Estado General</span>
                 <div>
                     <p-tag [severity]="getStatusSeverity(req.submissionStatus || req.status)"
                            [value]="getStatusLabel(req.submissionStatus || req.status)"></p-tag>
                 </div>
             </div>
-            <div class="col-6 flex flex-column gap-1">
+            <div class="col-12 sm:col-4 flex flex-column gap-1">
                 <span class="text-xs text-500 font-medium">Fecha Creación</span>
                 <span class="text-sm font-semibold text-700">{{ req.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
             </div>
-            <div class="col-6 flex flex-column gap-1">
+            <div class="col-12 sm:col-4 flex flex-column gap-1">
                 <span class="text-xs text-500 font-medium">Etapa Actual</span>
                 <span class="text-sm font-semibold text-700">
                     <lucide-icon name="info" class="mr-1" style="width: 1.1rem; height: 1.1rem; display: inline-block; vertical-align: middle;"></lucide-icon>
