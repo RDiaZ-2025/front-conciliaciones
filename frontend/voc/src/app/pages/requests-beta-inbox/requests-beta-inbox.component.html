@@ -368,12 +368,19 @@
                 <div class="flex flex-column gap-3">
                     <div *ngFor="let hStage of selectedTask().historyStages" class="border-round border-1 surface-border p-3 surface-card flex flex-column gap-2">
                         <!-- Stage header -->
-                        <div class="flex justify-content-between align-items-center border-bottom-1 surface-border pb-2">
-                            <span class="font-bold text-900 text-sm flex align-items-center gap-1">
-                                <lucide-icon name="info" class="text-primary" style="width: 1.1rem; height: 1.1rem; flex-shrink: 0;"></lucide-icon>
-                                <span>{{ hStage.stageName }}</span>
-                                <span class="text-500 font-normal" *ngIf="hStage.formName && hStage.formName !== hStage.stageName">({{ hStage.formName }})</span>
-                            </span>
+                        <div class="flex justify-content-between align-items-center border-bottom-1 surface-border pb-2 flex-wrap gap-2">
+                            <div class="flex align-items-center gap-2 flex-wrap">
+                                <span class="font-bold text-900 text-sm flex align-items-center gap-1">
+                                    <lucide-icon name="info" class="text-primary" style="width: 1.1rem; height: 1.1rem; flex-shrink: 0;"></lucide-icon>
+                                    <span>{{ hStage.stageName }}</span>
+                                    <span class="text-500 font-normal" *ngIf="hStage.formName && hStage.formName !== hStage.stageName">({{ hStage.formName }})</span>
+                                </span>
+                                <p-tag *ngIf="hStage.submissionId" 
+                                       [value]="'Solicitud #' + hStage.submissionId + (hStage.consecutive ? ' (' + hStage.consecutive + ')' : '')" 
+                                       [severity]="hStage.submissionId === selectedTask().submissionId ? 'info' : 'secondary'"
+                                       class="text-xs font-semibold">
+                                </p-tag>
+                            </div>
                             <p-tag [severity]="hStage.status === 'Approved' ? 'success' : (hStage.status === 'Rejected' ? 'danger' : 'warn')" 
                                    [value]="hStage.status === 'Approved' ? 'Aprobado' : (hStage.status === 'Rejected' ? 'Rechazado' : 'Pendiente')"></p-tag>
                         </div>
@@ -436,10 +443,15 @@
                         </div>
 
                         <!-- Simplified Footer -->
-                        <div class="text-xs text-500 mt-2">
-                            <span *ngIf="hStage.status === 'Approved'">Aprobado por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}</span>
-                            <span *ngIf="hStage.status === 'Rejected'">Rechazado por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}</span>
-                            <span *ngIf="hStage.status !== 'Approved' && hStage.status !== 'Rejected'">Asignado a (en espera): <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }})</span>
+                        <div class="text-xs text-500 mt-2 flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <span *ngIf="hStage.status === 'Approved'">Aprobado por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                                <span *ngIf="hStage.status === 'Rejected'">Rechazado por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                                <span *ngIf="hStage.status !== 'Approved' && hStage.status !== 'Rejected'">Asignado a (en espera): <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }})</span>
+                            </div>
+                            <div *ngIf="hStage.submissionId" class="text-500 font-medium">
+                                Origen: <strong>Solicitud #{{ hStage.submissionId }}</strong>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1463,12 +1475,19 @@
                 <div class="flex flex-column gap-3">
                     <div *ngFor="let hStage of selectedDetails().historyStages" class="border-round border-1 surface-border p-3 surface-card flex flex-column gap-2">
                         <!-- Stage header -->
-                        <div class="flex justify-content-between align-items-center border-bottom-1 surface-border pb-2">
-                            <span class="font-bold text-900 text-sm flex align-items-center gap-1">
-                                <lucide-icon name="info" class="text-primary" style="width: 1.1rem; height: 1.1rem; flex-shrink: 0;"></lucide-icon>
-                                <span>{{ hStage.stageName }}</span>
-                                <span class="text-500 font-normal" *ngIf="hStage.formName && hStage.formName !== hStage.stageName">({{ hStage.formName }})</span>
-                            </span>
+                        <div class="flex justify-content-between align-items-center border-bottom-1 surface-border pb-2 flex-wrap gap-2">
+                            <div class="flex align-items-center gap-2 flex-wrap">
+                                <span class="font-bold text-900 text-sm flex align-items-center gap-1">
+                                    <lucide-icon name="info" class="text-primary" style="width: 1.1rem; height: 1.1rem; flex-shrink: 0;"></lucide-icon>
+                                    <span>{{ hStage.stageName }}</span>
+                                    <span class="text-500 font-normal" *ngIf="hStage.formName && hStage.formName !== hStage.stageName">({{ hStage.formName }})</span>
+                                </span>
+                                <p-tag *ngIf="hStage.submissionId" 
+                                       [value]="'Solicitud #' + hStage.submissionId + (hStage.consecutive ? ' (' + hStage.consecutive + ')' : '')" 
+                                       [severity]="hStage.submissionId === selectedDetails().id ? 'info' : 'secondary'"
+                                       class="text-xs font-semibold">
+                                </p-tag>
+                            </div>
                             <p-tag [severity]="hStage.status === 'Approved' ? 'success' : (hStage.status === 'Rejected' ? 'danger' : 'warn')" 
                                    [value]="hStage.status === 'Approved' ? 'Aprobado' : (hStage.status === 'Rejected' ? 'Rechazado' : 'Pendiente')"></p-tag>
                         </div>
@@ -1531,10 +1550,15 @@
                         </div>
 
                         <!-- Simplified Footer -->
-                        <div class="text-xs text-500 mt-2">
-                            <span *ngIf="hStage.status === 'Approved'">Aprobado por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}</span>
-                            <span *ngIf="hStage.status === 'Rejected'">Rechazado por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}</span>
-                            <span *ngIf="hStage.status !== 'Approved' && hStage.status !== 'Rejected'">Asignado a (en espera): <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }})</span>
+                        <div class="text-xs text-500 mt-2 flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <span *ngIf="hStage.status === 'Approved'">Aprobado por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                                <span *ngIf="hStage.status === 'Rejected'">Rechazado por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                                <span *ngIf="hStage.status !== 'Approved' && hStage.status !== 'Rejected'">Asignado a (en espera): <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }})</span>
+                            </div>
+                            <div *ngIf="hStage.submissionId" class="text-500 font-medium">
+                                Origen: <strong>Solicitud #{{ hStage.submissionId }}</strong>
+                            </div>
                         </div>
                     </div>
                 </div>

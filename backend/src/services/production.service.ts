@@ -1075,6 +1075,10 @@ export class ProductionService {
              }
 
              return {
+                 submissionId: cState.submissionId,
+                 consecutive: (cState as any).submission?.consecutive || null,
+                 isCurrentSubmission: cState.submissionId === sub.id,
+                 submissionFormName: (cState as any).submission?.form?.name || null,
                  stageName: displayName,
                  formName: formName,
                  actionedByUserName: user?.name || 'Sin Asignar',
@@ -2083,6 +2087,10 @@ export class ProductionService {
                 }
 
                 return {
+                    submissionId: cState.submissionId,
+                    consecutive: (cState as any).submission?.consecutive || null,
+                    isCurrentSubmission: cState.submissionId === state.submissionId,
+                    submissionFormName: (cState as any).submission?.form?.name || null,
                     stageName: displayName,
                     formName: formName,
                     actionedByUserName: user?.name || 'Sin Asignar',
