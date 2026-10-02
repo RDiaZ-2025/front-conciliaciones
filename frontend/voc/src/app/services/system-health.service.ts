@@ -1,12 +1,15 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { Observable, catchError, of, timeout, tap } from 'rxjs';
 import { BaseApiService } from './base-api.service';
+import { APP_FRONTEND_VERSION, APP_FRONTEND_VERSION_DATE } from '../../environments/version';
 
 export interface SystemHealthResponse {
   success: boolean;
   status: 'healthy' | 'degraded' | 'down';
   version?: string;
   versionDate?: string;
+  backendVersion?: string;
+  backendVersionDate?: string;
   message: string;
   timestamp: string;
   environment: string;
@@ -45,8 +48,18 @@ export interface SystemHealthResponse {
 export class SystemHealthService extends BaseApiService {
   private _healthData = signal<SystemHealthResponse | null>(null);
   public healthData = this._healthData.asReadonly();
-  public appVersion = computed(() => this._healthData()?.version || '');
-  public appVersionDate = computed(() => this._healthData()?.versionDate || '');
+
+  // Versión del Frontend (Directamente desde package.json)
+  public frontendVersion = signal<string | undefined>(APP_FRONTEND_VERSION).asReadonly();
+  public frontendVersionDate = signal<string | undefined>(APP_FRONTEND_VERSION_DATE).asReadonly();
+
+  // Versión del Backend (Obtenida dinámicamente desde /health)
+  public backendVersion = computed<string | undefined>(() => this._healthData()?.backendVersion || this._healthData()?.version || undefined);
+  public backendVersionDate = computed<string | undefined>(() => this._healthData()?.backendVersionDate || this._healthData()?.versionDate || undefined);
+
+  // Retrocompatibilidad
+  public appVersion = computed<string>(() => this.backendVersion() || '');
+  public appVersionDate = computed<string>(() => this.backendVersionDate() || '');
 
   getHealth(): Observable<SystemHealthResponse> {
     const rootUrl = this.baseApiUrl.replace(/\/api\/?$/, '');
