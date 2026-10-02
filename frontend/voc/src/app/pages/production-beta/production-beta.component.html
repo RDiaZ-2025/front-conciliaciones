@@ -16,23 +16,23 @@
     <div class="surface-card border-1 surface-border border-round-xl p-3 shadow-1 flex flex-column gap-3">
         <!-- Fila Principal: Búsqueda Rápida + Acciones y Contadores -->
         <div class="flex flex-column md:flex-row align-items-stretch md:align-items-center justify-content-between gap-3">
-            
+
             <!-- Buscador Global -->
             <div class="relative flex-1 flex align-items-center">
                 <lucide-icon name="search" class="text-400 absolute ml-3" style="width: 1.1rem; height: 1.1rem; pointer-events: none;"></lucide-icon>
-                <input 
-                    pInputText 
-                    [ngModel]="filterSearch()" 
+                <input
+                    pInputText
+                    [ngModel]="filterSearch()"
                     (input)="onSearchInput($any($event.target).value)"
-                    placeholder="Buscar por ID (#), formulario, solicitante, etapa o datos..." 
+                    placeholder="Buscar por ID (#), formulario, solicitante, etapa o datos..."
                     class="w-full text-sm pl-6 pr-6 py-2 border-round-lg" />
-                <button 
-                    *ngIf="filterSearch()" 
-                    pButton 
-                    [text]="true" 
-                    [rounded]="true" 
-                    severity="secondary" 
-                    class="w-2rem h-2rem p-0 flex align-items-center justify-content-center absolute right-0 mr-2" 
+                <button
+                    *ngIf="filterSearch()"
+                    pButton
+                    [text]="true"
+                    [rounded]="true"
+                    severity="secondary"
+                    class="w-2rem h-2rem p-0 flex align-items-center justify-content-center absolute right-0 mr-2"
                     (click)="onSearchInput('')"
                     pTooltip="Borrar texto">
                     <lucide-icon name="x" style="width: 1rem; height: 1rem;"></lucide-icon>
@@ -42,10 +42,10 @@
             <!-- Botones de Acción y Contadores -->
             <div class="flex align-items-center gap-2 flex-wrap justify-content-end">
                 <!-- Toggle Filtros Avanzados -->
-                <p-button 
-                    [outlined]="!showAdvancedFilters()" 
+                <p-button
+                    [outlined]="!showAdvancedFilters()"
                     [severity]="activeFiltersCount() > 0 ? 'primary' : 'secondary'"
-                    size="small" 
+                    size="small"
                     (onClick)="showAdvancedFilters.set(!showAdvancedFilters())"
                     [pTooltip]="showAdvancedFilters() ? 'Ocultar filtros avanzados' : 'Mostrar filtros avanzados'">
                     <lucide-icon name="sliders-horizontal" class="mr-2" style="width: 1rem; height: 1rem;"></lucide-icon>
@@ -54,11 +54,11 @@
                 </p-button>
 
                 <!-- Limpiar todos los filtros -->
-                <p-button 
-                    *ngIf="activeFiltersCount() > 0" 
-                    [text]="true" 
-                    severity="danger" 
-                    size="small" 
+                <p-button
+                    *ngIf="activeFiltersCount() > 0"
+                    [text]="true"
+                    severity="danger"
+                    size="small"
                     (onClick)="clearAllFilters()"
                     pTooltip="Restablecer todos los filtros">
                     <lucide-icon name="rotate-ccw" class="mr-1" style="width: 0.9rem; height: 0.9rem;"></lucide-icon>
@@ -68,10 +68,10 @@
                 <!-- Resumen rápido de resultados -->
                 <div class="hidden lg:flex align-items-center gap-2 pl-2 border-left-1 surface-border">
                     <span class="text-xs text-500 font-medium">Aprobaciones:</span>
-                    <p-tag [severity]="approvalsTotal() > 0 ? 'warn' : 'secondary'" 
+                    <p-tag [severity]="approvalsTotal() > 0 ? 'warn' : 'secondary'"
                            [value]="approvalsTotal() + ' total'"></p-tag>
                     <span class="text-xs text-500 font-medium ml-2">Historial:</span>
-                    <p-tag [severity]="historyTotal() > 0 ? 'info' : 'secondary'" 
+                    <p-tag [severity]="historyTotal() > 0 ? 'info' : 'secondary'"
                            [value]="historyTotal() + ' total'"></p-tag>
                 </div>
             </div>
@@ -82,14 +82,14 @@
             <!-- Filtro: Formulario / Tipo -->
             <div class="col-12 sm:col-6 md:col-3 flex flex-column gap-1">
                 <label class="text-xs font-semibold text-700">Formulario / Flujo:</label>
-                <p-multiSelect 
-                    [options]="availableFormOptions()" 
-                    [(ngModel)]="filterSelectedForms" 
+                <p-multiSelect
+                    [options]="availableFormOptions()"
+                    [(ngModel)]="filterSelectedForms"
                     (onChange)="onFilterChange()"
-                    optionLabel="label" 
-                    optionValue="value" 
-                    placeholder="Todos los formularios" 
-                    display="chip" 
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Todos los formularios"
+                    display="chip"
                     [showClear]="true"
                     styleClass="p-inputtext-sm w-full"
                     appendTo="body">
@@ -99,12 +99,12 @@
             <!-- Filtro: Estado -->
             <div class="col-12 sm:col-6 md:col-3 flex flex-column gap-1">
                 <label class="text-xs font-semibold text-700">Estado de Solicitud:</label>
-                <p-select 
-                    [options]="statusOptions" 
-                    [(ngModel)]="filterStatus" 
+                <p-select
+                    [options]="statusOptions"
+                    [(ngModel)]="filterStatus"
                     (onChange)="onFilterChange()"
-                    optionLabel="label" 
-                    optionValue="value" 
+                    optionLabel="label"
+                    optionValue="value"
                     styleClass="p-inputtext-sm w-full"
                     appendTo="body">
                 </p-select>
@@ -113,12 +113,12 @@
             <!-- Filtro: Período de Fecha -->
             <div class="col-12 sm:col-6 md:col-3 flex flex-column gap-1">
                 <label class="text-xs font-semibold text-700">Fecha de Creación:</label>
-                <p-select 
-                    [options]="datePresetOptions" 
-                    [(ngModel)]="filterDatePreset" 
+                <p-select
+                    [options]="datePresetOptions"
+                    [(ngModel)]="filterDatePreset"
                     (onChange)="onDatePresetChange($event.value)"
-                    optionLabel="label" 
-                    optionValue="value" 
+                    optionLabel="label"
+                    optionValue="value"
                     styleClass="p-inputtext-sm w-full"
                     appendTo="body">
                 </p-select>
@@ -128,19 +128,19 @@
             <div class="col-12 sm:col-6 md:col-3 flex flex-column gap-1">
                 <label class="text-xs font-semibold text-700">Solicitante:</label>
                 <div class="relative flex align-items-center">
-                    <input 
-                        pInputText 
-                        [ngModel]="filterRequester()" 
+                    <input
+                        pInputText
+                        [ngModel]="filterRequester()"
                         (input)="filterRequester.set($any($event.target).value); onFilterChange()"
-                        placeholder="Nombre o correo..." 
+                        placeholder="Nombre o correo..."
                         class="p-inputtext-sm w-full pr-5" />
-                    <button 
-                        *ngIf="filterRequester()" 
-                        pButton 
-                        [text]="true" 
-                        [rounded]="true" 
-                        severity="secondary" 
-                        class="w-1.5rem h-1.5rem p-0 flex align-items-center justify-content-center absolute right-0 mr-1" 
+                    <button
+                        *ngIf="filterRequester()"
+                        pButton
+                        [text]="true"
+                        [rounded]="true"
+                        severity="secondary"
+                        class="w-1.5rem h-1.5rem p-0 flex align-items-center justify-content-center absolute right-0 mr-1"
                         (click)="filterRequester.set(''); onFilterChange()">
                         <lucide-icon name="x" style="width: 0.8rem; height: 0.8rem;"></lucide-icon>
                     </button>
@@ -169,7 +169,7 @@
                     <p-badge [value]="approvalsTotal().toString()" [severity]="approvalsTotal() > 0 ? 'warn' : 'secondary'"></p-badge>
                 </h3>
             </div>
-            
+
             <!-- Caso A: No hay tareas pendientes en absoluto -->
             <div *ngIf="approvalsTotal() === 0 && !loadingTasks() && activeFiltersCount() === 0" class="text-center p-5 border-round surface-card border-1 surface-border">
                 <lucide-icon name="check-circle" class="text-4xl text-green-500 mb-2 block"></lucide-icon>
@@ -249,10 +249,10 @@
 
             <!-- Paginador Real para Aprobaciones -->
             <div *ngIf="approvalsTotal() > 0 && !loadingTasks()" class="mt-2 flex justify-content-end">
-                <p-paginator 
-                    [first]="(approvalsPage() - 1) * approvalsLimit()" 
-                    [rows]="approvalsLimit()" 
-                    [totalRecords]="approvalsTotal()" 
+                <p-paginator
+                    [first]="(approvalsPage() - 1) * approvalsLimit()"
+                    [rows]="approvalsLimit()"
+                    [totalRecords]="approvalsTotal()"
                     [rowsPerPageOptions]="[4, 8, 12, 20]"
                     (onPageChange)="onApprovalsPageChange($event)"
                     styleClass="surface-card border-round border-1 surface-border py-1 px-2 text-sm">
@@ -358,10 +358,10 @@
 
                 <!-- Paginador Real para Historial -->
                 <div *ngIf="historyTotal() > 0 && !loading()" class="mt-3 flex justify-content-end">
-                    <p-paginator 
-                        [first]="(historyPage() - 1) * historyLimit()" 
-                        [rows]="historyLimit()" 
-                        [totalRecords]="historyTotal()" 
+                    <p-paginator
+                        [first]="(historyPage() - 1) * historyLimit()"
+                        [rows]="historyLimit()"
+                        [totalRecords]="historyTotal()"
                         [rowsPerPageOptions]="[8, 12, 24, 48]"
                         (onPageChange)="onHistoryPageChange($event)"
                         styleClass="surface-card border-round border-1 surface-border py-1 px-2 text-sm">
@@ -397,7 +397,7 @@
         [style]="{width: '780px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false"
         styleClass="p-fluid border-round-xl">
         <div class="flex flex-column gap-3 px-4 py-2">
-            
+
             <div *ngIf="loadingRequestTypes()" class="flex align-items-center justify-content-center p-4">
                 <lucide-icon name="loader-2" class="lucide-spin text-primary text-2xl"></lucide-icon>
             </div>
@@ -465,7 +465,7 @@
                                                [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
                                                [minFractionDigits]="0" [maxFractionDigits]="0"
                                                styleClass="w-full" class="w-full"></p-inputNumber>
-                                
+
                                 <!-- USD Currency Format -->
                                 <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
                                                mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
@@ -513,7 +513,7 @@
                                                (ngModelChange)="setFormValue(form.id + '_' + field.name, $event, 'initial')"
                                                [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
                                                styleClass="w-full" class="w-full"></p-inputNumber>
-                                
+
                                 <!-- USD Currency Format -->
                                 <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
                                                mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
@@ -621,7 +621,7 @@
                             <!-- Formula type -->
                             <div *ngSwitchCase="'formula'" class="flex align-items-center w-full relative">
                                 <input type="text" pInputText [id]="'initial-' + form.id + '-' + field.name"
-                                    [ngModel]="initialFormValues()[form.id + '_' + field.name]" [disabled]="true" 
+                                    [ngModel]="initialFormValues()[form.id + '_' + field.name]" [disabled]="true"
                                     class="w-full font-bold bg-50 border-round text-900 border-1 surface-border px-3 py-2" />
                                 <div class="absolute right-0 mr-3 text-400">
                                     <lucide-icon name="calculator" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
@@ -634,7 +634,7 @@
                                     <input type="file" [id]="'initial-' + form.id + '-' + field.name" [multiple]="(field.metadata?.maxFileCount || 1) > 1"
                                            [accept]="field.metadata?.allowedFormats || '*'" (change)="onInitialFileSelected($event, form.id, field)"
                                            class="hidden" #fileInput />
-                                    
+
                                     <div class="flex gap-2">
                                         <p-button [outlined]="true" size="small" (onClick)="fileInput.click()" [disabled]="field.isReadOnly">
                                             <lucide-icon name="upload" class="mr-2"></lucide-icon>
@@ -697,7 +697,7 @@
                             [tooltipDisabled]="isTeamEnabled(team)"
                             tooltipPosition="top"
                             (click)="isTeamEnabled(team) ? (team.selected = !team.selected) : null">
-                            
+
                             <p-checkbox [(ngModel)]="team.selected" [binary]="true" [inputId]="'team-' + team.id"
                                 [disabled]="!isTeamEnabled(team)"
                                 class="mt-1 flex-shrink-0"
@@ -712,7 +712,7 @@
                                             <span>{{ team.subteams.length }} {{ team.subteams.length === 1 ? 'subequipo' : 'subequipos' }}</span>
                                         </span>
                                     </div>
-                                    
+
                                     <!-- Botón Interactivo para Ciclar el Modo de Asignación de la Etapa 1 -->
                                     <button type="button"
                                             *ngIf="isTeamEnabled(team)"
@@ -729,8 +729,8 @@
                                 </div>
 
                                 <!-- Selector opcional de Ámbito Aleatorio (Equipo Principal o Subequipo) SOLO si assignmentMode === 'random' y el equipo tiene subequipos -->
-                                <div *ngIf="team.selected && team.assignmentMode === 'random' && team.subteams && team.subteams.length > 0" 
-                                     class="mt-2 pt-2 border-top-1 surface-border flex flex-column gap-1 w-full" 
+                                <div *ngIf="team.selected && team.assignmentMode === 'random' && team.subteams && team.subteams.length > 0"
+                                     class="mt-2 pt-2 border-top-1 surface-border flex flex-column gap-1 w-full"
                                      (click)="$event.stopPropagation()">
                                     <div class="flex align-items-center justify-content-between">
                                         <span class="text-xs font-bold text-700 flex align-items-center gap-1">
@@ -741,12 +741,12 @@
                                             🎲 Sorteo al azar
                                         </span>
                                     </div>
-                                    <p-select 
-                                        [(ngModel)]="team.selectedSubteamId" 
-                                        [options]="getSubteamOptionsForTeam(team)" 
-                                        optionLabel="label" 
-                                        optionValue="value" 
-                                        placeholder="Seleccionar ámbito..." 
+                                    <p-select
+                                        [(ngModel)]="team.selectedSubteamId"
+                                        [options]="getSubteamOptionsForTeam(team)"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        placeholder="Seleccionar ámbito..."
                                         appendTo="body"
                                         styleClass="w-full text-xs">
                                         <ng-template #selectedItem let-selected>
@@ -864,85 +864,59 @@
         </ng-template>
     </p-dialog>
 
-    <!-- Modal 3: Decisión de Aprobación / Rechazo / Corrección -->
-    <p-dialog [header]="isCorrection(selectedTask()) ? 'Corregir Solicitud: ' + (selectedTask()?.formName || '') : 'Revisión: ' + (selectedTask()?.formName || '')" [(visible)]="showActionDialog" 
-              [modal]="true" [style]="{width: '650px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
-        <div class="flex flex-column gap-4 px-4 py-2" *ngIf="selectedTask()">
-            
-            <!-- Rejection Alert Banner -->
-            <div *ngIf="isCorrection(selectedTask())" class="p-3 bg-red-50 text-red-700 border-round border-1 border-red-200 mb-2">
-                <div class="flex align-items-center gap-2 mb-2 font-bold">
-                    <lucide-icon name="alert-triangle"></lucide-icon>
-                    <span>Solicitud Devuelta para Corrección</span>
-                </div>
-                <p class="m-0 text-sm font-semibold">Comentarios del revisor:</p>
-                <p class="m-0 text-sm mt-1 italic">"{{ selectedTask().rejectionNotes || 'Sin comentarios.' }}"</p>
+    <!-- Shared Template: Visualización Unificada de Datos e Historial de Solicitud -->
+    <ng-template #requestReadOnlyView let-req="req" let-parentGroups="parentGroups">
+        <!-- Metadata summary grid -->
+        <div class="grid row-gap-2 surface-50 p-3 border-round border-1 surface-border">
+            <div class="col-6 flex flex-column gap-1">
+                <span class="text-xs text-500 font-medium">Consecutivo</span>
+                <span class="text-sm font-bold text-900">
+                    <lucide-icon name="hash" class="mr-1" style="width: 1.1rem; height: 1.1rem; display: inline-block; vertical-align: middle;"></lucide-icon>
+                    {{ req.consecutive || 'Sin consecutivo' }}
+                </span>
             </div>
-
-            <!-- Section 0: Datos del Requerimiento Inicial (Stacked initial forms values) -->
-            <div class="flex flex-column gap-3" *ngIf="parentFormGroups() && parentFormGroups().length > 0">
-                <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">Datos del Requerimiento Inicial</span>
-                <div *ngFor="let group of parentFormGroups()" class="flex flex-column gap-2 mb-2 p-3 border-round border-1 surface-border surface-card">
-                    <span class="text-primary font-bold text-sm border-bottom-1 pb-1 surface-border uppercase">{{ group.formName }}</span>
-                    <div class="grid row-gap-3 mt-1">
-                        <ng-container *ngFor="let val of group.values; let i = index">
-                            <!-- Section Header -->
-                            <div *ngIf="val.fieldType === 'section_header' && isSectionHeaderVisible(group.values, i)" class="col-12 mt-3 mb-1">
-                                <div class="bg-red-600 text-white font-bold text-center py-2 px-3 border-round text-sm uppercase tracking-wider shadow-1">
-                                    {{ val.label }}
-                                </div>
-                            </div>
-
-                            <!-- Regular Field Value -->
-                            <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" class="col-12 md:col-6 flex flex-column gap-1">
-                                <span class="text-xs text-500 font-medium">{{ val.label }}</span>
-                                <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
-                                    <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                        <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                        <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
-                                            <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
-                                        </p-button>
-                                    </div>
-                                </div>
-
-                                <!-- Dynamic List read-only view -->
-                                <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full">
-                                    <table class="w-full text-xs text-left border-collapse">
-                                        <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
-                                            <tr>
-                                                <th class="p-2 pl-3">Producto / Servicio</th>
-                                                <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" class="p-2 text-center" style="width: 8rem;">
-                                                    {{ formatLabel(col) }}
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr *ngFor="let itemRow of parseDynamicList(val.value)" class="border-bottom-1 surface-border hover:bg-50">
-                                                <td class="p-2 pl-3 font-semibold text-900 align-middle">
-                                                    {{ itemRow.item || itemRow.product }}
-                                                </td>
-                                                <td *ngFor="let col of getDynamicListKeys(itemRow)" class="p-2 text-center align-middle font-bold text-900">
-                                                    {{ itemRow[col] }}
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ formatValue(val) }}</span>
-                            </div>
-                        </ng-container>
-                    </div>
+            <div class="col-6 flex flex-column gap-1">
+                <span class="text-xs text-500 font-medium">Estado General</span>
+                <div>
+                    <p-tag [severity]="getStatusSeverity(req.submissionStatus || req.status)"
+                           [value]="getStatusLabel(req.submissionStatus || req.status)"></p-tag>
                 </div>
             </div>
+            <div class="col-6 flex flex-column gap-1">
+                <span class="text-xs text-500 font-medium">Fecha Creación</span>
+                <span class="text-sm font-semibold text-700">{{ req.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            <div class="col-6 flex flex-column gap-1">
+                <span class="text-xs text-500 font-medium">Etapa Actual</span>
+                <span class="text-sm font-semibold text-700">
+                    <lucide-icon name="info" class="mr-1" style="width: 1.1rem; height: 1.1rem; display: inline-block; vertical-align: middle;"></lucide-icon>
+                    {{ req.stageName }}
+                </span>
+            </div>
+        </div>
 
-            <!-- Section 1: Original Form Data (Only if no parent form groups) -->
-            <div class="flex flex-column gap-3" *ngIf="(!parentFormGroups() || parentFormGroups().length === 0) && selectedTask()?.values && selectedTask()?.values?.length > 0">
-                <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">Datos de la Solicitud</span>
-                <div class="grid row-gap-3">
-                    <ng-container *ngFor="let val of selectedTask()?.values; let i = index">
+        <!-- Banner de Solicitud Bloqueada -->
+        <div *ngIf="(req.submissionStatus || req.status) === 'Blocked'" class="bg-red-50 border-1 border-red-300 border-round p-3 flex align-items-start gap-3 shadow-1">
+            <span class="inline-flex align-items-center justify-content-center border-circle w-2rem h-2rem bg-red-100 text-red-700 flex-shrink-0">
+                <lucide-icon name="alert-triangle" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+            </span>
+            <div class="flex flex-column gap-1">
+                <span class="font-bold text-sm text-red-900">Solicitud Bloqueada</span>
+                <span class="text-xs text-red-700 line-height-3">
+                    Esta solicitud fue bloqueada y cerrada automáticamente debido a que el flujo de trabajo original fue modificado o eliminado mientras la solicitud estaba en proceso. Para continuar con este requerimiento, debe iniciar una nueva solicitud.
+                </span>
+            </div>
+        </div>
+
+        <!-- Section 0: Datos del Requerimiento Inicial (Stacked initial forms values) -->
+        <div class="flex flex-column gap-3" *ngIf="parentGroups && parentGroups.length > 0">
+            <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">Datos del Requerimiento Inicial</span>
+            <div *ngFor="let group of parentGroups" class="flex flex-column gap-2 mb-2 p-3 border-round border-1 surface-border surface-card">
+                <span class="text-primary font-bold text-sm border-bottom-1 pb-1 surface-border uppercase">{{ group.formName }}</span>
+                <div class="grid row-gap-3 mt-1">
+                    <ng-container *ngFor="let val of group.values; let i = index">
                         <!-- Section Header -->
-                        <div *ngIf="val.fieldType === 'section_header' && isSectionHeaderVisible(selectedTask()?.values, i)" class="col-12 mt-3 mb-1">
+                        <div *ngIf="val.fieldType === 'section_header' && isSectionHeaderVisible(group.values, i)" class="col-12 mt-3 mb-1">
                             <div class="bg-red-600 text-white font-bold text-center py-2 px-3 border-round text-sm uppercase tracking-wider shadow-1">
                                 {{ val.label }}
                             </div>
@@ -961,8 +935,8 @@
                             </div>
 
                             <!-- Dynamic List read-only view -->
-                            <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full">
-                                <table class="w-full text-xs text-left border-collapse">
+                            <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full text-xs">
+                                <table class="w-full text-left border-collapse">
                                     <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
                                         <tr>
                                             <th class="p-2 pl-3">Producto / Servicio</th>
@@ -988,99 +962,175 @@
                         </div>
                     </ng-container>
                 </div>
-                <div class="text-xs text-500 mt-2">
-                    Creado por: <strong>{{ selectedTask().requesterName }}</strong> ({{ selectedTask().requesterEmail }}) el {{ selectedTask().createdAt | date:'dd/MM/yyyy HH:mm' }}
-                </div>
             </div>
+        </div>
 
-            <!-- Section 1.5: Datos y Archivos de Aprobaciones Anteriores -->
-            <div class="flex flex-column gap-3 mt-2" *ngIf="selectedTask().historyStages && selectedTask().historyStages.length > 0">
-                <div class="flex flex-column gap-3">
-                    <div *ngFor="let hStage of selectedTask().historyStages" class="border-round border-1 surface-border p-3 surface-card flex flex-column gap-2">
-                        <!-- Stage header -->
-                        <div class="flex justify-content-between align-items-center border-bottom-1 surface-border pb-2">
-                            <span class="font-bold text-900 text-sm flex align-items-center gap-1">
-                                <lucide-icon name="info" class="text-primary" style="width: 1.1rem; height: 1.1rem; flex-shrink: 0;"></lucide-icon>
-                                <span>{{ hStage.stageName }}</span>
-                                <span class="text-500 font-normal" *ngIf="hStage.formName && hStage.formName !== hStage.stageName">({{ hStage.formName }})</span>
-                            </span>
-                            <p-tag [severity]="hStage.status === 'Approved' ? 'success' : (hStage.status === 'Rejected' ? 'danger' : 'warn')" 
-                                   [value]="hStage.status === 'Approved' ? 'Aprobado' : (hStage.status === 'Rejected' ? 'Rechazado' : 'Pendiente')"></p-tag>
+        <!-- Section 1: Original Form Data (Only if no parent form groups) -->
+        <div class="flex flex-column gap-3" *ngIf="(!parentGroups || parentGroups.length === 0) && req.values && req.values.length > 0">
+            <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">Datos de la Solicitud</span>
+            <div class="grid row-gap-3">
+                <ng-container *ngFor="let val of req.values; let i = index">
+                    <!-- Section Header -->
+                    <div *ngIf="val.fieldType === 'section_header' && isSectionHeaderVisible(req.values, i)" class="col-12 mt-3 mb-1">
+                        <div class="bg-red-600 text-white font-bold text-center py-2 px-3 border-round text-sm uppercase tracking-wider shadow-1">
+                            {{ val.label }}
                         </div>
-                        
-                        <!-- Values (if any) -->
-                        <div class="grid mt-1" *ngIf="hStage.values && hStage.values.length > 0">
-                            <ng-container *ngFor="let val of hStage.values; let i = index">
-                                <!-- Section Header -->
-                                <div *ngIf="val.fieldType === 'section_header' && isSectionHeaderVisible(hStage.values, i)" class="col-12 mt-3 mb-1">
-                                    <div class="bg-red-600 text-white font-bold text-center py-2 px-3 border-round text-sm uppercase tracking-wider shadow-1">
-                                        {{ val.label }}
+                    </div>
+
+                    <!-- Regular Field Value -->
+                    <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" class="col-12 md:col-6 flex flex-column gap-1">
+                        <span class="text-xs text-500 font-medium">{{ val.label }}</span>
+                        <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
+                            <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
+                                <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
+                                    <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
+                                </p-button>
+                            </div>
+                        </div>
+
+                        <!-- Dynamic List read-only view -->
+                        <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full text-xs">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
+                                    <tr>
+                                        <th class="p-2 pl-3">Producto / Servicio</th>
+                                        <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" class="p-2 text-center" style="width: 8rem;">
+                                            {{ formatLabel(col) }}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr *ngFor="let itemRow of parseDynamicList(val.value)" class="border-bottom-1 surface-border hover:bg-50">
+                                        <td class="p-2 pl-3 font-semibold text-900 align-middle">
+                                            {{ itemRow.item || itemRow.product }}
+                                        </td>
+                                        <td *ngFor="let col of getDynamicListKeys(itemRow)" class="p-2 text-center align-middle font-bold text-900">
+                                            {{ itemRow[col] }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ formatValue(val) }}</span>
+                    </div>
+                </ng-container>
+            </div>
+        </div>
+
+        <!-- Creator info -->
+        <div class="text-xs text-500 mt-1" *ngIf="req.requesterName">
+            Creado por: <strong>{{ req.requesterName }}</strong> <span *ngIf="req.requesterEmail">({{ req.requesterEmail }})</span> el {{ req.createdAt | date:'dd/MM/yyyy HH:mm' }}
+        </div>
+
+        <!-- Section 1.5: Datos y Archivos de Aprobaciones Anteriores (Historial) -->
+        <div class="flex flex-column gap-3 mt-2" *ngIf="req.historyStages && req.historyStages.length > 0">
+            <div class="flex flex-column gap-3">
+                <div *ngFor="let hStage of req.historyStages" class="border-round border-1 surface-border p-3 surface-card flex flex-column gap-2">
+                    <!-- Stage header -->
+                    <div class="flex justify-content-between align-items-center border-bottom-1 surface-border pb-2">
+                        <span class="font-bold text-900 text-sm flex align-items-center gap-1">
+                            <lucide-icon name="info" class="text-primary" style="width: 1.1rem; height: 1.1rem; flex-shrink: 0;"></lucide-icon>
+                            <span>{{ hStage.stageName }}</span>
+                            <span class="text-500 font-normal" *ngIf="hStage.formName && hStage.formName !== hStage.stageName">({{ hStage.formName }})</span>
+                        </span>
+                        <p-tag [severity]="hStage.status === 'Approved' ? 'success' : (hStage.status === 'Rejected' ? 'danger' : 'warn')"
+                               [value]="hStage.status === 'Approved' ? 'Aprobado' : (hStage.status === 'Rejected' ? 'Rechazado' : 'Pendiente')"></p-tag>
+                    </div>
+
+                    <!-- Values (if any) -->
+                    <div class="grid mt-1" *ngIf="hStage.values && hStage.values.length > 0">
+                        <ng-container *ngFor="let val of hStage.values; let i = index">
+                            <!-- Section Header -->
+                            <div *ngIf="val.fieldType === 'section_header' && isSectionHeaderVisible(hStage.values, i)" class="col-12 mt-3 mb-1">
+                                <div class="bg-red-600 text-white font-bold text-center py-2 px-3 border-round text-sm uppercase tracking-wider shadow-1">
+                                    {{ val.label }}
+                                </div>
+                            </div>
+
+                            <!-- Regular Field Value -->
+                            <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" class="col-12 md:col-6 flex flex-column gap-1">
+                                <span class="text-xs text-500 font-medium">{{ val.label }}</span>
+                                <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
+                                    <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
+                                        <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                        <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
+                                            <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
+                                        </p-button>
                                     </div>
                                 </div>
 
-                                <!-- Regular Field Value -->
-                                <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" class="col-12 md:col-6 flex flex-column gap-1">
-                                    <span class="text-xs text-500 font-medium">{{ val.label }}</span>
-                                    <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
-                                        <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                            <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                            <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
-                                                <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
-                                            </p-button>
-                                        </div>
-                                    </div>
-
-                                    <!-- Dynamic List read-only view -->
-                                    <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full text-xs">
-                                        <table class="w-full text-left border-collapse">
-                                            <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
-                                                <tr>
-                                                    <th class="p-2 pl-3">Producto / Servicio</th>
-                                                    <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" class="p-2 text-center" style="width: 8rem;">
-                                                        {{ formatLabel(col) }}
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr *ngFor="let itemRow of parseDynamicList(val.value)" class="border-bottom-1 surface-border hover:bg-50">
-                                                    <td class="p-2 pl-3 font-semibold text-900 align-middle">
-                                                        {{ itemRow.item || itemRow.product }}
-                                                    </td>
-                                                    <td *ngFor="let col of getDynamicListKeys(itemRow)" class="p-2 text-center align-middle font-bold text-900">
-                                                        {{ itemRow[col] }}
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ formatValue(val) }}</span>
+                                <!-- Dynamic List read-only view -->
+                                <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full text-xs">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
+                                            <tr>
+                                                <th class="p-2 pl-3">Producto / Servicio</th>
+                                                <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" class="p-2 text-center" style="width: 8rem;">
+                                                    {{ formatLabel(col) }}
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr *ngFor="let itemRow of parseDynamicList(val.value)" class="border-bottom-1 surface-border hover:bg-50">
+                                                <td class="p-2 pl-3 font-semibold text-900 align-middle">
+                                                    {{ itemRow.item || itemRow.product }}
+                                                </td>
+                                                <td *ngFor="let col of getDynamicListKeys(itemRow)" class="p-2 text-center align-middle font-bold text-900">
+                                                    {{ itemRow[col] }}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
-                            </ng-container>
-                        </div>
 
-                        <!-- Notes/Comments -->
-                        <div class="text-xs mt-1" *ngIf="hStage.notes">
-                            <span class="text-500 font-medium mr-1">Observaciones de la etapa:</span>
-                            <span class="text-700 font-semibold italic">"{{ hStage.notes }}"</span>
-                        </div>
+                                <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ formatValue(val) }}</span>
+                            </div>
+                        </ng-container>
+                    </div>
 
-                        <!-- Simplified Footer -->
-                        <div class="text-xs text-500 mt-2">
-                            <span *ngIf="hStage.status === 'Approved'">Aprobado por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}</span>
-                            <span *ngIf="hStage.status === 'Rejected'">Rechazado por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}</span>
-                            <span *ngIf="hStage.status !== 'Approved' && hStage.status !== 'Rejected'">Asignado a (en espera): <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }})</span>
-                        </div>
+                    <!-- Notes/Comments -->
+                    <div class="text-xs mt-1" *ngIf="hStage.notes">
+                        <span class="text-500 font-medium mr-1">Observaciones de la etapa:</span>
+                        <span class="text-700 font-semibold italic">"{{ hStage.notes }}"</span>
+                    </div>
+
+                    <!-- Simplified Footer -->
+                    <div class="text-xs text-500 mt-2">
+                        <span *ngIf="hStage.status === 'Approved'">Aprobado por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                        <span *ngIf="hStage.status === 'Rejected'">Rechazado por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                        <span *ngIf="hStage.status !== 'Approved' && hStage.status !== 'Rejected'">Asignado a (en espera): <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }})</span>
                     </div>
                 </div>
             </div>
+        </div>
+    </ng-template>
+
+    <!-- Modal 3: Decisión de Aprobación / Rechazo / Corrección -->
+    <p-dialog [header]="isCorrection(selectedTask()) ? 'Corregir Solicitud: ' + (selectedTask()?.formName || '') : 'Revisión de Solicitud: ' + (selectedTask()?.formName || '')" [(visible)]="showActionDialog"
+              [modal]="true" [style]="{width: '650px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
+        <div class="flex flex-column gap-4 px-4 py-2" *ngIf="selectedTask()">
+
+            <!-- Rejection Alert Banner -->
+            <div *ngIf="isCorrection(selectedTask())" class="p-3 bg-red-50 text-red-700 border-round border-1 border-red-200 mb-2">
+                <div class="flex align-items-center gap-2 mb-2 font-bold">
+                    <lucide-icon name="alert-triangle"></lucide-icon>
+                    <span>Solicitud Devuelta para Corrección</span>
+                </div>
+                <p class="m-0 text-sm font-semibold">Comentarios del revisor:</p>
+                <p class="m-0 text-sm mt-1 italic">"{{ selectedTask().rejectionNotes || 'Sin comentarios.' }}"</p>
+            </div>
+
+            <!-- Detalle Unificado e Historial de la Solicitud -->
+            <ng-container *ngTemplateOutlet="requestReadOnlyView; context: { req: selectedTask(), parentGroups: parentFormGroups() }"></ng-container>
 
             <!-- Section 2: Conditional approval form to fill or correction editor -->
             <div class="flex flex-column gap-3 mt-2" *ngIf="selectedTask().formIdToFill || (selectedTask()?.parentForms && selectedTask()?.parentForms?.length > 0)">
                 <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">
                     {{ (selectedTask()?.parentForms && selectedTask()?.parentForms?.length > 0) ? 'Modificar Datos de la Solicitud Inicial' : (selectedTask().formIdToFill === -1 ? 'Formularios Requeridos en esta Etapa' : 'Formulario Requerido en esta Etapa: ' + selectedTask().formToFill?.name) }}
                 </span>
-                
+
                 <div *ngIf="loadingStageFields()" class="flex justify-content-center p-3">
                     <lucide-icon name="loader-2" class="lucide-spin text-primary text-xl"></lucide-icon>
                 </div>
@@ -1096,14 +1146,14 @@
                                     {{ field.label }} <span class="text-red-500" *ngIf="field.isRequired">*</span>
                                 </label>
                                 <span class="text-xs text-500 mb-1" *ngIf="field.description && field.type !== 'section_header'">{{ field.description }}</span>
-                                
+
                                 <ng-container [ngSwitch]="field.type">
                                     <input *ngSwitchCase="'date'" type="date" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
-                                    
+
                                     <input *ngSwitchCase="'datetime'" type="datetime-local" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
 
                                     <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
-                                    
+
                                     <!-- Number type -->
                                     <ng-container *ngSwitchCase="'number'">
                                         <!-- COP Currency Format -->
@@ -1115,7 +1165,7 @@
                                                        [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
                                                        [minFractionDigits]="0" [maxFractionDigits]="0"
                                                        styleClass="w-full" class="w-full"></p-inputNumber>
-                                        
+
                                         <!-- USD Currency Format -->
                                         <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
                                                        mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
@@ -1163,7 +1213,7 @@
                                                        (ngModelChange)="setFormValue(form.formId + '_' + field.name, $event, 'parent')"
                                                        [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
                                                        styleClass="w-full" class="w-full"></p-inputNumber>
-                                        
+
                                         <!-- USD Currency Format -->
                                         <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
                                                        mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
@@ -1197,7 +1247,7 @@
                                                [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()"
                                                [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" class="w-full" />
                                     </ng-container>
-                                    
+
                                     <p-select *ngSwitchCase="'select'" [options]="field.metadata?.options || []"
                                               [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
                                               [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-select>
@@ -1262,11 +1312,11 @@
                                             </table>
                                         </div>
                                     </div>
-                                    
+
                                     <!-- Formula type -->
                                     <div *ngSwitchCase="'formula'" class="flex align-items-center w-full relative">
                                         <input type="text" pInputText [id]="'corr-field-' + form.formId + '-' + field.name"
-                                            [ngModel]="stageFormValues[form.formId + '_' + field.name]" [disabled]="true" 
+                                            [ngModel]="stageFormValues[form.formId + '_' + field.name]" [disabled]="true"
                                             class="w-full font-bold bg-50 border-round text-900 border-1 surface-border px-3 py-2" />
                                         <div class="absolute right-0 mr-3 text-400">
                                             <lucide-icon name="calculator" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
@@ -1279,7 +1329,7 @@
                                             <input type="file" [id]="'corr-field-' + form.formId + '-' + field.name" [multiple]="(field.metadata?.maxFileCount || 1) > 1"
                                                    [accept]="field.metadata?.allowedFormats || '*'" (change)="onParentFileSelected($event, form.formId, field)"
                                                    class="hidden" #fileInput />
-                                            
+
                                             <div class="flex gap-2">
                                                 <p-button [outlined]="true" size="small" (onClick)="fileInput.click()" [disabled]="field.isReadOnly">
                                                     <lucide-icon name="upload" class="mr-2"></lucide-icon>
@@ -1334,14 +1384,14 @@
                                 {{ field.label }} <span class="text-red-500" *ngIf="field.isRequired">*</span>
                             </label>
                             <span class="text-xs text-500 mb-1" *ngIf="field.description && field.type !== 'section_header'">{{ field.description }}</span>
-                            
+
                             <ng-container [ngSwitch]="field.type">
                                 <input *ngSwitchCase="'date'" type="date" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [disabled]="field.isReadOnly" />
-                                
+
                                 <input *ngSwitchCase="'datetime'" type="datetime-local" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [disabled]="field.isReadOnly" />
 
                                 <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
-                                
+
                                 <!-- Number type -->
                                 <ng-container *ngSwitchCase="'number'">
                                     <!-- COP Currency Format -->
@@ -1353,7 +1403,7 @@
                                                    [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
                                                    [minFractionDigits]="0" [maxFractionDigits]="0"
                                                    styleClass="w-full" class="w-full"></p-inputNumber>
-                                    
+
                                     <!-- USD Currency Format -->
                                     <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
                                                    mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
@@ -1401,7 +1451,7 @@
                                                    (ngModelChange)="setFormValue(field.name, $event, 'stage')"
                                                    [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
                                                    styleClass="w-full" class="w-full"></p-inputNumber>
-                                    
+
                                     <!-- USD Currency Format -->
                                     <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
                                                    mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
@@ -1435,7 +1485,7 @@
                                            [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()"
                                            [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" class="w-full" />
                                 </ng-container>
-                                
+
                                 <p-select *ngSwitchCase="'select'" [options]="field.metadata?.options || []"
                                           [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
                                           [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-select>
@@ -1500,11 +1550,11 @@
                                         </table>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Formula type -->
                                 <div *ngSwitchCase="'formula'" class="flex align-items-center w-full relative">
                                     <input type="text" pInputText [id]="'stage-field-' + field.name"
-                                        [ngModel]="stageFormValues[field.name]" [disabled]="true" 
+                                        [ngModel]="stageFormValues[field.name]" [disabled]="true"
                                         class="w-full font-bold bg-50 border-round text-900 border-1 surface-border px-3 py-2" />
                                     <div class="absolute right-0 mr-3 text-400">
                                         <lucide-icon name="calculator" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
@@ -1517,7 +1567,7 @@
                                         <input type="file" [id]="'stage-field-' + field.name" [multiple]="(field.metadata?.maxFileCount || 1) > 1"
                                                [accept]="field.metadata?.allowedFormats || '*'" (change)="onStageFileSelected($event, field)"
                                                class="hidden" #fileInput />
-                                        
+
                                         <div class="flex gap-2">
                                             <p-button [outlined]="true" size="small" (onClick)="fileInput.click()" [disabled]="field.isReadOnly">
                                                 <lucide-icon name="upload" class="mr-2"></lucide-icon>
@@ -1578,9 +1628,9 @@
                                     Máximo {{ selectedTask().maxSelectedForms }} seleccionable{{ selectedTask().maxSelectedForms > 1 ? 's' : '' }}
                                 </span>
                             </div>
-                            
+
                             <div class="grid m-0 gap-2">
-                                <div *ngFor="let mForm of selectedTask().availableMultiForms" 
+                                <div *ngFor="let mForm of selectedTask().availableMultiForms"
                                      class="col-12 md:col-6 p-2 bg-white border-round border-1 surface-border flex align-items-center gap-3 transition-duration-150"
                                      [class.cursor-pointer]="!isMultiFormDisabled(mForm.formId)"
                                      [class.hover:surface-100]="!isMultiFormDisabled(mForm.formId)"
@@ -1607,10 +1657,10 @@
                             </div>
 
                             <ng-container *ngFor="let field of mForm.fields; let fIdx = index">
-                                <div *ngIf="isFieldVisible(field, mForm.fields, stageFormValues, mForm.formId)" 
-                                     class="flex flex-column gap-1" 
+                                <div *ngIf="isFieldVisible(field, mForm.fields, stageFormValues, mForm.formId)"
+                                     class="flex flex-column gap-1"
                                      [class.col-12]="field.type === 'section_header'">
-                                    
+
                                     <label [for]="'pb-mf-field-' + mForm.formId + '-' + field.name" class="font-medium text-900" *ngIf="field.type !== 'section_header'">
                                         {{ field.label }} <span class="text-red-500" *ngIf="field.isRequired">*</span>
                                     </label>
@@ -1618,7 +1668,7 @@
 
                                     <ng-container [ngSwitch]="field.type">
                                         <input *ngSwitchCase="'date'" type="date" pInputText [id]="'pb-mf-field-' + mForm.formId + '-' + field.name" [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
-                                        
+
                                         <input *ngSwitchCase="'datetime'" type="datetime-local" pInputText [id]="'pb-mf-field-' + mForm.formId + '-' + field.name" [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
 
                                         <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'pb-mf-field-' + mForm.formId + '-' + field.name" [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
@@ -1633,7 +1683,7 @@
                                                            [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
                                                            [minFractionDigits]="0" [maxFractionDigits]="0"
                                                            styleClass="w-full" class="w-full"></p-inputNumber>
-                                            
+
                                             <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
                                                            mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
                                                            [id]="'pb-mf-field-' + mForm.formId + '-' + field.name"
@@ -1676,7 +1726,7 @@
                                                            (ngModelChange)="setFormValue(mForm.formId + '_' + field.name, $event, 'parent')"
                                                            [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
                                                            styleClass="w-full" class="w-full"></p-inputNumber>
-                                            
+
                                             <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
                                                            mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
                                                            [id]="'pb-mf-field-' + mForm.formId + '-' + field.name"
@@ -1706,7 +1756,7 @@
                                                    [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()"
                                                    [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" class="w-full" />
                                         </ng-container>
-                                        
+
                                         <p-select *ngSwitchCase="'select'" [options]="field.metadata?.options || []"
                                                   [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
                                                   [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-select>
@@ -1800,17 +1850,17 @@
                 </div>
             </div>
             <!-- Section: Chosen Next Stage Assignee -->
-            <div class="flex flex-column gap-2 mt-2 bg-indigo-50 border-1 border-indigo-200 border-round p-3" 
+            <div class="flex flex-column gap-2 mt-2 bg-indigo-50 border-1 border-indigo-200 border-round p-3"
                  *ngIf="!isCorrection(selectedTask()) && selectedTask()?.allowChooseNextStageAssignee && selectedTask()?.nextStageAssigneeOptions?.length > 0 && !selectedTask()?.isFinalStage">
                 <label class="font-bold text-sm text-indigo-900 flex align-items-center gap-2">
                     <i class="pi pi-user-plus text-indigo-600"></i>
                     <span>Destinatario de la siguiente etapa *</span>
                 </label>
-                <p-select [options]="selectedTask()?.nextStageAssigneeOptions" 
-                          [(ngModel)]="chosenNextAssignee" 
+                <p-select [options]="selectedTask()?.nextStageAssigneeOptions"
+                          [(ngModel)]="chosenNextAssignee"
                           (onChange)="onChosenNextAssigneeChange()"
-                          optionLabel="displayLabel" 
-                          placeholder="Seleccione a quién asignar la siguiente etapa..." 
+                          optionLabel="displayLabel"
+                          placeholder="Seleccione a quién asignar la siguiente etapa..."
                           class="w-full"
                           [appendTo]="'body'">
                 </p-select>
@@ -1849,14 +1899,14 @@
                 <textarea id="comments" class="w-full p-inputtext border-round" [(ngModel)]="comments" rows="2" [placeholder]="isCorrection(selectedTask()) ? 'Explica brevemente los cambios realizados...' : 'Escribe notas adicionales o la razón en caso de rechazo...'" style="resize: vertical; font-family: inherit;"></textarea>
             </div>
         </div>
- 
+
         <ng-template pTemplate="footer">
             <div class="flex justify-content-end gap-2 px-4 pb-3">
                 <p-button [text]="true" severity="secondary" (onClick)="showActionDialog.set(false)" [disabled]="loadingAction()">
                     <lucide-icon name="x" class="mr-2"></lucide-icon>
                     Cancelar
                 </p-button>
-                
+
                 <!-- Normal stages (non correction) -->
                 <ng-container *ngIf="!isCorrection(selectedTask())">
                     <p-button severity="danger" (onClick)="processAction('reject')" [loading]="loadingAction()">
@@ -1868,7 +1918,7 @@
                         Aprobar
                     </p-button>
                 </ng-container>
- 
+
                 <!-- Correction stage -->
                 <ng-container *ngIf="isCorrection(selectedTask())">
                     <p-button severity="success" (onClick)="processAction('approve')" [loading]="loadingAction()">
@@ -1879,9 +1929,9 @@
             </div>
         </ng-template>
     </p-dialog>
- 
+
     <!-- Modal 5: Detalles de Solicitud del Historial -->
-    <p-dialog [header]="'Detalle de la Solicitud' + (selectedDetails()?.formName ? ': ' + selectedDetails().formName : '')" [(visible)]="showDetailsDialog" 
+    <p-dialog [header]="'Detalle de la Solicitud' + (selectedDetails()?.formName ? ': ' + selectedDetails().formName : '')" [(visible)]="showDetailsDialog"
               [modal]="true" [style]="{width: '650px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
         <!-- Spinner mientras carga la información -->
         <div *ngIf="loadingDetails()" class="flex flex-column align-items-center justify-content-center p-5 gap-3">
@@ -1890,240 +1940,8 @@
         </div>
 
         <div class="flex flex-column gap-4 px-4 py-2" *ngIf="!loadingDetails() && selectedDetails()">
-            
-            <!-- Metadata summary grid -->
-            <div class="grid row-gap-2 surface-50 p-3 border-round border-1 surface-border">
-                <div class="col-12 sm:col-4 flex flex-column gap-1">
-                    <span class="text-xs text-500 font-medium">Estado General</span>
-                    <div>
-                        <p-tag [severity]="getStatusSeverity(selectedDetails().status)" 
-                               [value]="getStatusLabel(selectedDetails().status)"></p-tag>
-                    </div>
-                </div>
-                <div class="col-12 sm:col-4 flex flex-column gap-1">
-                    <span class="text-xs text-500 font-medium">Fecha Creación</span>
-                    <span class="text-sm font-semibold text-700">{{ selectedDetails().createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
-                </div>
-                <div class="col-12 sm:col-4 flex flex-column gap-1">
-                    <span class="text-xs text-500 font-medium">Etapa Actual</span>
-                    <span class="text-sm font-semibold text-700">
-                        <lucide-icon name="info" class="mr-1" style="width: 1.1rem; height: 1.1rem; display: inline-block; vertical-align: middle;"></lucide-icon>
-                        {{ selectedDetails().stageName }}
-                    </span>
-                </div>
-            </div>
-
-            <!-- Banner de Solicitud Bloqueada -->
-            <div *ngIf="selectedDetails().status === 'Blocked'" class="bg-red-50 border-1 border-red-300 border-round p-3 flex align-items-start gap-3 shadow-1">
-                <span class="inline-flex align-items-center justify-content-center border-circle w-2rem h-2rem bg-red-100 text-red-700 flex-shrink-0">
-                    <lucide-icon name="alert-triangle" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
-                </span>
-                <div class="flex flex-column gap-1">
-                    <span class="font-bold text-sm text-red-900">Solicitud Bloqueada</span>
-                    <span class="text-xs text-red-700 line-height-3">
-                        Esta solicitud fue bloqueada y cerrada automáticamente debido a que el flujo de trabajo original fue modificado o eliminado mientras la solicitud estaba en proceso. Para continuar con este requerimiento, debe iniciar una nueva solicitud.
-                    </span>
-                </div>
-            </div>
-
-            <!-- Section 0: Datos del Requerimiento Inicial (Stacked initial forms values) -->
-            <div class="flex flex-column gap-3" *ngIf="detailsParentFormGroups() && detailsParentFormGroups().length > 0">
-                <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">Datos del Requerimiento Inicial</span>
-                <div *ngFor="let group of detailsParentFormGroups()" class="flex flex-column gap-2 mb-2 p-3 border-round border-1 surface-border surface-card">
-                    <span class="text-primary font-bold text-sm border-bottom-1 pb-1 surface-border uppercase">{{ group.formName }}</span>
-                    <div class="grid row-gap-3 mt-1">
-                        <ng-container *ngFor="let val of group.values; let i = index">
-                            <!-- Section Header -->
-                            <div *ngIf="val.fieldType === 'section_header' && isSectionHeaderVisible(group.values, i)" class="col-12 mt-3 mb-1">
-                                <div class="bg-red-600 text-white font-bold text-center py-2 px-3 border-round text-sm uppercase tracking-wider shadow-1">
-                                    {{ val.label }}
-                                </div>
-                            </div>
-
-                            <!-- Regular Field Value -->
-                            <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" class="col-12 md:col-6 flex flex-column gap-1">
-                                <span class="text-xs text-500 font-medium">{{ val.label }}</span>
-                                <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
-                                    <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                        <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                        <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
-                                            <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
-                                        </p-button>
-                                    </div>
-                                </div>
-
-                                <!-- Dynamic List read-only view -->
-                                <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full text-xs">
-                                    <table class="w-full text-left border-collapse">
-                                        <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
-                                            <tr>
-                                                <th class="p-2 pl-3">Producto / Servicio</th>
-                                                <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" class="p-2 text-center" style="width: 8rem;">
-                                                    {{ formatLabel(col) }}
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr *ngFor="let itemRow of parseDynamicList(val.value)" class="border-bottom-1 surface-border hover:bg-50">
-                                                <td class="p-2 pl-3 font-semibold text-900 align-middle">
-                                                    {{ itemRow.item || itemRow.product }}
-                                                </td>
-                                                <td *ngFor="let col of getDynamicListKeys(itemRow)" class="p-2 text-center align-middle font-bold text-900">
-                                                    {{ itemRow[col] }}
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ formatValue(val) }}</span>
-                            </div>
-                        </ng-container>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Original Form Data (if direct values exist and no parent values) -->
-            <div class="flex flex-column gap-3" *ngIf="(!selectedDetails().parentValues || selectedDetails().parentValues.length === 0) && selectedDetails().values && selectedDetails().values.length > 0">
-                <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">Datos de la Solicitud</span>
-                <div class="grid row-gap-3">
-                    <ng-container *ngFor="let val of selectedDetails().values; let i = index">
-                        <!-- Section Header -->
-                        <div *ngIf="val.fieldType === 'section_header' && isSectionHeaderVisible(selectedDetails().values, i)" class="col-12 mt-3 mb-1">
-                            <div class="bg-red-600 text-white font-bold text-center py-2 px-3 border-round text-sm uppercase tracking-wider shadow-1">
-                                {{ val.label }}
-                            </div>
-                        </div>
-
-                        <!-- Regular Field Value -->
-                        <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" class="col-12 md:col-6 flex flex-column gap-1">
-                            <span class="text-xs text-500 font-medium">{{ val.label }}</span>
-                            <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
-                                <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                    <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                    <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
-                                        <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
-                                    </p-button>
-                                </div>
-                            </div>
-
-                            <!-- Dynamic List read-only view -->
-                            <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full text-xs">
-                                <table class="w-full text-left border-collapse">
-                                    <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
-                                        <tr>
-                                            <th class="p-2 pl-3">Producto / Servicio</th>
-                                            <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" class="p-2 text-center" style="width: 8rem;">
-                                                {{ formatLabel(col) }}
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr *ngFor="let itemRow of parseDynamicList(val.value)" class="border-bottom-1 surface-border hover:bg-50">
-                                            <td class="p-2 pl-3 font-semibold text-900 align-middle">
-                                                {{ itemRow.item || itemRow.product }}
-                                            </td>
-                                            <td *ngFor="let col of getDynamicListKeys(itemRow)" class="p-2 text-center align-middle font-bold text-900">
-                                                {{ itemRow[col] }}
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ formatValue(val) }}</span>
-                        </div>
-                    </ng-container>
-                </div>
-            </div>
-
-            <!-- Creator info -->
-            <div class="text-xs text-500 mt-1">
-                Creado por: <strong>{{ selectedDetails().requesterName }}</strong> ({{ selectedDetails().requesterEmail }}) el {{ selectedDetails().createdAt | date:'dd/MM/yyyy HH:mm' }}
-            </div>
-
-            <!-- Intermediate Stage values -->
-            <div class="flex flex-column gap-3 mt-2" *ngIf="selectedDetails().historyStages && selectedDetails().historyStages.length > 0">
-                <div class="flex flex-column gap-3">
-                    <div *ngFor="let hStage of selectedDetails().historyStages" class="border-round border-1 surface-border p-3 surface-card flex flex-column gap-2">
-                        <!-- Stage header -->
-                        <div class="flex justify-content-between align-items-center border-bottom-1 surface-border pb-2">
-                            <span class="font-bold text-900 text-sm flex align-items-center gap-1">
-                                <lucide-icon name="info" class="text-primary" style="width: 1.1rem; height: 1.1rem; flex-shrink: 0;"></lucide-icon>
-                                <span>{{ hStage.stageName }}</span>
-                                <span class="text-500 font-normal" *ngIf="hStage.formName && hStage.formName !== hStage.stageName">({{ hStage.formName }})</span>
-                            </span>
-                            <p-tag [severity]="hStage.status === 'Approved' ? 'success' : (hStage.status === 'Rejected' ? 'danger' : 'warn')" 
-                                   [value]="hStage.status === 'Approved' ? 'Aprobado' : (hStage.status === 'Rejected' ? 'Rechazado' : 'Pendiente')"></p-tag>
-                        </div>
-                        
-                        <!-- Values (if any) -->
-                        <div class="grid mt-1" *ngIf="hStage.values && hStage.values.length > 0">
-                            <ng-container *ngFor="let val of hStage.values; let i = index">
-                                <!-- Section Header -->
-                                <div *ngIf="val.fieldType === 'section_header' && isSectionHeaderVisible(hStage.values, i)" class="col-12 mt-3 mb-1">
-                                    <div class="bg-red-600 text-white font-bold text-center py-2 px-3 border-round text-sm uppercase tracking-wider shadow-1">
-                                        {{ val.label }}
-                                    </div>
-                                </div>
-
-                                <!-- Regular Field Value -->
-                                <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" class="col-12 md:col-6 flex flex-column gap-1">
-                                    <span class="text-xs text-500 font-medium">{{ val.label }}</span>
-                                    <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
-                                        <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                            <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                            <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
-                                                <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
-                                            </p-button>
-                                        </div>
-                                    </div>
-
-                                    <!-- Dynamic List read-only view -->
-                                    <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full text-xs">
-                                        <table class="w-full text-left border-collapse">
-                                            <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
-                                                <tr>
-                                                    <th class="p-2 pl-3">Producto / Servicio</th>
-                                                    <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" class="p-2 text-center" style="width: 8rem;">
-                                                        {{ formatLabel(col) }}
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr *ngFor="let itemRow of parseDynamicList(val.value)" class="border-bottom-1 surface-border hover:bg-50">
-                                                    <td class="p-2 pl-3 font-semibold text-900 align-middle">
-                                                        {{ itemRow.item || itemRow.product }}
-                                                    </td>
-                                                    <td *ngFor="let col of getDynamicListKeys(itemRow)" class="p-2 text-center align-middle font-bold text-900">
-                                                        {{ itemRow[col] }}
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ formatValue(val) }}</span>
-                                </div>
-                            </ng-container>
-                        </div>
-
-                        <!-- Notes/Comments -->
-                        <div class="text-xs mt-1" *ngIf="hStage.notes">
-                            <span class="text-500 font-medium mr-1">Observaciones de la etapa:</span>
-                            <span class="text-700 font-semibold italic">"{{ hStage.notes }}"</span>
-                        </div>
-
-                        <!-- Simplified Footer -->
-                        <div class="text-xs text-500 mt-2">
-                            <span *ngIf="hStage.status === 'Approved'">Aprobado por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}</span>
-                            <span *ngIf="hStage.status === 'Rejected'">Rechazado por: <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }}) el {{ hStage.actionedAt | date:'dd/MM/yyyy HH:mm' }}</span>
-                            <span *ngIf="hStage.status !== 'Approved' && hStage.status !== 'Rejected'">Asignado a (en espera): <strong>{{ hStage.actionedByUserName }}</strong> ({{ hStage.actionedByUserEmail }})</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
+            <!-- Detalle Unificado e Historial de la Solicitud -->
+            <ng-container *ngTemplateOutlet="requestReadOnlyView; context: { req: selectedDetails(), parentGroups: detailsParentFormGroups() }"></ng-container>
         </div>
         <ng-template pTemplate="footer">
             <div class="flex justify-content-end px-4 pb-3">

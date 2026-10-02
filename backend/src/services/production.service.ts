@@ -2026,18 +2026,23 @@ export class ProductionService {
                 !state.customFormIdToFill &&
                 !hasPriorApprovedStages &&
                 !state.submission.parentSubmissionId;
-            const statesForHistory = allStatesToInclude.filter(cs => cs.id < state.id && cs.status !== 'Pending');
+            const statesForHistory = allStatesToInclude.filter(cs => cs.id !== state.id);
 
             const historyStages = statesForHistory.map((cState) => {
-                const resolvedForm = cState.customFormToFill || cState.stage?.formToFill;
-                const resolvedFormId = cState.customFormIdToFill || cState.stage?.formIdToFill;
+                const isChildSub = cState.submissionId !== state.submissionId;
+                const resolvedForm = cState.customFormToFill || cState.stage?.formToFill || (isChildSub ? (cState as any).submission?.form : null);
+                const resolvedFormId = cState.customFormIdToFill || cState.stage?.formIdToFill || (isChildSub ? (cState as any).submission?.formId : null);
 
-                const stageVals = allValuesToInclude.filter(v => v && v.field && v.workflowStateId === cState.id);
+                let stageVals = allValuesToInclude.filter(v => v && v.field && v.workflowStateId === cState.id);
+
+                if (stageVals.length === 0 && isChildSub && resolvedFormId && (!cState.stage || cState.stage.stepOrder === 1) && cState.status === 'Approved' && !cState.notes?.toLowerCase().includes('rechaz')) {
+                    stageVals = allValuesToInclude.filter(v => v && v.field && v.submissionId === cState.submissionId && !v.workflowStateId && v.field.formId === resolvedFormId);
+                }
 
                 const user = cState.actionedByUser || cState.assignedUser;
 
                 let displayName = cState.stage ? cState.stage.name : 'Etapa';
-                if (cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid'))) {
+                if (cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir'))) {
                     displayName = `${displayName} (Corrección)`;
                 }
 
@@ -2317,7 +2322,9 @@ export class ProductionService {
                 parentSubmissionId: state.submission.parentSubmissionId,
                 formId: state.submission.formId,
                 requesterUserId: state.submission.requesterUserId,
+                status: state.submission.status,
                 submissionStatus: state.submission.status,
+                consecutive: state.submission.consecutive,
                 rejectionNotes,
                 formName: state.submission.form.name,
                 cardFields,
