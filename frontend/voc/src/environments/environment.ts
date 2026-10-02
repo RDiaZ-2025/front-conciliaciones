@@ -1,3 +1,5 @@
+import { APP_FRONTEND_VERSION, APP_FRONTEND_VERSION_DATE } from './version';
+
 const resolveApiUrl = (): string => {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname.toLowerCase();
@@ -13,6 +15,8 @@ const resolveApiUrl = (): string => {
 
 export const environment = {
   production: false,
+  version: APP_FRONTEND_VERSION,
+  versionDate: APP_FRONTEND_VERSION_DATE,
   apiUrl: resolveApiUrl(),
   festivosApiKey: 'fs_3mNHbhSyjhJyTtdhiKhQjtAC6LWj1MAc',
   festivosApiUrl: 'https://festivos.com.co/api/v1/festivos',

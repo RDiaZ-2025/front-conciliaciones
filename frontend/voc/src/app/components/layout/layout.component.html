@@ -148,9 +148,10 @@
                      <lucide-icon name="activity" class="text-sm"></lucide-icon>
                   </span>
                   <div class="flex flex-column">
-                     <div class="flex align-items-center gap-1.5">
+                     <div class="flex align-items-center gap-1.5 flex-wrap">
                         <span class="text-xs font-semibold text-900 line-height-2">Estado del Sistema</span>
-                        <span *ngIf="appVersion()" class="text-xs px-1.5 py-0.2 border-round text-500 surface-200 font-mono font-bold" style="font-size: 0.65rem;">v{{ appVersion() }}</span>
+                        <span *ngIf="frontendVersion()" class="text-xs px-1.5 py-0.2 border-round text-teal-700 bg-teal-50 border-1 border-teal-100 font-mono font-bold" style="font-size: 0.65rem;" title="Versión Frontend">Front: v{{ frontendVersion() }}</span>
+                        <span *ngIf="backendVersion()" class="text-xs px-1.5 py-0.2 border-round text-blue-700 bg-blue-50 border-1 border-blue-100 font-mono font-bold" style="font-size: 0.65rem;" title="Versión Backend">Back: v{{ backendVersion() }}</span>
                      </div>
                      <span class="text-xs text-green-600 font-medium flex align-items-center gap-1 line-height-2">
                         <span class="w-1 h-1 border-circle bg-green-500 inline-block"></span> Health Check

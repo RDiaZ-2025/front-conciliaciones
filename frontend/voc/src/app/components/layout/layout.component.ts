@@ -60,6 +60,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
   private healthService = inject(SystemHealthService);
 
   appVersion = this.healthService.appVersion;
+  frontendVersion = this.healthService.frontendVersion;
+  backendVersion = this.healthService.backendVersion;
 
   menuItems = signal<MenuItem[]>([]);
   loading = signal(true);

@@ -30,6 +30,11 @@ export class SystemHealthModalComponent {
   healthData = signal<SystemHealthResponse | null>(null);
   lastChecked = signal<Date | null>(null);
 
+  frontendVersion = this.healthService.frontendVersion;
+  frontendVersionDate = this.healthService.frontendVersionDate;
+  backendVersion = this.healthService.backendVersion;
+  backendVersionDate = this.healthService.backendVersionDate;
+
   statusSeverity = computed<'success' | 'warn' | 'danger'>(() => {
     const data = this.healthData();
     if (!data) return 'warn';
