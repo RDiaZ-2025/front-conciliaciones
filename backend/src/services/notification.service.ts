@@ -1,3 +1,4 @@
+import { Response } from 'express';
 import { AppDataSource } from '../config/typeorm.config';
 import { Notification } from '../models/Notification';
 import { User } from '../models/User';
@@ -5,6 +6,41 @@ import { User } from '../models/User';
 export class NotificationService {
     private notificationRepository = AppDataSource.getRepository(Notification);
     private userRepository = AppDataSource.getRepository(User);
+    private static sseClients: Map<number, Set<Response>> = new Map();
+
+    addSSEClient(userId: number, res: Response): void {
+        if (!NotificationService.sseClients.has(userId)) {
+            NotificationService.sseClients.set(userId, new Set());
+        }
+        NotificationService.sseClients.get(userId)!.add(res);
+    }
+
+    removeSSEClient(userId: number, res: Response): void {
+        const clients = NotificationService.sseClients.get(userId);
+        if (clients) {
+            clients.delete(res);
+            if (clients.size === 0) {
+                NotificationService.sseClients.delete(userId);
+            }
+        }
+    }
+
+    sendToUser(userId: number, notification: Notification): void {
+        const clients = NotificationService.sseClients.get(userId);
+        if (clients && clients.size > 0) {
+            const data = `data: ${JSON.stringify(notification)}\n\n`;
+            for (const client of clients) {
+                try {
+                    client.write(data);
+                    if (typeof (client as any).flush === 'function') {
+                        (client as any).flush();
+                    }
+                } catch (err) {
+                    console.error(`Error sending SSE to user ${userId}:`, err);
+                }
+            }
+        }
+    }
 
     async getUserNotifications(userId: number, limit: number = 50): Promise<Notification[]> {
         return this.notificationRepository.find({
@@ -61,6 +97,8 @@ export class NotificationService {
         notification.type = type;
         notification.isRead = false;
 
-        return this.notificationRepository.save(notification);
+        const savedNotification = await this.notificationRepository.save(notification);
+        this.sendToUser(userId, savedNotification);
+        return savedNotification;
     }
 }

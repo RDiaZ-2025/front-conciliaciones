@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getUserNotifications, markAsRead, markAllAsRead } from '../controllers/notification.controller';
+import { getUserNotifications, markAsRead, markAllAsRead, streamNotifications } from '../controllers/notification.controller';
 import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
@@ -7,6 +7,8 @@ const router = Router();
 router.use(authenticateToken);
 
 router.get('/', getUserNotifications);
+
+router.get('/stream', streamNotifications);
 
 router.put('/read-all', markAllAsRead);
 

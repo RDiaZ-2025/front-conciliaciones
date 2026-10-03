@@ -447,19 +447,19 @@
                                                 </p-select>
                                             </div>
 
-                                            <!-- Equipo (Al azar, Líder, Menor carga) -->
-                                            <div class="col-12 md:col-4 flex flex-column gap-1" *ngIf="opt.type === 'team_random' || opt.type === 'team_leader' || opt.type === 'team_workload'">
+                                            <!-- Equipo (Al azar, Miembros, Líder, Menor carga) -->
+                                            <div class="col-12 md:col-4 flex flex-column gap-1" *ngIf="opt.type === 'team_random' || opt.type === 'team_members' || opt.type === 'team_leader' || opt.type === 'team_workload'">
                                                 <label class="text-xs font-bold text-700">2. Equipo *</label>
                                                 <p-select [options]="teams()" [(ngModel)]="opt.teamId" optionLabel="name" optionValue="id" placeholder="Seleccione equipo..." class="w-full"></p-select>
                                             </div>
 
-                                            <!-- Subequipo (Al azar): Equipo + Subequipo -->
-                                            <div class="col-12 md:col-2 flex flex-column gap-1" *ngIf="opt.type === 'subteam_random'">
+                                            <!-- Subequipo (Al azar o Miembros): Equipo + Subequipo -->
+                                            <div class="col-12 md:col-2 flex flex-column gap-1" *ngIf="opt.type === 'subteam_random' || opt.type === 'subteam_members'">
                                                 <label class="text-xs font-bold text-700">2. Equipo *</label>
                                                 <p-select [options]="teams()" [(ngModel)]="opt.teamId" (onChange)="onNextStageOptionTeamChange(opt)" optionLabel="name" optionValue="id" placeholder="Seleccione equipo..." class="w-full"></p-select>
                                             </div>
-                                            <div class="col-12 md:col-2 flex flex-column gap-1" *ngIf="opt.type === 'subteam_random'">
-                                                <label class="text-xs font-bold text-700">3. Subequipo (Al Azar) *</label>
+                                            <div class="col-12 md:col-2 flex flex-column gap-1" *ngIf="opt.type === 'subteam_random' || opt.type === 'subteam_members'">
+                                                <label class="text-xs font-bold text-700">3. Subequipo {{ opt.type === 'subteam_random' ? '(Al Azar)' : '' }} *</label>
                                                 <p-select [options]="getSubteamsForTeam(opt.teamId)" [(ngModel)]="opt.subteamId" optionLabel="name" optionValue="id" [placeholder]="opt.teamId ? 'Seleccione subequipo...' : 'Elija equipo primero'" [disabled]="!opt.teamId" class="w-full">
                                                     <ng-template let-sub pTemplate="item">
                                                         <div class="flex align-items-center justify-content-between w-full">

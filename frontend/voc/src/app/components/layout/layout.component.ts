@@ -2,9 +2,10 @@ import { LucideIconComponent } from '../lucide-icon/lucide-icon.component';
 import { CachedImagePipe } from '../../pipes/cached-image.pipe';
 import { CoreDialogService } from '../../services/core-dialog.service';
 import { DialogService } from 'primeng/dynamicdialog';
-import { Component, inject, signal, computed, effect, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 
 import { DrawerModule } from 'primeng/drawer';
 import { ToolbarModule } from 'primeng/toolbar';
@@ -49,7 +50,7 @@ import { PERMISSIONS } from '../../constants/permissions';
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss'
 })
-export class LayoutComponent implements OnInit {
+export class LayoutComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private menuService = inject(MenuService);
   private notificationService = inject(NotificationService);
@@ -74,6 +75,9 @@ export class LayoutComponent implements OnInit {
 
   notifications = this.notificationService.notifications;
   unreadCount = this.notificationService.unreadCount;
+  browserPermission = this.notificationService.browserPermission;
+
+  private notifSub: Subscription | null = null;
 
   expandedItems = signal<Set<number>>(new Set());
 
@@ -96,8 +100,26 @@ export class LayoutComponent implements OnInit {
 
   ngOnInit() {
     this.fetchMenuItems();
+    this.notificationService.initBrowserNotifications();
     this.notificationService.loadNotifications();
+    this.notificationService.startRealtime();
     this.healthService.getHealth().subscribe();
+
+    this.notifSub = this.notificationService.notificationClicked$.subscribe((notification) => {
+      this.handleNotificationClick(notification);
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.notifSub) {
+      this.notifSub.unsubscribe();
+      this.notifSub = null;
+    }
+    this.notificationService.stopRealtime();
+  }
+
+  async requestNotificationPermission() {
+    await this.notificationService.requestBrowserPermission();
   }
 
   logout() {

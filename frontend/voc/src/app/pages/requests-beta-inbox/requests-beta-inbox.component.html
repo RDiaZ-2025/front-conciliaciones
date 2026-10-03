@@ -1196,11 +1196,38 @@
                 </label>
                 <p-select [options]="selectedTask()?.nextStageAssigneeOptions" 
                           [(ngModel)]="chosenNextAssignee" 
+                          (onChange)="onChosenNextAssigneeChange()"
                           optionLabel="displayLabel" 
                           placeholder="Seleccione a quién asignar la siguiente etapa..." 
                           class="w-full"
                           [appendTo]="'body'">
                 </p-select>
+
+                <!-- Sub-selector for members of team / subteam -->
+                <div class="flex flex-column gap-1 mt-2" *ngIf="chosenNextAssignee?.type === 'team_members' || chosenNextAssignee?.type === 'subteam_members'">
+                    <label class="font-bold text-xs text-indigo-900">
+                        Selecciona el integrante específico *
+                    </label>
+                    <p-select [options]="chosenNextAssignee?.members || []"
+                              [(ngModel)]="chosenMemberUserId"
+                              optionLabel="name"
+                              optionValue="id"
+                              placeholder="Seleccione el integrante..."
+                              [filter]="true"
+                              filterBy="name,email"
+                              class="w-full"
+                              [appendTo]="'body'">
+                        <ng-template let-member pTemplate="item">
+                            <div class="flex flex-column">
+                                <span class="font-semibold text-sm">{{ member.name }}</span>
+                                <span class="text-xs text-500">{{ member.email }}</span>
+                            </div>
+                        </ng-template>
+                    </p-select>
+                    <small *ngIf="(!chosenNextAssignee?.members || chosenNextAssignee?.members?.length === 0)" class="text-xs text-red-600 font-semibold">
+                        No hay integrantes activos disponibles en este equipo o subequipo.
+                    </small>
+                </div>
                 <small class="text-xs text-indigo-700">Esta etapa requiere que selecciones quién recibirá y gestionará la siguiente etapa del flujo.</small>
             </div>
 
@@ -1314,11 +1341,6 @@
                         <div class="flex align-items-center gap-2 text-sm text-600">
                             <lucide-icon name="cog"></lucide-icon>
                             <span>Etapa actual: <strong>{{ sub.stageName }}</strong></span>
-                        </div>
-
-                        <div class="flex align-items-center gap-2 text-sm text-green-700 font-bold" *ngIf="sub.consecutive">
-                            <lucide-icon name="hash"></lucide-icon>
-                            <span>Consecutivo: <strong>{{ sub.consecutive }}</strong></span>
                         </div>
 
                         <div class="flex align-items-center gap-2 text-sm text-600">

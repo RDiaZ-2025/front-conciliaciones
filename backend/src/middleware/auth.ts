@@ -13,7 +13,11 @@ declare global {
 
 export const authenticateToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  let token = authHeader && authHeader.split(' ')[1];
+
+  if (!token && req.query?.token && typeof req.query.token === 'string') {
+    token = req.query.token;
+  }
 
   if (!token) {
     res.status(401).json({
@@ -138,6 +142,31 @@ export const requireAnyPermission = (permissions: string[]) => {
         message: 'Error interno del servidor'
       });
     }
+  };
+};
+
+export const requireRole = (allowedRoles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: 'Token de acceso requerido'
+      });
+      return;
+    }
+
+    const userRole = (req.user.role || '').toLowerCase().trim();
+    const isAllowed = allowedRoles.some(r => r.toLowerCase().trim() === userRole);
+
+    if (!isAllowed) {
+      res.status(403).json({
+        success: false,
+        message: `Acceso denegado: se requiere rol de administrador`
+      });
+      return;
+    }
+
+    next();
   };
 };
 

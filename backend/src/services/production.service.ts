@@ -1993,7 +1993,8 @@ export class ProductionService {
             : states;
 
         const allTeams = await AppDataSource.getRepository(Team).find({ relations: ['subteams'] });
-        const allUsers = await AppDataSource.getRepository(User).find({ select: ['id', 'name', 'email'] });
+        const allUsers = await AppDataSource.getRepository(User).find({ select: ['id', 'name', 'email', 'teamId', 'status'] });
+        const allSubteamUsers = await AppDataSource.getRepository(SubteamUser).find({ relations: ['user'] });
 
         const valRepo = AppDataSource.getRepository(DynamicFormFieldValue);
         const results = [];
@@ -2413,6 +2414,18 @@ export class ProductionService {
                             } else if (opt.type === 'team_random') {
                                 const t = allTeams.find(t => t.id === opt.teamId);
                                 defaultLabel = t ? `🎲 Al azar de: ${t.name}` : `🎲 Equipo #${opt.teamId}`;
+                            } else if (opt.type === 'team_members') {
+                                const t = allTeams.find(t => t.id === opt.teamId);
+                                defaultLabel = t ? `👥 Miembros de: ${t.name}` : `👥 Miembros de equipo #${opt.teamId}`;
+                                const members = allUsers
+                                    .filter(u => u.teamId === Number(opt.teamId) && (u.status === 1 || u.status === null || u.status === undefined))
+                                    .map(u => ({ id: u.id, name: u.name, email: u.email }))
+                                    .sort((a, b) => a.name.localeCompare(b.name));
+                                return {
+                                    ...opt,
+                                    members,
+                                    displayLabel: opt.label && opt.label.trim() ? opt.label.trim() : (defaultLabel || 'Miembros de Equipo')
+                                };
                             } else if (opt.type === 'team_leader') {
                                 const t = allTeams.find(t => t.id === opt.teamId);
                                 defaultLabel = t ? `👔 Líder de: ${t.name}` : `👔 Líder de equipo #${opt.teamId}`;
@@ -2429,6 +2442,25 @@ export class ProductionService {
                                     }
                                 }
                                 defaultLabel = `👥 Al azar de subequipo: ${subName}`;
+                            } else if (opt.type === 'subteam_members') {
+                                let subName = `Subequipo #${opt.subteamId}`;
+                                for (const t of allTeams) {
+                                    const st = (t.subteams || []).find((s: any) => s.id === opt.subteamId);
+                                    if (st) {
+                                        subName = `${st.name} (${t.name})`;
+                                        break;
+                                    }
+                                }
+                                defaultLabel = `👥 Miembros de subequipo: ${subName}`;
+                                const members = allSubteamUsers
+                                    .filter(su => su.subteamId === Number(opt.subteamId) && su.user && (su.user.status === 1 || su.user.status === null || su.user.status === undefined))
+                                    .map(su => ({ id: su.user.id, name: su.user.name, email: su.user.email }))
+                                    .sort((a, b) => a.name.localeCompare(b.name));
+                                return {
+                                    ...opt,
+                                    members,
+                                    displayLabel: opt.label && opt.label.trim() ? opt.label.trim() : (defaultLabel || 'Miembros de Subequipo')
+                                };
                             } else if (opt.type === 'requester') {
                                 defaultLabel = '👤 Solicitante Original';
                             } else if (opt.type === 'requester_boss') {
@@ -2493,7 +2525,7 @@ export class ProductionService {
                     const optionId = typeof opt === 'object' && opt !== null ? opt.id : opt;
                     const matched = parsedOptions.find((o: any) => o.id === optionId || (opt && o.id === opt.id));
                     if (matched) {
-                        opt = matched; // Strictly use the trusted database record
+                        opt = { ...matched, selectedUserId: opt?.selectedUserId || (matched.type !== 'specific_user' ? opt?.userId : matched.userId) };
                     } else if (currentStage?.allowChooseNextStageAssignee) {
                         throw new Error('La opción de destinatario seleccionada no es válida o no está configurada para esta etapa.');
                     }
@@ -2507,6 +2539,19 @@ export class ProductionService {
 
         if (opt.type === 'specific_user' && opt.userId) {
             return Number(opt.userId);
+        }
+
+        if (opt.type === 'team_members' || opt.type === 'subteam_members') {
+            const chosenId = opt.selectedUserId || opt.userId;
+            const num = Number(chosenId);
+            if (!isNaN(num) && num > 0) {
+                const u = await userRepo.findOne({ where: { id: num } });
+                if (u && (u.status === 1 || u.status === null || u.status === undefined)) {
+                    return num;
+                }
+                throw new Error('El integrante seleccionado no es un usuario activo válido.');
+            }
+            throw new Error('Debe seleccionar un integrante específico del equipo o subequipo para la siguiente etapa.');
         }
 
         if (opt.type === 'requester') {

@@ -16,23 +16,23 @@
     <div class="surface-card border-1 surface-border border-round-xl p-3 shadow-1 flex flex-column gap-3">
         <!-- Fila Principal: Búsqueda Rápida + Acciones y Contadores -->
         <div class="flex flex-column md:flex-row align-items-stretch md:align-items-center justify-content-between gap-3">
-            
+
             <!-- Buscador Global -->
             <div class="relative flex-1 flex align-items-center">
                 <lucide-icon name="search" class="text-400 absolute ml-3" style="width: 1.1rem; height: 1.1rem; pointer-events: none;"></lucide-icon>
-                <input 
-                    pInputText 
-                    [ngModel]="filterSearch()" 
+                <input
+                    pInputText
+                    [ngModel]="filterSearch()"
                     (input)="onSearchInput($any($event.target).value)"
-                    placeholder="Buscar por ID (#), formulario, solicitante, consecutivo, etapa o datos..." 
+                    placeholder="Buscar por ID (#), formulario, solicitante, etapa o datos..."
                     class="w-full text-sm pl-6 pr-6 py-2 border-round-lg" />
-                <button 
-                    *ngIf="filterSearch()" 
-                    pButton 
-                    [text]="true" 
-                    [rounded]="true" 
-                    severity="secondary" 
-                    class="w-2rem h-2rem p-0 flex align-items-center justify-content-center absolute right-0 mr-2" 
+                <button
+                    *ngIf="filterSearch()"
+                    pButton
+                    [text]="true"
+                    [rounded]="true"
+                    severity="secondary"
+                    class="w-2rem h-2rem p-0 flex align-items-center justify-content-center absolute right-0 mr-2"
                     (click)="onSearchInput('')"
                     pTooltip="Borrar texto">
                     <lucide-icon name="x" style="width: 1rem; height: 1rem;"></lucide-icon>
@@ -42,10 +42,10 @@
             <!-- Botones de Acción y Contadores -->
             <div class="flex align-items-center gap-2 flex-wrap justify-content-end">
                 <!-- Toggle Filtros Avanzados -->
-                <p-button 
-                    [outlined]="!showAdvancedFilters()" 
+                <p-button
+                    [outlined]="!showAdvancedFilters()"
                     [severity]="activeFiltersCount() > 0 ? 'primary' : 'secondary'"
-                    size="small" 
+                    size="small"
                     (onClick)="showAdvancedFilters.set(!showAdvancedFilters())"
                     [pTooltip]="showAdvancedFilters() ? 'Ocultar filtros avanzados' : 'Mostrar filtros avanzados'">
                     <lucide-icon name="sliders-horizontal" class="mr-2" style="width: 1rem; height: 1rem;"></lucide-icon>
@@ -54,11 +54,11 @@
                 </p-button>
 
                 <!-- Limpiar todos los filtros -->
-                <p-button 
-                    *ngIf="activeFiltersCount() > 0" 
-                    [text]="true" 
-                    severity="danger" 
-                    size="small" 
+                <p-button
+                    *ngIf="activeFiltersCount() > 0"
+                    [text]="true"
+                    severity="danger"
+                    size="small"
                     (onClick)="clearAllFilters()"
                     pTooltip="Restablecer todos los filtros">
                     <lucide-icon name="rotate-ccw" class="mr-1" style="width: 0.9rem; height: 0.9rem;"></lucide-icon>
@@ -68,10 +68,10 @@
                 <!-- Resumen rápido de resultados -->
                 <div class="hidden lg:flex align-items-center gap-2 pl-2 border-left-1 surface-border">
                     <span class="text-xs text-500 font-medium">Aprobaciones:</span>
-                    <p-tag [severity]="approvalsTotal() > 0 ? 'warn' : 'secondary'" 
+                    <p-tag [severity]="approvalsTotal() > 0 ? 'warn' : 'secondary'"
                            [value]="approvalsTotal() + ' total'"></p-tag>
                     <span class="text-xs text-500 font-medium ml-2">Historial:</span>
-                    <p-tag [severity]="historyTotal() > 0 ? 'info' : 'secondary'" 
+                    <p-tag [severity]="historyTotal() > 0 ? 'info' : 'secondary'"
                            [value]="historyTotal() + ' total'"></p-tag>
                 </div>
             </div>
@@ -82,14 +82,14 @@
             <!-- Filtro: Formulario / Tipo -->
             <div class="col-12 sm:col-6 md:col-3 flex flex-column gap-1">
                 <label class="text-xs font-semibold text-700">Formulario / Flujo:</label>
-                <p-multiSelect 
-                    [options]="availableFormOptions()" 
-                    [(ngModel)]="filterSelectedForms" 
+                <p-multiSelect
+                    [options]="availableFormOptions()"
+                    [(ngModel)]="filterSelectedForms"
                     (onChange)="onFilterChange()"
-                    optionLabel="label" 
-                    optionValue="value" 
-                    placeholder="Todos los formularios" 
-                    display="chip" 
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Todos los formularios"
+                    display="chip"
                     [showClear]="true"
                     styleClass="p-inputtext-sm w-full"
                     appendTo="body">
@@ -99,12 +99,12 @@
             <!-- Filtro: Estado -->
             <div class="col-12 sm:col-6 md:col-3 flex flex-column gap-1">
                 <label class="text-xs font-semibold text-700">Estado de Solicitud:</label>
-                <p-select 
-                    [options]="statusOptions" 
-                    [(ngModel)]="filterStatus" 
+                <p-select
+                    [options]="statusOptions"
+                    [(ngModel)]="filterStatus"
                     (onChange)="onFilterChange()"
-                    optionLabel="label" 
-                    optionValue="value" 
+                    optionLabel="label"
+                    optionValue="value"
                     styleClass="p-inputtext-sm w-full"
                     appendTo="body">
                 </p-select>
@@ -113,12 +113,12 @@
             <!-- Filtro: Período de Fecha -->
             <div class="col-12 sm:col-6 md:col-3 flex flex-column gap-1">
                 <label class="text-xs font-semibold text-700">Fecha de Creación:</label>
-                <p-select 
-                    [options]="datePresetOptions" 
-                    [(ngModel)]="filterDatePreset" 
+                <p-select
+                    [options]="datePresetOptions"
+                    [(ngModel)]="filterDatePreset"
                     (onChange)="onDatePresetChange($event.value)"
-                    optionLabel="label" 
-                    optionValue="value" 
+                    optionLabel="label"
+                    optionValue="value"
                     styleClass="p-inputtext-sm w-full"
                     appendTo="body">
                 </p-select>
@@ -128,19 +128,19 @@
             <div class="col-12 sm:col-6 md:col-3 flex flex-column gap-1">
                 <label class="text-xs font-semibold text-700">Solicitante:</label>
                 <div class="relative flex align-items-center">
-                    <input 
-                        pInputText 
-                        [ngModel]="filterRequester()" 
+                    <input
+                        pInputText
+                        [ngModel]="filterRequester()"
                         (input)="filterRequester.set($any($event.target).value); onFilterChange()"
-                        placeholder="Nombre o correo..." 
+                        placeholder="Nombre o correo..."
                         class="p-inputtext-sm w-full pr-5" />
-                    <button 
-                        *ngIf="filterRequester()" 
-                        pButton 
-                        [text]="true" 
-                        [rounded]="true" 
-                        severity="secondary" 
-                        class="w-1.5rem h-1.5rem p-0 flex align-items-center justify-content-center absolute right-0 mr-1" 
+                    <button
+                        *ngIf="filterRequester()"
+                        pButton
+                        [text]="true"
+                        [rounded]="true"
+                        severity="secondary"
+                        class="w-1.5rem h-1.5rem p-0 flex align-items-center justify-content-center absolute right-0 mr-1"
                         (click)="filterRequester.set(''); onFilterChange()">
                         <lucide-icon name="x" style="width: 0.8rem; height: 0.8rem;"></lucide-icon>
                     </button>
@@ -169,7 +169,7 @@
                     <p-badge [value]="approvalsTotal().toString()" [severity]="approvalsTotal() > 0 ? 'warn' : 'secondary'"></p-badge>
                 </h3>
             </div>
-            
+
             <!-- Caso A: No hay tareas pendientes en absoluto -->
             <div *ngIf="approvalsTotal() === 0 && !loadingTasks() && activeFiltersCount() === 0" class="text-center p-5 border-round surface-card border-1 surface-border">
                 <lucide-icon name="check-circle" class="text-4xl text-green-500 mb-2 block"></lucide-icon>
@@ -249,10 +249,10 @@
 
             <!-- Paginador Real para Aprobaciones -->
             <div *ngIf="approvalsTotal() > 0 && !loadingTasks()" class="mt-2 flex justify-content-end">
-                <p-paginator 
-                    [first]="(approvalsPage() - 1) * approvalsLimit()" 
-                    [rows]="approvalsLimit()" 
-                    [totalRecords]="approvalsTotal()" 
+                <p-paginator
+                    [first]="(approvalsPage() - 1) * approvalsLimit()"
+                    [rows]="approvalsLimit()"
+                    [totalRecords]="approvalsTotal()"
                     [rowsPerPageOptions]="[4, 8, 12, 20]"
                     (onPageChange)="onApprovalsPageChange($event)"
                     styleClass="surface-card border-round border-1 surface-border py-1 px-2 text-sm">
@@ -335,11 +335,6 @@
                                     <span>Etapa actual: <strong>{{ sub.stageName }}</strong></span>
                                 </div>
 
-                                <div class="flex align-items-center gap-2 text-sm text-green-700 font-bold" *ngIf="sub.consecutive">
-                                    <lucide-icon name="hash"></lucide-icon>
-                                    <span>Consecutivo: <strong>{{ sub.consecutive }}</strong></span>
-                                </div>
-
                                 <div class="flex align-items-center gap-2 text-sm text-600">
                                     <lucide-icon name="user-check"></lucide-icon>
                                     <div class="flex flex-column">
@@ -363,10 +358,10 @@
 
                 <!-- Paginador Real para Historial -->
                 <div *ngIf="historyTotal() > 0 && !loading()" class="mt-3 flex justify-content-end">
-                    <p-paginator 
-                        [first]="(historyPage() - 1) * historyLimit()" 
-                        [rows]="historyLimit()" 
-                        [totalRecords]="historyTotal()" 
+                    <p-paginator
+                        [first]="(historyPage() - 1) * historyLimit()"
+                        [rows]="historyLimit()"
+                        [totalRecords]="historyTotal()"
                         [rowsPerPageOptions]="[8, 12, 24, 48]"
                         (onPageChange)="onHistoryPageChange($event)"
                         styleClass="surface-card border-round border-1 surface-border py-1 px-2 text-sm">
@@ -402,7 +397,7 @@
         [style]="{width: '780px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false"
         styleClass="p-fluid border-round-xl">
         <div class="flex flex-column gap-3 px-4 py-2">
-            
+
             <div *ngIf="loadingRequestTypes()" class="flex align-items-center justify-content-center p-4">
                 <lucide-icon name="loader-2" class="lucide-spin text-primary text-2xl"></lucide-icon>
             </div>
@@ -470,7 +465,7 @@
                                                [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
                                                [minFractionDigits]="0" [maxFractionDigits]="0"
                                                styleClass="w-full" class="w-full"></p-inputNumber>
-                                
+
                                 <!-- USD Currency Format -->
                                 <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
                                                mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
@@ -518,7 +513,7 @@
                                                (ngModelChange)="setFormValue(form.id + '_' + field.name, $event, 'initial')"
                                                [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
                                                styleClass="w-full" class="w-full"></p-inputNumber>
-                                
+
                                 <!-- USD Currency Format -->
                                 <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
                                                mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
@@ -626,7 +621,7 @@
                             <!-- Formula type -->
                             <div *ngSwitchCase="'formula'" class="flex align-items-center w-full relative">
                                 <input type="text" pInputText [id]="'initial-' + form.id + '-' + field.name"
-                                    [ngModel]="initialFormValues()[form.id + '_' + field.name]" [disabled]="true" 
+                                    [ngModel]="initialFormValues()[form.id + '_' + field.name]" [disabled]="true"
                                     class="w-full font-bold bg-50 border-round text-900 border-1 surface-border px-3 py-2" />
                                 <div class="absolute right-0 mr-3 text-400">
                                     <lucide-icon name="calculator" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
@@ -639,7 +634,7 @@
                                     <input type="file" [id]="'initial-' + form.id + '-' + field.name" [multiple]="(field.metadata?.maxFileCount || 1) > 1"
                                            [accept]="field.metadata?.allowedFormats || '*'" (change)="onInitialFileSelected($event, form.id, field)"
                                            class="hidden" #fileInput />
-                                    
+
                                     <div class="flex gap-2">
                                         <p-button [outlined]="true" size="small" (onClick)="fileInput.click()" [disabled]="field.isReadOnly">
                                             <lucide-icon name="upload" class="mr-2"></lucide-icon>
@@ -702,7 +697,7 @@
                             [tooltipDisabled]="isTeamEnabled(team)"
                             tooltipPosition="top"
                             (click)="isTeamEnabled(team) ? (team.selected = !team.selected) : null">
-                            
+
                             <p-checkbox [(ngModel)]="team.selected" [binary]="true" [inputId]="'team-' + team.id"
                                 [disabled]="!isTeamEnabled(team)"
                                 class="mt-1 flex-shrink-0"
@@ -717,7 +712,7 @@
                                             <span>{{ team.subteams.length }} {{ team.subteams.length === 1 ? 'subequipo' : 'subequipos' }}</span>
                                         </span>
                                     </div>
-                                    
+
                                     <!-- Botón Interactivo para Ciclar el Modo de Asignación de la Etapa 1 -->
                                     <button type="button"
                                             *ngIf="isTeamEnabled(team)"
@@ -734,8 +729,8 @@
                                 </div>
 
                                 <!-- Selector opcional de Ámbito Aleatorio (Equipo Principal o Subequipo) SOLO si assignmentMode === 'random' y el equipo tiene subequipos -->
-                                <div *ngIf="team.selected && team.assignmentMode === 'random' && team.subteams && team.subteams.length > 0" 
-                                     class="mt-2 pt-2 border-top-1 surface-border flex flex-column gap-1 w-full" 
+                                <div *ngIf="team.selected && team.assignmentMode === 'random' && team.subteams && team.subteams.length > 0"
+                                     class="mt-2 pt-2 border-top-1 surface-border flex flex-column gap-1 w-full"
                                      (click)="$event.stopPropagation()">
                                     <div class="flex align-items-center justify-content-between">
                                         <span class="text-xs font-bold text-700 flex align-items-center gap-1">
@@ -746,12 +741,12 @@
                                             🎲 Sorteo al azar
                                         </span>
                                     </div>
-                                    <p-select 
-                                        [(ngModel)]="team.selectedSubteamId" 
-                                        [options]="getSubteamOptionsForTeam(team)" 
-                                        optionLabel="label" 
-                                        optionValue="value" 
-                                        placeholder="Seleccionar ámbito..." 
+                                    <p-select
+                                        [(ngModel)]="team.selectedSubteamId"
+                                        [options]="getSubteamOptionsForTeam(team)"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        placeholder="Seleccionar ámbito..."
                                         appendTo="body"
                                         styleClass="w-full text-xs">
                                         <ng-template #selectedItem let-selected>
@@ -876,7 +871,7 @@
             <div class="col-12 sm:col-4 flex flex-column gap-1">
                 <span class="text-xs text-500 font-medium">Estado General</span>
                 <div>
-                    <p-tag [severity]="getStatusSeverity(req.submissionStatus || req.status)" 
+                    <p-tag [severity]="getStatusSeverity(req.submissionStatus || req.status)"
                            [value]="getStatusLabel(req.submissionStatus || req.status)"></p-tag>
                 </div>
             </div>
@@ -1043,7 +1038,7 @@
                         <p-tag [severity]="hStage.status === 'Approved' ? 'success' : (hStage.status === 'Rejected' ? 'danger' : 'warn')" 
                                [value]="hStage.status === 'Approved' ? 'Aprobado' : (hStage.status === 'Rejected' ? 'Rechazado' : 'Pendiente')"></p-tag>
                     </div>
-                    
+
                     <!-- Values (if any) -->
                     <div class="grid mt-1" *ngIf="hStage.values && hStage.values.length > 0">
                         <ng-container *ngFor="let val of hStage.values; let i = index">
@@ -1118,10 +1113,10 @@
     </ng-template>
 
     <!-- Modal 3: Decisión de Aprobación / Rechazo / Corrección -->
-    <p-dialog [header]="isCorrection(selectedTask()) ? 'Corregir Solicitud: ' + (selectedTask()?.formName || '') : 'Revisión de Solicitud: ' + (selectedTask()?.formName || '')" [(visible)]="showActionDialog" 
+    <p-dialog [header]="isCorrection(selectedTask()) ? 'Corregir Solicitud: ' + (selectedTask()?.formName || '') : 'Revisión de Solicitud: ' + (selectedTask()?.formName || '')" [(visible)]="showActionDialog"
               [modal]="true" [style]="{width: '650px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
         <div class="flex flex-column gap-4 px-4 py-2" *ngIf="selectedTask()">
-            
+
             <!-- Rejection Alert Banner -->
             <div *ngIf="isCorrection(selectedTask())" class="p-3 bg-red-50 text-red-700 border-round border-1 border-red-200 mb-2">
                 <div class="flex align-items-center gap-2 mb-2 font-bold">
@@ -1140,7 +1135,7 @@
                 <span class="text-900 font-bold text-lg border-bottom-1 surface-border pb-2 block">
                     {{ (selectedTask()?.parentForms && selectedTask()?.parentForms?.length > 0) ? 'Modificar Datos de la Solicitud Inicial' : (selectedTask().formIdToFill === -1 ? 'Formularios Requeridos en esta Etapa' : 'Formulario Requerido en esta Etapa: ' + selectedTask().formToFill?.name) }}
                 </span>
-                
+
                 <div *ngIf="loadingStageFields()" class="flex justify-content-center p-3">
                     <lucide-icon name="loader-2" class="lucide-spin text-primary text-xl"></lucide-icon>
                 </div>
@@ -1156,14 +1151,14 @@
                                     {{ field.label }} <span class="text-red-500" *ngIf="field.isRequired">*</span>
                                 </label>
                                 <span class="text-xs text-500 mb-1" *ngIf="field.description && field.type !== 'section_header'">{{ field.description }}</span>
-                                
+
                                 <ng-container [ngSwitch]="field.type">
                                     <input *ngSwitchCase="'date'" type="date" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
-                                    
+
                                     <input *ngSwitchCase="'datetime'" type="datetime-local" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
 
                                     <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
-                                    
+
                                     <!-- Number type -->
                                     <ng-container *ngSwitchCase="'number'">
                                         <!-- COP Currency Format -->
@@ -1175,7 +1170,7 @@
                                                        [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
                                                        [minFractionDigits]="0" [maxFractionDigits]="0"
                                                        styleClass="w-full" class="w-full"></p-inputNumber>
-                                        
+
                                         <!-- USD Currency Format -->
                                         <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
                                                        mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
@@ -1223,7 +1218,7 @@
                                                        (ngModelChange)="setFormValue(form.formId + '_' + field.name, $event, 'parent')"
                                                        [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
                                                        styleClass="w-full" class="w-full"></p-inputNumber>
-                                        
+
                                         <!-- USD Currency Format -->
                                         <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
                                                        mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
@@ -1257,7 +1252,7 @@
                                                [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()"
                                                [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" class="w-full" />
                                     </ng-container>
-                                    
+
                                     <p-select *ngSwitchCase="'select'" [options]="field.metadata?.options || []"
                                               [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
                                               [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-select>
@@ -1322,11 +1317,11 @@
                                             </table>
                                         </div>
                                     </div>
-                                    
+
                                     <!-- Formula type -->
                                     <div *ngSwitchCase="'formula'" class="flex align-items-center w-full relative">
                                         <input type="text" pInputText [id]="'corr-field-' + form.formId + '-' + field.name"
-                                            [ngModel]="stageFormValues[form.formId + '_' + field.name]" [disabled]="true" 
+                                            [ngModel]="stageFormValues[form.formId + '_' + field.name]" [disabled]="true"
                                             class="w-full font-bold bg-50 border-round text-900 border-1 surface-border px-3 py-2" />
                                         <div class="absolute right-0 mr-3 text-400">
                                             <lucide-icon name="calculator" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
@@ -1339,7 +1334,7 @@
                                             <input type="file" [id]="'corr-field-' + form.formId + '-' + field.name" [multiple]="(field.metadata?.maxFileCount || 1) > 1"
                                                    [accept]="field.metadata?.allowedFormats || '*'" (change)="onParentFileSelected($event, form.formId, field)"
                                                    class="hidden" #fileInput />
-                                            
+
                                             <div class="flex gap-2">
                                                 <p-button [outlined]="true" size="small" (onClick)="fileInput.click()" [disabled]="field.isReadOnly">
                                                     <lucide-icon name="upload" class="mr-2"></lucide-icon>
@@ -1394,14 +1389,14 @@
                                 {{ field.label }} <span class="text-red-500" *ngIf="field.isRequired">*</span>
                             </label>
                             <span class="text-xs text-500 mb-1" *ngIf="field.description && field.type !== 'section_header'">{{ field.description }}</span>
-                            
+
                             <ng-container [ngSwitch]="field.type">
                                 <input *ngSwitchCase="'date'" type="date" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [disabled]="field.isReadOnly" />
-                                
+
                                 <input *ngSwitchCase="'datetime'" type="datetime-local" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [disabled]="field.isReadOnly" />
 
                                 <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
-                                
+
                                 <!-- Number type -->
                                 <ng-container *ngSwitchCase="'number'">
                                     <!-- COP Currency Format -->
@@ -1413,7 +1408,7 @@
                                                    [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
                                                    [minFractionDigits]="0" [maxFractionDigits]="0"
                                                    styleClass="w-full" class="w-full"></p-inputNumber>
-                                    
+
                                     <!-- USD Currency Format -->
                                     <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
                                                    mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
@@ -1461,7 +1456,7 @@
                                                    (ngModelChange)="setFormValue(field.name, $event, 'stage')"
                                                    [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
                                                    styleClass="w-full" class="w-full"></p-inputNumber>
-                                    
+
                                     <!-- USD Currency Format -->
                                     <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
                                                    mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
@@ -1495,7 +1490,7 @@
                                            [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()"
                                            [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" class="w-full" />
                                 </ng-container>
-                                
+
                                 <p-select *ngSwitchCase="'select'" [options]="field.metadata?.options || []"
                                           [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
                                           [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-select>
@@ -1560,11 +1555,11 @@
                                         </table>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Formula type -->
                                 <div *ngSwitchCase="'formula'" class="flex align-items-center w-full relative">
                                     <input type="text" pInputText [id]="'stage-field-' + field.name"
-                                        [ngModel]="stageFormValues[field.name]" [disabled]="true" 
+                                        [ngModel]="stageFormValues[field.name]" [disabled]="true"
                                         class="w-full font-bold bg-50 border-round text-900 border-1 surface-border px-3 py-2" />
                                     <div class="absolute right-0 mr-3 text-400">
                                         <lucide-icon name="calculator" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
@@ -1577,7 +1572,7 @@
                                         <input type="file" [id]="'stage-field-' + field.name" [multiple]="(field.metadata?.maxFileCount || 1) > 1"
                                                [accept]="field.metadata?.allowedFormats || '*'" (change)="onStageFileSelected($event, field)"
                                                class="hidden" #fileInput />
-                                        
+
                                         <div class="flex gap-2">
                                             <p-button [outlined]="true" size="small" (onClick)="fileInput.click()" [disabled]="field.isReadOnly">
                                                 <lucide-icon name="upload" class="mr-2"></lucide-icon>
@@ -1638,9 +1633,9 @@
                                     Máximo {{ selectedTask().maxSelectedForms }} seleccionable{{ selectedTask().maxSelectedForms > 1 ? 's' : '' }}
                                 </span>
                             </div>
-                            
+
                             <div class="grid m-0 gap-2">
-                                <div *ngFor="let mForm of selectedTask().availableMultiForms" 
+                                <div *ngFor="let mForm of selectedTask().availableMultiForms"
                                      class="col-12 md:col-6 p-2 bg-white border-round border-1 surface-border flex align-items-center gap-3 transition-duration-150"
                                      [class.cursor-pointer]="!isMultiFormDisabled(mForm.formId)"
                                      [class.hover:surface-100]="!isMultiFormDisabled(mForm.formId)"
@@ -1667,10 +1662,10 @@
                             </div>
 
                             <ng-container *ngFor="let field of mForm.fields; let fIdx = index">
-                                <div *ngIf="isFieldVisible(field, mForm.fields, stageFormValues, mForm.formId)" 
-                                     class="flex flex-column gap-1" 
+                                <div *ngIf="isFieldVisible(field, mForm.fields, stageFormValues, mForm.formId)"
+                                     class="flex flex-column gap-1"
                                      [class.col-12]="field.type === 'section_header'">
-                                    
+
                                     <label [for]="'pb-mf-field-' + mForm.formId + '-' + field.name" class="font-medium text-900" *ngIf="field.type !== 'section_header'">
                                         {{ field.label }} <span class="text-red-500" *ngIf="field.isRequired">*</span>
                                     </label>
@@ -1678,7 +1673,7 @@
 
                                     <ng-container [ngSwitch]="field.type">
                                         <input *ngSwitchCase="'date'" type="date" pInputText [id]="'pb-mf-field-' + mForm.formId + '-' + field.name" [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
-                                        
+
                                         <input *ngSwitchCase="'datetime'" type="datetime-local" pInputText [id]="'pb-mf-field-' + mForm.formId + '-' + field.name" [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
 
                                         <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'pb-mf-field-' + mForm.formId + '-' + field.name" [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
@@ -1693,7 +1688,7 @@
                                                            [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
                                                            [minFractionDigits]="0" [maxFractionDigits]="0"
                                                            styleClass="w-full" class="w-full"></p-inputNumber>
-                                            
+
                                             <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
                                                            mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
                                                            [id]="'pb-mf-field-' + mForm.formId + '-' + field.name"
@@ -1736,7 +1731,7 @@
                                                            (ngModelChange)="setFormValue(mForm.formId + '_' + field.name, $event, 'parent')"
                                                            [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly"
                                                            styleClass="w-full" class="w-full"></p-inputNumber>
-                                            
+
                                             <p-inputNumber *ngIf="field.metadata?.numberFormat === 'currency_usd'"
                                                            mode="currency" currency="USD" locale="en-US" [useGrouping]="true"
                                                            [id]="'pb-mf-field-' + mForm.formId + '-' + field.name"
@@ -1766,7 +1761,7 @@
                                                    [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()"
                                                    [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" class="w-full" />
                                         </ng-container>
-                                        
+
                                         <p-select *ngSwitchCase="'select'" [options]="field.metadata?.options || []"
                                                   [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || 'Seleccione opción...'"
                                                   [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-select>
@@ -1860,19 +1855,46 @@
                 </div>
             </div>
             <!-- Section: Chosen Next Stage Assignee -->
-            <div class="flex flex-column gap-2 mt-2 bg-indigo-50 border-1 border-indigo-200 border-round p-3" 
+            <div class="flex flex-column gap-2 mt-2 bg-indigo-50 border-1 border-indigo-200 border-round p-3"
                  *ngIf="!isCorrection(selectedTask()) && selectedTask()?.allowChooseNextStageAssignee && selectedTask()?.nextStageAssigneeOptions?.length > 0 && !selectedTask()?.isFinalStage">
                 <label class="font-bold text-sm text-indigo-900 flex align-items-center gap-2">
                     <i class="pi pi-user-plus text-indigo-600"></i>
                     <span>Destinatario de la siguiente etapa *</span>
                 </label>
-                <p-select [options]="selectedTask()?.nextStageAssigneeOptions" 
-                          [(ngModel)]="chosenNextAssignee" 
-                          optionLabel="displayLabel" 
-                          placeholder="Seleccione a quién asignar la siguiente etapa..." 
+                <p-select [options]="selectedTask()?.nextStageAssigneeOptions"
+                          [(ngModel)]="chosenNextAssignee"
+                          (onChange)="onChosenNextAssigneeChange()"
+                          optionLabel="displayLabel"
+                          placeholder="Seleccione a quién asignar la siguiente etapa..."
                           class="w-full"
                           [appendTo]="'body'">
                 </p-select>
+
+                <!-- Sub-selector for members of team / subteam -->
+                <div class="flex flex-column gap-1 mt-2" *ngIf="chosenNextAssignee?.type === 'team_members' || chosenNextAssignee?.type === 'subteam_members'">
+                    <label class="font-bold text-xs text-indigo-900">
+                        Selecciona el integrante específico *
+                    </label>
+                    <p-select [options]="chosenNextAssignee?.members || []"
+                              [(ngModel)]="chosenMemberUserId"
+                              optionLabel="name"
+                              optionValue="id"
+                              placeholder="Seleccione el integrante..."
+                              [filter]="true"
+                              filterBy="name,email"
+                              class="w-full"
+                              [appendTo]="'body'">
+                        <ng-template let-member pTemplate="item">
+                            <div class="flex flex-column">
+                                <span class="font-semibold text-sm">{{ member.name }}</span>
+                                <span class="text-xs text-500">{{ member.email }}</span>
+                            </div>
+                        </ng-template>
+                    </p-select>
+                    <small *ngIf="(!chosenNextAssignee?.members || chosenNextAssignee?.members?.length === 0)" class="text-xs text-red-600 font-semibold">
+                        No hay integrantes activos disponibles en este equipo o subequipo.
+                    </small>
+                </div>
                 <small class="text-xs text-indigo-700">Esta etapa requiere que selecciones quién recibirá y gestionará la siguiente etapa del flujo.</small>
             </div>
 
@@ -1882,14 +1904,14 @@
                 <textarea id="comments" class="w-full p-inputtext border-round" [(ngModel)]="comments" rows="2" [placeholder]="isCorrection(selectedTask()) ? 'Explica brevemente los cambios realizados...' : 'Escribe notas adicionales o la razón en caso de rechazo...'" style="resize: vertical; font-family: inherit;"></textarea>
             </div>
         </div>
- 
+
         <ng-template pTemplate="footer">
             <div class="flex justify-content-end gap-2 px-4 pb-3">
                 <p-button [text]="true" severity="secondary" (onClick)="showActionDialog.set(false)" [disabled]="loadingAction()">
                     <lucide-icon name="x" class="mr-2"></lucide-icon>
                     Cancelar
                 </p-button>
-                
+
                 <!-- Normal stages (non correction) -->
                 <ng-container *ngIf="!isCorrection(selectedTask())">
                     <p-button severity="danger" (onClick)="processAction('reject')" [loading]="loadingAction()">
@@ -1901,7 +1923,7 @@
                         Aprobar
                     </p-button>
                 </ng-container>
- 
+
                 <!-- Correction stage -->
                 <ng-container *ngIf="isCorrection(selectedTask())">
                     <p-button severity="success" (onClick)="processAction('approve')" [loading]="loadingAction()">
@@ -1912,9 +1934,9 @@
             </div>
         </ng-template>
     </p-dialog>
- 
+
     <!-- Modal 5: Detalles de Solicitud del Historial -->
-    <p-dialog [header]="'Detalle de la Solicitud' + (selectedDetails()?.formName ? ': ' + selectedDetails().formName : '')" [(visible)]="showDetailsDialog" 
+    <p-dialog [header]="'Detalle de la Solicitud' + (selectedDetails()?.formName ? ': ' + selectedDetails().formName : '')" [(visible)]="showDetailsDialog"
               [modal]="true" [style]="{width: '650px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
         <!-- Spinner mientras carga la información -->
         <div *ngIf="loadingDetails()" class="flex flex-column align-items-center justify-content-center p-5 gap-3">

@@ -110,7 +110,14 @@ app.use(helmet({
   }
 }));
 app.use(cors(corsOptions));
-app.use(compression());
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers.accept && req.headers.accept.includes('text/event-stream')) {
+      return false;
+    }
+    return compression.filter(req, res);
+  }
+}));
 app.use(morgan('combined'));
 if (process.env.NODE_ENV === 'production') {
   app.use(limiter);
@@ -147,8 +154,8 @@ const packageJson = (() => {
   }
 })();
 
-const APP_VERSION = packageJson?.version || '1.10.13';
-const APP_VERSION_DATE = packageJson?.versionDate || '2026-10-01';
+const APP_VERSION = packageJson?.version || '1.11.3';
+const APP_VERSION_DATE = packageJson?.versionDate || '2026-10-02';
 
 const getHealthPayload = () => {
   const mem = process.memoryUsage();
