@@ -7,14 +7,15 @@ const router = Router();
 const authController = new AuthController();
 
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
+  windowMs: parseInt(process.env.LOGIN_RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutos
+  max: parseInt(process.env.LOGIN_RATE_LIMIT_MAX || '100'), // 100 intentos permitidos desde la misma IP
+  skipSuccessfulRequests: true, // Las conexiones exitosas no consumen el límite, solo intentos fallidos
   standardHeaders: true,
   legacyHeaders: false,
   validate: { ip: false },
   message: {
     success: false,
-    message: 'Demasiados intentos de inicio de sesión desde esta IP. Por seguridad, intente de nuevo en 15 minutos.'
+    message: 'Demasiados intentos fallidos de inicio de sesión desde esta IP. Por seguridad, intente de nuevo en 15 minutos.'
   }
 });
 
