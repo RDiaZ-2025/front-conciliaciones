@@ -85,12 +85,21 @@ const corsOptions: cors.CorsOptions = {
   optionsSuccessStatus: 200
 };
 
+const isGlobalLimiterEnabled = process.env.ENABLE_GLOBAL_RATE_LIMIT === 'true';
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '1000'),
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutos
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100000'), // Elevado a 100,000 para evitar bloqueos corporativos
   standardHeaders: true,
   legacyHeaders: false,
   validate: { ip: false },
+  skip: (req) => {
+    // Si no está activado explícitamente, omitir
+    if (!isGlobalLimiterEnabled) return true;
+    // Omitir peticiones autenticadas o llamadas internas de la aplicación
+    if (req.headers['authorization'] || req.query?.token) return true;
+    if (req.path.startsWith('/health') || req.path.includes('/stream')) return true;
+    return false;
+  },
   message: {
     success: false,
     message: 'Demasiadas solicitudes desde esta IP, intenta de nuevo más tarde.'
@@ -112,14 +121,18 @@ app.use(helmet({
 app.use(cors(corsOptions));
 app.use(compression({
   filter: (req, res) => {
-    if (req.headers.accept && req.headers.accept.includes('text/event-stream')) {
+    if (
+      (req.headers.accept && req.headers.accept.includes('text/event-stream')) ||
+      (req.path && req.path.includes('/stream')) ||
+      (req.url && req.url.includes('/stream'))
+    ) {
       return false;
     }
     return compression.filter(req, res);
   }
 }));
 app.use(morgan('combined'));
-if (process.env.NODE_ENV === 'production') {
+if (isGlobalLimiterEnabled) {
   app.use(limiter);
 }
 app.use(cookieParser());
@@ -154,8 +167,8 @@ const packageJson = (() => {
   }
 })();
 
-const APP_VERSION = packageJson?.version || '1.11.3';
-const APP_VERSION_DATE = packageJson?.versionDate || '2026-10-02';
+const APP_VERSION = packageJson?.version || '1.11.4';
+const APP_VERSION_DATE = packageJson?.versionDate || '2026-10-05';
 
 const getHealthPayload = () => {
   const mem = process.memoryUsage();
