@@ -93,3 +93,41 @@ export const streamNotifications = asyncHandler(async (req: Request, res: Respon
     });
 });
 
+export const sendCustomNotification = asyncHandler(async (req: Request, res: Response) => {
+    const role = (req.user?.role || '').toLowerCase();
+    if (role !== 'admin') {
+        return res.status(403).json({ success: false, message: 'Acceso denegado: solo administradores pueden enviar notificaciones personalizadas' });
+    }
+
+    const { targetUserId, title, message, type } = req.body;
+    const targetId = Number(targetUserId);
+
+    if (!targetId || isNaN(targetId)) {
+        return res.status(400).json({ success: false, message: 'Debe especificar un usuario destinatario válido' });
+    }
+
+    if (!title || typeof title !== 'string' || title.trim() === '') {
+        return res.status(400).json({ success: false, message: 'El título de la notificación es obligatorio' });
+    }
+
+    if (!message || typeof message !== 'string' || message.trim() === '') {
+        return res.status(400).json({ success: false, message: 'El mensaje de la notificación es obligatorio' });
+    }
+
+    const validTypes = ['info', 'success', 'warning', 'error'];
+    const notifType = validTypes.includes(type) ? type : 'info';
+
+    const notification = await notificationService.createNotification(
+        targetId,
+        title.trim(),
+        message.trim(),
+        notifType
+    );
+
+    return res.status(201).json({
+        success: true,
+        message: 'Notificación enviada correctamente',
+        data: notification
+    });
+});
+

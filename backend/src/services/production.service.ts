@@ -1397,7 +1397,7 @@ export class ProductionService {
             await historyService.logChange(updatedRequest.id, 'AssignmentMethod', null, `${assignmentMethod}: Auto-assigned to user ID ${assignedUserId}`, userId, 'update');
         }
 
-        if (assignedUserId && assignedUserId !== oldAssignedUserId && assignmentMethod !== 'Manual') {
+        if (assignedUserId && assignedUserId !== oldAssignedUserId) {
             try { await notificationService.createNotification(assignedUserId, 'Nueva Solicitud Asignada', `Se te ha asignado la solicitud de producción: ${existingRequest.name}`, 'info'); } catch (err) { console.error(err); }
         }
 
@@ -1471,7 +1471,7 @@ export class ProductionService {
             }
         }
 
-        if (existingRequest.assignedUserId && existingRequest.assignedUserId !== oldAssignedUserId && assignmentMethod !== 'Manual') {
+        if (existingRequest.assignedUserId && existingRequest.assignedUserId !== oldAssignedUserId) {
             try { await notificationService.createNotification(existingRequest.assignedUserId, 'Nueva Solicitud Asignada', `Se te ha asignado la solicitud de producción: ${existingRequest.name}`, 'info'); } catch (err) { console.error(err); }
         }
 

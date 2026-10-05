@@ -16,16 +16,23 @@
             <div class="flex flex-column gap-3 p-3">
                <div class="flex justify-content-between align-items-center">
                   <span class="font-bold text-lg">Notificaciones</span>
-                  <p-button *ngIf="unreadCount() > 0" label="Marcar todo como leído" link="true"
-                     (onClick)="markAllAsRead()" styleClass="p-0 text-sm"></p-button>
+                  <div class="flex align-items-center gap-2">
+                     <p-button *ngIf="isAdmin()" label="Enviar aviso" [text]="true" size="small"
+                        (onClick)="op.hide(); openSendNotificationModal()" styleClass="p-0 text-xs font-semibold text-primary"></p-button>
+                     <p-button *ngIf="unreadCount() > 0" label="Marcar todo como leído" link="true"
+                        (onClick)="markAllAsRead()" styleClass="p-0 text-sm"></p-button>
+                  </div>
                </div>
 
                <div *ngIf="browserPermission() !== 'granted'" class="flex align-items-center justify-content-between p-2 surface-100 border-round border-1 surface-border">
                   <div class="flex align-items-center gap-2">
                      <lucide-icon name="bell" class="text-primary text-sm"></lucide-icon>
-                     <span class="text-xs text-700">Notificaciones de escritorio</span>
+                     <div class="flex flex-column">
+                        <span class="text-xs font-medium text-700">Notificaciones de escritorio</span>
+                        <span *ngIf="browserPermission() === 'denied'" class="text-xs text-red-500 font-normal">Bloqueadas. Habilítalas en el candado de la URL</span>
+                     </div>
                   </div>
-                  <p-button label="Activar" [text]="true" size="small" (onClick)="requestNotificationPermission()" styleClass="p-0 text-xs font-semibold"></p-button>
+                  <p-button *ngIf="browserPermission() === 'default'" label="Activar" [text]="true" size="small" (onClick)="requestNotificationPermission()" styleClass="p-0 text-xs font-semibold"></p-button>
                </div>
 
                <div class="flex flex-column gap-2" style="max-height: 400px; overflow-y: auto">
@@ -166,6 +173,61 @@
 
    <!-- Modal de Estado y Salud del Sistema (Solo Administradores con permiso health_checker) -->
    <app-system-health-modal *ngIf="canViewHealthBottom()" [(visible)]="showHealthModal"></app-system-health-modal>
+
+   <!-- Toast de notificaciones para el layout -->
+   <p-toast></p-toast>
+
+   <!-- Modal para enviar notificación personalizada (Solo Administradores) -->
+   <p-dialog *ngIf="isAdmin()" [(visible)]="showSendNotificationModal" [modal]="true" [draggable]="false" [resizable]="false"
+      header="Enviar Notificación a Usuario" [style]="{ width: '480px', maxWidth: '95vw' }" (onHide)="closeSendNotificationModal()">
+      <div class="flex flex-column gap-3 pt-2">
+         <!-- Selector de Usuario Destinatario -->
+         <div class="flex flex-column gap-1">
+            <label class="text-sm font-semibold text-900">Usuario destinatario <span class="text-red-500">*</span></label>
+            <p-select [options]="adminUsersList()" [(ngModel)]="selectedTargetUser" optionLabel="name" [filter]="true" filterBy="name,email"
+               [loading]="loadingUsers()" placeholder="Buscar usuario..." styleClass="w-full">
+               <ng-template let-user pTemplate="selectedItem">
+                  <div class="flex align-items-center gap-2" *ngIf="user">
+                     <span class="font-medium text-900">{{ user.name }}</span>
+                     <span class="text-xs text-500">({{ user.email }})</span>
+                  </div>
+               </ng-template>
+               <ng-template let-user pTemplate="item">
+                  <div class="flex flex-column">
+                     <span class="font-medium text-900">{{ user.name }}</span>
+                     <span class="text-xs text-500">{{ user.email }}</span>
+                  </div>
+               </ng-template>
+            </p-select>
+         </div>
+
+         <!-- Tipo de Notificación -->
+         <div class="flex flex-column gap-1">
+            <label class="text-sm font-semibold text-900">Tipo de notificación</label>
+            <p-select [options]="notifTypeOptions" [(ngModel)]="customNotifType" optionLabel="label" optionValue="value" styleClass="w-full"></p-select>
+         </div>
+
+         <!-- Título -->
+         <div class="flex flex-column gap-1">
+            <label class="text-sm font-semibold text-900">Título <span class="text-red-500">*</span></label>
+            <input type="text" pInputText [(ngModel)]="customNotifTitle" placeholder="Ej: Mensaje de Administración" class="w-full text-sm" />
+         </div>
+
+         <!-- Mensaje -->
+         <div class="flex flex-column gap-1">
+            <label class="text-sm font-semibold text-900">Mensaje de notificación <span class="text-red-500">*</span></label>
+            <textarea pTextarea [(ngModel)]="customNotifMessage" rows="4" placeholder="Escribe el mensaje que recibirá el usuario..." class="w-full text-sm" style="resize: vertical;"></textarea>
+            <span class="text-xs text-500">El usuario recibirá un aviso emergente en su pantalla y en la campana de notificaciones.</span>
+         </div>
+      </div>
+
+      <ng-template pTemplate="footer">
+         <div class="flex justify-content-end gap-2 pt-2">
+            <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="closeSendNotificationModal()"></p-button>
+            <p-button label="Enviar Notificación" icon="pi pi-send" [loading]="sendingNotification()" (onClick)="sendCustomNotification()" severity="danger"></p-button>
+         </div>
+      </ng-template>
+   </p-dialog>
 
    <div class="flex-grow-1 p-2 overflow-y-auto" style="margin-top: 4rem; height: calc(100dvh - 4rem);">
       <router-outlet></router-outlet>

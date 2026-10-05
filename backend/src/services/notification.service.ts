@@ -9,24 +9,30 @@ export class NotificationService {
     private static sseClients: Map<number, Set<Response>> = new Map();
 
     addSSEClient(userId: number, res: Response): void {
-        if (!NotificationService.sseClients.has(userId)) {
-            NotificationService.sseClients.set(userId, new Set());
+        const id = Number(userId);
+        if (isNaN(id)) return;
+        if (!NotificationService.sseClients.has(id)) {
+            NotificationService.sseClients.set(id, new Set());
         }
-        NotificationService.sseClients.get(userId)!.add(res);
+        NotificationService.sseClients.get(id)!.add(res);
     }
 
     removeSSEClient(userId: number, res: Response): void {
-        const clients = NotificationService.sseClients.get(userId);
+        const id = Number(userId);
+        if (isNaN(id)) return;
+        const clients = NotificationService.sseClients.get(id);
         if (clients) {
             clients.delete(res);
             if (clients.size === 0) {
-                NotificationService.sseClients.delete(userId);
+                NotificationService.sseClients.delete(id);
             }
         }
     }
 
     sendToUser(userId: number, notification: Notification): void {
-        const clients = NotificationService.sseClients.get(userId);
+        const id = Number(userId);
+        if (isNaN(id)) return;
+        const clients = NotificationService.sseClients.get(id);
         if (clients && clients.size > 0) {
             const data = `data: ${JSON.stringify(notification)}\n\n`;
             for (const client of clients) {
@@ -36,7 +42,7 @@ export class NotificationService {
                         (client as any).flush();
                     }
                 } catch (err) {
-                    console.error(`Error sending SSE to user ${userId}:`, err);
+                    console.error(`Error sending SSE to user ${id}:`, err);
                 }
             }
         }

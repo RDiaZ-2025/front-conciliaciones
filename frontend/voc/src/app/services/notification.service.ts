@@ -38,6 +38,8 @@ export class NotificationService extends BaseApiService {
   private eventSource: EventSource | null = null;
   private pollInterval: any = null;
   private swRegistration: ServiceWorkerRegistration | null = null;
+  private notifiedIds = new Set<number>();
+  private initialLoadDone = false;
 
   initBrowserNotifications(): void {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -46,11 +48,16 @@ export class NotificationService extends BaseApiService {
 
     if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .catch((err) => {
+          console.warn('No se pudo registrar sw.js para notificaciones:', err);
+        });
+
+      navigator.serviceWorker.ready
         .then((reg) => {
           this.swRegistration = reg;
         })
         .catch((err) => {
-          console.warn('No se pudo registrar sw.js para notificaciones push:', err);
+          console.warn('Error inicializando serviceWorker.ready:', err);
         });
 
       navigator.serviceWorker.addEventListener('message', (event) => {
@@ -69,6 +76,19 @@ export class NotificationService extends BaseApiService {
     try {
       const permission = await Notification.requestPermission();
       this.browserPermission.set(permission);
+
+      if (permission === 'granted') {
+        this.showBrowserPushNotification({
+          id: -1,
+          userId: 0,
+          title: 'Notificaciones activadas en VOC',
+          message: '¡Listo! Recibirás avisos en tu navegador cuando se te asignen solicitudes o tareas.',
+          type: 'success',
+          isRead: false,
+          createdAt: new Date().toISOString()
+        });
+      }
+
       return permission;
     } catch (err) {
       console.error('Error solicitando permisos de notificación:', err);
@@ -83,7 +103,11 @@ export class NotificationService extends BaseApiService {
     }
 
     if (this.eventSource) {
-      return;
+      if (this.eventSource.readyState === EventSource.OPEN || this.eventSource.readyState === EventSource.CONNECTING) {
+        return;
+      }
+      this.eventSource.close();
+      this.eventSource = null;
     }
 
     try {
@@ -108,7 +132,10 @@ export class NotificationService extends BaseApiService {
           if (!currentList.some(n => n.id === notification.id)) {
             this.notifications.set([notification, ...currentList]);
             this.unreadCount.update(count => count + 1);
-            this.showBrowserPushNotification(notification);
+            if (!this.notifiedIds.has(notification.id)) {
+              this.notifiedIds.add(notification.id);
+              this.showBrowserPushNotification(notification);
+            }
           }
         } catch (err) {
           console.error('Error parseando notificación en tiempo real:', err);
@@ -117,12 +144,21 @@ export class NotificationService extends BaseApiService {
 
       this.eventSource.onerror = () => {
         this.isRealtimeActive.set(false);
+        if (this.eventSource && this.eventSource.readyState === EventSource.CLOSED) {
+          this.eventSource.close();
+          this.eventSource = null;
+          // Reintentar reconexión automática tras cierre
+          setTimeout(() => {
+            const activeToken = localStorage.getItem('auth_token');
+            if (activeToken) this.startRealtime();
+          }, 8000);
+        }
       };
     } catch (err) {
       console.error('Error iniciando stream de notificaciones:', err);
     }
 
-    // Intervalo de respaldo para mantener sincronizado el conteo
+    // Intervalo de respaldo activo para mantener sincronizado el estado y disparar alertas si SSE falla
     if (!this.pollInterval) {
       this.pollInterval = setInterval(() => {
         const activeToken = localStorage.getItem('auth_token');
@@ -131,7 +167,7 @@ export class NotificationService extends BaseApiService {
         } else {
           this.stopRealtime();
         }
-      }, 45000);
+      }, 20000);
     }
   }
 
@@ -157,29 +193,22 @@ export class NotificationService extends BaseApiService {
     }
 
     const title = notification.title || 'Nueva Notificación VOC';
-    const options: any = {
+    const tag = notification.id > 0 ? `voc-notif-${notification.id}` : `voc-notif-${Date.now()}`;
+    const options: NotificationOptions = {
       body: notification.message || '',
       icon: '/assets/claro-media-logo.png',
       badge: '/favicon-32x32.png',
-      tag: `voc-notif-${notification.id}`,
+      tag,
       data: notification,
       requireInteraction: false
     };
 
-    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && this.swRegistration) {
-      this.swRegistration.showNotification(title, options).catch(() => {
-        this.fallbackNativeNotification(notification, title, options);
-      });
-    } else {
-      this.fallbackNativeNotification(notification, title, options);
-    }
-  }
-
-  private fallbackNativeNotification(notification: Notification, title: string, options: any): void {
+    // 1. Intentar notificación nativa directa en el navegador
     try {
       const nativeNotif = new Notification(title, {
         body: options.body,
         icon: options.icon,
+        badge: options.badge,
         tag: options.tag
       });
 
@@ -187,19 +216,45 @@ export class NotificationService extends BaseApiService {
         if (typeof window !== 'undefined') {
           window.focus();
         }
-        this.notificationClicked$.next(notification);
+        if (notification.id > 0) {
+          this.notificationClicked$.next(notification);
+        }
         nativeNotif.close();
       };
+      return;
     } catch (e) {
-      console.warn('No se pudo desplegar la notificación nativa:', e);
+      console.warn('Constructor nativo Notification requiere Service Worker:', e);
+    }
+
+    // 2. Fallback vía Service Worker para entornos que no permiten constructor directo
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && this.swRegistration) {
+      this.swRegistration.showNotification(title, options).catch((swErr) => {
+        console.error('Error desplegando notificación vía Service Worker:', swErr);
+      });
     }
   }
 
   loadNotifications(): void {
     this.http.get<NotificationResponse>(this.apiUrl).subscribe({
       next: (response) => {
-        if (response.success) {
-          this.notifications.set(response.data.notifications);
+        if (response.success && response.data) {
+          const incoming = response.data.notifications || [];
+
+          if (this.initialLoadDone) {
+            // Disparar notificación para cualquier solicitud/tarea nueva que no hayamos notificado aún
+            for (const notif of incoming) {
+              if (!notif.isRead && !this.notifiedIds.has(notif.id)) {
+                this.notifiedIds.add(notif.id);
+                this.showBrowserPushNotification(notif);
+              }
+            }
+          } else {
+            // Primera carga: registrar IDs existentes para evitar spam histórico
+            incoming.forEach(n => this.notifiedIds.add(n.id));
+            this.initialLoadDone = true;
+          }
+
+          this.notifications.set(incoming);
           this.unreadCount.set(response.data.unreadCount);
         }
       },
@@ -230,6 +285,18 @@ export class NotificationService extends BaseApiService {
           this.unreadCount.set(0);
         }
       })
+    );
+  }
+
+  sendCustomNotification(
+    targetUserId: number,
+    title: string,
+    message: string,
+    type: 'info' | 'success' | 'warning' | 'error' = 'info'
+  ): Observable<{ success: boolean; message: string; data?: Notification }> {
+    return this.http.post<{ success: boolean; message: string; data?: Notification }>(
+      `${this.apiUrl}/send-custom`,
+      { targetUserId, title, message, type }
     );
   }
 }

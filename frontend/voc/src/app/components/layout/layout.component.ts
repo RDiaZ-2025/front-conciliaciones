@@ -16,9 +16,17 @@ import { StyleClassModule } from 'primeng/styleclass';
 import { PopoverModule } from 'primeng/popover';
 import { BadgeModule } from 'primeng/badge';
 import { MenuModule } from 'primeng/menu';
-import { MenuItem as PrimeMenuItem } from 'primeng/api';
+import { DialogModule } from 'primeng/dialog';
+import { SelectModule } from 'primeng/select';
+import { InputTextModule } from 'primeng/inputtext';
+import { TextareaModule } from 'primeng/textarea';
+import { ToastModule } from 'primeng/toast';
+import { TooltipModule } from 'primeng/tooltip';
+import { FormsModule } from '@angular/forms';
+import { MenuItem as PrimeMenuItem, MessageService } from 'primeng/api';
 
 import { AuthService } from '../../services/auth.service';
+import { UserService, User as VOCUser } from '../../services/user.service';
 import { MenuService, MenuItem } from '../../services/menu.service';
 import { NotificationService, Notification } from '../../services/notification.service';
 import { ProductionService } from '../../services/production.service';
@@ -34,6 +42,7 @@ import { PERMISSIONS } from '../../constants/permissions';
     LucideIconComponent,
     CachedImagePipe,
     CommonModule,
+    FormsModule,
     RouterOutlet,
     DrawerModule,
     ToolbarModule,
@@ -44,14 +53,22 @@ import { PERMISSIONS } from '../../constants/permissions';
     PopoverModule,
     BadgeModule,
     MenuModule,
+    DialogModule,
+    SelectModule,
+    InputTextModule,
+    TextareaModule,
+    ToastModule,
+    TooltipModule,
     SystemHealthModalComponent
   ],
-  providers: [DialogService],
+  providers: [DialogService, MessageService],
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss'
 })
 export class LayoutComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
+  private userService = inject(UserService);
+  private messageService = inject(MessageService);
   private menuService = inject(MenuService);
   private notificationService = inject(NotificationService);
   private productionService = inject(ProductionService);
@@ -86,6 +103,24 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   isDarkMode = signal(false);
 
+  // Modal para envío de notificaciones personalizadas (Admin)
+  showSendNotificationModal = signal<boolean>(false);
+  adminUsersList = signal<VOCUser[]>([]);
+  loadingUsers = signal<boolean>(false);
+  sendingNotification = signal<boolean>(false);
+
+  selectedTargetUser = signal<VOCUser | null>(null);
+  customNotifTitle = signal<string>('Mensaje de Administración');
+  customNotifMessage = signal<string>('');
+  customNotifType = signal<'info' | 'warning' | 'success' | 'error'>('info');
+
+  notifTypeOptions = [
+    { label: 'Informativa (Azul)', value: 'info' },
+    { label: 'Éxito (Verde)', value: 'success' },
+    { label: 'Advertencia (Amarillo)', value: 'warning' },
+    { label: 'Alerta / Error (Rojo)', value: 'error' }
+  ];
+
   userMenuItems: PrimeMenuItem[] = [
     {
       label: 'Cerrar Sesión',
@@ -116,6 +151,94 @@ export class LayoutComponent implements OnInit, OnDestroy {
       this.notifSub = null;
     }
     this.notificationService.stopRealtime();
+  }
+
+  openSendNotificationModal(): void {
+    this.customNotifTitle.set('Mensaje de Administración');
+    this.customNotifMessage.set('');
+    this.customNotifType.set('info');
+    this.selectedTargetUser.set(null);
+    this.showSendNotificationModal.set(true);
+
+    if (this.adminUsersList().length === 0) {
+      this.loadingUsers.set(true);
+      this.userService.getAllUsers().subscribe({
+        next: (users) => {
+          const activeUsers = (users || [])
+            .filter(u => u.status === 1)
+            .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+          this.adminUsersList.set(activeUsers);
+          this.loadingUsers.set(false);
+        },
+        error: (err) => {
+          console.error('Error cargando usuarios para notificaciones:', err);
+          this.loadingUsers.set(false);
+        }
+      });
+    }
+  }
+
+  closeSendNotificationModal(): void {
+    this.showSendNotificationModal.set(false);
+  }
+
+  sendCustomNotification(): void {
+    const target = this.selectedTargetUser();
+    if (!target || !target.id) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Destinatario requerido',
+        detail: 'Por favor selecciona el usuario destinatario.'
+      });
+      return;
+    }
+
+    const title = this.customNotifTitle().trim();
+    if (!title) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Título requerido',
+        detail: 'Por favor ingresa un título para la notificación.'
+      });
+      return;
+    }
+
+    const message = this.customNotifMessage().trim();
+    if (!message) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Mensaje requerido',
+        detail: 'Por favor escribe el mensaje a enviar.'
+      });
+      return;
+    }
+
+    this.sendingNotification.set(true);
+    this.notificationService.sendCustomNotification(
+      target.id,
+      title,
+      message,
+      this.customNotifType()
+    ).subscribe({
+      next: () => {
+        this.sendingNotification.set(false);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Notificación enviada',
+          detail: `La notificación fue enviada exitosamente a ${target.name}.`
+        });
+        this.closeSendNotificationModal();
+      },
+      error: (err) => {
+        this.sendingNotification.set(false);
+        console.error('Error enviando notificación personalizada:', err);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error al enviar',
+          detail: err.error?.message || 'No se pudo enviar la notificación.'
+        });
+      }
+    });
   }
 
   async requestNotificationPermission() {
@@ -161,6 +284,15 @@ export class LayoutComponent implements OnInit, OnDestroy {
           error: (err) => console.error('Error fetching request on notification click', err)
         });
       }
+    } else if (
+      notification.title.includes('Tarea de Flujo') ||
+      notification.title.includes('Solicitud Asignada a tu Equipo') ||
+      notification.title.includes('Revisión Requerida') ||
+      notification.title.includes('Cierre de Solicitud') ||
+      notification.title.includes('Rechazada') ||
+      notification.title.includes('Solicitud Bloqueada')
+    ) {
+      this.router.navigate(['/requests-beta/inbox']);
     }
   }
 
