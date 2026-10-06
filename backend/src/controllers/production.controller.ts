@@ -107,6 +107,10 @@ export const getSubmissions = asyncHandler(async (req: Request, res: Response): 
     const requesterUserId = req.user?.userId;
     if (!requesterUserId) return res.status(401).json({ message: 'Usuario no autenticado' });
 
+    const userRole = (req.user?.role || '').toLowerCase();
+    const isAdmin = userRole === 'admin' || userRole === 'administrador';
+    const allUsers = isAdmin && (req.query.allUsers === 'true' || req.query.viewAll === 'true');
+
     const page = req.query.page ? parseInt(req.query.page as string) : undefined;
     const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
     const search = req.query.search as string | undefined;
@@ -133,7 +137,8 @@ export const getSubmissions = asyncHandler(async (req: Request, res: Response): 
         dateFrom,
         dateTo,
         requester,
-        excludePendingForUser
+        excludePendingForUser,
+        allUsers
     });
     return res.json(submissions);
 });
@@ -232,6 +237,10 @@ export const getPendingApprovals = asyncHandler(async (req: Request, res: Respon
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: 'Usuario no autenticado' });
 
+    const userRole = (req.user?.role || '').toLowerCase();
+    const isAdmin = userRole === 'admin' || userRole === 'administrador';
+    const allUsers = isAdmin && (req.query.allUsers === 'true' || req.query.viewAll === 'true');
+
     const page = req.query.page ? parseInt(req.query.page as string) : undefined;
     const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
     const search = req.query.search as string | undefined;
@@ -256,7 +265,8 @@ export const getPendingApprovals = asyncHandler(async (req: Request, res: Respon
         status,
         dateFrom,
         dateTo,
-        requester
+        requester,
+        allUsers
     });
     return res.json(approvals);
 });
@@ -269,3 +279,29 @@ export const actionApproval = asyncHandler(async (req: Request, res: Response): 
     const result = await productionService.actionApproval(parseInt(stateId), userId, action, notes, formValues, consecutive, chosenNextAssignee);
     return res.json(result);
 });
+
+export const deleteSubmission = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const adminUserId = req.user?.userId;
+    if (!adminUserId) return res.status(401).json({ message: 'Usuario no autenticado' });
+
+    const userRole = (req.user?.role || '').toLowerCase();
+    const isAdmin = userRole === 'admin' || userRole === 'administrador';
+    if (!isAdmin) {
+        return res.status(403).json({ message: 'Solo los administradores pueden eliminar solicitudes' });
+    }
+
+    const submissionId = parseInt(req.params.submissionId, 10);
+    if (isNaN(submissionId)) {
+        return res.status(400).json({ message: 'ID de solicitud inválido' });
+    }
+
+    const { reason, comment } = req.body || {};
+    const notes = (reason || comment || req.query?.reason || req.query?.comment || '').toString().trim();
+    if (!notes) {
+        return res.status(400).json({ message: 'El comentario o motivo de eliminación es obligatorio.' });
+    }
+
+    await productionService.deleteSubmission(submissionId, adminUserId, notes);
+    return res.json({ success: true, message: 'Solicitud eliminada exitosamente' });
+});
+

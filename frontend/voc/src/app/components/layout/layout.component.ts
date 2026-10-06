@@ -32,6 +32,7 @@ import { NotificationService, Notification } from '../../services/notification.s
 import { ProductionService } from '../../services/production.service';
 import { ProductionDialogComponent } from '../../pages/production_2/production-dialog/production-dialog.component';
 import { SystemHealthModalComponent } from '../system-health-modal/system-health-modal.component';
+import { ChangePasswordDialogComponent } from '../change-password-dialog/change-password-dialog.component';
 import { SystemHealthService } from '../../services/system-health.service';
 import { PERMISSIONS } from '../../constants/permissions';
 
@@ -59,7 +60,8 @@ import { PERMISSIONS } from '../../constants/permissions';
     TextareaModule,
     ToastModule,
     TooltipModule,
-    SystemHealthModalComponent
+    SystemHealthModalComponent,
+    ChangePasswordDialogComponent
   ],
   providers: [DialogService, MessageService],
   templateUrl: './layout.component.html',
@@ -121,7 +123,14 @@ export class LayoutComponent implements OnInit, OnDestroy {
     { label: 'Alerta / Error (Rojo)', value: 'error' }
   ];
 
+  showChangePasswordModal = signal<boolean>(false);
+
   userMenuItems: PrimeMenuItem[] = [
+    {
+      label: 'Cambiar Contraseña',
+      icon: 'key-round',
+      command: () => this.showChangePasswordModal.set(true)
+    },
     {
       label: 'Cerrar Sesión',
       icon: 'power',

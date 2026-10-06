@@ -627,41 +627,51 @@ export class ProductionService {
         dateTo?: string;
         requester?: string;
         excludePendingForUser?: boolean;
+        allUsers?: boolean;
     }) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const stateRepo = AppDataSource.getRepository(DynamicSubmissionWorkflowState);
         const subRepo = AppDataSource.getRepository(DynamicFormSubmission);
 
-        const states = await stateRepo.find({
-            where: [
-                { assignedUserId: userId },
-                { actionedByUserId: userId }
-            ],
-            select: ['submissionId']
-        });
-        const directSubIds = new Set<number>(states.map(s => s.submissionId).filter(Boolean));
+        let submissions: DynamicFormSubmission[] = [];
 
-        const userCreatedSubs = await subRepo.find({
-            where: { requesterUserId: userId },
-            select: ['id']
-        });
-        userCreatedSubs.forEach(s => directSubIds.add(s.id));
+        if (options?.allUsers) {
+            submissions = await subRepo.find({
+                relations: ['form', 'currentStage', 'workflow', 'requesterUser'],
+                order: { createdAt: 'DESC' }
+            });
+        } else {
+            const states = await stateRepo.find({
+                where: [
+                    { assignedUserId: userId },
+                    { actionedByUserId: userId }
+                ],
+                select: ['submissionId']
+            });
+            const directSubIds = new Set<number>(states.map(s => s.submissionId).filter(Boolean));
 
-        if (directSubIds.size === 0) {
-            return options?.page || options?.limit ? { data: [], total: 0, page: options?.page || 1, limit: options?.limit || 12, totalPages: 0 } : [];
+            const userCreatedSubs = await subRepo.find({
+                where: { requesterUserId: userId },
+                select: ['id']
+            });
+            userCreatedSubs.forEach(s => directSubIds.add(s.id));
+
+            if (directSubIds.size === 0) {
+                return options?.page || options?.limit ? { data: [], total: 0, page: options?.page || 1, limit: options?.limit || 12, totalPages: 0 } : [];
+            }
+
+            const allTreeIds = new Set<number>();
+            for (const subId of directSubIds) {
+                const tree = await this.getSubmissionTreeIds(subId);
+                tree.forEach(id => allTreeIds.add(id));
+            }
+
+            submissions = await subRepo.find({
+                where: { id: In(Array.from(allTreeIds)) },
+                relations: ['form', 'currentStage', 'workflow', 'requesterUser'],
+                order: { createdAt: 'DESC' }
+            });
         }
-
-        const allTreeIds = new Set<number>();
-        for (const subId of directSubIds) {
-            const tree = await this.getSubmissionTreeIds(subId);
-            tree.forEach(id => allTreeIds.add(id));
-        }
-
-        let submissions = await subRepo.find({
-            where: { id: In(Array.from(allTreeIds)) },
-            relations: ['form', 'currentStage', 'workflow', 'requesterUser'],
-            order: { createdAt: 'DESC' }
-        });
 
         const subMap = new Map<number, DynamicFormSubmission>();
         submissions.forEach(s => subMap.set(s.id, s));
@@ -678,9 +688,9 @@ export class ProductionService {
             return !isEntryContainer && !isInternalSubflow;
         });
 
-        // 1. Excluir solicitudes que tienen tareas pendientes asignadas al usuario para evitar duplicidad
+        // 1. Excluir solicitudes que tienen tareas pendientes asignadas al usuario para evitar duplicidad (solo si no es allUsers)
         let candidateSubmissions = mainSubmissions;
-        if (options?.excludePendingForUser !== false) {
+        if (options?.excludePendingForUser !== false && !options?.allUsers) {
             const userPendingStates = await stateRepo.find({
                 where: { assignedUserId: userId, status: 'Pending' },
                 select: ['submissionId']
@@ -709,7 +719,7 @@ export class ProductionService {
             }
             candidateSubmissions = candidateSubmissions.filter(s => {
                 // Las solicitudes completadas o aprobadas NUNCA deben excluirse del historial
-                if (s.status === 'Completed' || s.status === 'Approved') {
+                if (s.status === 'Completed' || s.status === 'Approved' || s.status === 'Deleted') {
                     return true;
                 }
                 return !directlyPendingSubIds.has(s.id);
@@ -718,8 +728,8 @@ export class ProductionService {
 
         // 2. Ordenar: Activas primero, luego fecha descendente
         candidateSubmissions.sort((a, b) => {
-            const aActive = a.status !== 'Completed' && a.status !== 'Approved';
-            const bActive = b.status !== 'Completed' && b.status !== 'Approved';
+            const aActive = a.status !== 'Completed' && a.status !== 'Approved' && a.status !== 'Deleted';
+            const bActive = b.status !== 'Completed' && b.status !== 'Approved' && b.status !== 'Deleted';
             if (aActive && !bActive) return -1;
             if (!aActive && bActive) return 1;
             return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -739,7 +749,10 @@ export class ProductionService {
                 if (st === 'completed') return subSt === 'completed' || subSt === 'approved';
                 if (st === 'in_progress') return subSt === 'in progress' || subSt === 'in_progress';
                 if (st === 'rejected') return subSt === 'rejected';
-                return true;
+                if (st === 'deleted') return subSt === 'deleted';
+                if (st === 'pending') return subSt === 'pending';
+                if (st === 'blocked') return subSt === 'blocked';
+                return subSt === st;
             });
         }
 
@@ -859,7 +872,11 @@ export class ProductionService {
                 assigneeEmail = Array.from(new Set(users.map(u => u.email))).join(', ');
             }
 
-            if (activeStatesForThisSub.length > 0) {
+            if (sub.status === 'Deleted') {
+                displayStageName = 'Eliminada';
+                assigneeName = 'Ninguno';
+                assigneeEmail = undefined;
+            } else if (activeStatesForThisSub.length > 0) {
                 const stageNames = activeStatesForThisSub.map(st => {
                     if (st.stage) {
                         if (st.stage.workflow && sub.workflowId && st.stage.workflowId !== sub.workflowId) {
@@ -880,6 +897,8 @@ export class ProductionService {
                     displayStageName = 'Completado';
                 } else if (sub.status === 'Rejected') {
                     displayStageName = 'Devuelta para Corrección';
+                } else if (sub.status === 'Blocked') {
+                    displayStageName = 'Bloqueada';
                 } else if (sub.currentStage) {
                     displayStageName = sub.currentStage.name;
                 } else {
@@ -1054,7 +1073,9 @@ export class ProductionService {
              const user = cState.actionedByUser || cState.assignedUser;
 
              let displayName = cState.stage ? cState.stage.name : 'Etapa';
-             if (cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir'))) {
+             if (cState.status === 'Deleted') {
+                 displayName = `${displayName} - Eliminada por Administrador`;
+             } else if (cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir'))) {
                  displayName = `${displayName} (Corrección)`;
              }
 
@@ -1081,7 +1102,7 @@ export class ProductionService {
                  submissionFormName: (cState as any).submission?.form?.name || null,
                  stageName: displayName,
                  formName: formName,
-                 actionedByUserName: user?.name || 'Sin Asignar',
+                 actionedByUserName: user?.name || (cState.status === 'Deleted' ? 'Administrador' : 'Sin Asignar'),
                  actionedByUserEmail: user?.email || '',
                  actionedAt: cState.updatedAt,
                  status: stateStatus,
@@ -1191,15 +1212,21 @@ export class ProductionService {
             }
         }
 
+        const deletionState = allStatesToInclude.slice().reverse().find(s => s.status === 'Deleted');
+
         return {
             id: sub.id,
             formName: sub.form.name,
             createdAt: sub.createdAt,
             status: sub.status,
             consecutive: sub.consecutive,
-            stageName: sub.currentStage ? sub.currentStage.name : 'Completado',
+            stageName: sub.status === 'Deleted' ? 'Eliminada' : (sub.currentStage ? sub.currentStage.name : 'Completado'),
             requesterName: sub.requesterUser ? sub.requesterUser.name : 'Usuario',
             requesterEmail: sub.requesterUser ? sub.requesterUser.email : '',
+            deletionReason: deletionState?.notes || null,
+            deletedByUserName: deletionState?.actionedByUser?.name || null,
+            deletedByUserEmail: deletionState?.actionedByUser?.email || null,
+            deletedAt: deletionState?.updatedAt || null,
             values: uniqueEntryValues.map(v => {
                  let parsedMeta = v.field.metadata;
                  if (parsedMeta && typeof parsedMeta === 'string') {
@@ -1624,6 +1651,103 @@ export class ProductionService {
         return allSubsToBlock.length;
     }
 
+    async deleteSubmission(submissionId: number, adminUserId: number, notes: string): Promise<void> {
+        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+        await AppDataSource.transaction(async (manager) => {
+            const subRepo = manager.getRepository(DynamicFormSubmission);
+            const stateRepo = manager.getRepository(DynamicSubmissionWorkflowState);
+            const userRepo = manager.getRepository(User);
+            const stageRepo = manager.getRepository(DynamicWorkflowStage);
+
+            const adminUser = await userRepo.findOne({ where: { id: adminUserId } });
+            if (!adminUser) throw new Error('Usuario administrador no encontrado');
+
+            const treeIds = await this.getSubmissionTreeIds(submissionId);
+            if (!treeIds || treeIds.length === 0) throw new Error('Solicitud no encontrada');
+
+            const submissions = await subRepo.find({
+                where: { id: In(treeIds) },
+                relations: ['currentStage', 'form', 'requesterUser']
+            });
+
+            if (submissions.length === 0) throw new Error('Solicitud no encontrada');
+
+            const mainSub = submissions.find(s => s.id === submissionId) || submissions[0];
+            const originalStageId = mainSub.currentStageId;
+
+            // 1. Marcar todas las solicitudes del árbol como 'Deleted'
+            for (const sub of submissions) {
+                sub.status = 'Deleted';
+                sub.currentStageId = null;
+                await subRepo.save(sub);
+            }
+
+            // 2. Cerrar/Cancelar estados pendientes con motivo y usuario admin
+            const pendingStates = await stateRepo.find({
+                where: { submissionId: In(treeIds), status: 'Pending' }
+            });
+
+            for (const pState of pendingStates) {
+                pState.status = 'Deleted';
+                pState.actionedByUserId = adminUserId;
+                pState.notes = notes;
+                await stateRepo.save(pState);
+            }
+
+            // 3. Registrar el estado 'Deleted' en la solicitud principal para el historial
+            const alreadyHasDeletedState = pendingStates.some(p => p.submissionId === mainSub.id);
+
+            if (!alreadyHasDeletedState) {
+                let stageId = originalStageId;
+                if (!stageId) {
+                    const lastState = await stateRepo.findOne({
+                        where: { submissionId: mainSub.id },
+                        order: { id: 'DESC' }
+                    });
+                    stageId = lastState?.stageId || null;
+                }
+                if (!stageId && mainSub.workflowId) {
+                    const firstStage = await stageRepo.findOne({
+                        where: { workflowId: mainSub.workflowId, isDeleted: false },
+                        order: { stepOrder: 'ASC' }
+                    });
+                    stageId = firstStage?.id || null;
+                }
+                if (!stageId && mainSub.formId) {
+                    const formStage = await stageRepo.findOne({
+                        where: { formId: mainSub.formId, isDeleted: false },
+                        order: { stepOrder: 'ASC' }
+                    });
+                    stageId = formStage?.id || null;
+                }
+
+                if (stageId) {
+                    const deleteState = stateRepo.create({
+                        submissionId: mainSub.id,
+                        stageId: stageId,
+                        assignedUserId: adminUserId,
+                        actionedByUserId: adminUserId,
+                        status: 'Deleted',
+                        notes: notes
+                    });
+                    await stateRepo.save(deleteState);
+                }
+            }
+
+            // 4. Notificar al solicitante
+            try {
+                if (mainSub.requesterUserId && mainSub.requesterUserId !== adminUserId) {
+                    await notificationService.createNotification(
+                        mainSub.requesterUserId,
+                        'Solicitud Eliminada',
+                        `El administrador ${adminUser.name} ha eliminado la solicitud #${mainSub.id} ("${mainSub.form?.name || 'Solicitud'}"). Motivo: ${notes}`,
+                        'warning'
+                    );
+                }
+            } catch (e) {}
+        });
+    }
+
     async adminUpdateWorkflow(id: number, data: Partial<DynamicWorkflow>) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const repo = AppDataSource.getRepository(DynamicWorkflow);
@@ -1898,13 +2022,19 @@ export class ProductionService {
         dateFrom?: string;
         dateTo?: string;
         requester?: string;
+        allUsers?: boolean;
     }) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const stateRepo = AppDataSource.getRepository(DynamicSubmissionWorkflowState);
 
+        let whereCondition: any = { status: 'Pending' };
+        if (!options?.allUsers) {
+            whereCondition.assignedUserId = userId;
+        }
+
         let states = await stateRepo.find({
-            where: { assignedUserId: userId, status: 'Pending' },
-            relations: ['submission', 'submission.form', 'stage', 'stage.formToFill', 'customFormToFill', 'submission.requesterUser'],
+            where: whereCondition,
+            relations: ['submission', 'submission.form', 'stage', 'stage.formToFill', 'customFormToFill', 'submission.requesterUser', 'assignedUser'],
             order: { createdAt: 'DESC' }
         });
 
@@ -2359,6 +2489,8 @@ export class ProductionService {
                 cardFields,
                 requesterName: state.submission.requesterUser ? state.submission.requesterUser.name : 'Usuario',
                 requesterEmail: state.submission.requesterUser ? state.submission.requesterUser.email : '',
+                assignedUserName: (state as any).assignedUser ? (state as any).assignedUser.name : 'Sin Asignar',
+                assignedUserEmail: (state as any).assignedUser ? (state as any).assignedUser.email : '',
                 createdAt: state.submission.createdAt,
                 assignedAt: state.createdAt,
                 stageName: stageName,

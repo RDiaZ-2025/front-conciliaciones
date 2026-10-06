@@ -191,6 +191,46 @@ export class AuthService {
     return bcrypt.hash(password, this.SALT_ROUNDS);
   }
 
+  async changePassword(
+    userId: number,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<{ success: boolean; message: string }> {
+    if (!AppDataSource.isInitialized) {
+      return { success: false, message: 'Servicio de autenticación no disponible' };
+    }
+
+    if (newPassword.length < AuthService.MIN_PASSWORD_LENGTH) {
+      return {
+        success: false,
+        message: `La nueva contraseña debe tener al menos ${AuthService.MIN_PASSWORD_LENGTH} caracteres.`
+      };
+    }
+
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOne({ where: { id: userId, status: 1 } });
+    if (!user) {
+      return { success: false, message: 'Usuario no encontrado o deshabilitado.' };
+    }
+
+    const isCurrentValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isCurrentValid) {
+      return { success: false, message: 'La contraseña actual es incorrecta.' };
+    }
+
+    const isSameAsCurrent = await bcrypt.compare(newPassword, user.passwordHash);
+    if (isSameAsCurrent) {
+      return { success: false, message: 'La nueva contraseña debe ser diferente a la actual.' };
+    }
+
+    const passwordHash = await this.hashPassword(newPassword);
+    await userRepository.update(user.id, { passwordHash });
+
+    return { success: true, message: 'Contraseña actualizada correctamente.' };
+  }
+
+  static readonly MIN_PASSWORD_LENGTH = 8;
+
   constructor() {
     const secret = process.env.JWT_SECRET;
     if (!secret || secret === 'fallback-secret-key-for-development') {

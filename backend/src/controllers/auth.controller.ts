@@ -63,6 +63,23 @@ export class AuthController {
     return;
   });
 
+  changePassword = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    if (!req.user) {
+      res.status(401).json({ success: false, message: 'No autenticado' });
+      return;
+    }
+
+    const { currentPassword, newPassword } = req.body || {};
+    if (typeof currentPassword !== 'string' || typeof newPassword !== 'string' || !currentPassword || !newPassword) {
+      res.status(400).json({ success: false, message: 'La contraseña actual y la nueva son requeridas.' });
+      return;
+    }
+
+    const result = await this.authService.changePassword(req.user.userId, currentPassword, newPassword);
+    // Se usa 400 (no 401) para fallos de validación: el interceptor del frontend cierra la sesión ante cualquier 401.
+    res.status(result.success ? 200 : 400).json(result);
+  });
+
   async logout(req: Request, res: Response): Promise<void> {
     res.status(200).json({
       success: true,

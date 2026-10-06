@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { ProductionController, getAllProductionRequests, getProductionRequestById, createProductionRequest, updateProductionRequest, getProducts, moveProductionRequest, updateStepGeneral, updateStepCustomer, updateStepCampaign, updateStepAudience, updateStepProduction, updateMaterialData, getFormFields, createSubmission, getSubmissions, adminGetForms, adminCreateForm, adminUpdateForm, adminDeleteForm, adminSaveFields, adminGetStages, adminSaveStages, adminGetWorkflows, adminCreateWorkflow, adminUpdateWorkflow, adminDeleteWorkflow, adminGetWorkflowStages, adminSaveWorkflowStages, getPendingApprovals, actionApproval, getSubmissionDetails } from '../controllers/production.controller';
+import { ProductionController, getAllProductionRequests, getProductionRequestById, createProductionRequest, updateProductionRequest, getProducts, moveProductionRequest, updateStepGeneral, updateStepCustomer, updateStepCampaign, updateStepAudience, updateStepProduction, updateMaterialData, getFormFields, createSubmission, getSubmissions, adminGetForms, adminCreateForm, adminUpdateForm, adminDeleteForm, adminSaveFields, adminGetStages, adminSaveStages, adminGetWorkflows, adminCreateWorkflow, adminUpdateWorkflow, adminDeleteWorkflow, adminGetWorkflowStages, adminSaveWorkflowStages, getPendingApprovals, actionApproval, getSubmissionDetails, deleteSubmission } from '../controllers/production.controller';
 import { addMaterialRegister, getMaterialRegisters } from '../controllers/material_register.controller';
 import { RequestsReportController } from '../controllers/requests_report.controller';
 import { getProductionRequestHistory } from '../controllers/production_request_history.controller';
@@ -17,12 +17,13 @@ router.get('/initial-form', productionController.getInitialForm);
 
 router.use(authenticateToken);
 
+const adminFormsAuth = requireRole(['admin', 'administrador']);
+
 router.get('/forms/:id/fields', getFormFields);
 router.post('/submissions', createSubmission);
 router.get('/submissions', getSubmissions);
 router.get('/submissions/:submissionId', getSubmissionDetails);
-
-const adminFormsAuth = requireRole(['admin', 'administrador']);
+router.delete('/submissions/:submissionId', adminFormsAuth, deleteSubmission);
 
 router.get('/admin/forms', adminFormsAuth, adminGetForms);
 router.post('/admin/forms', adminFormsAuth, adminCreateForm);

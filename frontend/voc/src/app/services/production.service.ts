@@ -254,4 +254,8 @@ export class ProductionService extends BaseApiService {
   actionApproval(stateId: number, action: 'approve' | 'reject', notes: string, formValues?: any, consecutive?: string, chosenNextAssignee?: any): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/approvals/${stateId}/action`, { action, notes, formValues, consecutive, chosenNextAssignee });
   }
+
+  deleteSubmission(submissionId: number, reason: string): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/submissions/${submissionId}`, { body: { reason } });
+  }
 }

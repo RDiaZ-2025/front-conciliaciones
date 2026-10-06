@@ -177,6 +177,9 @@
    <!-- Toast de notificaciones para el layout -->
    <p-toast></p-toast>
 
+   <!-- Modal para cambiar la contraseña del usuario logueado -->
+   <app-change-password-dialog [visible]="showChangePasswordModal()" (visibleChange)="showChangePasswordModal.set($event)"></app-change-password-dialog>
+
    <!-- Modal para enviar notificación personalizada (Solo Administradores) -->
    <p-dialog *ngIf="isAdmin()" [(visible)]="showSendNotificationModal" [modal]="true" [draggable]="false" [resizable]="false"
       header="Enviar Notificación a Usuario" [style]="{ width: '480px', maxWidth: '95vw' }" (onHide)="closeSendNotificationModal()">

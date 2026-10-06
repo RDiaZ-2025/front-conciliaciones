@@ -138,6 +138,13 @@ export class AuthService extends BaseApiService {
     this.router.navigate(['/login']);
   }
 
+  changePassword(currentPassword: string, newPassword: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<{ success: boolean; message: string }>(`${this.apiUrl}/change-password`, {
+      currentPassword,
+      newPassword
+    });
+  }
+
   verifyToken(): Observable<any> {
     return this.http.get(`${this.apiUrl}/verify`).pipe(
       catchError(() => {

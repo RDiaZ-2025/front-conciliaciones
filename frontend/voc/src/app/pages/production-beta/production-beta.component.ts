@@ -27,6 +27,7 @@ import { AuthService } from '../../services/auth.service';
 import { TeamService } from '../../services/team.service';
 import { CheckboxModule } from 'primeng/checkbox';
 import { InputTextModule } from 'primeng/inputtext';
+import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -71,6 +72,7 @@ import { DatePickerModule } from 'primeng/datepicker';
     AnsDialogComponent,
     CheckboxModule,
     InputTextModule,
+    TextareaModule,
     SelectModule,
     MultiSelectModule,
     InputNumberModule,
@@ -84,6 +86,7 @@ import { DatePickerModule } from 'primeng/datepicker';
   styleUrl: './production-beta.component.scss'
 })
 export class ProductionBetaComponent implements OnInit, OnDestroy {
+  authService = inject(AuthService);
   productionService = inject(ProductionService);
   teamService = inject(TeamService);
   dialogService = inject(CoreDialogService);
@@ -92,6 +95,10 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   azureService = inject(AzureStorageService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+
+  canAdminForms = computed(() => {
+    return this.authService.canAdminForms();
+  });
 
   requests = signal<ProductionRequest[]>([]);
   dynamicSubmissions = signal<any[]>([]);
@@ -106,12 +113,22 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   filterRequester = signal<string>('');
   showAdvancedFilters = signal<boolean>(false);
 
+  filterAllUsers = signal<boolean>(false);
+
+  // --- Modal de Confirmación de Eliminación de Solicitud (Solo Administradores) ---
+  showDeleteDialog = signal<boolean>(false);
+  subToDelete = signal<any>(null);
+  deleteComment = signal<string>('');
+  deleteError = signal<string>('');
+  isDeletingSub = signal<boolean>(false);
+
   statusOptions = [
     { label: 'Todos los estados', value: 'all' },
     { label: 'Pendientes de mi Aprobación', value: 'pending_me' },
     { label: 'En Proceso', value: 'in_progress' },
     { label: 'Aprobadas / Completadas', value: 'completed' },
-    { label: 'Devueltas para Corrección', value: 'rejected' }
+    { label: 'Devueltas para Corrección', value: 'rejected' },
+    { label: 'Eliminadas', value: 'deleted' }
   ];
 
   datePresetOptions = [
@@ -142,6 +159,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     if (this.filterStatus() !== 'all') count++;
     if (this.filterDatePreset() !== 'all') count++;
     if (this.filterRequester().trim()) count++;
+    if (this.filterAllUsers()) count++;
     return count;
   });
 
@@ -250,7 +268,68 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       if (this.filterDateTo()) params.dateTo = this.filterDateTo()!.toISOString();
     }
 
+    if (this.filterAllUsers() && this.canAdminForms()) {
+      params.allUsers = true;
+    }
+
     return params;
+  }
+
+  toggleAllUsersFilter() {
+    if (!this.canAdminForms()) return;
+    this.filterAllUsers.update(v => !v);
+    this.onFilterChange();
+  }
+
+  confirmDeleteSubmission(subOrTask: any) {
+    if (!this.canAdminForms() || !subOrTask) return;
+    this.subToDelete.set(subOrTask);
+    this.deleteComment.set('');
+    this.deleteError.set('');
+    this.showDeleteDialog.set(true);
+  }
+
+  executeDeleteSubmission() {
+    if (!this.canAdminForms()) return;
+    const sub = this.subToDelete();
+    const subId = sub?.submissionId || sub?.id;
+    if (!subId) return;
+
+    const comment = this.deleteComment().trim();
+    if (!comment) {
+      this.deleteError.set('Debes ingresar obligatoriamente un motivo para eliminar la solicitud.');
+      return;
+    }
+
+    this.deleteError.set('');
+    this.isDeletingSub.set(true);
+
+    this.productionService.deleteSubmission(subId, comment).subscribe({
+      next: () => {
+        this.isDeletingSub.set(false);
+        this.showDeleteDialog.set(false);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Solicitud Eliminada',
+          detail: `La solicitud #${subId} ha sido eliminada correctamente.`
+        });
+
+        if (this.showDetailsDialog() && this.selectedDetails()?.id === subId) {
+          this.viewSubmissionDetails(subId);
+        }
+
+        this.loadRequests();
+        this.loadPendingTasks();
+      },
+      error: (err) => {
+        this.isDeletingSub.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: err?.error?.message || 'Ocurrió un error al intentar eliminar la solicitud.'
+        });
+      }
+    });
   }
 
   pendingTasks = signal<any[]>([]);
@@ -295,10 +374,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
   canCreateRequest = computed(() => {
     return this.authService.isCommercialOrAdmin();
-  });
-
-  canAdminForms = computed(() => {
-    return this.authService.canAdminForms();
   });
 
   ref: DynamicDialogRef | undefined | null;
@@ -548,8 +623,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     });
   }
-
-  authService = inject(AuthService);
 
   openDialog(request?: ProductionRequest, readonly: boolean = false) {
     if (!request) {
@@ -1165,7 +1238,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     if (s === 'approved' || s === 'completed') return 'success';
     if (s === 'in progress') return 'info';
     if (s === 'pending') return 'warn';
-    if (s === 'rejected' || s === 'blocked') return 'danger';
+    if (s === 'rejected' || s === 'blocked' || s === 'deleted') return 'danger';
     return 'secondary';
   }
 
@@ -1180,6 +1253,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       case 'Draft': return 'Borrador';
       case 'Cancelled': return 'Cancelado';
       case 'Blocked': return 'Bloqueada';
+      case 'Deleted': return 'Eliminada';
       default: return status;
     }
   }
