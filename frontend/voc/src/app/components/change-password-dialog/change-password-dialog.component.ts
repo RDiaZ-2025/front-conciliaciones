@@ -13,7 +13,8 @@ const MIN_PASSWORD_LENGTH = 8;
   selector: 'app-change-password-dialog',
   standalone: true,
   imports: [CommonModule, FormsModule, DialogModule, ButtonModule, PasswordModule],
-  templateUrl: './change-password-dialog.component.html'
+  templateUrl: './change-password-dialog.component.html',
+  styleUrl: './change-password-dialog.component.scss'
 })
 export class ChangePasswordDialogComponent {
   private authService = inject(AuthService);
