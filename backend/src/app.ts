@@ -167,7 +167,7 @@ const packageJson = (() => {
   }
 })();
 
-const APP_VERSION = packageJson?.version || '1.14.6';
+const APP_VERSION = packageJson?.version || '1.14.7';
 const APP_VERSION_DATE = packageJson?.versionDate || '2026-10-06';
 
 const getHealthPayload = () => {
