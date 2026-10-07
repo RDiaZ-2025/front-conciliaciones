@@ -235,7 +235,7 @@
 
     <!-- Action Decision Dialog -->
     <p-dialog [header]="isCorrection(selectedTask()) ? 'Corregir Solicitud: ' + (selectedTask()?.formName || '') : 'Revisión: ' + (selectedTask()?.formName || '')" [(visible)]="showActionDialog" 
-              [modal]="true" [style]="{width: '650px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
+              [modal]="true" [style]="{width: getDynamicDialogWidth(selectedTask(), parentFormGroups()), 'max-width': '96vw'}" [maximizable]="true" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
         <div class="flex flex-column gap-4 px-4 py-2" *ngIf="selectedTask()">
             
             <!-- Rejection Alert Banner -->
@@ -264,7 +264,9 @@
                             </div>
 
                             <!-- Regular Field Value -->
-                            <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" class="col-12 md:col-6 flex flex-column gap-1">
+                            <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" 
+                                 class="col-12 flex flex-column gap-1"
+                                 [class.md:col-6]="!shouldDynamicListSpanFullWidth(val)">
                                 <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                                 <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                     <div *ngFor="let file of getUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
@@ -276,22 +278,36 @@
                                 </div>
 
                                 <!-- Dynamic List read-only view -->
-                                <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full text-xs">
-                                    <table class="w-full text-left border-collapse">
+                                <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-x-auto w-full text-xs">
+                                    <table class="w-full text-left border-collapse" style="min-width: 100%;">
                                         <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
                                             <tr>
-                                                <th class="p-2 pl-3">Producto / Servicio</th>
-                                                <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" class="p-2 text-center" style="width: 8rem;">
+                                                <th class="p-2 pl-3 white-space-nowrap" style="min-width: 9rem; max-width: 18rem;">Producto / Servicio</th>
+                                                <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" 
+                                                    class="p-2 white-space-nowrap"
+                                                    [class.text-center]="isDynamicListColNumeric(col, val)"
+                                                    [class.text-left]="!isDynamicListColNumeric(col, val)"
+                                                    [style.min-width]="isDynamicListColNumeric(col, val) ? '4.5rem' : '8rem'"
+                                                    [style.max-width]="isDynamicListColNumeric(col, val) ? 'none' : '22rem'">
                                                     {{ formatLabel(col) }}
                                                 </th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <tr *ngFor="let itemRow of parseDynamicList(val.value)" class="border-bottom-1 surface-border hover:bg-50">
-                                                <td class="p-2 pl-3 font-semibold text-900 align-middle">
+                                                <td class="p-2 pl-3 font-semibold text-900 align-middle" style="min-width: 9rem; max-width: 18rem; word-break: break-word; white-space: normal;">
                                                     {{ itemRow.item || itemRow.product }}
                                                 </td>
-                                                <td *ngFor="let col of getDynamicListKeys(itemRow)" class="p-2 text-center align-middle font-bold text-900">
+                                                <td *ngFor="let col of getDynamicListKeys(itemRow)" 
+                                                    class="p-2 align-middle text-900"
+                                                    [class.text-center]="isDynamicListColNumeric(col, val)"
+                                                    [class.font-bold]="isDynamicListColNumeric(col, val)"
+                                                    [class.white-space-nowrap]="isDynamicListColNumeric(col, val)"
+                                                    [class.text-left]="!isDynamicListColNumeric(col, val)"
+                                                    [style.min-width]="isDynamicListColNumeric(col, val) ? '4.5rem' : '8rem'"
+                                                    [style.max-width]="isDynamicListColNumeric(col, val) ? 'none' : '22rem'"
+                                                    [style.word-break]="!isDynamicListColNumeric(col, val) ? 'break-word' : 'normal'"
+                                                    [style.white-space]="!isDynamicListColNumeric(col, val) ? 'normal' : 'nowrap'">
                                                     {{ itemRow[col] }}
                                                 </td>
                                             </tr>
@@ -299,7 +315,16 @@
                                     </table>
                                 </div>
 
-                                <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ formatValue(val) }}</span>
+                                <!-- Multi-select / Array Badges read-only view -->
+                                <div *ngIf="isMultiSelectValue(val.value)" class="flex flex-wrap gap-1 align-items-center surface-100 p-2 border-round w-full" style="min-height: 2.35rem;">
+                                    <p-tag *ngFor="let item of parseMultiSelect(val.value)" 
+                                           [value]="item" 
+                                           severity="info" 
+                                           [rounded]="true">
+                                    </p-tag>
+                                </div>
+
+                                <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value) && !isMultiSelectValue(val.value)">{{ formatValue(val) }}</span>
                             </div>
                         </ng-container>
                     </div>
@@ -319,7 +344,9 @@
                         </div>
 
                         <!-- Regular Field Value -->
-                        <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" class="col-12 md:col-6 flex flex-column gap-1">
+                        <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" 
+                             class="col-12 flex flex-column gap-1"
+                             [class.md:col-6]="!shouldDynamicListSpanFullWidth(val)">
                             <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                             <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                 <div *ngFor="let file of getUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
@@ -331,22 +358,36 @@
                             </div>
 
                             <!-- Dynamic List read-only view -->
-                            <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full text-xs">
-                                <table class="w-full text-left border-collapse">
+                            <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-x-auto w-full text-xs">
+                                <table class="w-full text-left border-collapse" style="min-width: 100%;">
                                     <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
                                         <tr>
-                                            <th class="p-2 pl-3">Producto / Servicio</th>
-                                            <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" class="p-2 text-center" style="width: 8rem;">
+                                            <th class="p-2 pl-3 white-space-nowrap" style="min-width: 9rem; max-width: 18rem;">Producto / Servicio</th>
+                                            <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" 
+                                                class="p-2 white-space-nowrap"
+                                                [class.text-center]="isDynamicListColNumeric(col, val)"
+                                                [class.text-left]="!isDynamicListColNumeric(col, val)"
+                                                [style.min-width]="isDynamicListColNumeric(col, val) ? '4.5rem' : '8rem'"
+                                                [style.max-width]="isDynamicListColNumeric(col, val) ? 'none' : '22rem'">
                                                 {{ formatLabel(col) }}
                                             </th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr *ngFor="let itemRow of parseDynamicList(val.value)" class="border-bottom-1 surface-border hover:bg-50">
-                                            <td class="p-2 pl-3 font-semibold text-900 align-middle">
+                                            <td class="p-2 pl-3 font-semibold text-900 align-middle" style="min-width: 9rem; max-width: 18rem; word-break: break-word; white-space: normal;">
                                                 {{ itemRow.item || itemRow.product }}
                                             </td>
-                                            <td *ngFor="let col of getDynamicListKeys(itemRow)" class="p-2 text-center align-middle font-bold text-900">
+                                            <td *ngFor="let col of getDynamicListKeys(itemRow)" 
+                                                class="p-2 align-middle text-900"
+                                                [class.text-center]="isDynamicListColNumeric(col, val)"
+                                                [class.font-bold]="isDynamicListColNumeric(col, val)"
+                                                [class.white-space-nowrap]="isDynamicListColNumeric(col, val)"
+                                                [class.text-left]="!isDynamicListColNumeric(col, val)"
+                                                [style.min-width]="isDynamicListColNumeric(col, val) ? '4.5rem' : '8rem'"
+                                                [style.max-width]="isDynamicListColNumeric(col, val) ? 'none' : '22rem'"
+                                                [style.word-break]="!isDynamicListColNumeric(col, val) ? 'break-word' : 'normal'"
+                                                [style.white-space]="!isDynamicListColNumeric(col, val) ? 'normal' : 'nowrap'">
                                                 {{ itemRow[col] }}
                                             </td>
                                         </tr>
@@ -354,7 +395,16 @@
                                 </table>
                             </div>
 
-                            <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ formatValue(val) }}</span>
+                            <!-- Multi-select / Array Badges read-only view -->
+                            <div *ngIf="isMultiSelectValue(val.value)" class="flex flex-wrap gap-1 align-items-center surface-100 p-2 border-round w-full" style="min-height: 2.35rem;">
+                                <p-tag *ngFor="let item of parseMultiSelect(val.value)" 
+                                       [value]="item" 
+                                       severity="info" 
+                                       [rounded]="true">
+                                </p-tag>
+                            </div>
+
+                            <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value) && !isMultiSelectValue(val.value)">{{ formatValue(val) }}</span>
                         </div>
                     </ng-container>
                 </div>
@@ -396,7 +446,9 @@
                                 </div>
 
                                 <!-- Regular Field Value -->
-                                <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" class="col-12 md:col-6 flex flex-column gap-1">
+                                <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" 
+                                     class="col-12 flex flex-column gap-1"
+                                     [class.md:col-6]="!shouldDynamicListSpanFullWidth(val)">
                                     <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                                     <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                         <div *ngFor="let file of getUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
@@ -408,22 +460,36 @@
                                     </div>
 
                                     <!-- Dynamic List read-only view -->
-                                    <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full text-xs">
-                                        <table class="w-full text-left border-collapse">
+                                    <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-x-auto w-full text-xs">
+                                        <table class="w-full text-left border-collapse" style="min-width: 100%;">
                                             <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
                                                 <tr>
-                                                    <th class="p-2 pl-3">Producto / Servicio</th>
-                                                    <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" class="p-2 text-center" style="width: 8rem;">
+                                                    <th class="p-2 pl-3 white-space-nowrap" style="min-width: 9rem; max-width: 18rem;">Producto / Servicio</th>
+                                                    <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" 
+                                                        class="p-2 white-space-nowrap"
+                                                        [class.text-center]="isDynamicListColNumeric(col, val)"
+                                                        [class.text-left]="!isDynamicListColNumeric(col, val)"
+                                                        [style.min-width]="isDynamicListColNumeric(col, val) ? '4.5rem' : '8rem'"
+                                                        [style.max-width]="isDynamicListColNumeric(col, val) ? 'none' : '22rem'">
                                                         {{ formatLabel(col) }}
                                                     </th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <tr *ngFor="let itemRow of parseDynamicList(val.value)" class="border-bottom-1 surface-border hover:bg-50">
-                                                    <td class="p-2 pl-3 font-semibold text-900 align-middle">
+                                                    <td class="p-2 pl-3 font-semibold text-900 align-middle" style="min-width: 9rem; max-width: 18rem; word-break: break-word; white-space: normal;">
                                                         {{ itemRow.item || itemRow.product }}
                                                     </td>
-                                                    <td *ngFor="let col of getDynamicListKeys(itemRow)" class="p-2 text-center align-middle font-bold text-900">
+                                                    <td *ngFor="let col of getDynamicListKeys(itemRow)" 
+                                                        class="p-2 align-middle text-900"
+                                                        [class.text-center]="isDynamicListColNumeric(col, val)"
+                                                        [class.font-bold]="isDynamicListColNumeric(col, val)"
+                                                        [class.white-space-nowrap]="isDynamicListColNumeric(col, val)"
+                                                        [class.text-left]="!isDynamicListColNumeric(col, val)"
+                                                        [style.min-width]="isDynamicListColNumeric(col, val) ? '4.5rem' : '8rem'"
+                                                        [style.max-width]="isDynamicListColNumeric(col, val) ? 'none' : '22rem'"
+                                                        [style.word-break]="!isDynamicListColNumeric(col, val) ? 'break-word' : 'normal'"
+                                                        [style.white-space]="!isDynamicListColNumeric(col, val) ? 'normal' : 'nowrap'">
                                                         {{ itemRow[col] }}
                                                     </td>
                                                 </tr>
@@ -431,7 +497,16 @@
                                         </table>
                                     </div>
 
-                                    <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ formatValue(val) }}</span>
+                                    <!-- Multi-select / Array Badges read-only view -->
+                                    <div *ngIf="isMultiSelectValue(val.value)" class="flex flex-wrap gap-1 align-items-center surface-100 p-2 border-round w-full" style="min-height: 2.35rem;">
+                                        <p-tag *ngFor="let item of parseMultiSelect(val.value)" 
+                                               [value]="item" 
+                                               severity="info" 
+                                               [rounded]="true">
+                                        </p-tag>
+                                    </div>
+
+                                    <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value) && !isMultiSelectValue(val.value)">{{ formatValue(val) }}</span>
                                 </div>
                             </ng-container>
                         </div>
@@ -607,12 +682,14 @@
                                                   [placeholder]="field.placeholder || 'Seleccione productos / ítems...'"
                                                   [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-multiSelect>
  
-                                        <div class="border-round border-1 surface-border bg-white overflow-hidden w-full" *ngIf="(dynamicListRows[form.formId + '_' + field.name] || []).length > 0">
-                                            <table class="w-full text-sm text-left border-collapse">
+                                        <div class="border-round border-1 surface-border bg-white overflow-x-auto w-full" *ngIf="(dynamicListRows[form.formId + '_' + field.name] || []).length > 0">
+                                            <table class="w-full text-sm text-left border-collapse" style="min-width: 100%;">
                                                 <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
                                                     <tr>
-                                                        <th class="p-2 pl-3">Producto / Servicio</th>
-                                                        <th *ngFor="let sf of (field.metadata?.subFields || [{ label: 'Cantidad' }])" class="p-2 text-center" style="width: 12rem;">
+                                                        <th class="p-2 pl-3 white-space-nowrap" style="min-width: 9rem;">Producto / Servicio</th>
+                                                        <th *ngFor="let sf of (field.metadata?.subFields || [{ label: 'Cantidad' }])" 
+                                                            class="p-2 text-center white-space-nowrap" 
+                                                            [style.min-width]="(sf.type === 'number' || sf.type === 'decimal') ? '6rem' : '10rem'">
                                                             {{ sf.label }}
                                                         </th>
                                                         <th class="p-2 text-center" style="width: 3rem;" *ngIf="!field.isReadOnly"></th>
@@ -845,12 +922,14 @@
                                               [placeholder]="field.placeholder || 'Seleccione productos / ítems...'"
                                               [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-multiSelect>
 
-                                    <div class="border-round border-1 surface-border bg-white overflow-hidden w-full" *ngIf="(dynamicListRows[field.name] || []).length > 0">
-                                        <table class="w-full text-sm text-left border-collapse">
+                                    <div class="border-round border-1 surface-border bg-white overflow-x-auto w-full" *ngIf="(dynamicListRows[field.name] || []).length > 0">
+                                        <table class="w-full text-sm text-left border-collapse" style="min-width: 100%;">
                                             <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
                                                 <tr>
-                                                    <th class="p-2 pl-3">Producto / Servicio</th>
-                                                    <th *ngFor="let sf of (field.metadata?.subFields || [{ label: 'Cantidad' }])" class="p-2 text-center" style="width: 12rem;">
+                                                    <th class="p-2 pl-3 white-space-nowrap" style="min-width: 9rem;">Producto / Servicio</th>
+                                                    <th *ngFor="let sf of (field.metadata?.subFields || [{ label: 'Cantidad' }])" 
+                                                        class="p-2 text-center white-space-nowrap" 
+                                                        [style.min-width]="(sf.type === 'number' || sf.type === 'decimal') ? '6rem' : '10rem'">
                                                         {{ sf.label }}
                                                     </th>
                                                     <th class="p-2 text-center" style="width: 3rem;" *ngIf="!field.isReadOnly"></th>
@@ -1122,12 +1201,14 @@
                                                       [placeholder]="field.placeholder || 'Seleccione productos / ítems...'"
                                                       [disabled]="field.isReadOnly" class="w-full" [appendTo]="'body'"></p-multiSelect>
 
-                                            <div class="border-round border-1 surface-border bg-white overflow-hidden w-full" *ngIf="(dynamicListRows[mForm.formId + '_' + field.name] || []).length > 0">
-                                                <table class="w-full text-sm text-left border-collapse">
+                                            <div class="border-round border-1 surface-border bg-white overflow-x-auto w-full" *ngIf="(dynamicListRows[mForm.formId + '_' + field.name] || []).length > 0">
+                                                <table class="w-full text-sm text-left border-collapse" style="min-width: 100%;">
                                                     <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
                                                         <tr>
-                                                            <th class="p-2 pl-3">Producto / Servicio</th>
-                                                            <th *ngFor="let sf of (field.metadata?.subFields || [{ label: 'Cantidad' }])" class="p-2 text-center" style="width: 12rem;">
+                                                            <th class="p-2 pl-3 white-space-nowrap" style="min-width: 9rem;">Producto / Servicio</th>
+                                                            <th *ngFor="let sf of (field.metadata?.subFields || [{ label: 'Cantidad' }])" 
+                                                                class="p-2 text-center white-space-nowrap" 
+                                                                [style.min-width]="(sf.type === 'number' || sf.type === 'decimal') ? '6rem' : '10rem'">
                                                                 {{ sf.label }}
                                                             </th>
                                                             <th class="p-2 text-center" style="width: 3rem;" *ngIf="!field.isReadOnly"></th>
@@ -1367,7 +1448,7 @@
 
     <!-- Modal: Detalle Completo de la Solicitud -->
     <p-dialog [header]="'Detalle de la Solicitud' + (selectedDetails()?.formName ? ': ' + selectedDetails().formName : '')" [(visible)]="showDetailsDialog" 
-              [modal]="true" [style]="{width: '650px', 'max-width': '95vw'}" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
+              [modal]="true" [style]="{width: getDynamicDialogWidth(selectedDetails(), detailsParentFormGroups()), 'max-width': '96vw'}" [maximizable]="true" [draggable]="false" [resizable]="false" styleClass="p-fluid border-round-xl">
         <!-- Spinner mientras carga la información -->
         <div *ngIf="loadingDetails()" class="flex flex-column align-items-center justify-content-center p-5 gap-3">
             <p-progressSpinner></p-progressSpinner>
@@ -1391,7 +1472,9 @@
                             </div>
 
                             <!-- Regular Field Value -->
-                            <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" class="col-12 md:col-6 flex flex-column gap-1">
+                            <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" 
+                                 class="col-12 flex flex-column gap-1"
+                                 [class.md:col-6]="!shouldDynamicListSpanFullWidth(val)">
                                 <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                                 <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                     <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
@@ -1403,22 +1486,36 @@
                                 </div>
 
                                 <!-- Dynamic List read-only view -->
-                                <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full text-xs">
-                                    <table class="w-full text-left border-collapse">
+                                <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-x-auto w-full text-xs">
+                                    <table class="w-full text-left border-collapse" style="min-width: 100%;">
                                         <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
                                             <tr>
-                                                <th class="p-2 pl-3">Producto / Servicio</th>
-                                                <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" class="p-2 text-center" style="width: 8rem;">
+                                                <th class="p-2 pl-3 white-space-nowrap" style="min-width: 9rem; max-width: 18rem;">Producto / Servicio</th>
+                                                <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" 
+                                                    class="p-2 white-space-nowrap"
+                                                    [class.text-center]="isDynamicListColNumeric(col, val)"
+                                                    [class.text-left]="!isDynamicListColNumeric(col, val)"
+                                                    [style.min-width]="isDynamicListColNumeric(col, val) ? '4.5rem' : '8rem'"
+                                                    [style.max-width]="isDynamicListColNumeric(col, val) ? 'none' : '22rem'">
                                                     {{ formatLabel(col) }}
                                                 </th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <tr *ngFor="let itemRow of parseDynamicList(val.value)" class="border-bottom-1 surface-border hover:bg-50">
-                                                <td class="p-2 pl-3 font-semibold text-900 align-middle">
+                                                <td class="p-2 pl-3 font-semibold text-900 align-middle" style="min-width: 9rem; max-width: 18rem; word-break: break-word; white-space: normal;">
                                                     {{ itemRow.item || itemRow.product }}
                                                 </td>
-                                                <td *ngFor="let col of getDynamicListKeys(itemRow)" class="p-2 text-center align-middle font-bold text-900">
+                                                <td *ngFor="let col of getDynamicListKeys(itemRow)" 
+                                                    class="p-2 align-middle text-900"
+                                                    [class.text-center]="isDynamicListColNumeric(col, val)"
+                                                    [class.font-bold]="isDynamicListColNumeric(col, val)"
+                                                    [class.white-space-nowrap]="isDynamicListColNumeric(col, val)"
+                                                    [class.text-left]="!isDynamicListColNumeric(col, val)"
+                                                    [style.min-width]="isDynamicListColNumeric(col, val) ? '4.5rem' : '8rem'"
+                                                    [style.max-width]="isDynamicListColNumeric(col, val) ? 'none' : '22rem'"
+                                                    [style.word-break]="!isDynamicListColNumeric(col, val) ? 'break-word' : 'normal'"
+                                                    [style.white-space]="!isDynamicListColNumeric(col, val) ? 'normal' : 'nowrap'">
                                                     {{ itemRow[col] }}
                                                 </td>
                                             </tr>
@@ -1426,7 +1523,16 @@
                                     </table>
                                 </div>
 
-                                <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ formatValue(val) }}</span>
+                                <!-- Multi-select / Array Badges read-only view -->
+                                <div *ngIf="isMultiSelectValue(val.value)" class="flex flex-wrap gap-1 align-items-center surface-100 p-2 border-round w-full" style="min-height: 2.35rem;">
+                                    <p-tag *ngFor="let item of parseMultiSelect(val.value)" 
+                                           [value]="item" 
+                                           severity="info" 
+                                           [rounded]="true">
+                                    </p-tag>
+                                </div>
+
+                                <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value) && !isMultiSelectValue(val.value)">{{ formatValue(val) }}</span>
                             </div>
                         </ng-container>
                     </div>
@@ -1446,7 +1552,9 @@
                         </div>
 
                         <!-- Regular Field Value -->
-                        <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" class="col-12 md:col-6 flex flex-column gap-1">
+                        <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" 
+                             class="col-12 flex flex-column gap-1"
+                             [class.md:col-6]="!shouldDynamicListSpanFullWidth(val)">
                             <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                             <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                 <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
@@ -1458,22 +1566,36 @@
                             </div>
 
                             <!-- Dynamic List read-only view -->
-                            <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full text-xs">
-                                <table class="w-full text-left border-collapse">
+                            <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-x-auto w-full text-xs">
+                                <table class="w-full text-left border-collapse" style="min-width: 100%;">
                                     <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
                                         <tr>
-                                            <th class="p-2 pl-3">Producto / Servicio</th>
-                                            <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" class="p-2 text-center" style="width: 8rem;">
+                                            <th class="p-2 pl-3 white-space-nowrap" style="min-width: 9rem; max-width: 18rem;">Producto / Servicio</th>
+                                            <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" 
+                                                class="p-2 white-space-nowrap"
+                                                [class.text-center]="isDynamicListColNumeric(col, val)"
+                                                [class.text-left]="!isDynamicListColNumeric(col, val)"
+                                                [style.min-width]="isDynamicListColNumeric(col, val) ? '4.5rem' : '8rem'"
+                                                [style.max-width]="isDynamicListColNumeric(col, val) ? 'none' : '22rem'">
                                                 {{ formatLabel(col) }}
                                             </th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr *ngFor="let itemRow of parseDynamicList(val.value)" class="border-bottom-1 surface-border hover:bg-50">
-                                            <td class="p-2 pl-3 font-semibold text-900 align-middle">
+                                            <td class="p-2 pl-3 font-semibold text-900 align-middle" style="min-width: 9rem; max-width: 18rem; word-break: break-word; white-space: normal;">
                                                 {{ itemRow.item || itemRow.product }}
                                             </td>
-                                            <td *ngFor="let col of getDynamicListKeys(itemRow)" class="p-2 text-center align-middle font-bold text-900">
+                                            <td *ngFor="let col of getDynamicListKeys(itemRow)" 
+                                                class="p-2 align-middle text-900"
+                                                [class.text-center]="isDynamicListColNumeric(col, val)"
+                                                [class.font-bold]="isDynamicListColNumeric(col, val)"
+                                                [class.white-space-nowrap]="isDynamicListColNumeric(col, val)"
+                                                [class.text-left]="!isDynamicListColNumeric(col, val)"
+                                                [style.min-width]="isDynamicListColNumeric(col, val) ? '4.5rem' : '8rem'"
+                                                [style.max-width]="isDynamicListColNumeric(col, val) ? 'none' : '22rem'"
+                                                [style.word-break]="!isDynamicListColNumeric(col, val) ? 'break-word' : 'normal'"
+                                                [style.white-space]="!isDynamicListColNumeric(col, val) ? 'normal' : 'nowrap'">
                                                 {{ itemRow[col] }}
                                             </td>
                                         </tr>
@@ -1481,7 +1603,16 @@
                                 </table>
                             </div>
 
-                            <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ formatValue(val) }}</span>
+                            <!-- Multi-select / Array Badges read-only view -->
+                            <div *ngIf="isMultiSelectValue(val.value)" class="flex flex-wrap gap-1 align-items-center surface-100 p-2 border-round w-full" style="min-height: 2.35rem;">
+                                <p-tag *ngFor="let item of parseMultiSelect(val.value)" 
+                                       [value]="item" 
+                                       severity="info" 
+                                       [rounded]="true">
+                                </p-tag>
+                            </div>
+
+                            <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value) && !isMultiSelectValue(val.value)">{{ formatValue(val) }}</span>
                         </div>
                     </ng-container>
                 </div>
@@ -1525,7 +1656,9 @@
                                 </div>
 
                                 <!-- Regular Field Value -->
-                                <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" class="col-12 md:col-6 flex flex-column gap-1">
+                                <div *ngIf="val.fieldType !== 'section_header' && hasValue(val.value)" 
+                                     class="col-12 flex flex-column gap-1"
+                                     [class.md:col-6]="!shouldDynamicListSpanFullWidth(val)">
                                     <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                                     <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                         <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
@@ -1537,22 +1670,36 @@
                                     </div>
 
                                     <!-- Dynamic List read-only view -->
-                                    <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-hidden w-full text-xs">
-                                        <table class="w-full text-left border-collapse">
+                                    <div *ngIf="isDynamicListValue(val.value)" class="border-round border-1 surface-border bg-white overflow-x-auto w-full text-xs">
+                                        <table class="w-full text-left border-collapse" style="min-width: 100%;">
                                             <thead class="bg-50 font-bold text-700 border-bottom-1 surface-border">
                                                 <tr>
-                                                    <th class="p-2 pl-3">Producto / Servicio</th>
-                                                    <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" class="p-2 text-center" style="width: 8rem;">
+                                                    <th class="p-2 pl-3 white-space-nowrap" style="min-width: 9rem; max-width: 18rem;">Producto / Servicio</th>
+                                                    <th *ngFor="let col of getDynamicListKeys(parseDynamicList(val.value)[0])" 
+                                                        class="p-2 white-space-nowrap"
+                                                        [class.text-center]="isDynamicListColNumeric(col, val)"
+                                                        [class.text-left]="!isDynamicListColNumeric(col, val)"
+                                                        [style.min-width]="isDynamicListColNumeric(col, val) ? '4.5rem' : '8rem'"
+                                                        [style.max-width]="isDynamicListColNumeric(col, val) ? 'none' : '22rem'">
                                                         {{ formatLabel(col) }}
                                                     </th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <tr *ngFor="let itemRow of parseDynamicList(val.value)" class="border-bottom-1 surface-border hover:bg-50">
-                                                    <td class="p-2 pl-3 font-semibold text-900 align-middle">
+                                                    <td class="p-2 pl-3 font-semibold text-900 align-middle" style="min-width: 9rem; max-width: 18rem; word-break: break-word; white-space: normal;">
                                                         {{ itemRow.item || itemRow.product }}
                                                     </td>
-                                                    <td *ngFor="let col of getDynamicListKeys(itemRow)" class="p-2 text-center align-middle font-bold text-900">
+                                                    <td *ngFor="let col of getDynamicListKeys(itemRow)" 
+                                                        class="p-2 align-middle text-900"
+                                                        [class.text-center]="isDynamicListColNumeric(col, val)"
+                                                        [class.font-bold]="isDynamicListColNumeric(col, val)"
+                                                        [class.white-space-nowrap]="isDynamicListColNumeric(col, val)"
+                                                        [class.text-left]="!isDynamicListColNumeric(col, val)"
+                                                        [style.min-width]="isDynamicListColNumeric(col, val) ? '4.5rem' : '8rem'"
+                                                        [style.max-width]="isDynamicListColNumeric(col, val) ? 'none' : '22rem'"
+                                                        [style.word-break]="!isDynamicListColNumeric(col, val) ? 'break-word' : 'normal'"
+                                                        [style.white-space]="!isDynamicListColNumeric(col, val) ? 'normal' : 'nowrap'">
                                                         {{ itemRow[col] }}
                                                     </td>
                                                 </tr>
@@ -1560,7 +1707,16 @@
                                         </table>
                                     </div>
 
-                                    <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value)">{{ formatValue(val) }}</span>
+                                    <!-- Multi-select / Array Badges read-only view -->
+                                    <div *ngIf="isMultiSelectValue(val.value)" class="flex flex-wrap gap-1 align-items-center surface-100 p-2 border-round w-full" style="min-height: 2.35rem;">
+                                        <p-tag *ngFor="let item of parseMultiSelect(val.value)" 
+                                               [value]="item" 
+                                               severity="info" 
+                                               [rounded]="true">
+                                        </p-tag>
+                                    </div>
+
+                                    <span class="text-900 font-semibold text-sm surface-100 p-2 border-round w-full block" *ngIf="!isFileListValue(val.value) && !isDynamicListValue(val.value) && !isMultiSelectValue(val.value)">{{ formatValue(val) }}</span>
                                 </div>
                             </ng-container>
                         </div>

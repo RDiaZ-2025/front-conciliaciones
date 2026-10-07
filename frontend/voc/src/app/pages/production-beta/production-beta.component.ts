@@ -1686,6 +1686,9 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   formatValue(val: any): string {
     if (!val || val.value === undefined || val.value === null) return '';
     const rawValue = String(val.value);
+    if (this.isMultiSelectValue(val.value)) {
+      return this.parseMultiSelect(val.value).join(', ');
+    }
     if (val.fieldType === 'number' || val.fieldType === 'decimal') {
       const format = val.metadata?.numberFormat || 'none';
       if (format === 'none') return rawValue;
@@ -2253,6 +2256,56 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }
   }
 
+  private multiSelectCache = new Map<string, string[]>();
+
+  isMultiSelectValue(val: any): boolean {
+    if (!val) return false;
+    if (this.isFileListValue(val) || this.isDynamicListValue(val)) return false;
+    if (Array.isArray(val)) {
+      return val.length > 0 && val.every(item => typeof item === 'string' || typeof item === 'number');
+    }
+    if (typeof val !== 'string') return false;
+    const trimmed = val.trim();
+    if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) return false;
+    const items = this.parseMultiSelect(val);
+    return items.length > 0;
+  }
+
+  parseMultiSelect(val: any): string[] {
+    if (!val) return [];
+    if (Array.isArray(val)) {
+      return val.map(item => String(item).trim()).filter(Boolean);
+    }
+    if (typeof val !== 'string') return [];
+    if (this.multiSelectCache.has(val)) {
+      return this.multiSelectCache.get(val)!;
+    }
+    const raw = val.trim();
+    if (raw.startsWith('[') && raw.endsWith(']')) {
+      try {
+        let clean = raw;
+        if (clean.includes('""')) {
+          clean = clean.replace(/""/g, '"');
+        }
+        const parsed = JSON.parse(clean);
+        if (Array.isArray(parsed)) {
+          if (parsed.length > 0 && typeof parsed[0] === 'object' && parsed[0] !== null) {
+            return [];
+          }
+          const res = parsed.map(item => String(item).trim()).filter(Boolean);
+          this.multiSelectCache.set(val, res);
+          return res;
+        }
+      } catch (e) {
+        const inner = raw.slice(1, -1);
+        const parts = inner.split(',').map(s => s.replace(/^["'\s]+|["'\s]+$/g, '').trim()).filter(Boolean);
+        this.multiSelectCache.set(val, parts);
+        return parts;
+      }
+    }
+    return [];
+  }
+
   async uploadStageFilesAndAction(task: any, action: 'approve' | 'reject', notes: string) {
     this.loadingAction.set(true);
 
@@ -2801,6 +2854,180 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Evaluates if a dynamic_list field should span full width (both columns, col-12)
+   * in read-only / historical views.
+   * Rule: Full width (2 columns) if:
+   *   1. It has more than 2 numeric fields (> 2)
+   *   2. OR it has at least 1 string/text field (>= 1)
+   */
+  shouldDynamicListSpanFullWidth(val: any): boolean {
+    if (!val || !this.isDynamicListValue(val.value)) return false;
+
+    // Check metadata subFields first if available
+    let metadata = val.metadata || val.field?.metadata;
+    if (typeof metadata === 'string') {
+      try { metadata = JSON.parse(metadata); } catch {}
+    }
+    const subFields: any[] = metadata?.subFields;
+
+    if (Array.isArray(subFields) && subFields.length > 0) {
+      let numericCount = 0;
+      let hasStringField = false;
+
+      for (const sf of subFields) {
+        const type = (sf.type || '').toLowerCase().trim();
+        if (type === 'number' || type === 'decimal') {
+          numericCount++;
+        } else {
+          hasStringField = true;
+        }
+      }
+
+      if (hasStringField || numericCount > 2) {
+        return true;
+      }
+      return false;
+    }
+
+    // Fallback: analyze data rows directly
+    const rows = this.parseDynamicList(val.value);
+    if (!rows || rows.length === 0) return false;
+
+    const firstRow = rows[0];
+    const keys = this.getDynamicListKeys(firstRow);
+
+    let numericCount = 0;
+    let hasStringField = false;
+
+    for (const k of keys) {
+      let isNumeric = true;
+      let hasValue = false;
+
+      for (const r of rows) {
+        const cell = r[k];
+        if (cell !== null && cell !== undefined && cell !== '') {
+          hasValue = true;
+          if (typeof cell === 'number') {
+            // numeric
+          } else if (typeof cell === 'string') {
+            const trimmed = cell.trim();
+            const num = Number(trimmed.replace(',', '.'));
+            if (trimmed === '' || isNaN(num)) {
+              isNumeric = false;
+              break;
+            }
+          } else {
+            isNumeric = false;
+            break;
+          }
+        }
+      }
+
+      if (hasValue && !isNumeric) {
+        hasStringField = true;
+      } else {
+        numericCount++;
+      }
+    }
+
+    return hasStringField || numericCount > 2;
+  }
+
+  /**
+   * Checks whether a specific column in dynamic_list is numeric
+   * to align it centered (numbers) or left-aligned with proper width (text).
+   */
+  isDynamicListColNumeric(col: string, val: any): boolean {
+    if (!col || !val) return true;
+
+    let metadata = val.metadata || val.field?.metadata;
+    if (typeof metadata === 'string') {
+      try { metadata = JSON.parse(metadata); } catch {}
+    }
+    const subFields: any[] = metadata?.subFields;
+
+    if (Array.isArray(subFields) && subFields.length > 0) {
+      const sf = subFields.find(f => (f.name || '').toLowerCase() === col.toLowerCase() || (f.label || '').toLowerCase() === col.toLowerCase());
+      if (sf) {
+        const type = (sf.type || '').toLowerCase().trim();
+        return type === 'number' || type === 'decimal';
+      }
+    }
+
+    const rows = this.parseDynamicList(val.value);
+    if (!rows || rows.length === 0) return true;
+
+    for (const r of rows) {
+      const cell = r[col];
+      if (cell !== null && cell !== undefined && cell !== '') {
+        if (typeof cell === 'number') return true;
+        const trimmed = String(cell).trim();
+        const num = Number(trimmed.replace(',', '.'));
+        if (trimmed !== '' && !isNaN(num)) return true;
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Dynamically calculates modal width based on whether the submission contains
+   * wide tables/dynamic lists and how many columns they have.
+   */
+  getDynamicDialogWidth(target?: any, parentGroups?: any[]): string {
+    let maxCols = 0;
+    const checkVal = (v: any) => {
+      const valStr = typeof v === 'object' && v !== null ? v.value : v;
+      if (this.isDynamicListValue(valStr)) {
+        const rows = this.parseDynamicList(valStr);
+        if (rows && rows.length > 0) {
+          const keys = this.getDynamicListKeys(rows[0]);
+          if (keys.length > maxCols) {
+            maxCols = keys.length;
+          }
+        }
+      }
+    };
+
+    if (target?.values && Array.isArray(target.values)) {
+      target.values.forEach(checkVal);
+    }
+    if (parentGroups && Array.isArray(parentGroups)) {
+      parentGroups.forEach(g => {
+        if (g?.values && Array.isArray(g.values)) {
+          g.values.forEach(checkVal);
+        }
+      });
+    }
+    if (target?.parentValues && Array.isArray(target.parentValues)) {
+      target.parentValues.forEach(checkVal);
+    }
+    if (target?.historyStages && Array.isArray(target.historyStages)) {
+      target.historyStages.forEach((s: any) => {
+        if (s?.values && Array.isArray(s.values)) {
+          s.values.forEach(checkVal);
+        }
+      });
+    }
+    if (this.dynamicListRows) {
+      Object.values(this.dynamicListRows).forEach((rows: any) => {
+        if (Array.isArray(rows) && rows.length > 0) {
+          const keys = Object.keys(rows[0]).filter(k => k !== 'item' && k !== 'product');
+          if (keys.length > maxCols) {
+            maxCols = keys.length;
+          }
+        }
+      });
+    }
+
+    if (maxCols >= 7) return '1150px';
+    if (maxCols >= 4) return '920px';
+    if (maxCols >= 2) return '820px';
+    return '720px';
   }
 
   private parsedListCache = new Map<string, any[]>();
