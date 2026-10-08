@@ -2229,7 +2229,9 @@ export class ProductionService {
             const isCorrection = (state.submission.status === 'Rejected');
             const rootRequesterId = parentSubmissions.length > 0 ? parentSubmissions[0].requesterUserId : state.submission.requesterUserId;
             const isRequesterUser = (state.assignedUserId === state.submission.requesterUserId || state.assignedUserId === rootRequesterId);
-            const isInitialRequestCorrection = isCorrection && isRequesterUser;
+            const hasPriorApprovedState = allStatesToInclude.some(cs => cs.status === 'Approved' && cs.id < state.id);
+            const hasStageFormToFill = !!(state.customFormIdToFill || (state.stage?.formIdToFill && (state.stage.stepOrder > 1 || hasPriorApprovedState)));
+            const isInitialRequestCorrection = isCorrection && isRequesterUser && !hasStageFormToFill;
             const statesForHistory = allStatesToInclude.filter(cs => cs.id !== state.id);
 
             const historyStages = statesForHistory.map((cState) => {
@@ -3559,10 +3561,11 @@ export class ProductionService {
                 let targetStageId: number = stage.id;
                 let targetCustomFormIdToFill: number | null = null;
                 const targetType = stage.rejectionTargetType || 'previous_sender';
+                let prevState: any = null;
 
                 if (targetType === 'previous_sender') {
 
-                    const prevState = await stateRepo.findOne({
+                    prevState = await stateRepo.findOne({
                         where: { submissionId: submission.id, status: 'Approved' },
                         order: { updatedAt: 'DESC' },
                         relations: ['stage', 'stage.formToFill']
@@ -3607,14 +3610,13 @@ export class ProductionService {
                 }
 
                 if (!targetUserId) targetUserId = submission.requesterUserId;
-                if (targetUserId === submission.requesterUserId) {
-                    targetCustomFormIdToFill = null;
-                }
+                const isReturningToInitialRequest = (!prevState && !targetCustomFormIdToFill && targetUserId === submission.requesterUserId);
 
                 submission.status = 'Rejected';
 
-                if (targetUserId === submission.requesterUserId && !targetCustomFormIdToFill && !submission.parentSubmissionId) {
+                if (isReturningToInitialRequest && !submission.parentSubmissionId) {
                     submission.currentStageId = null;
+                    targetCustomFormIdToFill = null;
                 } else {
                     submission.currentStageId = targetStageId;
                 }
