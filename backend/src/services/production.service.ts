@@ -1096,9 +1096,6 @@ export class ProductionService {
              } else if (stageVals.length > 0 && stageVals[0].field?.form) {
                  resolvedForm = stageVals[0].field.form;
                  resolvedFormId = stageVals[0].field.formId;
-             } else if ((cState as any).submission?.form) {
-                 resolvedForm = (cState as any).submission.form;
-                 resolvedFormId = (cState as any).submission.formId;
              }
 
              if (stageVals.length === 0 && isChildSub && resolvedFormId && (!cState.stage || cState.stage.stepOrder === 1) && cState.status === 'Approved' && !cState.notes?.toLowerCase().includes('rechaz')) {
@@ -2269,9 +2266,6 @@ export class ProductionService {
                 } else if (stageVals.length > 0 && stageVals[0].field?.form) {
                     resolvedForm = stageVals[0].field.form;
                     resolvedFormId = stageVals[0].field.formId;
-                } else if ((cState as any).submission?.form) {
-                    resolvedForm = (cState as any).submission.form;
-                    resolvedFormId = (cState as any).submission.formId;
                 }
 
                 if (stageVals.length === 0 && isChildSub && resolvedFormId && (!cState.stage || cState.stage.stepOrder === 1) && cState.status === 'Approved' && !cState.notes?.toLowerCase().includes('rechaz')) {
