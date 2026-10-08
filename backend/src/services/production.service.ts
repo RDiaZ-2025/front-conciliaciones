@@ -1062,15 +1062,20 @@ export class ProductionService {
 
          const historyStages = allStatesToInclude.map((cState) => {
              const isChildSub = cState.submissionId !== sub.id;
-             let resolvedForm = cState.customFormToFill || cState.stage?.formToFill || (isChildSub ? (cState as any).submission?.form : null);
-             let resolvedFormId = cState.customFormIdToFill || cState.stage?.formIdToFill || (isChildSub ? (cState as any).submission?.formId : null);
              let stageVals = allValuesToInclude.filter(v => v && v.field && v.workflowStateId === cState.id);
 
-             if (stageVals.length === 0 && isChildSub && resolvedFormId && (!cState.stage || cState.stage.stepOrder === 1) && cState.status === 'Approved' && !cState.notes?.toLowerCase().includes('rechaz')) {
-                 stageVals = allValuesToInclude.filter(v => v && v.field && v.submissionId === cState.submissionId && !v.workflowStateId && v.field.formId === resolvedFormId);
-             }
+             const isRequesterAction = (cState.actionedByUserId && (cState as any).submission?.requesterUserId && cState.actionedByUserId === (cState as any).submission?.requesterUserId);
+             const isRequesterAssigned = (cState.assignedUserId && (cState as any).submission?.requesterUserId && cState.assignedUserId === (cState as any).submission?.requesterUserId);
+             const isCorrectionState = (cState.status === 'Approved' && (isRequesterAction || isRequesterAssigned)) ||
+                 (cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir')));
 
-             if (!resolvedForm) {
+             let resolvedForm = null;
+             let resolvedFormId = null;
+
+             if (cState.customFormToFill) {
+                 resolvedForm = cState.customFormToFill;
+                 resolvedFormId = cState.customFormIdToFill;
+             } else if (isCorrectionState) {
                  if (stageVals.length > 0 && stageVals[0].field?.form) {
                      resolvedForm = stageVals[0].field.form;
                      resolvedFormId = stageVals[0].field.formId;
@@ -1078,6 +1083,25 @@ export class ProductionService {
                      resolvedForm = (cState as any).submission.form;
                      resolvedFormId = (cState as any).submission.formId;
                  }
+             } else if (stageVals.length > 0 && stageVals[0].field?.form && cState.stage?.formToFill && stageVals[0].field.formId !== cState.stage.formIdToFill) {
+                 resolvedForm = stageVals[0].field.form;
+                 resolvedFormId = stageVals[0].field.formId;
+             } else if (cState.stage?.formToFill) {
+                 resolvedForm = cState.stage.formToFill;
+                 resolvedFormId = cState.stage.formIdToFill;
+             } else if (isChildSub && (cState as any).submission?.form) {
+                 resolvedForm = (cState as any).submission.form;
+                 resolvedFormId = (cState as any).submission.formId;
+             } else if (stageVals.length > 0 && stageVals[0].field?.form) {
+                 resolvedForm = stageVals[0].field.form;
+                 resolvedFormId = stageVals[0].field.formId;
+             } else if ((cState as any).submission?.form) {
+                 resolvedForm = (cState as any).submission.form;
+                 resolvedFormId = (cState as any).submission.formId;
+             }
+
+             if (stageVals.length === 0 && isChildSub && resolvedFormId && (!cState.stage || cState.stage.stepOrder === 1) && cState.status === 'Approved' && !cState.notes?.toLowerCase().includes('rechaz')) {
+                 stageVals = allValuesToInclude.filter(v => v && v.field && v.submissionId === cState.submissionId && !v.workflowStateId && v.field.formId === resolvedFormId);
              }
 
              const user = cState.actionedByUser || cState.assignedUser;
@@ -1141,6 +1165,20 @@ export class ProductionService {
                                      fieldType: field.type,
                                      metadata: parsedMeta || {}
                                  };
+                             }
+                             // Fallback for approved/corrected stages so unchanged fields are also visible
+                             if (cState.status === 'Approved' || isCorrectionState) {
+                                 const fallbackVal = allValuesToInclude
+                                     .filter(v => v && v.fieldId === field.id && (!v.workflowStateId || v.workflowStateId <= cState.id))
+                                     .sort((a, b) => b.id - a.id)[0];
+                                 if (fallbackVal && fallbackVal.value !== undefined && fallbackVal.value !== null && fallbackVal.value !== '') {
+                                     return {
+                                         label: field.label,
+                                         value: fallbackVal.value,
+                                         fieldType: field.type,
+                                         metadata: parsedMeta || {}
+                                     };
+                                 }
                              }
                              return null;
                          }).filter(Boolean);
@@ -2184,27 +2222,29 @@ export class ProductionService {
                 }
             }
 
+            const parentSubmissions = await this.getAncestorSubmissions(state.submissionId);
             const isCorrection = (state.submission.status === 'Rejected');
-            const hasPriorApprovedStages = allStatesToInclude.some(cs => cs.status === 'Approved');
-            const isInitialRequestCorrection = isCorrection &&
-                (state.assignedUserId === state.submission.requesterUserId) &&
-                !state.customFormIdToFill &&
-                !hasPriorApprovedStages &&
-                !state.submission.parentSubmissionId;
+            const rootRequesterId = parentSubmissions.length > 0 ? parentSubmissions[0].requesterUserId : state.submission.requesterUserId;
+            const isRequesterUser = (state.assignedUserId === state.submission.requesterUserId || state.assignedUserId === rootRequesterId);
+            const isInitialRequestCorrection = isCorrection && isRequesterUser;
             const statesForHistory = allStatesToInclude.filter(cs => cs.id !== state.id);
 
             const historyStages = statesForHistory.map((cState) => {
                 const isChildSub = cState.submissionId !== state.submissionId;
-                let resolvedForm = cState.customFormToFill || cState.stage?.formToFill || (isChildSub ? (cState as any).submission?.form : null);
-                let resolvedFormId = cState.customFormIdToFill || cState.stage?.formIdToFill || (isChildSub ? (cState as any).submission?.formId : null);
-
                 let stageVals = allValuesToInclude.filter(v => v && v.field && v.workflowStateId === cState.id);
 
-                if (stageVals.length === 0 && isChildSub && resolvedFormId && (!cState.stage || cState.stage.stepOrder === 1) && cState.status === 'Approved' && !cState.notes?.toLowerCase().includes('rechaz')) {
-                    stageVals = allValuesToInclude.filter(v => v && v.field && v.submissionId === cState.submissionId && !v.workflowStateId && v.field.formId === resolvedFormId);
-                }
+                const isRequesterAction = (cState.actionedByUserId && (cState as any).submission?.requesterUserId && cState.actionedByUserId === (cState as any).submission?.requesterUserId);
+                const isRequesterAssigned = (cState.assignedUserId && (cState as any).submission?.requesterUserId && cState.assignedUserId === (cState as any).submission?.requesterUserId);
+                const isCorrectionState = (cState.status === 'Approved' && (isRequesterAction || isRequesterAssigned)) ||
+                    (cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir')));
 
-                if (!resolvedForm) {
+                let resolvedForm = null;
+                let resolvedFormId = null;
+
+                if (cState.customFormToFill) {
+                    resolvedForm = cState.customFormToFill;
+                    resolvedFormId = cState.customFormIdToFill;
+                } else if (isCorrectionState) {
                     if (stageVals.length > 0 && stageVals[0].field?.form) {
                         resolvedForm = stageVals[0].field.form;
                         resolvedFormId = stageVals[0].field.formId;
@@ -2212,6 +2252,25 @@ export class ProductionService {
                         resolvedForm = (cState as any).submission.form;
                         resolvedFormId = (cState as any).submission.formId;
                     }
+                } else if (stageVals.length > 0 && stageVals[0].field?.form && cState.stage?.formToFill && stageVals[0].field.formId !== cState.stage.formIdToFill) {
+                    resolvedForm = stageVals[0].field.form;
+                    resolvedFormId = stageVals[0].field.formId;
+                } else if (cState.stage?.formToFill) {
+                    resolvedForm = cState.stage.formToFill;
+                    resolvedFormId = cState.stage.formIdToFill;
+                } else if (isChildSub && (cState as any).submission?.form) {
+                    resolvedForm = (cState as any).submission.form;
+                    resolvedFormId = (cState as any).submission.formId;
+                } else if (stageVals.length > 0 && stageVals[0].field?.form) {
+                    resolvedForm = stageVals[0].field.form;
+                    resolvedFormId = stageVals[0].field.formId;
+                } else if ((cState as any).submission?.form) {
+                    resolvedForm = (cState as any).submission.form;
+                    resolvedFormId = (cState as any).submission.formId;
+                }
+
+                if (stageVals.length === 0 && isChildSub && resolvedFormId && (!cState.stage || cState.stage.stepOrder === 1) && cState.status === 'Approved' && !cState.notes?.toLowerCase().includes('rechaz')) {
+                    stageVals = allValuesToInclude.filter(v => v && v.field && v.submissionId === cState.submissionId && !v.workflowStateId && v.field.formId === resolvedFormId);
                 }
 
                 const user = cState.actionedByUser || cState.assignedUser;
@@ -2274,6 +2333,20 @@ export class ProductionService {
                                       metadata: parsedMeta || {}
                                   };
                               }
+                              // Fallback for approved/corrected stages so unchanged fields are also visible
+                              if (cState.status === 'Approved' || isCorrectionState) {
+                                  const fallbackVal = allValuesToInclude
+                                      .filter(v => v && v.fieldId === field.id && (!v.workflowStateId || v.workflowStateId <= cState.id))
+                                      .sort((a, b) => b.id - a.id)[0];
+                                  if (fallbackVal && fallbackVal.value !== undefined && fallbackVal.value !== null && fallbackVal.value !== '') {
+                                      return {
+                                          label: field.label,
+                                          value: fallbackVal.value,
+                                          fieldType: field.type,
+                                          metadata: parsedMeta || {}
+                                      };
+                                  }
+                              }
                               return null;
                           }).filter(Boolean);
                       } else if (stageVals.length > 0) {
@@ -2317,7 +2390,6 @@ export class ProductionService {
                 };
             });
 
-            const parentSubmissions = await this.getAncestorSubmissions(state.submissionId);
             const initialParentSubmissions = parentSubmissions.filter(p => p.form && (p.form.isInitialForm || p.form.isEntryForm || !p.parentSubmissionId));
             const parentSubIds = initialParentSubmissions.map(p => p.id);
             const parentVals: any[] = [];
@@ -2348,9 +2420,7 @@ export class ProductionService {
             const parentForms = [];
             if (isInitialRequestCorrection) {
                 const seenFormIds = new Set<number>();
-                const submissionsToCorrect = (parentSubmissions && parentSubmissions.length > 0)
-                    ? parentSubmissions
-                    : [state.submission];
+                const submissionsToCorrect = [...(parentSubmissions || []), state.submission];
                 const fieldRepo = AppDataSource.getRepository(DynamicFormField);
                 for (const pSub of submissionsToCorrect) {
                     if (seenFormIds.has(pSub.formId)) continue;
@@ -2360,13 +2430,13 @@ export class ProductionService {
                         where: { formId: pSub.formId, isActive: true },
                         order: { displayOrder: 'ASC' }
                     });
-                    const pSubVals = await valRepo.find({
-                        where: { submissionId: pSub.id },
-                        relations: ['field']
-                    });
 
                     const mappedFields = fields.map((f: any) => {
-                        const valObj = pSubVals.find(v => v.fieldId === f.id);
+                        const matchingVals = allValuesToInclude.filter(v => v && v.fieldId === f.id);
+                        const latestVal = matchingVals.length > 0
+                            ? matchingVals.reduce((prev, curr) => (curr.id > prev.id ? curr : prev))
+                            : null;
+
                         let parsedMeta = f.metadata;
                         if (parsedMeta && typeof parsedMeta === 'string') {
                             try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
@@ -2385,7 +2455,7 @@ export class ProductionService {
                             defaultValueExpression: f.defaultValueExpression,
                             formulaExpression: f.formulaExpression,
                             visibilityCondition: f.visibilityCondition,
-                            value: valObj ? valObj.value : ''
+                            value: latestVal ? (latestVal.value ?? '') : ''
                         };
                     });
 
@@ -3560,7 +3630,7 @@ export class ProductionService {
                         } else {
                             targetUserId = submission.requesterUserId;
                             targetStageId = stage.id;
-                            targetCustomFormIdToFill = stage.formIdToFill || null;
+                            targetCustomFormIdToFill = null;
                         }
                     } else {
                         targetUserId = submission.requesterUserId;
@@ -3582,6 +3652,9 @@ export class ProductionService {
                 }
 
                 if (!targetUserId) targetUserId = submission.requesterUserId;
+                if (targetUserId === submission.requesterUserId) {
+                    targetCustomFormIdToFill = null;
+                }
 
                 submission.status = 'Rejected';
 
