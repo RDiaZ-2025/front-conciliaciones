@@ -3162,17 +3162,12 @@ export class ProductionService {
             const submission = currentState.submission;
             const stage = currentState.stage;
 
-            const lastRejectionState = await stateRepo.findOne({
+            const isCorrection = (submission.status === 'Rejected');
+            const lastRejectionState = isCorrection ? await stateRepo.findOne({
                 where: { submissionId: submission.id, status: 'Rejected' },
                 order: { id: 'DESC' },
                 relations: ['stage']
-            });
-
-            const isCorrection = (submission.status === 'Rejected') ||
-                (lastRejectionState !== null && (
-                    currentState.status === 'Pending' ||
-                    (currentState.notes && (currentState.notes.toLowerCase().includes('correg') || currentState.notes.toLowerCase().includes('corrección')))
-                ));
+            }) : null;
 
             if (isCorrection) {
                 if (formValues) {
