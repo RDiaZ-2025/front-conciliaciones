@@ -1040,10 +1040,11 @@ export class ProductionService {
 
         const allValuesToInclude = await valRepo.find({
             where: { submissionId: In(treeIds) },
-            relations: ['field', 'field.form']
+            relations: ['field', 'field.form'],
+            order: { id: 'ASC' }
         });
 
-        const entryValues = allValuesToInclude.filter(v => v && v.field && v.field.formId === sub.formId);
+        const entryValues = allValuesToInclude.filter(v => v && v.field && v.field.formId === sub.formId && !v.workflowStateId);
         const stageValues = allValuesToInclude.filter(v => v && v.field && v.field.formId !== sub.formId);
 
         const wfId = sub.workflowId || (sub.currentStage ? sub.currentStage.workflowId : null) || (sub.form ? sub.form.workflowId : null);
@@ -1230,7 +1231,8 @@ export class ProductionService {
         if (parentSubIds.length > 0) {
             const pVals = await valRepo.find({
                 where: { submissionId: In(parentSubIds), workflowStateId: IsNull() },
-                relations: ['field', 'field.form']
+                relations: ['field', 'field.form'],
+                order: { id: 'ASC' }
             });
             const seenParentFieldIds = new Set<number>();
             for (const v of pVals) {
@@ -2211,7 +2213,8 @@ export class ProductionService {
             });
             const allValuesToInclude = await valRepo.find({
                 where: { submissionId: In(treeIds) },
-                relations: ['field', 'field.form']
+                relations: ['field', 'field.form'],
+                order: { id: 'ASC' }
             });
 
             const submittedValuesRaw: Record<string, string> = {};
@@ -2396,7 +2399,8 @@ export class ProductionService {
             if (parentSubIds.length > 0) {
                 const pVals = await valRepo.find({
                     where: { submissionId: In(parentSubIds), workflowStateId: IsNull() },
-                    relations: ['field', 'field.form']
+                    relations: ['field', 'field.form'],
+                    order: { id: 'ASC' }
                 });
                 const seenParentFieldIds = new Set<number>();
                 for (const v of pVals) {
@@ -2875,14 +2879,6 @@ export class ProductionService {
             }
         }
 
-        const pastStates = await stateRepo.find({
-            where: { submissionId: submission.id, stageId: targetStage.id }
-        });
-        const pastStateIds = pastStates.map((s: any) => s.id);
-        if (pastStateIds.length > 0) {
-            await valRepo.delete({ submissionId: submission.id, workflowStateId: In(pastStateIds) });
-        }
-
         let assigneeMappings: { userId: number, formId: number | null }[] = [];
 
         if (preferredAssigneeUserId) {
@@ -3197,49 +3193,13 @@ export class ProductionService {
                                 ? formValues[fId + '_' + field.name]
                                 : formValues[field.name];
                             if (valStr !== undefined && valStr !== null) {
-                                // 1. Save workflow state snapshot for history
+                                // Save workflow state snapshot for history
                                 valsToSave.push(valRepo.create({
                                     submissionId: submission.id,
                                     fieldId: field.id,
                                     workflowStateId: currentState.id,
                                     value: String(valStr)
                                 }));
-
-                                // 2. Update base submission values (workflowStateId IS NULL) so current view reflects the corrected data
-                                const existingBaseVal = await valRepo.findOne({
-                                    where: { submissionId: submission.id, fieldId: field.id, workflowStateId: IsNull() }
-                                });
-                                if (existingBaseVal) {
-                                    existingBaseVal.value = String(valStr);
-                                    valsToSave.push(existingBaseVal);
-                                } else {
-                                    valsToSave.push(valRepo.create({
-                                        submissionId: submission.id,
-                                        fieldId: field.id,
-                                        workflowStateId: null,
-                                        value: String(valStr)
-                                    }));
-                                }
-
-                                // 3. Update ancestor submissions if they share this field/form
-                                for (const pSub of parentSubs) {
-                                    if (pSub.formId === fId) {
-                                        const existingParentVal = await valRepo.findOne({
-                                            where: { submissionId: pSub.id, fieldId: field.id, workflowStateId: IsNull() }
-                                        });
-                                        if (existingParentVal) {
-                                            existingParentVal.value = String(valStr);
-                                            valsToSave.push(existingParentVal);
-                                        } else {
-                                            valsToSave.push(valRepo.create({
-                                                submissionId: pSub.id,
-                                                fieldId: field.id,
-                                                workflowStateId: null,
-                                                value: String(valStr)
-                                            }));
-                                        }
-                                    }
-                                }
                             }
                         }
                     }
