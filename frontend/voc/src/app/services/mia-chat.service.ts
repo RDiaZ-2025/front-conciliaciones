@@ -47,37 +47,40 @@ export interface ConversationItem {
 }
 
 export interface ConversationMessageSender {
-  id: string;
-  phone: string;
-  name: string;
-  email: string;
-  address: string;
-  urlPhotoProfile: string | null;
+  id?: string;
+  phone?: string;
+  name?: string;
+  email?: string;
+  address?: string;
+  urlPhotoProfile?: string | null;
 }
 
 export interface ConversationMessageContent {
-  text: string;
-  type: string;
-  timestamp: number;
-  metadata: {
-    name: string;
-    extension: string;
-    size: number;
-    contentType: string;
-    mimeType: string;
-    duration: number | null;
-    path: string;
+  text?: string;
+  type?: string;
+  timestamp?: number | string;
+  metadata?: {
+    name?: string;
+    extension?: string;
+    size?: number;
+    contentType?: string;
+    mimeType?: string;
+    duration?: number | null;
+    path?: string;
   } | null;
 }
 
 export interface ConversationMessage {
-  id: string;
-  agentId: string;
-  conversationId: string;
-  contactId: string;
-  channelId: string;
-  sender: ConversationMessageSender;
-  messageContent: ConversationMessageContent;
+  id?: string;
+  agentId?: string;
+  conversationId?: string;
+  contactId?: string;
+  channelId?: string;
+  sender?: ConversationMessageSender | string;
+  messageContent?: ConversationMessageContent;
+  message?: ConversationMessageContent;
+  text?: string;
+  timestamp?: number | string;
 }
 
 @Injectable({

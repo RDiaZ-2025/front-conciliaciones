@@ -308,27 +308,151 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         this.conversationsLoading.set(false);
 
         if (!this.selectedConversationId() && sorted.length > 0) {
-          this.selectedConversationId.set(sorted[0].id);
+          this.selectConversation(sorted[0]);
         }
       },
-      error: () => {
+      error: (err) => {
         this.conversationsLoading.set(false);
+        console.error('Error loading conversations:', err);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error al cargar conversaciones',
+          detail: 'No se pudieron recuperar las conversaciones previas.'
+        });
       }
     });
   }
 
+  private extractMessageTimestampSeconds(m: any): number {
+    if (!m) return 0;
+    const raw =
+      m.messageContent?.timestamp ??
+      m.messageContent?.Timestamp ??
+      m.message?.timestamp ??
+      m.message?.Timestamp ??
+      m.MessageContent?.Timestamp ??
+      m.MessageContent?.timestamp ??
+      m.Message?.Timestamp ??
+      m.Message?.timestamp ??
+      m.timestamp ??
+      m.Timestamp ??
+      m.createdAt ??
+      m.created_at ??
+      m.createTime ??
+      m._createTime ??
+      m.date;
+
+    if (raw === null || raw === undefined) return 0;
+
+    if (typeof raw === 'number') {
+      if (isNaN(raw) || !isFinite(raw)) return 0;
+      return raw > 1e11 ? Math.floor(raw / 1000) : Math.floor(raw);
+    }
+
+    if (typeof raw === 'string') {
+      const trimmed = raw.trim();
+      if (!trimmed) return 0;
+      const num = Number(trimmed);
+      if (!isNaN(num) && isFinite(num) && num > 0) {
+        return num > 1e11 ? Math.floor(num / 1000) : Math.floor(num);
+      }
+      const parsedDate = new Date(trimmed).getTime();
+      if (!isNaN(parsedDate) && parsedDate > 0) {
+        return Math.floor(parsedDate / 1000);
+      }
+    }
+
+    if (raw instanceof Date) {
+      const t = raw.getTime();
+      return isNaN(t) ? 0 : Math.floor(t / 1000);
+    }
+
+    return 0;
+  }
+
+  private extractMessageDate(m: any): Date {
+    const sec = this.extractMessageTimestampSeconds(m);
+    return sec > 0 ? new Date(sec * 1000) : new Date();
+  }
+
+  private extractMessageContent(m: any): { text: string; type: string; metadata: any } {
+    if (!m) {
+      return { text: '', type: 'text', metadata: null };
+    }
+
+    const mc = m.messageContent ?? m.MessageContent ?? m.message ?? m.Message;
+
+    let text = '';
+    let type = 'text';
+    let metadata: any = null;
+
+    if (typeof mc === 'string') {
+      text = mc;
+    } else if (mc && typeof mc === 'object') {
+      text = mc.text ?? mc.Text ?? mc.content ?? mc.Content ?? '';
+      type = (mc.type ?? mc.Type ?? 'text').toString();
+      metadata = mc.metadata ?? mc.Metadata ?? mc.file ?? mc.File ?? null;
+    }
+
+    if (!text) {
+      text = m.text ?? m.Text ?? m.content ?? m.Content ?? '';
+    }
+    if (type === 'text' && (m.type || m.Type)) {
+      type = (m.type ?? m.Type).toString();
+    }
+    if (!metadata) {
+      metadata = m.metadata ?? m.Metadata ?? m.file ?? m.File ?? null;
+    }
+
+    return { text, type, metadata };
+  }
+
+  private isAssistantMessage(m: any): boolean {
+    if (!m) return false;
+
+    if (m.role === 'assistant' || m.role === 'agent') return true;
+    if (m.role === 'user') return false;
+
+    const agentId = (m.agentId ?? this.AGENT_ID ?? '').toString().toLowerCase();
+
+    const sender = m.sender ?? m.Sender;
+    let senderId = '';
+    if (typeof sender === 'string') {
+      senderId = sender;
+    } else if (sender && typeof sender === 'object') {
+      senderId = (sender.id ?? sender.Id ?? sender.email ?? sender.Email ?? '').toString();
+    }
+
+    const currentEmail = (this.authService.currentUser()?.email ?? '').toLowerCase();
+    const contactId = (m.contactId ?? m.ContactId ?? '').toString().toLowerCase();
+
+    if (currentEmail && senderId.toLowerCase() === currentEmail) return false;
+    if (contactId && senderId.toLowerCase() === contactId) return false;
+
+    if (agentId && senderId.toLowerCase() === agentId) return true;
+
+    if (sender && typeof sender === 'object' && sender.name && /mia/i.test(sender.name)) {
+      return true;
+    }
+
+    return agentId ? senderId.toLowerCase() === agentId : false;
+  }
+
   private mapApiMessagesToChatMessages(data: ConversationMessage[]): ChatMessage[] {
-    const list = Array.isArray(data) ? data : [];
-    const unique = list.filter((m, i, arr) => arr.findIndex(x => x.id === m.id) === i);
+    const list = Array.isArray(data) ? data.filter(Boolean) : [];
+    const unique = list.filter((m, i, arr) => {
+      const id = m?.id ?? (m as any)?._id ?? (m as any)?._Id;
+      return id ? arr.findIndex(x => (x?.id ?? (x as any)?._id ?? (x as any)?._Id) === id) === i : true;
+    });
     const sorted = unique.sort(
-      (a, b) => a.messageContent.timestamp - b.messageContent.timestamp
+      (a, b) => this.extractMessageTimestampSeconds(a) - this.extractMessageTimestampSeconds(b)
     );
     return sorted.map(m => {
-      const meta = m.messageContent.metadata;
+      const { text, type: msgType, metadata: meta } = this.extractMessageContent(m);
       let attachment: ChatMessageAttachment | null = null;
       if (meta?.path && meta?.name) {
         const mimeType = meta.mimeType || meta.contentType || '';
-        const apiType = m.messageContent.type?.toLowerCase() ?? '';
+        const apiType = msgType.toLowerCase();
         let attType: ChatMessageAttachment['type'] = 'document';
         if (apiType === 'file') {
           attType = 'document';
@@ -343,13 +467,17 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         const isMedia = attType !== 'document';
         attachment = { type: attType, name: meta.name, mimeType, path: cleanPath, blobUrl: null, loading: isMedia };
       }
+
+      const isPptx = (msgType.toLowerCase() === 'file' || msgType === '') &&
+        (meta?.extension?.toLowerCase() === '.pptx' ||
+          meta?.name?.toLowerCase()?.endsWith('.pptx') ||
+          meta?.path?.toLowerCase()?.endsWith('.pptx'));
+
       return {
-        role: m.sender.id === m.agentId ? 'assistant' : 'user',
-        content: m.messageContent.text,
-        timestamp: new Date(m.messageContent.timestamp * 1000),
-        ppt: (m.messageContent.type === 'File' && meta?.extension?.toLowerCase() === '.pptx')
-          ? meta.path
-          : null,
+        role: this.isAssistantMessage(m) ? 'assistant' : 'user',
+        content: text,
+        timestamp: this.extractMessageDate(m),
+        ppt: isPptx ? (meta?.path ?? null) : null,
         attachment
       };
     });
@@ -405,8 +533,14 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         this.conversationMessagesLoading.set(false);
         setTimeout(() => this.scrollToBottom(), 50);
       },
-      error: () => {
+      error: (err) => {
         this.conversationMessagesLoading.set(false);
+        console.error('Error loading conversation messages:', err);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error al cargar mensajes',
+          detail: 'No se pudieron recuperar los mensajes de la conversación.'
+        });
       }
     });
   }
@@ -434,14 +568,19 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       })
     ).subscribe({
       next: (data) => {
-        const list = Array.isArray(data) ? data : [];
+        const list = Array.isArray(data) ? data.filter(Boolean) : [];
         if (list.length === 0) return;
 
-        const unique = list.filter((m, i, arr) => arr.findIndex(x => x.id === m.id) === i);
-        const sorted = unique.sort((a, b) => a.messageContent.timestamp - b.messageContent.timestamp);
+        const unique = list.filter((m, i, arr) => {
+          const id = m?.id ?? (m as any)?._id ?? (m as any)?._Id;
+          return id ? arr.findIndex(x => (x?.id ?? (x as any)?._id ?? (x as any)?._Id) === id) === i : true;
+        });
+        const sorted = unique.sort(
+          (a, b) => this.extractMessageTimestampSeconds(a) - this.extractMessageTimestampSeconds(b)
+        );
 
         const hasAssistantResponse = sorted.some(m =>
-          m.sender.id === m.agentId && m.messageContent.timestamp >= (sendTimeSeconds - 2)
+          this.isAssistantMessage(m) && this.extractMessageTimestampSeconds(m) >= (sendTimeSeconds - 2)
         );
 
         if (hasAssistantResponse) {
