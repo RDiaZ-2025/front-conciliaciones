@@ -556,6 +556,7 @@ export class NocNewsSchedulerService {
                 title: d.title || parsedArticle?.title || 'Noticia Sin Título',
                 subtitle: d.subtitle || parsedArticle?.subtitle || '',
                 path: d.path || '',
+                url: d.path || '',
                 status: d.status,
                 createdAt: d.createdAt,
                 updatedAt: d.updatedAt,
@@ -590,6 +591,7 @@ export class NocNewsSchedulerService {
             title: draft.title || articleData.title,
             subtitle: draft.subtitle || articleData.subtitle,
             path: draft.path,
+            url: draft.path,
             status: draft.status,
             createdAt: draft.createdAt,
             updatedAt: draft.updatedAt,
@@ -811,7 +813,9 @@ export class NocNewsSchedulerService {
             articleData = this.buildDefaultArticleData(draft.title || 'Noticia');
         }
 
-        let cmsPath = draft.path;
+        // Solo reutilizar cmsPath si fue efectivamente creado en el CMS para este borrador específico (registrado en articleData.cmsPath)
+        let cmsPath = (articleData as any)?.cmsPath;
+        let publishedUrl: string | null = null;
         try {
             const bluestacksCms = new BluestacksCmsService();
 
@@ -822,12 +826,18 @@ export class NocNewsSchedulerService {
 
             if (cmsPath) {
                 await bluestacksCms.publishNews(cmsPath);
+                publishedUrl = await bluestacksCms.getPublishedNewsUrl(cmsPath);
             }
         } catch (cmsErr: any) {
             console.warn(`[Publish Draft] Bluestacks CMS publication warning:`, cmsErr.message);
         }
 
-        draft.path = cmsPath || draft.path;
+        if (cmsPath) {
+            (articleData as any).cmsPath = cmsPath;
+            draft.content = JSON.stringify(articleData);
+        }
+
+        draft.path = publishedUrl || cmsPath || draft.path;
         draft.status = 'published';
         draft.publishedAt = new Date();
         draft.updatedAt = new Date();

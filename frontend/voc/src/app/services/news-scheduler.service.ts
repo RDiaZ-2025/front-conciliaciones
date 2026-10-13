@@ -37,6 +37,7 @@ export interface NewsDraftDetail {
   title: string;
   subtitle: string;
   path: string | null;
+  url?: string | null;
   status: string;
   createdAt: string;
   updatedAt?: string;

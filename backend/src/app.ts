@@ -167,14 +167,22 @@ const packageJson = (() => {
   }
 })();
 
-const APP_VERSION = packageJson?.version || '1.14.12';
-const APP_VERSION_DATE = packageJson?.versionDate || '2026-10-07';
+const APP_VERSION = packageJson?.version || '1.14.17';
+const APP_VERSION_DATE = packageJson?.versionDate || '2026-10-13';
 
 const getHealthPayload = () => {
   const mem = process.memoryUsage();
   const uptimeSec = Math.floor(process.uptime());
   const sbStatus = azureServiceBusSchedulerService.getStatus();
   const dbConnected = AppDataSource.isInitialized;
+
+  const bluestacksVars = ['BLUESTACK_CMD_URL', 'BLUESTACK_USERNAME', 'BLUESTACK_PASSWORD', 'BLUESTACK_SECURITY_TOKEN'];
+  const missingBluestacks = bluestacksVars.filter(v => !process.env[v]?.trim());
+  const bluestacksConfigured = missingBluestacks.length === 0;
+
+  const n8nVars = ['N8N_AI_EXTRACT_NEWS_URL', 'N8N_AI_DRAFT_ARTICLE_URL', 'N8N_AI_GENERATE_IMAGE_URL'];
+  const missingN8n = n8nVars.filter(v => !process.env[v]?.trim());
+  const n8nConfigured = missingN8n.length === 0;
 
   return {
     success: true,
@@ -195,6 +203,14 @@ const getHealthPayload = () => {
       name: process.env.DB_DATABASE || 'voc_db'
     },
     serviceBus: sbStatus,
+    bluestacksCms: {
+      configured: bluestacksConfigured,
+      missingVars: missingBluestacks
+    },
+    n8nPipeline: {
+      configured: n8nConfigured,
+      missingVars: missingN8n
+    },
     system: {
       nodeVersion: process.version,
       platform: process.platform,

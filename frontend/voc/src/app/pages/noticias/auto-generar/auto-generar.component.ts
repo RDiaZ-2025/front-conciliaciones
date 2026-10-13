@@ -927,7 +927,12 @@ export class AutoGenerarComponent implements OnInit {
         this.schedulerService.updateDraft(this.currentDraft!.id, this.currentArticleData).subscribe({
           next: () => {
             this.schedulerService.publishDraft(this.currentDraft!.id).subscribe({
-              next: () => {
+              next: (published: any) => {
+                if (published && this.currentDraft) {
+                  this.currentDraft.status = 'published';
+                  this.currentDraft.path = published.path;
+                  this.currentDraft.url = published.url || published.path;
+                }
                 this.messageService.add({
                   severity: 'success',
                   summary: '¡Noticia Publicada!',
@@ -963,11 +968,16 @@ export class AutoGenerarComponent implements OnInit {
       rejectLabel: 'Cancelar',
       accept: () => {
         this.schedulerService.publishDraft(draft.id).subscribe({
-          next: () => {
+          next: (published: any) => {
+            if (published && draft) {
+              draft.status = 'published';
+              draft.path = published.path;
+              draft.url = published.url || published.path;
+            }
             this.messageService.add({
               severity: 'success',
               summary: 'Publicado',
-              detail: 'La noticia se ha publicado correctamente.'
+              detail: 'La noticia se ha publicado correctamente en el portal oficial.'
             });
             if (this.selectedScheduleForDrafts) {
               this.loadDrafts(this.selectedScheduleForDrafts.id);

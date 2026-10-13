@@ -8,6 +8,7 @@ export interface BluestacksConfig {
     site: string;
     publication: string;
     securityToken: string;
+    publicUrl: string;
 }
 
 export class BluestacksCmsService {
@@ -46,6 +47,7 @@ export class BluestacksCmsService {
             throw new Error('La variable de entorno BLUESTACK_SECURITY_TOKEN es requerida y no está configurada o es inválida.');
         }
 
+        const publicUrl = process.env.BLUESTACK_PUBLIC_URL?.trim() || 'https://redmas.com.co';
         const cleanCmd = cmdUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '');
 
         this.config = {
@@ -54,7 +56,8 @@ export class BluestacksCmsService {
             password,
             site,
             publication,
-            securityToken
+            securityToken,
+            publicUrl: publicUrl.replace(/\/+$/, '')
         };
     }
 
@@ -150,12 +153,40 @@ export class BluestacksCmsService {
         }
     }
 
+    private formatParagraphHtml(content: string): string {
+        if (!content) return '';
+        const trimmed = content.trim();
+        if (!trimmed) return '';
+
+        // Si ya contiene etiquetas HTML de bloque (<p>, <h2>, <h3>, <blockquote>, <ul>, <ol>, <div>)
+        if (/^<(p|h[1-6]|blockquote|div|ul|ol)\b/i.test(trimmed)) {
+            return trimmed;
+        }
+
+        // Si contiene múltiples párrafos separados por doble salto de línea
+        const rawParagraphs = trimmed
+            .split(/\n\s*\n/)
+            .map(p => p.trim())
+            .filter(p => p.length > 0);
+
+        if (rawParagraphs.length > 1) {
+            return rawParagraphs
+                .map(p => (/^<(p|h[1-6]|blockquote|div|ul|ol)\b/i.test(p) ? p : `<p>${p.replace(/\n/g, '<br/>')}</p>`))
+                .join('\n');
+        }
+
+        return `<p>${trimmed.replace(/\n/g, '<br/>')}</p>`;
+    }
+
     private buildCmsHtmlBody(blocks: NewsBlock[], uploadedImagePaths: Map<string, string>): string {
         const parts: string[] = [];
 
         for (const block of blocks) {
             if (block.type === 'paragraph' && block.content) {
-                parts.push(block.content.trim());
+                parts.push(this.formatParagraphHtml(block.content));
+            } else if ((block.type === 'heading' || (block as any).type === 'subtitle') && block.content) {
+                const text = block.content.replace(/^<[^>]+>|<\/[^>]+>$/g, '').trim();
+                parts.push(`<h2>${text}</h2>`);
             } else if (block.type === 'image') {
                 const cmsPath = (block.url ? uploadedImagePaths.get(block.url) : null) || block.url || '';
                 const alt = block.alt || block.caption || 'Fotografía de prensa';
@@ -165,6 +196,9 @@ export class BluestacksCmsService {
                 parts.push(imageMacro);
             }
         }
+
+        // Cierre editorial oficial estándar de Red+ Noticias
+        parts.push(`<p>Gracias por leer Red+ Noticias. Lo invitamos a <a href="https://www.google.com/preferences/source?q=redmas.com.co" target="_blank" rel="nofollow">SEGUIRNOS EN GOOGLE o activar nuestras noticias</a> para no perderse sus informes y noticias favoritas.</p>`);
 
         return parts.join('\n');
     }
@@ -199,7 +233,11 @@ export class BluestacksCmsService {
 
         const cuerpoHtml = this.buildCmsHtmlBody(articleData.blocks || [], uploadedImagesMap);
         const clavesStr = Array.isArray(articleData.tags) ? articleData.tags.join(', ') : (articleData.tags || 'noticias, actualidad');
-        const seccionStr = (articleData.section || 'general').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const seccionStr = (articleData.section || 'colombia')
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/g, '');
 
         const payload = {
             site: this.config.site,
@@ -213,6 +251,11 @@ export class BluestacksCmsService {
                     { "autor[1]/nombre": articleData.author || "Redacción Red+" },
                     { "autor[1]/internalUser": "" },
                     { "seccion": seccionStr },
+                    { "zonahome": "destacadas" },
+                    { "prioridadhome": "2" },
+                    { "fotoenhome": "horizontal" },
+                    { "fotoNota": "2 Columnas" },
+                    { "Visibilidad": "público" },
                     {
                         "imagenPrevisualizacion[1]/imagen": cmsCoverPath,
                         "imagenPrevisualizacion[1]/descripcion": articleData.coverImage?.caption || articleData.title
@@ -274,4 +317,55 @@ export class BluestacksCmsService {
             throw new Error(`Error publicando noticia en Bluestacks CMS: ${error.message}`);
         }
     }
+
+    async getPublishedNewsUrl(newsCmsPath: string): Promise<string | null> {
+        const token = await this.login();
+        try {
+            const listUrl = `https://${this.config.cmdUrl}/system/modules/com.tfsla.diario.base/templates/webservices/newsListService.jsp`;
+            const cleanPath = newsCmsPath.replace(/^\/sites\/[^\/]+/, '');
+
+            const fetchDetails = async () => {
+                const response = await axios.get(listUrl, {
+                    params: {
+                        token,
+                        site: this.config.site,
+                        url: cleanPath
+                    },
+                    headers: {
+                        'x-security-token': this.config.securityToken
+                    },
+                    timeout: 30000
+                });
+                const first = response.data?.data?.[0];
+                return first?.urlFriendly || null;
+            };
+
+            let urlFriendly = await fetchDetails();
+
+            // Si el CMS tarda unos instantes en indexar el slug amigable o devuelve un slug temporal incompleto (ej. /noticia/-...)
+            let attempts = 0;
+            while ((!urlFriendly || urlFriendly.includes('/noticia/-')) && attempts < 3) {
+                await new Promise(r => setTimeout(r, 2000));
+                urlFriendly = await fetchDetails();
+                attempts++;
+            }
+
+            if (urlFriendly) {
+                const cleanFriendly = urlFriendly.startsWith('/') ? urlFriendly : `/${urlFriendly}`;
+                const finalUrl = `${this.config.publicUrl}${cleanFriendly}`;
+                console.log(`[Bluestacks CMS] Resolved public URL: ${finalUrl}`);
+                return finalUrl;
+            }
+
+            const cleanRelPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
+            const fallbackUrl = `${this.config.publicUrl}${cleanRelPath}`;
+            console.log(`[Bluestacks CMS] Fallback public URL: ${fallbackUrl}`);
+            return fallbackUrl;
+        } catch (error: any) {
+            console.error(`[Bluestacks CMS] Error getting published news URL for ${newsCmsPath}:`, error.message);
+            const cleanRelPath = newsCmsPath.replace(/^\/sites\/[^\/]+/, '');
+            return `${this.config.publicUrl}${cleanRelPath.startsWith('/') ? cleanRelPath : `/${cleanRelPath}`}`;
+        }
+    }
 }
+

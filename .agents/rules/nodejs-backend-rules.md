@@ -36,6 +36,7 @@ Enforce consistent casing to maintain readability across directories:
 * **Centralized Error Handling**: Avoid redundant `try/catch` blocks inside controllers. Let errors bubble up to a global custom Express error handler middleware that catches exceptions, formats responses, and hides internal stack traces.
 * **Dependency Injection (DI)**: Avoid static classes for Services. Inject service instances or pass them to constructors to facilitate mock injection during unit tests.
 * **Startup Validation**: Validate environment variables at boot time (e.g., using schema validators like Zod or Joi). Fail fast and abort startup if mandatory credentials (e.g., `DATABASE_URL`, `JWT_SECRET`) are missing or invalid. Never fallback to hardcoded secrets in production environments.
+* **Environment Variables & Health Check Tracking**: Whenever an environment variable is added, modified, or removed in the backend or its integrations, the `/health` endpoint (`backend/src/app.ts`) must be updated immediately to validate its existence in `process.env` and report missing variables in `missingVars` (with `configured: boolean`), ensuring missing deployment variables in Azure Portal or containers are immediately visible and diagnosable.
 
 ---
 

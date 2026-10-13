@@ -261,6 +261,9 @@
           </td>
           <td>
             <div class="text-xs text-main">{{ draft.createdAt | date:'short' }}</div>
+            <div *ngIf="draft.publishedAt" class="text-xs text-muted mt-1">
+              Pub: {{ draft.publishedAt | date:'short' }}
+            </div>
           </td>
           <td class="text-center">
             <p-tag [severity]="draft.status === 'published' ? 'success' : 'warn'" 
@@ -268,6 +271,11 @@
           </td>
           <td class="text-center">
             <div class="flex justify-content-center gap-1">
+              <a *ngIf="draft.status === 'published' && (draft.path || draft.url)" [href]="draft.path || draft.url" target="_blank" rel="noopener noreferrer"
+                 pButton pRipple type="button" class="p-button-rounded p-button-success p-button-text" 
+                 pTooltip="Ver Noticia en Portal Web" tooltipPosition="top">
+                <lucide-icon name="external-link"></lucide-icon>
+              </a>
               <button pButton pRipple type="button" class="p-button-rounded p-button-info p-button-text" 
                       pTooltip="Editar y Previsualizar Noticia" tooltipPosition="top" (click)="openEditor(draft)">
                 <lucide-icon name="pencil"></lucide-icon>
@@ -313,6 +321,12 @@
             Editor y Previsualizador de Noticia
             <p-tag [severity]="currentDraft?.status === 'published' ? 'success' : 'warn'" 
                    [value]="currentDraft?.status === 'published' ? 'Publicada' : 'Borrador'" [rounded]="true"></p-tag>
+            <a *ngIf="currentDraft?.status === 'published' && currentDraft?.path" 
+               [href]="currentDraft?.path || ''" target="_blank" rel="noopener noreferrer"
+               class="text-xs text-primary hover:underline inline-flex align-items-center gap-1 font-normal ml-2"
+               pTooltip="Abrir noticia en portal web oficial" tooltipPosition="bottom">
+              <lucide-icon name="external-link" [size]="13"></lucide-icon> Ver Noticia Publicada
+            </a>
           </h3>
           <span class="text-xs text-muted">Edita cada párrafo o imagen a mano o mediante instrucciones de IA.</span>
         </div>
@@ -555,6 +569,12 @@
         </button>
       </div>
       <div class="flex gap-2 align-items-center">
+        <a *ngIf="currentDraft?.status === 'published' && currentDraft?.path" 
+           [href]="currentDraft?.path || ''" target="_blank" rel="noopener noreferrer"
+           pButton pRipple class="p-button-outlined p-button-success border-round-lg"
+           pTooltip="Abrir noticia publicada en el portal oficial" tooltipPosition="top">
+          <lucide-icon name="external-link" class="mr-2" [size]="16"></lucide-icon>Ver en la Web
+        </a>
         <button pButton pRipple type="button" class="p-button-text p-button-secondary border-round-lg" (click)="displayEditorDialog = false">
           <lucide-icon name="x" class="mr-2" [size]="16"></lucide-icon>Cerrar
         </button>
