@@ -31,6 +31,14 @@ export interface SystemHealthResponse {
     wsModuleStatus: string;
     lastError: string | null;
   };
+  bluestacksCms?: {
+    configured: boolean;
+    missingVars: string[];
+  };
+  n8nPipeline?: {
+    configured: boolean;
+    missingVars: string[];
+  };
   system: {
     nodeVersion: string;
     platform: string;

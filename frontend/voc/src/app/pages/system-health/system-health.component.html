@@ -201,6 +201,76 @@
           </div>
         </div>
       </div>
+    <!-- Tarjeta 5: Bluestacks CMS (Publicación Red+) -->
+    <div *ngIf="healthData.bluestacksCms as bluestacks" class="col-12 md:col-6 p-2">
+      <div class="surface-card border-1 border-200 border-round-xl p-4 h-full flex flex-column justify-content-between shadow-1">
+        <div>
+          <div class="flex align-items-center justify-content-between mb-3">
+            <span class="font-bold text-base text-900 flex align-items-center gap-2">
+              <lucide-icon name="send" class="text-blue-500"></lucide-icon> Bluestacks CMS (Red+)
+            </span>
+            <span [class]="bluestacks.configured ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+              class="text-xs font-bold px-2 py-1 border-round">
+              {{ bluestacks.configured ? 'Listo para Publicar' : 'Variables Faltantes' }}
+            </span>
+          </div>
+          <div class="flex flex-column gap-2 text-sm text-700">
+            <div class="flex justify-content-between pb-2 border-bottom-1 surface-border">
+              <span class="text-500">Estado de Credenciales:</span>
+              <span class="font-semibold" [class.text-green-600]="bluestacks.configured" [class.text-red-600]="!bluestacks.configured">
+                {{ bluestacks.configured ? 'Configuradas en Azure' : 'Incompletas' }}
+              </span>
+            </div>
+            <div *ngIf="!bluestacks.configured" class="flex flex-column gap-1 pt-1">
+              <span class="text-xs font-semibold text-red-600">Variables pendientes por agregar en Azure Portal:</span>
+              <div class="flex flex-wrap gap-1">
+                <code *ngFor="let v of bluestacks.missingVars" class="text-xs bg-red-50 text-red-700 px-2 py-1 border-round border-1 border-red-200">
+                  {{ v }}
+                </code>
+              </div>
+            </div>
+            <div *ngIf="bluestacks.configured" class="text-xs text-500 pt-1">
+              Todas las variables requeridas (CMD_URL, USERNAME, PASSWORD, SECURITY_TOKEN) están cargadas en el servidor.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tarjeta 6: Pipeline IA (n8n Webhooks) -->
+    <div *ngIf="healthData.n8nPipeline as n8n" class="col-12 md:col-6 p-2">
+      <div class="surface-card border-1 border-200 border-round-xl p-4 h-full flex flex-column justify-content-between shadow-1">
+        <div>
+          <div class="flex align-items-center justify-content-between mb-3">
+            <span class="font-bold text-base text-900 flex align-items-center gap-2">
+              <lucide-icon name="sparkles" class="text-purple-500"></lucide-icon> Pipeline IA (n8n Webhooks)
+            </span>
+            <span [class]="n8n.configured ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'"
+              class="text-xs font-bold px-2 py-1 border-round">
+              {{ n8n.configured ? 'Conectado' : 'Webhooks Pendientes' }}
+            </span>
+          </div>
+          <div class="flex flex-column gap-2 text-sm text-700">
+            <div class="flex justify-content-between pb-2 border-bottom-1 surface-border">
+              <span class="text-500">Estado de Webhooks:</span>
+              <span class="font-semibold" [class.text-green-600]="n8n.configured" [class.text-orange-600]="!n8n.configured">
+                {{ n8n.configured ? 'URLs configuradas' : 'Incompletas' }}
+              </span>
+            </div>
+            <div *ngIf="!n8n.configured" class="flex flex-column gap-1 pt-1">
+              <span class="text-xs font-semibold text-orange-600">Webhooks pendientes en Azure Portal:</span>
+              <div class="flex flex-wrap gap-1">
+                <code *ngFor="let v of n8n.missingVars" class="text-xs bg-orange-50 text-orange-700 px-2 py-1 border-round border-1 border-orange-200">
+                  {{ v }}
+                </code>
+              </div>
+            </div>
+            <div *ngIf="n8n.configured" class="text-xs text-500 pt-1">
+              Los endpoints de extracción, redacción y generación de imágenes están configurados.
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div>

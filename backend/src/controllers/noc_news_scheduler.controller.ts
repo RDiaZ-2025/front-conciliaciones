@@ -107,8 +107,23 @@ export class NocNewsSchedulerController {
 
     publishDraft = asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
-        const draft = await schedulerService.publishDraft(parseInt(id, 10));
-        res.status(200).json(draft);
+        console.log(`📥 [HTTP Request][POST /api/news-scheduler/drafts/${id}/publish] Solicitud recibida para publicar borrador ID: ${id}`);
+        try {
+            const draft = await schedulerService.publishDraft(parseInt(id, 10));
+            console.log(`📤 [HTTP Response][POST /api/news-scheduler/drafts/${id}/publish] Status: 200 | Resultado:`, JSON.stringify({
+                id: draft.id,
+                status: draft.status,
+                path: draft.path,
+                publishedAt: draft.publishedAt
+            }));
+            res.status(200).json(draft);
+        } catch (error: any) {
+            console.error(`❌ [HTTP Response][POST /api/news-scheduler/drafts/${id}/publish] Status: 500 | Error:`, error.message);
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
     });
 
     getDraftDetail = asyncHandler(async (req: Request, res: Response) => {

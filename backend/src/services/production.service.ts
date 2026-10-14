@@ -1040,10 +1040,11 @@ export class ProductionService {
 
         const allValuesToInclude = await valRepo.find({
             where: { submissionId: In(treeIds) },
-            relations: ['field', 'field.form']
+            relations: ['field', 'field.form'],
+            order: { id: 'ASC' }
         });
 
-        const entryValues = allValuesToInclude.filter(v => v && v.field && v.field.formId === sub.formId);
+        const entryValues = allValuesToInclude.filter(v => v && v.field && v.field.formId === sub.formId && !v.workflowStateId);
         const stageValues = allValuesToInclude.filter(v => v && v.field && v.field.formId !== sub.formId);
 
         const wfId = sub.workflowId || (sub.currentStage ? sub.currentStage.workflowId : null) || (sub.form ? sub.form.workflowId : null);
@@ -1062,15 +1063,20 @@ export class ProductionService {
 
          const historyStages = allStatesToInclude.map((cState) => {
              const isChildSub = cState.submissionId !== sub.id;
-             let resolvedForm = cState.customFormToFill || cState.stage?.formToFill || (isChildSub ? (cState as any).submission?.form : null);
-             let resolvedFormId = cState.customFormIdToFill || cState.stage?.formIdToFill || (isChildSub ? (cState as any).submission?.formId : null);
              let stageVals = allValuesToInclude.filter(v => v && v.field && v.workflowStateId === cState.id);
 
-             if (stageVals.length === 0 && isChildSub && resolvedFormId && (!cState.stage || cState.stage.stepOrder === 1) && cState.status === 'Approved' && !cState.notes?.toLowerCase().includes('rechaz')) {
-                 stageVals = allValuesToInclude.filter(v => v && v.field && v.submissionId === cState.submissionId && !v.workflowStateId && v.field.formId === resolvedFormId);
-             }
+             const isRequesterAction = (cState.actionedByUserId && (cState as any).submission?.requesterUserId && cState.actionedByUserId === (cState as any).submission?.requesterUserId);
+             const isRequesterAssigned = (cState.assignedUserId && (cState as any).submission?.requesterUserId && cState.assignedUserId === (cState as any).submission?.requesterUserId);
+             const isCorrectionState = (cState.status === 'Approved' && (isRequesterAction || isRequesterAssigned)) ||
+                 (cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir')));
 
-             if (!resolvedForm) {
+             let resolvedForm = null;
+             let resolvedFormId = null;
+
+             if (cState.customFormToFill) {
+                 resolvedForm = cState.customFormToFill;
+                 resolvedFormId = cState.customFormIdToFill;
+             } else if (isCorrectionState) {
                  if (stageVals.length > 0 && stageVals[0].field?.form) {
                      resolvedForm = stageVals[0].field.form;
                      resolvedFormId = stageVals[0].field.formId;
@@ -1078,6 +1084,22 @@ export class ProductionService {
                      resolvedForm = (cState as any).submission.form;
                      resolvedFormId = (cState as any).submission.formId;
                  }
+             } else if (stageVals.length > 0 && stageVals[0].field?.form && cState.stage?.formToFill && stageVals[0].field.formId !== cState.stage.formIdToFill) {
+                 resolvedForm = stageVals[0].field.form;
+                 resolvedFormId = stageVals[0].field.formId;
+             } else if (cState.stage?.formToFill) {
+                 resolvedForm = cState.stage.formToFill;
+                 resolvedFormId = cState.stage.formIdToFill;
+             } else if (isChildSub && (cState as any).submission?.form) {
+                 resolvedForm = (cState as any).submission.form;
+                 resolvedFormId = (cState as any).submission.formId;
+             } else if (stageVals.length > 0 && stageVals[0].field?.form) {
+                 resolvedForm = stageVals[0].field.form;
+                 resolvedFormId = stageVals[0].field.formId;
+             }
+
+             if (stageVals.length === 0 && isChildSub && resolvedFormId && (!cState.stage || cState.stage.stepOrder === 1) && cState.status === 'Approved' && !cState.notes?.toLowerCase().includes('rechaz')) {
+                 stageVals = allValuesToInclude.filter(v => v && v.field && v.submissionId === cState.submissionId && !v.workflowStateId && v.field.formId === resolvedFormId);
              }
 
              const user = cState.actionedByUser || cState.assignedUser;
@@ -1142,6 +1164,20 @@ export class ProductionService {
                                      metadata: parsedMeta || {}
                                  };
                              }
+                             // Fallback for approved/corrected stages so unchanged fields are also visible
+                             if (cState.status === 'Approved' || isCorrectionState) {
+                                 const fallbackVal = allValuesToInclude
+                                     .filter(v => v && v.fieldId === field.id && (!v.workflowStateId || v.workflowStateId <= cState.id))
+                                     .sort((a, b) => b.id - a.id)[0];
+                                 if (fallbackVal && fallbackVal.value !== undefined && fallbackVal.value !== null && fallbackVal.value !== '') {
+                                     return {
+                                         label: field.label,
+                                         value: fallbackVal.value,
+                                         fieldType: field.type,
+                                         metadata: parsedMeta || {}
+                                     };
+                                 }
+                             }
                              return null;
                          }).filter(Boolean);
                      } else if (stageVals.length > 0) {
@@ -1192,7 +1228,8 @@ export class ProductionService {
         if (parentSubIds.length > 0) {
             const pVals = await valRepo.find({
                 where: { submissionId: In(parentSubIds), workflowStateId: IsNull() },
-                relations: ['field', 'field.form']
+                relations: ['field', 'field.form'],
+                order: { id: 'ASC' }
             });
             const seenParentFieldIds = new Set<number>();
             for (const v of pVals) {
@@ -2173,7 +2210,8 @@ export class ProductionService {
             });
             const allValuesToInclude = await valRepo.find({
                 where: { submissionId: In(treeIds) },
-                relations: ['field', 'field.form']
+                relations: ['field', 'field.form'],
+                order: { id: 'ASC' }
             });
 
             const submittedValuesRaw: Record<string, string> = {};
@@ -2184,27 +2222,31 @@ export class ProductionService {
                 }
             }
 
+            const parentSubmissions = await this.getAncestorSubmissions(state.submissionId);
             const isCorrection = (state.submission.status === 'Rejected');
-            const hasPriorApprovedStages = allStatesToInclude.some(cs => cs.status === 'Approved');
-            const isInitialRequestCorrection = isCorrection &&
-                (state.assignedUserId === state.submission.requesterUserId) &&
-                !state.customFormIdToFill &&
-                !hasPriorApprovedStages &&
-                !state.submission.parentSubmissionId;
+            const rootRequesterId = parentSubmissions.length > 0 ? parentSubmissions[0].requesterUserId : state.submission.requesterUserId;
+            const isRequesterUser = (state.assignedUserId === state.submission.requesterUserId || state.assignedUserId === rootRequesterId);
+            const hasPriorApprovedState = allStatesToInclude.some(cs => cs.status === 'Approved' && cs.id < state.id);
+            const hasStageFormToFill = !!(state.customFormIdToFill || (state.stage?.formIdToFill && (state.stage.stepOrder > 1 || hasPriorApprovedState)));
+            const isInitialRequestCorrection = isCorrection && isRequesterUser && !hasStageFormToFill;
             const statesForHistory = allStatesToInclude.filter(cs => cs.id !== state.id);
 
             const historyStages = statesForHistory.map((cState) => {
                 const isChildSub = cState.submissionId !== state.submissionId;
-                let resolvedForm = cState.customFormToFill || cState.stage?.formToFill || (isChildSub ? (cState as any).submission?.form : null);
-                let resolvedFormId = cState.customFormIdToFill || cState.stage?.formIdToFill || (isChildSub ? (cState as any).submission?.formId : null);
-
                 let stageVals = allValuesToInclude.filter(v => v && v.field && v.workflowStateId === cState.id);
 
-                if (stageVals.length === 0 && isChildSub && resolvedFormId && (!cState.stage || cState.stage.stepOrder === 1) && cState.status === 'Approved' && !cState.notes?.toLowerCase().includes('rechaz')) {
-                    stageVals = allValuesToInclude.filter(v => v && v.field && v.submissionId === cState.submissionId && !v.workflowStateId && v.field.formId === resolvedFormId);
-                }
+                const isRequesterAction = (cState.actionedByUserId && (cState as any).submission?.requesterUserId && cState.actionedByUserId === (cState as any).submission?.requesterUserId);
+                const isRequesterAssigned = (cState.assignedUserId && (cState as any).submission?.requesterUserId && cState.assignedUserId === (cState as any).submission?.requesterUserId);
+                const isCorrectionState = (cState.status === 'Approved' && (isRequesterAction || isRequesterAssigned)) ||
+                    (cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir')));
 
-                if (!resolvedForm) {
+                let resolvedForm = null;
+                let resolvedFormId = null;
+
+                if (cState.customFormToFill) {
+                    resolvedForm = cState.customFormToFill;
+                    resolvedFormId = cState.customFormIdToFill;
+                } else if (isCorrectionState) {
                     if (stageVals.length > 0 && stageVals[0].field?.form) {
                         resolvedForm = stageVals[0].field.form;
                         resolvedFormId = stageVals[0].field.formId;
@@ -2212,6 +2254,22 @@ export class ProductionService {
                         resolvedForm = (cState as any).submission.form;
                         resolvedFormId = (cState as any).submission.formId;
                     }
+                } else if (stageVals.length > 0 && stageVals[0].field?.form && cState.stage?.formToFill && stageVals[0].field.formId !== cState.stage.formIdToFill) {
+                    resolvedForm = stageVals[0].field.form;
+                    resolvedFormId = stageVals[0].field.formId;
+                } else if (cState.stage?.formToFill) {
+                    resolvedForm = cState.stage.formToFill;
+                    resolvedFormId = cState.stage.formIdToFill;
+                } else if (isChildSub && (cState as any).submission?.form) {
+                    resolvedForm = (cState as any).submission.form;
+                    resolvedFormId = (cState as any).submission.formId;
+                } else if (stageVals.length > 0 && stageVals[0].field?.form) {
+                    resolvedForm = stageVals[0].field.form;
+                    resolvedFormId = stageVals[0].field.formId;
+                }
+
+                if (stageVals.length === 0 && isChildSub && resolvedFormId && (!cState.stage || cState.stage.stepOrder === 1) && cState.status === 'Approved' && !cState.notes?.toLowerCase().includes('rechaz')) {
+                    stageVals = allValuesToInclude.filter(v => v && v.field && v.submissionId === cState.submissionId && !v.workflowStateId && v.field.formId === resolvedFormId);
                 }
 
                 const user = cState.actionedByUser || cState.assignedUser;
@@ -2274,6 +2332,20 @@ export class ProductionService {
                                       metadata: parsedMeta || {}
                                   };
                               }
+                              // Fallback for approved/corrected stages so unchanged fields are also visible
+                              if (cState.status === 'Approved' || isCorrectionState) {
+                                  const fallbackVal = allValuesToInclude
+                                      .filter(v => v && v.fieldId === field.id && (!v.workflowStateId || v.workflowStateId <= cState.id))
+                                      .sort((a, b) => b.id - a.id)[0];
+                                  if (fallbackVal && fallbackVal.value !== undefined && fallbackVal.value !== null && fallbackVal.value !== '') {
+                                      return {
+                                          label: field.label,
+                                          value: fallbackVal.value,
+                                          fieldType: field.type,
+                                          metadata: parsedMeta || {}
+                                      };
+                                  }
+                              }
                               return null;
                           }).filter(Boolean);
                       } else if (stageVals.length > 0) {
@@ -2317,14 +2389,14 @@ export class ProductionService {
                 };
             });
 
-            const parentSubmissions = await this.getAncestorSubmissions(state.submissionId);
             const initialParentSubmissions = parentSubmissions.filter(p => p.form && (p.form.isInitialForm || p.form.isEntryForm || !p.parentSubmissionId));
             const parentSubIds = initialParentSubmissions.map(p => p.id);
             const parentVals: any[] = [];
             if (parentSubIds.length > 0) {
                 const pVals = await valRepo.find({
                     where: { submissionId: In(parentSubIds), workflowStateId: IsNull() },
-                    relations: ['field', 'field.form']
+                    relations: ['field', 'field.form'],
+                    order: { id: 'ASC' }
                 });
                 const seenParentFieldIds = new Set<number>();
                 for (const v of pVals) {
@@ -2348,9 +2420,7 @@ export class ProductionService {
             const parentForms = [];
             if (isInitialRequestCorrection) {
                 const seenFormIds = new Set<number>();
-                const submissionsToCorrect = (parentSubmissions && parentSubmissions.length > 0)
-                    ? parentSubmissions
-                    : [state.submission];
+                const submissionsToCorrect = [...(parentSubmissions || []), state.submission];
                 const fieldRepo = AppDataSource.getRepository(DynamicFormField);
                 for (const pSub of submissionsToCorrect) {
                     if (seenFormIds.has(pSub.formId)) continue;
@@ -2360,13 +2430,13 @@ export class ProductionService {
                         where: { formId: pSub.formId, isActive: true },
                         order: { displayOrder: 'ASC' }
                     });
-                    const pSubVals = await valRepo.find({
-                        where: { submissionId: pSub.id },
-                        relations: ['field']
-                    });
 
                     const mappedFields = fields.map((f: any) => {
-                        const valObj = pSubVals.find(v => v.fieldId === f.id);
+                        const matchingVals = allValuesToInclude.filter(v => v && v.fieldId === f.id);
+                        const latestVal = matchingVals.length > 0
+                            ? matchingVals.reduce((prev, curr) => (curr.id > prev.id ? curr : prev))
+                            : null;
+
                         let parsedMeta = f.metadata;
                         if (parsedMeta && typeof parsedMeta === 'string') {
                             try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
@@ -2385,7 +2455,7 @@ export class ProductionService {
                             defaultValueExpression: f.defaultValueExpression,
                             formulaExpression: f.formulaExpression,
                             visibilityCondition: f.visibilityCondition,
-                            value: valObj ? valObj.value : ''
+                            value: latestVal ? (latestVal.value ?? '') : ''
                         };
                     });
 
@@ -2805,14 +2875,6 @@ export class ProductionService {
             }
         }
 
-        const pastStates = await stateRepo.find({
-            where: { submissionId: submission.id, stageId: targetStage.id }
-        });
-        const pastStateIds = pastStates.map((s: any) => s.id);
-        if (pastStateIds.length > 0) {
-            await valRepo.delete({ submissionId: submission.id, workflowStateId: In(pastStateIds) });
-        }
-
         let assigneeMappings: { userId: number, formId: number | null }[] = [];
 
         if (preferredAssigneeUserId) {
@@ -3096,17 +3158,12 @@ export class ProductionService {
             const submission = currentState.submission;
             const stage = currentState.stage;
 
-            const lastRejectionState = await stateRepo.findOne({
+            const isCorrection = (submission.status === 'Rejected');
+            const lastRejectionState = isCorrection ? await stateRepo.findOne({
                 where: { submissionId: submission.id, status: 'Rejected' },
                 order: { id: 'DESC' },
                 relations: ['stage']
-            });
-
-            const isCorrection = (submission.status === 'Rejected') ||
-                (lastRejectionState !== null && (
-                    currentState.status === 'Pending' ||
-                    (currentState.notes && (currentState.notes.toLowerCase().includes('correg') || currentState.notes.toLowerCase().includes('corrección')))
-                ));
+            }) : null;
 
             if (isCorrection) {
                 if (formValues) {
@@ -3127,49 +3184,13 @@ export class ProductionService {
                                 ? formValues[fId + '_' + field.name]
                                 : formValues[field.name];
                             if (valStr !== undefined && valStr !== null) {
-                                // 1. Save workflow state snapshot for history
+                                // Save workflow state snapshot for history
                                 valsToSave.push(valRepo.create({
                                     submissionId: submission.id,
                                     fieldId: field.id,
                                     workflowStateId: currentState.id,
                                     value: String(valStr)
                                 }));
-
-                                // 2. Update base submission values (workflowStateId IS NULL) so current view reflects the corrected data
-                                const existingBaseVal = await valRepo.findOne({
-                                    where: { submissionId: submission.id, fieldId: field.id, workflowStateId: IsNull() }
-                                });
-                                if (existingBaseVal) {
-                                    existingBaseVal.value = String(valStr);
-                                    valsToSave.push(existingBaseVal);
-                                } else {
-                                    valsToSave.push(valRepo.create({
-                                        submissionId: submission.id,
-                                        fieldId: field.id,
-                                        workflowStateId: null,
-                                        value: String(valStr)
-                                    }));
-                                }
-
-                                // 3. Update ancestor submissions if they share this field/form
-                                for (const pSub of parentSubs) {
-                                    if (pSub.formId === fId) {
-                                        const existingParentVal = await valRepo.findOne({
-                                            where: { submissionId: pSub.id, fieldId: field.id, workflowStateId: IsNull() }
-                                        });
-                                        if (existingParentVal) {
-                                            existingParentVal.value = String(valStr);
-                                            valsToSave.push(existingParentVal);
-                                        } else {
-                                            valsToSave.push(valRepo.create({
-                                                submissionId: pSub.id,
-                                                fieldId: field.id,
-                                                workflowStateId: null,
-                                                value: String(valStr)
-                                            }));
-                                        }
-                                    }
-                                }
                             }
                         }
                     }
@@ -3534,10 +3555,11 @@ export class ProductionService {
                 let targetStageId: number = stage.id;
                 let targetCustomFormIdToFill: number | null = null;
                 const targetType = stage.rejectionTargetType || 'previous_sender';
+                let prevState: any = null;
 
                 if (targetType === 'previous_sender') {
 
-                    const prevState = await stateRepo.findOne({
+                    prevState = await stateRepo.findOne({
                         where: { submissionId: submission.id, status: 'Approved' },
                         order: { updatedAt: 'DESC' },
                         relations: ['stage', 'stage.formToFill']
@@ -3560,7 +3582,7 @@ export class ProductionService {
                         } else {
                             targetUserId = submission.requesterUserId;
                             targetStageId = stage.id;
-                            targetCustomFormIdToFill = stage.formIdToFill || null;
+                            targetCustomFormIdToFill = null;
                         }
                     } else {
                         targetUserId = submission.requesterUserId;
@@ -3582,11 +3604,13 @@ export class ProductionService {
                 }
 
                 if (!targetUserId) targetUserId = submission.requesterUserId;
+                const isReturningToInitialRequest = (!prevState && !targetCustomFormIdToFill && targetUserId === submission.requesterUserId);
 
                 submission.status = 'Rejected';
 
-                if (targetUserId === submission.requesterUserId && !targetCustomFormIdToFill && !submission.parentSubmissionId) {
+                if (isReturningToInitialRequest && !submission.parentSubmissionId) {
                     submission.currentStageId = null;
+                    targetCustomFormIdToFill = null;
                 } else {
                     submission.currentStageId = targetStageId;
                 }

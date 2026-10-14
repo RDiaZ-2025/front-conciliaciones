@@ -41,6 +41,14 @@ Al actualizar la versión, la modificación se realiza en **un único lugar en e
 
 ---
 
+## Regla Obligatoria de Variables de Entorno y Monitoreo en `/health`
+Cada vez que se **agregue, modifique o elimine** una variable de entorno en el proyecto (backend, servicios o integraciones externas):
+1. **Actualización Obligatoria de `/health`:** Se debe actualizar inmediatamente la función diagnóstica en el endpoint de salud (`backend/src/app.ts`) para validar si dicha variable existe o no en el entorno de ejecución (`process.env`).
+2. **Diagnóstico y Reporte de Faltantes (`missingVars`):** El payload de `/health` debe reportar con precisión si el servicio o módulo asociado está `configured: true/false` y listar explícitamente en el arreglo `missingVars` los nombres exactos de las variables que hagan falta.
+3. **Visibilidad en Frontend:** Si la variable corresponde a una integración o servicio crítico (ej. Bluestacks CMS, n8n, Storage, Service Bus, Base de Datos), reflejar su estado en el servicio y pantalla de **System Health** (`frontend/voc/src/app/pages/system-health/`) para que cualquier variable faltante en Azure Portal sea diagnosticable visualmente de inmediato.
+
+---
+
 ## Directivas de Buenas Prácticas y SOLID
 - Seguir principios SOLID y mantener código modular, testeable y mantenible.
 - Mantener la lógica de negocio en el backend/servicios y la presentación limpia en el frontend.
