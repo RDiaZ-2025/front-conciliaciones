@@ -797,51 +797,82 @@ export class NocNewsSchedulerService {
     }
 
     async publishDraft(draftId: number) {
+        console.log(`🚀 [Publish Draft] Iniciando publicación de borrador ID: ${draftId}`);
+
         if (!AppDataSource.isInitialized) {
             throw new Error('Database not initialized');
         }
         const draftRepo = AppDataSource.getRepository(NocNewsDraft);
         const draft = await draftRepo.findOne({ where: { id: draftId } });
         if (!draft) {
-            throw new Error('Borrador no encontrado');
+            throw new Error(`Borrador con ID ${draftId} no encontrado`);
+        }
+
+        if (!draft.content) {
+            throw new Error(`El borrador ID ${draftId} no tiene contenido para publicar`);
         }
 
         let articleData: NewsArticleData;
         try {
-            articleData = draft.content ? JSON.parse(draft.content) : this.buildDefaultArticleData(draft.title || 'Noticia');
-        } catch {
-            articleData = this.buildDefaultArticleData(draft.title || 'Noticia');
+            articleData = JSON.parse(draft.content);
+        } catch (parseErr: any) {
+            throw new Error(`El contenido del borrador ID ${draftId} no es un JSON válido: ${parseErr.message}`);
         }
 
-        // Solo reutilizar cmsPath si fue efectivamente creado en el CMS para este borrador específico (registrado en articleData.cmsPath)
         let cmsPath = (articleData as any)?.cmsPath;
-        let publishedUrl: string | null = null;
+        let publishedUrl: string;
+        console.log(`📋 [Publish Draft] Datos del borrador ID ${draftId}:`, JSON.stringify({
+            id: draft.id,
+            title: articleData.title || draft.title,
+            currentStatus: draft.status,
+            existingCmsPath: cmsPath || null
+        }));
+
         try {
             const bluestacksCms = new BluestacksCmsService();
 
             if (!cmsPath) {
+                console.log(`📝 [Publish Draft] Creando noticia en Bluestacks CMS para borrador ID ${draftId}...`);
                 const createRes = await bluestacksCms.createNewsDraft(articleData);
                 cmsPath = createRes.cmsPath;
+                if (!cmsPath) {
+                    throw new Error('Bluestacks CMS no devolvió un cmsPath válido al crear el borrador');
+                }
+                (articleData as any).cmsPath = cmsPath;
+                draft.content = JSON.stringify(articleData);
+                draft.updatedAt = new Date();
+                await draftRepo.save(draft);
             }
 
-            if (cmsPath) {
-                await bluestacksCms.publishNews(cmsPath);
-                publishedUrl = await bluestacksCms.getPublishedNewsUrl(cmsPath);
-            }
+            console.log(`🌐 [Publish Draft] Publicando noticia en Bluestacks CMS (cmsPath: ${cmsPath})...`);
+            await bluestacksCms.publishNews(cmsPath);
+
+            console.log(`🔗 [Publish Draft] Consultando URL pública de la noticia en Bluestacks CMS (cmsPath: ${cmsPath})...`);
+            publishedUrl = await bluestacksCms.getPublishedNewsUrl(cmsPath);
         } catch (cmsErr: any) {
-            console.warn(`[Publish Draft] Bluestacks CMS publication warning:`, cmsErr.message);
+            console.error(`❌ [Publish Draft][ERROR] Falló la publicación del borrador ID ${draftId} en Bluestacks CMS:`, {
+                draftId,
+                cmsPath: cmsPath || null,
+                message: cmsErr.message,
+                stack: cmsErr.stack
+            });
+            throw cmsErr;
         }
 
-        if (cmsPath) {
-            (articleData as any).cmsPath = cmsPath;
-            draft.content = JSON.stringify(articleData);
-        }
-
-        draft.path = publishedUrl || cmsPath || draft.path;
+        draft.path = publishedUrl;
         draft.status = 'published';
         draft.publishedAt = new Date();
         draft.updatedAt = new Date();
-        return await draftRepo.save(draft);
+        const savedDraft = await draftRepo.save(draft);
+
+        console.log(`✅ [Publish Draft][SUCCESS] Borrador ID ${draftId} publicado exitosamente en Bluestacks CMS:`, JSON.stringify({
+            id: savedDraft.id,
+            status: savedDraft.status,
+            path: savedDraft.path,
+            publishedAt: savedDraft.publishedAt
+        }));
+
+        return savedDraft;
     }
 
     async previewDraft(path: string) {
@@ -1205,19 +1236,19 @@ export class NocNewsSchedulerService {
             subtitle: createdArticleData.subtitle,
             content: JSON.stringify(createdArticleData),
             path: null,
-            status: schedule.publishAutomatically ? 'published' : 'pending',
+            status: 'pending',
             createdAt: now,
             updatedAt: now,
-            publishedAt: schedule.publishAutomatically ? now : null
+            publishedAt: null
         });
-        const savedDraft = await draftRepo.save(newDraft);
+        let savedDraft = await draftRepo.save(newDraft);
 
         const totalDurationSec = ((Date.now() - startTime) / 1000).toFixed(1);
         console.log(`✅ [Pipeline Completed] Draft ID: ${savedDraft.id} | Total Time: ${totalDurationSec}s | Next Run: ${nextRun ? nextRun.toISOString() : 'None'}`);
 
         if (schedule.publishAutomatically) {
             console.log(`🌐 [Auto-Publish] Auto-publishing draft ID: ${savedDraft.id} to Bluestacks CMS...`);
-            await this.publishDraft(savedDraft.id);
+            savedDraft = await this.publishDraft(savedDraft.id);
         }
 
         return {

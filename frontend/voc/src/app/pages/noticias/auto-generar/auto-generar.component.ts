@@ -949,7 +949,7 @@ export class AutoGenerarComponent implements OnInit {
                 this.messageService.add({
                   severity: 'error',
                   summary: 'Error al Publicar',
-                  detail: 'No se pudo publicar la noticia.'
+                  detail: err?.error?.message || 'No se pudo publicar la noticia.'
                 });
               }
             });
@@ -988,8 +988,8 @@ export class AutoGenerarComponent implements OnInit {
             console.error('Error publishing draft', err);
             this.messageService.add({
               severity: 'error',
-              summary: 'Error',
-              detail: 'No se pudo publicar la noticia.'
+              summary: 'Error al Publicar',
+              detail: err?.error?.message || 'No se pudo publicar la noticia.'
             });
           }
         });
