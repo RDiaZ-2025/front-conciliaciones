@@ -28,5 +28,6 @@ export const environment = {
   chatGetConversationsUrl: 'https://api.azemblia.ai/Agents/contact-conversations',
   chatGetMessagesUrl: 'https://api.azemblia.ai/Agents/conversation-messages',
   chatDownloadFileUrl: 'https://api.azemblia.ai/Files/download',
-  chatSendMessageUrl: 'https://api.azemblia.ai/WebChat/message'
+  chatSendMessageUrl: 'https://api.azemblia.ai/WebChat/message',
+  chatHubUrl: 'https://api.azemblia.ai/hubs/chat'
 };

@@ -1,6 +1,6 @@
 import { LucideIconComponent } from '../../../components/lucide-icon/lucide-icon.component';
 import { CachedImagePipe } from '../../../pipes/cached-image.pipe';
-import { Component, ElementRef, ViewChild, signal, computed, inject, Output, EventEmitter, OnDestroy, AfterViewInit } from '@angular/core';
+import { Component, ElementRef, ViewChild, signal, computed, inject, Output, EventEmitter, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -15,6 +15,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MarkdownPipe } from '../../../pipes/markdown.pipe';
 import { AuthService } from '../../../services/auth.service';
 import { AzureStorageService } from '../../../services/azure-storage.service';
+import { environment } from '../../../../environments/environment';
 import {
   MiaChatService,
   WebMessageFile,
@@ -78,7 +79,7 @@ interface MessageFile {
   templateUrl: './production-chat-dialog.component.html',
   styleUrls: ['./production-chat-dialog.component.scss']
 })
-export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
+export class ProductionChatDialogComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('scrollPanel') scrollPanel!: ElementRef;
   @ViewChild('chatInput') chatInput!: ElementRef;
 
@@ -181,13 +182,17 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   private cancelPending$ = new Subject<void>();
   private destroy$ = new Subject<void>();
   private blobUrls: string[] = [];
-  private pollingSubscription: Subscription | null = null;
+  private safetyTimeoutSubscription: Subscription | null = null;
+
+  private stopSafetyTimeout(): void {
+    if (this.safetyTimeoutSubscription) {
+      this.safetyTimeoutSubscription.unsubscribe();
+      this.safetyTimeoutSubscription = null;
+    }
+  }
 
   private stopPolling(): void {
-    if (this.pollingSubscription) {
-      this.pollingSubscription.unsubscribe();
-      this.pollingSubscription = null;
-    }
+    this.stopSafetyTimeout();
   }
 
   getConvTitle(conv: ConversationItem): string {
@@ -413,7 +418,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     if (m.role === 'assistant' || m.role === 'agent') return true;
     if (m.role === 'user') return false;
 
-    const agentId = (m.agentId ?? this.AGENT_ID ?? '').toString().toLowerCase();
+    const agentId = (m.agentId ?? this.AGENT_ID ?? environment.chatAgentId ?? '').toString().toLowerCase();
 
     const sender = m.sender ?? m.Sender;
     let senderId = '';
@@ -422,6 +427,13 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     } else if (sender && typeof sender === 'object') {
       senderId = (sender.id ?? sender.Id ?? sender.email ?? sender.Email ?? '').toString();
     }
+    if (!senderId && (m.senderId || m.SenderId)) {
+      senderId = (m.senderId ?? m.SenderId).toString();
+    }
+
+    if (sender === 'ai' || senderId.toLowerCase() === 'ai' || (m.senderId && m.senderId.toString().toLowerCase() === 'ai')) {
+      return true;
+    }
 
     const currentEmail = (this.authService.currentUser()?.email ?? '').toLowerCase();
     const contactId = (m.contactId ?? m.ContactId ?? '').toString().toLowerCase();
@@ -429,7 +441,9 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     if (currentEmail && senderId.toLowerCase() === currentEmail) return false;
     if (contactId && senderId.toLowerCase() === contactId) return false;
 
-    if (agentId && senderId.toLowerCase() === agentId) return true;
+    if (agentId && (senderId.toLowerCase() === agentId || (m.senderId && m.senderId.toString().toLowerCase() === agentId))) {
+      return true;
+    }
 
     if (sender && typeof sender === 'object' && sender.name && /mia/i.test(sender.name)) {
       return true;
@@ -518,9 +532,16 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     const email = this.authService.currentUser()?.email;
     if (!email) return;
 
-    this.stopPolling();
+    const previousId = this.selectedConversationId();
+    if (previousId && previousId !== conv.id) {
+      this.miaChatService.leaveConversation(previousId);
+    }
+
+    this.stopSafetyTimeout();
     this.cancelPending$.next();
     this.selectedConversationId.set(conv.id);
+    this.miaChatService.joinConversation(conv.id);
+
     this.conversationMessagesLoading.set(true);
     this.messages.set([]);
     this.summary.set('');
@@ -545,8 +566,10 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     });
   }
 
-  private pollForAssistantResponse(targetConvId: string, sendTimeSeconds: number): void {
-    this.stopPolling();
+  private startSafetyTimeout(targetConvId: string | null, sendTimeSeconds: number): void {
+    this.stopSafetyTimeout();
+    if (!targetConvId) return;
+
     const email = this.authService.currentUser()?.email;
     if (!email) {
       this.stopTypingMessageRotation();
@@ -554,18 +577,9 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
       return;
     }
 
-    let attempts = 0;
-    const maxAttempts = 60;
-
-    this.pollingSubscription = timer(5000, 5000).pipe(
+    this.safetyTimeoutSubscription = timer(35000).pipe(
       takeUntil(this.cancelPending$),
-      switchMap(() => {
-        attempts++;
-        if (attempts > maxAttempts) {
-          throw new Error('Polling timeout');
-        }
-        return this.miaChatService.getConversationMessages(email, targetConvId);
-      })
+      switchMap(() => this.miaChatService.getConversationMessages(email, targetConvId))
     ).subscribe({
       next: (data) => {
         const list = Array.isArray(data) ? data.filter(Boolean) : [];
@@ -584,7 +598,7 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
         );
 
         if (hasAssistantResponse) {
-          this.stopPolling();
+          this.stopSafetyTimeout();
           this.stopTypingMessageRotation();
           this.isTyping.set(false);
 
@@ -594,22 +608,93 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
 
           this.scrollToBottom();
           this.loadConversations();
+        } else {
+          this.stopTypingMessageRotation();
+          this.isTyping.set(false);
         }
       },
       error: (err) => {
-        console.error('Error polling for assistant response:', err);
-        if (attempts > maxAttempts) {
-          this.stopPolling();
-          this.stopTypingMessageRotation();
-          this.isTyping.set(false);
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Tiempo de espera agotado',
-            detail: 'El asistente no respondió a tiempo.'
-          });
-        }
+        console.error('Safety timeout error recovering messages:', err);
+        this.stopSafetyTimeout();
+        this.stopTypingMessageRotation();
+        this.isTyping.set(false);
       }
     });
+  }
+
+  private handleIncomingSignalRMessage(msg: any): void {
+    if (!msg) return;
+
+    const incomingConvId = msg.conversationId ?? msg.ConversationId;
+    const currentConvId = this.selectedConversationId();
+
+    if (currentConvId && incomingConvId && incomingConvId !== currentConvId) {
+      this.loadConversations();
+      return;
+    }
+
+    if (!currentConvId && incomingConvId) {
+      this.selectedConversationId.set(incomingConvId);
+      this.miaChatService.joinConversation(incomingConvId);
+    }
+
+    const isAssistant = this.isAssistantMessage(msg);
+
+    if (isAssistant) {
+      this.isTyping.set(false);
+      this.stopTypingMessageRotation();
+      this.stopSafetyTimeout();
+
+      const mapped = this.mapApiMessagesToChatMessages([msg]);
+      if (mapped.length > 0) {
+        const newMsg = mapped[0];
+        const isDuplicate = this.messages().some(existing =>
+          existing.role === 'assistant' && existing.content.trim() === newMsg.content.trim()
+        );
+
+        if (!isDuplicate) {
+          this.messages.update(msgs => [...msgs, newMsg]);
+          this.loadAttachmentsForMessages(mapped);
+          this.scrollToBottom();
+        }
+      }
+
+      this.loadConversations();
+    } else {
+      const mapped = this.mapApiMessagesToChatMessages([msg]);
+      if (mapped.length > 0) {
+        const userMsg = mapped[0];
+        const hasUserMessage = this.messages().some(m =>
+          m.role === 'user' && m.content.trim() === userMsg.content.trim()
+        );
+        if (!hasUserMessage) {
+          this.messages.update(msgs => [...msgs, userMsg]);
+          this.loadAttachmentsForMessages(mapped);
+          this.scrollToBottom();
+        }
+      }
+    }
+  }
+
+  private initSignalR(): void {
+    const email = this.authService.currentUser()?.email;
+    this.miaChatService.startSignalR(email);
+
+    this.miaChatService.messageReceived$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((msg: any) => {
+        this.handleIncomingSignalRMessage(msg);
+      });
+
+    this.miaChatService.conversationUpdated$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.loadConversations();
+      });
+  }
+
+  ngOnInit(): void {
+    this.initSignalR();
   }
 
   private memoryUniqueId: string;
@@ -750,9 +835,13 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   resetChat() {
-    this.stopPolling();
+    this.stopSafetyTimeout();
     this.cancelPending$.next();
     this.stopTypingMessageRotation();
+    const prevId = this.selectedConversationId();
+    if (prevId) {
+      this.miaChatService.leaveConversation(prevId);
+    }
     this.messages.set([]);
     this.summary.set('');
     this.files.set([]);
@@ -778,7 +867,11 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
-    this.stopPolling();
+    this.stopSafetyTimeout();
+    const prevId = this.selectedConversationId();
+    if (prevId) {
+      this.miaChatService.leaveConversation(prevId);
+    }
     this.blobUrls.forEach(url => URL.revokeObjectURL(url));
     this.blobUrls = [];
     if (this.scrollContainer) {
@@ -830,21 +923,21 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     this.miaChatService.sendMessage(payload)
       .pipe(takeUntil(this.cancelPending$)).subscribe({
       next: (response) => {
-        const convId = response?.conversationId || conversationId || this.selectedConversationId();
-        if (response?.conversationId) {
-          this.selectedConversationId.set(response.conversationId);
-        }
-
+        const convId = (typeof response === 'string' ? response : (response?.conversationId || response?.id)) || conversationId || this.selectedConversationId();
         if (convId) {
-
-          this.pollForAssistantResponse(convId, sendTimeSeconds);
+          if (convId !== this.selectedConversationId()) {
+            this.selectedConversationId.set(convId);
+          }
+          this.miaChatService.joinConversation(convId);
+          this.startSafetyTimeout(convId, sendTimeSeconds);
         } else {
+          this.stopSafetyTimeout();
           this.stopTypingMessageRotation();
           this.isTyping.set(false);
         }
       },
       error: (err) => {
-        this.stopPolling();
+        this.stopSafetyTimeout();
         this.stopTypingMessageRotation();
         this.isTyping.set(false);
         console.error('Error asking assistant:', err);
@@ -949,3 +1042,4 @@ export class ProductionChatDialogComponent implements OnDestroy, AfterViewInit {
     }, 1500);
   }
 }
+
