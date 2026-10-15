@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { validateEnv } from './config/env.config';
 
 process.env.TZ = 'America/Bogota';
+process.env.DOTENV_CONFIG_QUIET = 'true';
 
 validateEnv();
 

@@ -131,7 +131,9 @@ app.use(compression({
     return compression.filter(req, res);
   }
 }));
-app.use(morgan('combined'));
+app.use(morgan(isProduction ? 'combined' : 'dev', {
+  skip: (req) => req.url.startsWith('/health') || req.url.includes('/stream')
+}));
 if (isGlobalLimiterEnabled) {
   app.use(limiter);
 }

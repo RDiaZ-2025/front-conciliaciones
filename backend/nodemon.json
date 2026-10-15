@@ -1,0 +1,11 @@
+{
+  "watch": ["src"],
+  "ext": "ts",
+  "ignore": [
+    "node_modules",
+    "dist",
+    "src/scripts",
+    "*.spec.ts"
+  ],
+  "delay": "1000"
+}

@@ -36,7 +36,7 @@ export const AppDataSource = new DataSource({
   migrationsTableName: 'typeorm_migrations',
 
   synchronize: false,
-  logging: process.env.NODE_ENV === 'development' ? ['query', 'error'] : ['error'],
+  logging: process.env.DB_LOGGING === 'true' ? ['query', 'error'] : ['error'],
 });
 
 export const initializeDatabase = async (): Promise<void> => {

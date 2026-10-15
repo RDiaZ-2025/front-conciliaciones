@@ -744,7 +744,8 @@ export class ProductionChatDialogComponent implements OnInit, OnDestroy, AfterVi
     }]);
 
     if (this.chatInput) {
-      this.chatInput.nativeElement.style.height = '44px';
+      this.chatInput.nativeElement.style.height = '36px';
+      this.chatInput.nativeElement.style.overflowY = 'hidden';
     }
 
     this.scrollToBottom();
@@ -821,8 +822,13 @@ export class ProductionChatDialogComponent implements OnInit, OnDestroy, AfterVi
   }
 
   autoResize(textarea: HTMLTextAreaElement) {
-    textarea.style.height = '44px';
-    textarea.style.height = textarea.scrollHeight + 'px';
+    textarea.style.height = '36px';
+    if (textarea.scrollHeight > 36) {
+      textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+      textarea.style.overflowY = textarea.scrollHeight > 120 ? 'auto' : 'hidden';
+    } else {
+      textarea.style.overflowY = 'hidden';
+    }
   }
 
   scrollToBottom() {
@@ -848,7 +854,8 @@ export class ProductionChatDialogComponent implements OnInit, OnDestroy, AfterVi
     this.inputText = '';
     this.selectedConversationId.set(null);
     if (this.chatInput) {
-      this.chatInput.nativeElement.style.height = '44px';
+      this.chatInput.nativeElement.style.height = '36px';
+      this.chatInput.nativeElement.style.overflowY = 'hidden';
     }
   }
 
