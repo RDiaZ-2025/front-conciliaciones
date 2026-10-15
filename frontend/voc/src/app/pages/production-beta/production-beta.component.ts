@@ -2086,6 +2086,30 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }
   }
 
+  addCommentOnly() {
+    const task = this.selectedTask();
+    const notes = this.comments();
+    if (!notes || !notes.trim()) {
+      this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'Debe ingresar un comentario.' });
+      return;
+    }
+
+    this.loadingAction.set(true);
+    this.productionService.addApprovalComment(task.stateId, notes).subscribe({
+      next: (saved) => {
+        this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Comentario guardado.' });
+        this.selectedTask.set({ ...task, comments: [...(task.comments || []), saved] });
+        this.comments.set('');
+        this.loadPendingTasks();
+        this.loadingAction.set(false);
+      },
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Ocurrió un error al guardar el comentario.' });
+        this.loadingAction.set(false);
+      }
+    });
+  }
+
   onStageFileSelected(event: any, field: any) {
     const files: FileList = event.target.files;
     if (!files || files.length === 0) return;

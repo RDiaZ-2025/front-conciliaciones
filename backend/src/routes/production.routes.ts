@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { ProductionController, getAllProductionRequests, getProductionRequestById, createProductionRequest, updateProductionRequest, getProducts, moveProductionRequest, updateStepGeneral, updateStepCustomer, updateStepCampaign, updateStepAudience, updateStepProduction, updateMaterialData, getFormFields, createSubmission, getSubmissions, adminGetForms, adminCreateForm, adminUpdateForm, adminDeleteForm, adminSaveFields, adminGetStages, adminSaveStages, adminGetWorkflows, adminCreateWorkflow, adminUpdateWorkflow, adminDeleteWorkflow, adminGetWorkflowStages, adminSaveWorkflowStages, getPendingApprovals, actionApproval, getSubmissionDetails, deleteSubmission } from '../controllers/production.controller';
+import { ProductionController, getAllProductionRequests, getProductionRequestById, createProductionRequest, updateProductionRequest, getProducts, moveProductionRequest, updateStepGeneral, updateStepCustomer, updateStepCampaign, updateStepAudience, updateStepProduction, updateMaterialData, getFormFields, createSubmission, getSubmissions, adminGetForms, adminCreateForm, adminUpdateForm, adminDeleteForm, adminSaveFields, adminGetStages, adminSaveStages, adminGetWorkflows, adminCreateWorkflow, adminUpdateWorkflow, adminDeleteWorkflow, adminGetWorkflowStages, adminSaveWorkflowStages, getPendingApprovals, actionApproval, addApprovalComment, getSubmissionDetails, deleteSubmission } from '../controllers/production.controller';
 import { addMaterialRegister, getMaterialRegisters } from '../controllers/material_register.controller';
 import { RequestsReportController } from '../controllers/requests_report.controller';
 import { getProductionRequestHistory } from '../controllers/production_request_history.controller';
@@ -42,6 +42,7 @@ router.post('/admin/workflows/:id/stages', adminFormsAuth, adminSaveWorkflowStag
 
 router.get('/approvals/pending', getPendingApprovals);
 router.post('/approvals/:stateId/action', actionApproval);
+router.post('/approvals/:stateId/comment', addApprovalComment);
 
 router.get('/products', getProducts);
 

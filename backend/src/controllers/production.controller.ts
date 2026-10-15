@@ -290,6 +290,13 @@ export const actionApproval = asyncHandler(async (req: Request, res: Response): 
     return res.json(result);
 });
 
+export const addApprovalComment = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ message: 'Usuario no autenticado' });
+    const comment = await productionService.addApprovalComment(parseInt(req.params.stateId), userId, req.body.comment);
+    return res.status(201).json(comment);
+});
+
 export const deleteSubmission = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
     const adminUserId = req.user?.userId;
     if (!adminUserId) return res.status(401).json({ message: 'Usuario no autenticado' });
