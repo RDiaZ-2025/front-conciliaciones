@@ -622,7 +622,7 @@ export class ProductionService {
         limit?: number;
         search?: string;
         forms?: string[];
-        status?: string;
+        status?: string[];
         dateFrom?: string;
         dateTo?: string;
         requester?: string;
@@ -742,17 +742,19 @@ export class ProductionService {
         }
 
         // 4. Aplicar Filtro de Estado
-        if (options?.status && options.status !== 'all') {
-            const st = options.status.toLowerCase().trim();
+        if (options?.status && options.status.length > 0) {
+            const statuses = options.status.map(st => st.toLowerCase().trim());
             candidateSubmissions = candidateSubmissions.filter(s => {
                 const subSt = (s.status || '').toLowerCase();
-                if (st === 'completed') return subSt === 'completed' || subSt === 'approved';
-                if (st === 'in_progress') return subSt === 'in progress' || subSt === 'in_progress';
-                if (st === 'rejected') return subSt === 'rejected';
-                if (st === 'deleted') return subSt === 'deleted';
-                if (st === 'pending') return subSt === 'pending';
-                if (st === 'blocked') return subSt === 'blocked';
-                return subSt === st;
+                return statuses.some(st => {
+                    if (st === 'completed') return subSt === 'completed' || subSt === 'approved';
+                    if (st === 'in_progress') return subSt === 'in progress' || subSt === 'in_progress';
+                    if (st === 'rejected') return subSt === 'rejected';
+                    if (st === 'deleted') return subSt === 'deleted';
+                    if (st === 'pending') return subSt === 'pending';
+                    if (st === 'blocked') return subSt === 'blocked';
+                    return subSt === st;
+                });
             });
         }
 
@@ -2065,7 +2067,7 @@ export class ProductionService {
         limit?: number;
         search?: string;
         forms?: string[];
-        status?: string;
+        status?: string[];
         dateFrom?: string;
         dateTo?: string;
         requester?: string;
@@ -2094,14 +2096,16 @@ export class ProductionService {
         }
 
         // 2. Filtro de Estado
-        if (options?.status && options.status !== 'all') {
-            const st = options.status.toLowerCase().trim();
+        if (options?.status && options.status.length > 0) {
+            const statuses = options.status.map(st => st.toLowerCase().trim());
             states = states.filter(s => {
                 const subSt = (s.submission?.status || '').toLowerCase();
-                if (st === 'completed') return false;
-                if (st === 'in_progress') return subSt === 'in progress' || subSt === 'in_progress';
-                if (st === 'rejected') return subSt === 'rejected';
-                return true;
+                return statuses.some(st => {
+                    if (st === 'completed') return false;
+                    if (st === 'in_progress') return subSt === 'in progress' || subSt === 'in_progress';
+                    if (st === 'rejected') return subSt === 'rejected';
+                    return true;
+                });
             });
         }
 

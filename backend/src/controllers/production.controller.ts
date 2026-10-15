@@ -122,7 +122,12 @@ export const getSubmissions = asyncHandler(async (req: Request, res: Response): 
             forms = (req.query.forms as string).split(',').map(f => f.trim()).filter(Boolean);
         }
     }
-    const status = req.query.status as string | undefined;
+    let status: string[] | undefined = undefined;
+    if (req.query.status) {
+        status = Array.isArray(req.query.status)
+            ? req.query.status as string[]
+            : (req.query.status as string).split(',').map(st => st.trim()).filter(Boolean);
+    }
     const dateFrom = req.query.dateFrom as string | undefined;
     const dateTo = req.query.dateTo as string | undefined;
     const requester = req.query.requester as string | undefined;
@@ -252,7 +257,12 @@ export const getPendingApprovals = asyncHandler(async (req: Request, res: Respon
             forms = (req.query.forms as string).split(',').map(f => f.trim()).filter(Boolean);
         }
     }
-    const status = req.query.status as string | undefined;
+    let status: string[] | undefined = undefined;
+    if (req.query.status) {
+        status = Array.isArray(req.query.status)
+            ? req.query.status as string[]
+            : (req.query.status as string).split(',').map(st => st.trim()).filter(Boolean);
+    }
     const dateFrom = req.query.dateFrom as string | undefined;
     const dateTo = req.query.dateTo as string | undefined;
     const requester = req.query.requester as string | undefined;

@@ -106,7 +106,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   // --- Filtros Integrales (Aprobaciones e Historial) ---
   filterSearch = signal<string>('');
   filterSelectedForms = signal<string[]>([]);
-  filterStatus = signal<string>('all');
+  filterStatus = signal<string[]>([]);
   filterDatePreset = signal<string>('all');
   filterDateFrom = signal<Date | null>(null);
   filterDateTo = signal<Date | null>(null);
@@ -123,7 +123,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   isDeletingSub = signal<boolean>(false);
 
   statusOptions = [
-    { label: 'Todos los estados', value: 'all' },
     { label: 'Pendientes de mi Aprobación', value: 'pending_me' },
     { label: 'En Proceso', value: 'in_progress' },
     { label: 'Aprobadas / Completadas', value: 'completed' },
@@ -156,7 +155,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     let count = 0;
     if (this.filterSearch().trim()) count++;
     if (this.filterSelectedForms().length > 0) count++;
-    if (this.filterStatus() !== 'all') count++;
+    if (this.filterStatus().length > 0) count++;
     if (this.filterDatePreset() !== 'all') count++;
     if (this.filterRequester().trim()) count++;
     if (this.filterAllUsers()) count++;
@@ -191,7 +190,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   clearAllFilters() {
     this.filterSearch.set('');
     this.filterSelectedForms.set([]);
-    this.filterStatus.set('all');
+    this.filterStatus.set([]);
     this.filterDatePreset.set('all');
     this.filterDateFrom.set(null);
     this.filterDateTo.set(null);
@@ -247,7 +246,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     if (forms && forms.length > 0) params.forms = forms;
 
     const status = this.filterStatus();
-    if (status && status !== 'all') params.status = status;
+    if (status && status.length > 0) params.status = status;
 
     const requester = this.filterRequester();
     if (requester && requester.trim()) params.requester = requester.trim();
