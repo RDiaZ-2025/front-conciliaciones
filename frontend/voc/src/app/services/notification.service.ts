@@ -40,6 +40,7 @@ export class NotificationService extends BaseApiService {
   private swRegistration: ServiceWorkerRegistration | null = null;
   private notifiedIds = new Set<number>();
   private initialLoadDone = false;
+  private lastFetchTime = 0;
 
   initBrowserNotifications(): void {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -116,6 +117,8 @@ export class NotificationService extends BaseApiService {
 
       this.eventSource.onopen = () => {
         this.isRealtimeActive.set(true);
+        // Sincronizar estado al conectar/reconectar SSE para asegurar consistencia
+        this.loadNotifications();
       };
 
       this.eventSource.onmessage = (event) => {
@@ -158,16 +161,25 @@ export class NotificationService extends BaseApiService {
       console.error('Error iniciando stream de notificaciones:', err);
     }
 
-    // Intervalo de respaldo activo para mantener sincronizado el estado y disparar alertas si SSE falla
+    // Intervalo de sondeo inteligente:
+    // - Si SSE está activo y conectado: sincronización preventiva espaciada cada 3 minutos (180s)
+    // - Si SSE está desconectado o en reconexión: actúa como respaldo activo consultando cada 30 segundos
     if (!this.pollInterval) {
       this.pollInterval = setInterval(() => {
         const activeToken = localStorage.getItem('auth_token');
-        if (activeToken && activeToken !== 'null' && activeToken !== 'undefined') {
-          this.loadNotifications();
-        } else {
+        if (!activeToken || activeToken === 'null' || activeToken === 'undefined') {
           this.stopRealtime();
+          return;
         }
-      }, 20000);
+
+        const isSSEConnected = this.isRealtimeActive() && this.eventSource?.readyState === EventSource.OPEN;
+        const now = Date.now();
+        const timeSinceLastFetch = now - this.lastFetchTime;
+
+        if (!isSSEConnected || timeSinceLastFetch >= 180000) {
+          this.loadNotifications();
+        }
+      }, 30000);
     }
   }
 
@@ -235,6 +247,7 @@ export class NotificationService extends BaseApiService {
   }
 
   loadNotifications(): void {
+    this.lastFetchTime = Date.now();
     this.http.get<NotificationResponse>(this.apiUrl).subscribe({
       next: (response) => {
         if (response.success && response.data) {
