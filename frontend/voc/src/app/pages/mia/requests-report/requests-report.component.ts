@@ -58,6 +58,10 @@ export class RequestsReportComponent implements OnInit {
   customRange = signal<Date[] | null>(null);
   selectedFormIds = signal<number[]>([]);
   selectedAreaIds = signal<number[]>([]);
+  isAreaLocked = computed(() => {
+    const scope = this.data()?.scope;
+    return !!scope && !scope.all;
+  });
 
   readonly presetOptions: { label: string; value: DatePreset }[] = [
     { label: 'Este mes', value: 'month' },
@@ -173,19 +177,28 @@ export class RequestsReportComponent implements OnInit {
       dateFrom: range.from,
       dateTo: range.to,
       formIds: this.selectedFormIds(),
-      workflowIds: this.selectedAreaIds()
+      teamIds: this.selectedAreaIds()
     }).subscribe({
       next: res => {
+        if (!res.data.scope.all && res.data.scope.teamIds?.length) {
+          this.selectedAreaIds.set(res.data.scope.teamIds);
+        }
         this.data.set(res.data);
         this.loading.set(false);
       },
       error: (err: HttpErrorResponse) => {
         this.loading.set(false);
         this.errorMessage.set(err.status === 403
-          ? 'No tienes acceso al informe de solicitudes. Solicita el permiso de gestión de producción o ser líder de un equipo.'
+          ? 'Tu usuario no tiene un equipo asignado para consultar el informe de solicitudes.'
           : 'No se pudo cargar el informe. Intenta nuevamente.');
       }
     });
+  }
+
+  onAreaChange(ids: number[]) {
+    if (this.isAreaLocked()) return;
+    this.selectedAreaIds.set(ids || []);
+    this.load();
   }
 
   onPresetChange(preset: DatePreset) {
@@ -200,7 +213,8 @@ export class RequestsReportComponent implements OnInit {
 
   clearFilters() {
     this.selectedFormIds.set([]);
-    this.selectedAreaIds.set([]);
+    const scope = this.data()?.scope;
+    this.selectedAreaIds.set(scope && !scope.all ? scope.teamIds : []);
     this.datePreset.set('30d');
     this.customRange.set(null);
     this.load();

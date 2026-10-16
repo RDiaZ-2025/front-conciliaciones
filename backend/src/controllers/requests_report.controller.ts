@@ -52,7 +52,7 @@ export class RequestsReportController {
       dateTo,
       tzOffsetMinutes,
       formIds: this.parseIdList(req.query.formIds),
-      workflowIds: this.parseIdList(req.query.workflowIds)
+      teamIds: this.parseIdList(req.query.teamIds ?? req.query.workflowIds)
     });
     res.status(200).json({ success: true, data });
   });

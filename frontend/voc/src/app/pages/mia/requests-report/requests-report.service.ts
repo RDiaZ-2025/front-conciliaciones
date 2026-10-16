@@ -10,11 +10,11 @@ export interface RequestsAnalyticsFilters {
   dateFrom: Date;
   dateTo: Date;
   formIds: number[];
-  workflowIds: number[];
+  teamIds: number[];
 }
 
 export interface RequestsAnalytics {
-  scope: { all: boolean; teamNames: string[] };
+  scope: { all: boolean; teamIds: number[]; teamNames: string[] };
   filterOptions: {
     forms: { id: number; name: string }[];
     areas: { id: number; name: string }[];
@@ -76,7 +76,7 @@ export class RequestsReportService extends BaseApiService {
       .set('dateTo', filters.dateTo.toISOString())
       .set('tz', String(new Date().getTimezoneOffset()));
     if (filters.formIds.length > 0) params = params.set('formIds', filters.formIds.join(','));
-    if (filters.workflowIds.length > 0) params = params.set('workflowIds', filters.workflowIds.join(','));
+    if (filters.teamIds.length > 0) params = params.set('teamIds', filters.teamIds.join(','));
     return this.http.get<{ success: boolean; data: RequestsAnalytics }>(this.apiUrl, { params });
   }
 }
