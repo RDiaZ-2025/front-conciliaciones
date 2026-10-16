@@ -1,247 +1,386 @@
 <div class="flex flex-column gap-4 p-4 fadein animation-duration-300 w-full max-w-7xl mx-auto">
 
-    <app-page-header title="Informe de Solicitudes" subtitle="Seguimiento de tareas y carga de trabajo"
+    <app-page-header title="Informe de Solicitudes" subtitle="Indicadores del flujo de solicitudes, carga de trabajo y cuellos de botella"
         icon="line-chart"></app-page-header>
 
-    @if (stats(); as data) {
-    <!-- Stats Cards -->
+    <!-- Filtros -->
+    <div class="surface-card shadow-1 border-round-xl p-3 flex flex-column gap-3">
+        <div class="grid align-items-end m-0">
+            <div class="col-12 sm:col-6 lg:col-2 flex flex-column gap-1">
+                <label class="text-xs font-semibold text-700">Periodo</label>
+                <p-select [options]="presetOptions" [ngModel]="datePreset()" (ngModelChange)="onPresetChange($event)"
+                    optionLabel="label" optionValue="value" styleClass="w-full" appendTo="body"></p-select>
+            </div>
+            @if (datePreset() === 'custom') {
+            <div class="col-12 sm:col-6 lg:col-3 flex flex-column gap-1">
+                <label class="text-xs font-semibold text-700">Rango de fechas</label>
+                <p-datepicker [ngModel]="customRange()" (ngModelChange)="onCustomRangeChange($event)" selectionMode="range"
+                    [readonlyInput]="true" dateFormat="dd/mm/yy" [showIcon]="true" placeholder="Desde – Hasta"
+                    styleClass="w-full" appendTo="body"></p-datepicker>
+            </div>
+            }
+            <div class="col-12 sm:col-6 lg:col-3 flex flex-column gap-1">
+                <label class="text-xs font-semibold text-700">Tipo de solicitud</label>
+                <p-multiSelect [options]="data()?.filterOptions?.forms || []" [ngModel]="selectedFormIds()"
+                    (ngModelChange)="selectedFormIds.set($event); load()" optionLabel="name" optionValue="id"
+                    placeholder="Todos los tipos" display="chip" [showClear]="true" [filter]="true" filterBy="name"
+                    styleClass="w-full" appendTo="body"></p-multiSelect>
+            </div>
+            <div class="col-12 sm:col-6 lg:col-3 flex flex-column gap-1">
+                <label class="text-xs font-semibold text-700">Área</label>
+                <p-multiSelect [options]="data()?.filterOptions?.areas || []" [ngModel]="selectedAreaIds()"
+                    (ngModelChange)="onAreaChange($event)" optionLabel="name" optionValue="id"
+                    placeholder="Todas las áreas" display="chip" [disabled]="isAreaLocked()" [showClear]="!isAreaLocked()"
+                    [filter]="!isAreaLocked()" filterBy="name" styleClass="w-full" appendTo="body"></p-multiSelect>
+            </div>
+            <div class="col-12 lg:col flex gap-2 justify-content-end flex-wrap">
+                <p-button [text]="true" severity="secondary" (onClick)="clearFilters()" pTooltip="Limpiar filtros" tooltipPosition="top">
+                    <lucide-icon name="filter-x"></lucide-icon>
+                </p-button>
+                <p-button [outlined]="true" severity="secondary" (onClick)="load()" [loading]="loading()" pTooltip="Actualizar" tooltipPosition="top">
+                    <lucide-icon name="refresh-cw"></lucide-icon>
+                </p-button>
+                <p-button severity="success" (onClick)="exportExcel()" [loading]="exporting()" [disabled]="!data()">
+                    <lucide-icon name="file-spreadsheet" class="mr-2"></lucide-icon>
+                    Exportar
+                </p-button>
+            </div>
+        </div>
+        <div class="flex flex-wrap align-items-center gap-2 text-xs text-600">
+            <lucide-icon name="calendar" style="width: 0.9rem; height: 0.9rem;"></lucide-icon>
+            <span>{{ getPeriodLabel() || 'Selecciona un rango de fechas' }}</span>
+            @if (data()?.scope && !data()!.scope.all) {
+            <span class="ml-2 px-2 py-1 border-round-3xl bg-primary-50 text-primary font-semibold flex align-items-center gap-1">
+                <lucide-icon name="users" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                Mostrando solo tu equipo: {{ data()!.scope.teamNames.join(', ') }}
+            </span>
+            }
+        </div>
+    </div>
+
+    @if (errorMessage()) {
+    <div class="surface-card shadow-1 border-round-xl p-5 flex flex-column align-items-center gap-2 text-center">
+        <lucide-icon name="shield-alert" class="text-red-500" style="width: 2.5rem; height: 2.5rem;"></lucide-icon>
+        <span class="font-semibold text-900">{{ errorMessage() }}</span>
+    </div>
+    } @else if (data(); as d) {
+
+    <!-- KPIs -->
     <div class="grid">
-        <div class="col-12 md:col-6 lg:col">
-            <div class="surface-card shadow-2 p-3 border-round border-left-3 border-cyan-500">
-                <div class="flex justify-content-between mb-3">
-                    <div>
-                        <div class="flex align-items-center gap-2 mb-3">
-                            <span class="block text-500 font-medium">Total Solicitudes</span>
-                            <lucide-icon name="info" class="text-500 cursor-pointer" pTooltip="Total de solicitudes asignadas al equipo." tooltipPosition="top"></lucide-icon>
-                        </div>
-                        <div class="text-900 font-medium text-xl">{{data.total}}</div>
-                    </div>
-                    <div class="flex align-items-center justify-content-center bg-cyan-100 border-round"
-                        style="width:2.5rem;height:2.5rem">
-                        <lucide-icon name="list" class="text-cyan-500 text-xl"></lucide-icon>
-                    </div>
+        <div class="col-12 sm:col-6 xl:col-2">
+            <div class="kpi-card surface-card shadow-1 border-round-xl p-3 h-full">
+                <div class="flex justify-content-between align-items-start">
+                    <span class="text-600 font-medium text-sm">Solicitudes creadas</span>
+                    <span class="kpi-icon bg-red-50 text-primary"><lucide-icon name="inbox"></lucide-icon></span>
+                </div>
+                <div class="text-900 font-bold text-3xl mt-2">{{ d.summary.total }}</div>
+                <div class="text-xs text-500 mt-1">{{ d.summary.deleted }} eliminadas en el periodo</div>
+            </div>
+        </div>
+        <div class="col-12 sm:col-6 xl:col-2">
+            <div class="kpi-card surface-card shadow-1 border-round-xl p-3 h-full">
+                <div class="flex justify-content-between align-items-start">
+                    <span class="text-600 font-medium text-sm">En curso</span>
+                    <span class="kpi-icon bg-blue-50 text-blue-500"><lucide-icon name="loader"></lucide-icon></span>
+                </div>
+                <div class="text-900 font-bold text-3xl mt-2">{{ d.summary.inProgress }}</div>
+                <div class="text-xs text-500 mt-1">Alguna área aún trabajando</div>
+            </div>
+        </div>
+        <div class="col-12 sm:col-6 xl:col-2">
+            <div class="kpi-card surface-card shadow-1 border-round-xl p-3 h-full">
+                <div class="flex justify-content-between align-items-start">
+                    <span class="text-600 font-medium text-sm">Devueltas</span>
+                    <span class="kpi-icon bg-orange-50 text-orange-500"><lucide-icon name="undo-2"></lucide-icon></span>
+                </div>
+                <div class="text-900 font-bold text-3xl mt-2">{{ d.summary.returned }}</div>
+                <div class="text-xs text-500 mt-1" pTooltip="Porcentaje de flujos de área que fueron devueltos al menos una vez" tooltipPosition="bottom">
+                    Tasa de devolución: {{ d.summary.returnRate !== null ? d.summary.returnRate + '%' : '—' }}
                 </div>
             </div>
         </div>
-        <div class="col-12 md:col-6 lg:col">
-            <div class="surface-card shadow-2 p-3 border-round border-left-3 border-blue-500">
-                <div class="flex justify-content-between mb-3">
-                    <div>
-                        <div class="flex align-items-center gap-2 mb-3">
-                            <span class="block text-500 font-medium">Activas</span>
-                            <lucide-icon name="info" class="text-500 cursor-pointer" pTooltip="Solicitudes en proceso (no completadas ni canceladas)."
-                                tooltipPosition="top"></lucide-icon>
-                        </div>
-                        <div class="text-900 font-medium text-xl">{{data.active}}</div>
-                    </div>
-                    <div class="flex align-items-center justify-content-center bg-blue-100 border-round"
-                        style="width:2.5rem;height:2.5rem">
-                        <lucide-icon name="check-circle" class="text-blue-500 text-xl"></lucide-icon>
-                    </div>
+        <div class="col-12 sm:col-6 xl:col-2">
+            <div class="kpi-card surface-card shadow-1 border-round-xl p-3 h-full">
+                <div class="flex justify-content-between align-items-start">
+                    <span class="text-600 font-medium text-sm">Finalizadas</span>
+                    <span class="kpi-icon bg-green-50 text-green-500"><lucide-icon name="circle-check"></lucide-icon></span>
+                </div>
+                <div class="text-900 font-bold text-3xl mt-2">{{ d.summary.completed }}</div>
+                <div class="text-xs text-500 mt-1">Tasa de finalización: {{ d.summary.completionRate !== null ? d.summary.completionRate + '%' : '—' }}</div>
+            </div>
+        </div>
+        <div class="col-12 sm:col-6 xl:col-2">
+            <div class="kpi-card surface-card shadow-1 border-round-xl p-3 h-full">
+                <div class="flex justify-content-between align-items-start">
+                    <span class="text-600 font-medium text-sm">Tiempo de ciclo</span>
+                    <span class="kpi-icon bg-purple-50 text-purple-500"><lucide-icon name="timer"></lucide-icon></span>
+                </div>
+                <div class="text-900 font-bold text-3xl mt-2">{{ formatDays(d.summary.avgCycleDays) }}</div>
+                <div class="text-xs text-500 mt-1" pTooltip="Promedio desde que se crea la solicitud hasta la última aprobación" tooltipPosition="bottom">
+                    Promedio de creación a finalización
                 </div>
             </div>
         </div>
-        <div class="col-12 md:col-6 lg:col">
-            <div class="surface-card shadow-2 p-3 border-round border-left-3 border-green-500">
-                <div class="flex justify-content-between mb-3">
-                    <div>
-                        <div class="flex align-items-center gap-2 mb-3">
-                            <span class="block text-500 font-medium">Completadas</span>
-                            <lucide-icon name="info" class="text-500 cursor-pointer" pTooltip="Solicitudes finalizadas exitosamente." tooltipPosition="top"></lucide-icon>
-                        </div>
-                        <div class="text-900 font-medium text-xl">{{data.completed}}</div>
-                    </div>
-                    <div class="flex align-items-center justify-content-center bg-green-100 border-round"
-                        style="width:2.5rem;height:2.5rem">
-                        <lucide-icon name="check" class="text-green-500 text-xl"></lucide-icon>
-                    </div>
+        <div class="col-12 sm:col-6 xl:col-2">
+            <div class="kpi-card surface-card shadow-1 border-round-xl p-3 h-full">
+                <div class="flex justify-content-between align-items-start">
+                    <span class="text-600 font-medium text-sm">Tareas pendientes</span>
+                    <span class="kpi-icon bg-yellow-50 text-yellow-600"><lucide-icon name="hourglass"></lucide-icon></span>
                 </div>
-            </div>
-        </div>
-        <div class="col-12 md:col-6 lg:col">
-            <div class="surface-card shadow-2 p-3 border-round border-left-3 border-orange-500">
-                <div class="flex justify-content-between mb-3">
-                    <div>
-                        <div class="flex align-items-center gap-2 mb-3">
-                            <span class="block text-500 font-medium">En Riesgo</span>
-                            <lucide-icon name="info" class="text-500 cursor-pointer" pTooltip="Solicitudes que vencen en los próximos 3 días." tooltipPosition="top"></lucide-icon>
-                        </div>
-                        <div class="text-900 font-medium text-xl">{{data.atRisk}}</div>
-                    </div>
-                    <div class="flex align-items-center justify-content-center bg-orange-100 border-round"
-                        style="width:2.5rem;height:2.5rem">
-                        <lucide-icon name="alert-triangle" class="text-orange-500 text-xl"></lucide-icon>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 md:col-6 lg:col">
-            <div class="surface-card shadow-2 p-3 border-round border-left-3 border-red-500">
-                <div class="flex justify-content-between mb-3">
-                    <div>
-                        <div class="flex align-items-center gap-2 mb-3">
-                            <span class="block text-500 font-medium">Atrasadas</span>
-                            <lucide-icon name="info" class="text-500 cursor-pointer" pTooltip="Solicitudes que han excedido su fecha de entrega." tooltipPosition="top"></lucide-icon>
-                        </div>
-                        <div class="text-900 font-medium text-xl">{{data.overdue}}</div>
-                    </div>
-                    <div class="flex align-items-center justify-content-center bg-red-100 border-round"
-                        style="width:2.5rem;height:2.5rem">
-                        <lucide-icon name="clock" class="text-red-500 text-xl"></lucide-icon>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 md:col-6 lg:col">
-            <div class="surface-card shadow-2 p-3 border-round border-left-3 border-gray-500">
-                <div class="flex justify-content-between mb-3">
-                    <div>
-                        <div class="flex align-items-center gap-2 mb-3">
-                            <span class="block text-500 font-medium">Canceladas</span>
-                            <lucide-icon name="info" class="text-500 cursor-pointer" pTooltip="Solicitudes que han sido canceladas." tooltipPosition="top"></lucide-icon>
-                        </div>
-                        <div class="text-900 font-medium text-xl">{{data.cancelled}}</div>
-                    </div>
-                    <div class="flex align-items-center justify-content-center bg-gray-100 border-round"
-                        style="width:2.5rem;height:2.5rem">
-                        <lucide-icon name="x-circle" class="text-gray-500 text-xl"></lucide-icon>
-                    </div>
+                <div class="text-900 font-bold text-3xl mt-2">{{ d.summary.pendingTasks }}</div>
+                <div class="text-xs text-500 mt-1" pTooltip="Foto actual: no depende del periodo seleccionado" tooltipPosition="bottom">
+                    Espera promedio: {{ formatDays(d.summary.avgPendingAgeDays) }}
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Charts -->
+    <!-- Tendencia y estado -->
     <div class="grid">
         <div class="col-12 lg:col-8">
-            <div class="surface-card shadow-2 border-round p-4 h-full">
-                <div class="flex justify-content-between align-items-center mb-1">
-                    <h5 class="text-xl font-bold m-0">Carga de Trabajo del Equipo</h5>
-                    <button pButton class="p-button-rounded p-button-text p-button-secondary p-button-sm" pTooltip="Muestra la cantidad de solicitudes asignadas a cada miembro del equipo. Entre más alto el valor, más carga laboral está asignada a ese usuario." tooltipPosition="left"><lucide-icon name="info"></lucide-icon></button>
+            <div class="surface-card shadow-1 border-round-xl p-4 h-full">
+                <div class="chart-title">
+                    <h5>Tendencia de solicitudes</h5>
+                    <lucide-icon name="info" class="text-500" pTooltip="Solicitudes creadas vs. finalizadas en cada {{ d.trend.granularity === 'day' ? 'día' : 'mes' }} del periodo" tooltipPosition="left"></lucide-icon>
                 </div>
-                <p-chart type="bar" [data]="workloadChartData" [options]="workloadChartOptions"
-                    height="300px"></p-chart>
+                <p-chart type="line" [data]="trendChart()" [options]="lineOptions" height="300px"></p-chart>
             </div>
         </div>
         <div class="col-12 lg:col-4">
-            <div class="surface-card shadow-2 border-round p-4 h-full">
-                <div class="flex justify-content-between align-items-center mb-1">
-                    <h5 class="text-xl font-bold m-0">Estado de Ejecución</h5>
-                    <button pButton class="p-button-rounded p-button-text p-button-secondary p-button-sm" pTooltip="Muestra la distribución de las solicitudes según su estado actual. - Pendiente: Solicitudes que no han iniciado operación - En curso: Solicitudes que están en proceso de ser completadas - Completadas: Solicitudes que han sido finalizadas con éxito" tooltipPosition="left"><lucide-icon name="info"></lucide-icon></button>
+            <div class="surface-card shadow-1 border-round-xl p-4 h-full">
+                <div class="chart-title">
+                    <h5>Estado de las solicitudes</h5>
+                    <lucide-icon name="info" class="text-500" pTooltip="Estado actual de las solicitudes creadas en el periodo" tooltipPosition="left"></lucide-icon>
                 </div>
-                <div class="flex justify-content-center">
-                    <p-chart type="doughnut" [data]="executionChartData" [options]="executionChartOptions"
-                        height="300px"></p-chart>
-                </div>
+                @if (statusChart()) {
+                <p-chart type="doughnut" [data]="statusChart()" [options]="doughnutOptions" height="300px"></p-chart>
+                } @else {
+                <ng-container *ngTemplateOutlet="emptyChart"></ng-container>
+                }
             </div>
         </div>
     </div>
 
-    <!-- Stage Chart -->
+    <!-- Áreas y tipos -->
     <div class="grid">
-        <div class="col-12">
-            <div class="surface-card shadow-2 border-round p-4 h-full">
-                <div class="flex justify-content-between align-items-center mb-1">
-                    <h5 class="text-xl font-bold m-0">Solicitudes por Etapa</h5>
-                    <button pButton class="p-button-rounded p-button-text p-button-secondary p-button-sm" pTooltip="Distribución de solicitudes según su etapa actual en el flujo de trabajo." tooltipPosition="left"><lucide-icon name="info"></lucide-icon></button>
+        <div class="col-12 lg:col-7">
+            <div class="surface-card shadow-1 border-round-xl p-4 h-full">
+                <div class="chart-title">
+                    <h5>Flujos por área</h5>
+                    <lucide-icon name="info" class="text-500" pTooltip="Estado de los flujos que cada área tiene por las solicitudes del periodo" tooltipPosition="left"></lucide-icon>
                 </div>
-                <p-chart type="bar" [data]="stageChartData" [options]="stageChartOptions"
-                    height="400px"></p-chart>
+                @if (areaChart()) {
+                <p-chart type="bar" [data]="areaChart()" [options]="stackedBarOptions" height="320px"></p-chart>
+                } @else {
+                <ng-container *ngTemplateOutlet="emptyChart"></ng-container>
+                }
+            </div>
+        </div>
+        <div class="col-12 lg:col-5">
+            <div class="surface-card shadow-1 border-round-xl p-4 h-full">
+                <div class="chart-title">
+                    <h5>Por tipo de solicitud</h5>
+                </div>
+                @if (formChart()) {
+                <p-chart type="doughnut" [data]="formChart()" [options]="doughnutOptions" height="320px"></p-chart>
+                } @else {
+                <ng-container *ngTemplateOutlet="emptyChart"></ng-container>
+                }
             </div>
         </div>
     </div>
 
-    <!-- Details Table -->
-    <div class="surface-card shadow-2 border-round p-4">
-        <h5 class="text-xl font-bold m-0">Detalle de Tareas</h5>
-        <p-table [value]="data.recentTasks" [rows]="5" [paginator]="true" responsiveLayout="scroll">
+    <!-- Carga y cuellos de botella -->
+    <div class="grid">
+        <div class="col-12 lg:col-6">
+            <div class="surface-card shadow-1 border-round-xl p-4 h-full">
+                <div class="chart-title">
+                    <h5>Carga actual por responsable</h5>
+                    <lucide-icon name="info" class="text-500" pTooltip="Tareas pendientes asignadas hoy a cada persona (top 10)" tooltipPosition="left"></lucide-icon>
+                </div>
+                @if (workloadChart()) {
+                <p-chart type="bar" [data]="workloadChart()" [options]="horizontalBarOptions" height="320px"></p-chart>
+                } @else {
+                <ng-container *ngTemplateOutlet="emptyChart; context: { message: 'No hay tareas pendientes' }"></ng-container>
+                }
+            </div>
+        </div>
+        <div class="col-12 lg:col-6">
+            <div class="surface-card shadow-1 border-round-xl p-4 h-full">
+                <div class="chart-title">
+                    <h5>Cuellos de botella</h5>
+                    <lucide-icon name="info" class="text-500" pTooltip="Etapas con más tareas pendientes en este momento (top 10)" tooltipPosition="left"></lucide-icon>
+                </div>
+                @if (bottleneckChart()) {
+                <p-chart type="bar" [data]="bottleneckChart()" [options]="horizontalBarOptions" height="320px"></p-chart>
+                } @else {
+                <ng-container *ngTemplateOutlet="emptyChart; context: { message: 'No hay tareas pendientes' }"></ng-container>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Tiempos por etapa y comerciales -->
+    <div class="grid">
+        <div class="col-12 lg:col-7">
+            <div class="surface-card shadow-1 border-round-xl p-4 h-full">
+                <div class="chart-title">
+                    <h5>Etapas más lentas</h5>
+                    <lucide-icon name="info" class="text-500" pTooltip="Tiempo promedio que tardan en aprobarse o devolverse las tareas de cada etapa" tooltipPosition="left"></lucide-icon>
+                </div>
+                @if (stageTimeChart()) {
+                <p-chart type="bar" [data]="stageTimeChart()" [options]="stageTimeOptions" height="320px"></p-chart>
+                } @else {
+                <ng-container *ngTemplateOutlet="emptyChart; context: { message: 'Aún no hay tareas resueltas en el periodo' }"></ng-container>
+                }
+            </div>
+        </div>
+        <div class="col-12 lg:col-5">
+            <div class="surface-card shadow-1 border-round-xl p-4 h-full">
+                <div class="chart-title">
+                    <h5>Solicitantes más activos</h5>
+                </div>
+                <p-table [value]="d.topRequesters" styleClass="p-datatable-sm">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Solicitante</th>
+                            <th class="text-center">Creadas</th>
+                            <th class="text-center">Abiertas</th>
+                            <th class="text-center">Finalizadas</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-r>
+                        <tr>
+                            <td class="font-medium">{{ r.name }}</td>
+                            <td class="text-center font-bold">{{ r.created }}</td>
+                            <td class="text-center text-blue-600">{{ r.inProgress }}</td>
+                            <td class="text-center text-green-600">{{ r.completed }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr><td colspan="4" class="text-center text-500 p-4">Sin solicitudes en el periodo</td></tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tareas pendientes -->
+    <div class="surface-card shadow-1 border-round-xl p-4">
+        <div class="chart-title">
+            <h5>Tareas pendientes por antigüedad</h5>
+            <lucide-icon name="info" class="text-500" pTooltip="Todas las tareas pendientes hoy, de la más antigua a la más reciente. El color compara con la espera promedio." tooltipPosition="left"></lucide-icon>
+        </div>
+        <p-table [value]="d.pendingTasks" [rows]="10" [paginator]="d.pendingTasks.length > 10" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '50rem' }">
             <ng-template pTemplate="header">
                 <tr>
-                    <th>Tarea</th>
+                    <th>ID</th>
+                    <th>Tipo / Área</th>
+                    <th>Etapa</th>
                     <th>Responsable</th>
-                    <th>Cuenta</th>
-                    <th>Estado</th>
-                    <th>Fecha Límite</th>
+                    <th>Asignada</th>
+                    <th class="text-center">En espera</th>
                 </tr>
             </ng-template>
-            <ng-template pTemplate="body" let-task>
+            <ng-template pTemplate="body" let-t>
                 <tr>
-                    <td>{{task.task}}</td>
+                    <td class="font-mono font-semibold">#{{ t.submissionId }}</td>
                     <td>
-                        <div class="flex align-items-center gap-2">
-                            <p-avatar [image]="task.avatar" shape="circle" *ngIf="task.avatar"
-                                [label]="task.responsible.charAt(0)"></p-avatar>
-                            <span>{{task.responsible}}</span>
-                        </div>
+                        <div class="font-medium text-900">{{ t.formName }}</div>
+                        <div class="text-xs text-500">{{ t.area }}</div>
                     </td>
-                    <td>{{task.account}}</td>
+                    <td>{{ t.stageName }}</td>
                     <td>
-                        <span class="p-badge" [class]="'status-' + getStatusSeverity(task.status)">
-                            {{task.status}}
-                        </span>
+                        <div class="font-medium">{{ t.assigneeName }}</div>
+                        <div class="text-xs text-500">{{ t.teamName }}</div>
                     </td>
-                    <td>{{task.deadline}}</td>
+                    <td class="text-sm">{{ t.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+                    <td class="text-center"><p-tag [value]="formatDays(t.ageDays)" [severity]="getAgeSeverity(t.ageDays)"></p-tag></td>
                 </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr><td colspan="6" class="text-center text-500 p-4">No hay tareas pendientes 🎉</td></tr>
             </ng-template>
         </p-table>
     </div>
-    } @else {
+
+    <!-- Detalle de solicitudes -->
+    <div class="surface-card shadow-1 border-round-xl p-4">
+        <p-table #requestsTable [value]="d.requests" [rows]="10" [paginator]="d.requests.length > 10" styleClass="p-datatable-sm"
+            [globalFilterFields]="['consecutive', 'formName', 'requesterName']" [tableStyle]="{ 'min-width': '60rem' }">
+            <ng-template pTemplate="caption">
+                <div class="flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h5 class="text-lg font-bold m-0">Detalle de solicitudes del periodo</h5>
+                    <span class="p-input-icon-left">
+                        <input pInputText type="text" class="p-inputtext-sm" placeholder="Buscar tipo, solicitante..."
+                            (input)="requestsTable.filterGlobal($any($event.target).value, 'contains')" />
+                    </span>
+                </div>
+            </ng-template>
+            <ng-template pTemplate="header">
+                <tr>
+                    <th pSortableColumn="formName">Tipo <p-sortIcon field="formName"></p-sortIcon></th>
+                    <th pSortableColumn="requesterName">Solicitante <p-sortIcon field="requesterName"></p-sortIcon></th>
+                    <th pSortableColumn="createdAt">Creada <p-sortIcon field="createdAt"></p-sortIcon></th>
+                    <th>Áreas (ID)</th>
+                    <th pSortableColumn="status">Estado <p-sortIcon field="status"></p-sortIcon></th>
+                    <th class="text-center">Tiempo</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-r>
+                <tr>
+                    <td>
+                        <div class="font-medium text-900">{{ r.formName }}</div>
+                        <div class="text-xs text-500" *ngIf="r.consecutive">Consecutivo: {{ r.consecutive }}</div>
+                    </td>
+                    <td>{{ r.requesterName }}</td>
+                    <td class="text-sm">{{ r.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+                    <td>
+                        <div class="flex flex-wrap gap-1">
+                            <span *ngFor="let a of r.areas" class="area-chip" [ngClass]="'area-' + a.status">{{ a.name }} #{{ a.id }}</span>
+                            <span *ngIf="r.areas.length === 0" class="text-xs text-500">—</span>
+                        </div>
+                    </td>
+                    <td><p-tag [value]="getStatusLabel(r.status)" [severity]="getStatusSeverity(r.status)"></p-tag></td>
+                    <td class="text-center text-sm">
+                        <span *ngIf="r.cycleDays !== null" pTooltip="Tiempo total de ciclo">{{ formatDays(r.cycleDays) }}</span>
+                        <span *ngIf="r.ageDays !== null" class="text-600" pTooltip="Días abierta">{{ formatDays(r.ageDays) }} abierta</span>
+                        <span *ngIf="r.cycleDays === null && r.ageDays === null" class="text-500">—</span>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr><td colspan="6" class="text-center text-500 p-4">No hay solicitudes en el periodo seleccionado</td></tr>
+            </ng-template>
+        </p-table>
+    </div>
+
+    } @else if (loading()) {
     <!-- Skeleton Loading -->
     <div class="grid">
         @for (item of [1,2,3,4,5,6]; track item) {
-        <div class="col-12 md:col-6 lg:col">
-            <div class="surface-card shadow-2 p-3 border-round">
-                <div class="flex justify-content-between mb-3">
-                    <div>
-                        <p-skeleton width="6rem" styleClass="mb-2"></p-skeleton>
-                        <p-skeleton width="3rem" height="1.5rem"></p-skeleton>
-                    </div>
-                    <p-skeleton shape="circle" size="2.5rem"></p-skeleton>
-                </div>
+        <div class="col-12 sm:col-6 xl:col-2">
+            <div class="surface-card shadow-1 border-round-xl p-3">
+                <p-skeleton width="7rem" styleClass="mb-3"></p-skeleton>
+                <p-skeleton width="3rem" height="2rem"></p-skeleton>
             </div>
         </div>
         }
     </div>
-
     <div class="grid">
         <div class="col-12 lg:col-8">
-            <div class="surface-card shadow-2 border-round p-4 h-full">
-                <p-skeleton width="15rem" styleClass="mb-4"></p-skeleton>
-                <p-skeleton height="300px"></p-skeleton>
-            </div>
+            <div class="surface-card shadow-1 border-round-xl p-4"><p-skeleton height="300px"></p-skeleton></div>
         </div>
         <div class="col-12 lg:col-4">
-            <div class="surface-card shadow-2 border-round p-4 h-full">
-                <p-skeleton width="10rem" styleClass="mb-4"></p-skeleton>
-                <div class="flex justify-content-center">
-                    <p-skeleton shape="circle" size="300px"></p-skeleton>
-                </div>
-            </div>
+            <div class="surface-card shadow-1 border-round-xl p-4 flex justify-content-center"><p-skeleton shape="circle" size="250px"></p-skeleton></div>
         </div>
     </div>
-
-    <div class="surface-card shadow-2 border-round p-4">
-        <p-skeleton width="10rem" styleClass="mb-4"></p-skeleton>
-        <p-table [value]="[1,2,3,4,5]" [rows]="5">
-            <ng-template pTemplate="header">
-                <tr>
-                    <th><p-skeleton width="8rem"></p-skeleton></th>
-                    <th><p-skeleton width="8rem"></p-skeleton></th>
-                    <th><p-skeleton width="8rem"></p-skeleton></th>
-                    <th><p-skeleton width="8rem"></p-skeleton></th>
-                    <th><p-skeleton width="8rem"></p-skeleton></th>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="body">
-                <tr>
-                    <td><p-skeleton></p-skeleton></td>
-                    <td><p-skeleton></p-skeleton></td>
-                    <td><p-skeleton></p-skeleton></td>
-                    <td><p-skeleton></p-skeleton></td>
-                    <td><p-skeleton></p-skeleton></td>
-                </tr>
-            </ng-template>
-        </p-table>
-    </div>
     }
+
+    <ng-template #emptyChart let-message="message">
+        <div class="flex flex-column align-items-center justify-content-center gap-2 text-500 empty-chart">
+            <lucide-icon name="chart-no-axes-column" style="width: 2rem; height: 2rem;"></lucide-icon>
+            <span class="text-sm">{{ message || 'Sin datos para el periodo seleccionado' }}</span>
+        </div>
+    </ng-template>
 </div>

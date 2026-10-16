@@ -1,4 +1,4 @@
-import { ProductionRequest, Product, User, FormatType, RightsDuration, Team, Subteam, SubteamUser, ProductionRequestType, DynamicWorkflow, DynamicForm, DynamicFormField, DynamicFormSubmission, DynamicFormFieldValue, DynamicWorkflowStage, DynamicSubmissionWorkflowState } from "../models";
+import { ProductionRequest, Product, User, FormatType, RightsDuration, Team, Subteam, SubteamUser, ProductionRequestType, DynamicWorkflow, DynamicForm, DynamicFormField, DynamicFormSubmission, DynamicFormFieldValue, DynamicWorkflowStage, DynamicSubmissionWorkflowState, DynamicSubmissionComment } from "../models";
 import { AppDataSource } from "../config/typeorm.config";
 import { NotificationService } from './notification.service';
 import { ProductionRequestHistoryService } from './production_request_history.service';
@@ -622,7 +622,7 @@ export class ProductionService {
         limit?: number;
         search?: string;
         forms?: string[];
-        status?: string;
+        status?: string[];
         dateFrom?: string;
         dateTo?: string;
         requester?: string;
@@ -742,17 +742,19 @@ export class ProductionService {
         }
 
         // 4. Aplicar Filtro de Estado
-        if (options?.status && options.status !== 'all') {
-            const st = options.status.toLowerCase().trim();
+        if (options?.status && options.status.length > 0) {
+            const statuses = options.status.map(st => st.toLowerCase().trim());
             candidateSubmissions = candidateSubmissions.filter(s => {
                 const subSt = (s.status || '').toLowerCase();
-                if (st === 'completed') return subSt === 'completed' || subSt === 'approved';
-                if (st === 'in_progress') return subSt === 'in progress' || subSt === 'in_progress';
-                if (st === 'rejected') return subSt === 'rejected';
-                if (st === 'deleted') return subSt === 'deleted';
-                if (st === 'pending') return subSt === 'pending';
-                if (st === 'blocked') return subSt === 'blocked';
-                return subSt === st;
+                return statuses.some(st => {
+                    if (st === 'completed') return subSt === 'completed' || subSt === 'approved';
+                    if (st === 'in_progress') return subSt === 'in progress' || subSt === 'in_progress';
+                    if (st === 'rejected') return subSt === 'rejected';
+                    if (st === 'deleted') return subSt === 'deleted';
+                    if (st === 'pending') return subSt === 'pending';
+                    if (st === 'blocked') return subSt === 'blocked';
+                    return subSt === st;
+                });
             });
         }
 
@@ -1300,7 +1302,8 @@ export class ProductionService {
                      formName: v.field.form ? v.field.form.name : 'Etapa'
                  };
              }),
-            historyStages
+            historyStages,
+            comments: await this.getSubmissionComments(treeIds)
         };
     }
 
@@ -2065,7 +2068,7 @@ export class ProductionService {
         limit?: number;
         search?: string;
         forms?: string[];
-        status?: string;
+        status?: string[];
         dateFrom?: string;
         dateTo?: string;
         requester?: string;
@@ -2094,14 +2097,16 @@ export class ProductionService {
         }
 
         // 2. Filtro de Estado
-        if (options?.status && options.status !== 'all') {
-            const st = options.status.toLowerCase().trim();
+        if (options?.status && options.status.length > 0) {
+            const statuses = options.status.map(st => st.toLowerCase().trim());
             states = states.filter(s => {
                 const subSt = (s.submission?.status || '').toLowerCase();
-                if (st === 'completed') return false;
-                if (st === 'in_progress') return subSt === 'in progress' || subSt === 'in_progress';
-                if (st === 'rejected') return subSt === 'rejected';
-                return true;
+                return statuses.some(st => {
+                    if (st === 'completed') return false;
+                    if (st === 'in_progress') return subSt === 'in progress' || subSt === 'in_progress';
+                    if (st === 'rejected') return subSt === 'rejected';
+                    return true;
+                });
             });
         }
 
@@ -2697,7 +2702,8 @@ export class ProductionService {
                         return [];
                     }
                 })(),
-                historyStages
+                historyStages,
+                comments: await this.getSubmissionComments(treeIds)
             });
         }
 
@@ -3138,6 +3144,66 @@ export class ProductionService {
 
             await this.handleSubmissionCompletion(manager, parentSub);
         }
+    }
+
+    private async getSubmissionComments(treeIds: number[]) {
+        const comments = await AppDataSource.getRepository(DynamicSubmissionComment).find({
+            where: { submissionId: In(treeIds) },
+            relations: ['user', 'state', 'state.stage'],
+            order: { id: 'ASC' }
+        });
+        return comments.map(c => ({
+            id: c.id,
+            submissionId: c.submissionId,
+            stageName: c.state?.stage?.name || '',
+            userName: c.user?.name || '',
+            userEmail: c.user?.email || '',
+            comment: c.comment,
+            createdAt: c.createdAt
+        }));
+    }
+
+    async addApprovalComment(stateId: number, userId: number, comment: string) {
+        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+        const text = (comment || '').trim();
+        if (!text) throw new Error('El comentario no puede estar vacío');
+
+        const state = await AppDataSource.getRepository(DynamicSubmissionWorkflowState).findOne({
+            where: { id: stateId, assignedUserId: userId, status: 'Pending' },
+            relations: ['submission', 'submission.form', 'stage']
+        });
+        if (!state) throw new Error('Tarea pendiente no encontrada o ya procesada');
+
+        const saved = await AppDataSource.getRepository(DynamicSubmissionComment).save({
+            submissionId: state.submissionId,
+            stateId: state.id,
+            userId,
+            comment: text
+        });
+        const author = await AppDataSource.getRepository(User).findOneBy({ id: userId });
+
+        const requesterId = state.submission.requesterUserId;
+        if (requesterId && requesterId !== userId) {
+            try {
+                await notificationService.createNotification(
+                    requesterId,
+                    'Nuevo comentario en tu solicitud',
+                    `${author?.name || 'Un aprobador'} comentó en la etapa "${state.stage?.name || ''}" de la solicitud de "${state.submission.form?.name || 'Solicitud'}": "${text}"`,
+                    'info'
+                );
+            } catch (err) {
+                console.error('Error sending notification:', err);
+            }
+        }
+        return {
+            id: saved.id,
+            submissionId: saved.submissionId,
+            stageName: state.stage?.name || '',
+            userName: author?.name || '',
+            userEmail: author?.email || '',
+            comment: saved.comment,
+            createdAt: saved.createdAt
+        };
     }
 
     async actionApproval(stateId: number, userId: number, action: 'approve' | 'reject', notes: string, formValues?: Record<string, string>, consecutive?: string, chosenNextAssignee?: any) {

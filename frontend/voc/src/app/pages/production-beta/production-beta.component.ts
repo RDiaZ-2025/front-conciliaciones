@@ -106,7 +106,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   // --- Filtros Integrales (Aprobaciones e Historial) ---
   filterSearch = signal<string>('');
   filterSelectedForms = signal<string[]>([]);
-  filterStatus = signal<string>('all');
+  filterStatus = signal<string[]>([]);
   filterDatePreset = signal<string>('all');
   filterDateFrom = signal<Date | null>(null);
   filterDateTo = signal<Date | null>(null);
@@ -123,7 +123,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   isDeletingSub = signal<boolean>(false);
 
   statusOptions = [
-    { label: 'Todos los estados', value: 'all' },
     { label: 'Pendientes de mi Aprobación', value: 'pending_me' },
     { label: 'En Proceso', value: 'in_progress' },
     { label: 'Aprobadas / Completadas', value: 'completed' },
@@ -156,7 +155,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     let count = 0;
     if (this.filterSearch().trim()) count++;
     if (this.filterSelectedForms().length > 0) count++;
-    if (this.filterStatus() !== 'all') count++;
+    if (this.filterStatus().length > 0) count++;
     if (this.filterDatePreset() !== 'all') count++;
     if (this.filterRequester().trim()) count++;
     if (this.filterAllUsers()) count++;
@@ -191,7 +190,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   clearAllFilters() {
     this.filterSearch.set('');
     this.filterSelectedForms.set([]);
-    this.filterStatus.set('all');
+    this.filterStatus.set([]);
     this.filterDatePreset.set('all');
     this.filterDateFrom.set(null);
     this.filterDateTo.set(null);
@@ -247,7 +246,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     if (forms && forms.length > 0) params.forms = forms;
 
     const status = this.filterStatus();
-    if (status && status !== 'all') params.status = status;
+    if (status && status.length > 0) params.status = status;
 
     const requester = this.filterRequester();
     if (requester && requester.trim()) params.requester = requester.trim();
@@ -2085,6 +2084,30 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     } else {
       this.uploadStageFilesAndAction(task, action, notes);
     }
+  }
+
+  addCommentOnly() {
+    const task = this.selectedTask();
+    const notes = this.comments();
+    if (!notes || !notes.trim()) {
+      this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'Debe ingresar un comentario.' });
+      return;
+    }
+
+    this.loadingAction.set(true);
+    this.productionService.addApprovalComment(task.stateId, notes).subscribe({
+      next: (saved) => {
+        this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Comentario guardado.' });
+        this.selectedTask.set({ ...task, comments: [...(task.comments || []), saved] });
+        this.comments.set('');
+        this.loadPendingTasks();
+        this.loadingAction.set(false);
+      },
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Ocurrió un error al guardar el comentario.' });
+        this.loadingAction.set(false);
+      }
+    });
   }
 
   onStageFileSelected(event: any, field: any) {

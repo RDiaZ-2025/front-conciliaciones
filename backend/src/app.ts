@@ -169,8 +169,8 @@ const packageJson = (() => {
   }
 })();
 
-const APP_VERSION = packageJson?.version || '1.14.21';
-const APP_VERSION_DATE = packageJson?.versionDate || '2026-10-14';
+const APP_VERSION = packageJson?.version || '1.17.2';
+const APP_VERSION_DATE = packageJson?.versionDate || '2026-10-15';
 
 const getHealthPayload = () => {
   const mem = process.memoryUsage();
