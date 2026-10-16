@@ -47,6 +47,7 @@ router.post('/approvals/:stateId/comment', addApprovalComment);
 router.get('/products', getProducts);
 
 router.get('/dashboard-stats', requirePermission('production_management'), requestsReportController.getDashboardStats);
+router.get('/requests-analytics', requestsReportController.getRequestsAnalytics);
 
 router.get('/', getAllProductionRequests);
 router.get('/:id', getProductionRequestById);

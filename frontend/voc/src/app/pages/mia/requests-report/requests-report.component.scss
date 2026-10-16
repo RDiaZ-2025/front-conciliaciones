@@ -1,23 +1,79 @@
-.status-danger {
-    background-color: var(--p-red-100);
-    color: var(--p-red-700);
-    padding: 0.25em 0.5rem;
-    border-radius: 4px;
-    font-weight: 700;
+:host {
+    display: block;
 }
 
-.status-warn {
-    background-color: var(--p-yellow-100);
-    color: var(--p-yellow-700);
-    padding: 0.25em 0.5rem;
-    border-radius: 4px;
-    font-weight: 700;
+.kpi-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+    }
 }
 
-.status-success {
-    background-color: var(--p-green-100);
-    color: var(--p-green-700);
-    padding: 0.25em 0.5rem;
-    border-radius: 4px;
-    font-weight: 700;
+.kpi-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.75rem;
+    flex-shrink: 0;
+
+    lucide-icon {
+        width: 1.15rem;
+        height: 1.15rem;
+    }
+}
+
+.chart-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+
+    h5 {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--p-text-color);
+    }
+
+    lucide-icon {
+        width: 1rem;
+        height: 1rem;
+        cursor: help;
+    }
+}
+
+.empty-chart {
+    min-height: 300px;
+}
+
+.area-chip {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    white-space: nowrap;
+
+    &.area-in_progress {
+        background: #eff6ff;
+        color: #1d4ed8;
+    }
+
+    &.area-returned {
+        background: #fff7ed;
+        color: #c2410c;
+    }
+
+    &.area-completed {
+        background: #f0fdf4;
+        color: #15803d;
+    }
+
+    &.area-deleted {
+        background: #fef2f2;
+        color: #b91c1c;
+        text-decoration: line-through;
+    }
 }
