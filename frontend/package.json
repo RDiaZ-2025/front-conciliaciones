@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "1.15.6",
+  "version": "1.16.4",
   "versionDate": "2026-10-15",
   "scripts": {
     "ng": "ng",

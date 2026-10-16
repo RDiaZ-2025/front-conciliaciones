@@ -15,7 +15,6 @@ import { AvatarModule } from 'primeng/avatar';
 import { StyleClassModule } from 'primeng/styleclass';
 import { PopoverModule } from 'primeng/popover';
 import { BadgeModule } from 'primeng/badge';
-import { MenuModule } from 'primeng/menu';
 import { DialogModule } from 'primeng/dialog';
 import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
@@ -23,7 +22,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { FormsModule } from '@angular/forms';
-import { MenuItem as PrimeMenuItem, MessageService } from 'primeng/api';
+import { MessageService } from 'primeng/api';
 
 import { AuthService } from '../../services/auth.service';
 import { UserService, User as VOCUser } from '../../services/user.service';
@@ -53,7 +52,6 @@ import { PERMISSIONS } from '../../constants/permissions';
     StyleClassModule,
     PopoverModule,
     BadgeModule,
-    MenuModule,
     DialogModule,
     SelectModule,
     InputTextModule,
@@ -124,19 +122,6 @@ export class LayoutComponent implements OnInit, OnDestroy {
   ];
 
   showChangePasswordModal = signal<boolean>(false);
-
-  userMenuItems: PrimeMenuItem[] = [
-    {
-      label: 'Cambiar Contraseña',
-      icon: 'key-round',
-      command: () => this.showChangePasswordModal.set(true)
-    },
-    {
-      label: 'Cerrar Sesión',
-      icon: 'power',
-      command: () => this.logout()
-    }
-  ];
 
   constructor() {
     this.initTheme();
