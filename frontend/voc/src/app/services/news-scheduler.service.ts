@@ -29,6 +29,7 @@ export interface NewsArticleData {
   section?: string;
   author?: string;
   sourcesUsed?: any[];
+  cmsPath?: string;
 }
 
 export interface NewsDraftDetail {
@@ -38,6 +39,7 @@ export interface NewsDraftDetail {
   subtitle: string;
   path: string | null;
   url?: string | null;
+  cmsPath?: string | null;
   status: string;
   createdAt: string;
   updatedAt?: string;
@@ -147,6 +149,10 @@ export class NewsSchedulerService extends BaseApiService {
 
   previewDraft(path: string): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/drafts/preview`, { path });
+  }
+
+  publishDraftToCms(draftId: number): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/drafts/${draftId}/publish-draft`, {});
   }
 
   publishDraft(draftId: number): Observable<any> {

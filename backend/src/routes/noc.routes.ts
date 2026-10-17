@@ -54,6 +54,7 @@ router.get(['/news-scheduler/drafts/detail/:id', '/noc/news-scheduler/drafts/det
 router.put(['/news-scheduler/drafts/:id', '/noc/news-scheduler/drafts/:id'], authenticateToken, nocNewsSchedulerController.updateDraft);
 router.delete(['/news-scheduler/drafts/:id', '/noc/news-scheduler/drafts/:id'], authenticateToken, nocNewsSchedulerController.deleteDraft);
 router.post(['/news-scheduler/drafts/preview', '/noc/news-scheduler/drafts/preview'], authenticateToken, nocNewsSchedulerController.previewDraft);
+router.post(['/news-scheduler/drafts/:id/publish-draft', '/noc/news-scheduler/drafts/:id/publish-draft'], authenticateToken, nocNewsSchedulerController.publishDraftToCms);
 router.post(['/news-scheduler/drafts/:id/publish', '/noc/news-scheduler/drafts/:id/publish'], authenticateToken, nocNewsSchedulerController.publishDraft);
 
 // Acciones de Inteligencia Artificial (IA) sobre Borradores

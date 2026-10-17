@@ -266,8 +266,8 @@
             </div>
           </td>
           <td class="text-center">
-            <p-tag [severity]="draft.status === 'published' ? 'success' : 'warn'" 
-                   [value]="draft.status === 'published' ? 'Publicada' : 'Borrador'" [rounded]="true"></p-tag>
+            <p-tag [severity]="draft.status === 'published' ? 'success' : (draft.cmsPath ? 'info' : 'warn')" 
+                   [value]="draft.status === 'published' ? 'Publicada' : (draft.cmsPath ? 'Borrador en CMS' : 'Borrador')" [rounded]="true"></p-tag>
           </td>
           <td class="text-center">
             <div class="flex justify-content-center gap-1">
@@ -280,8 +280,12 @@
                       pTooltip="Editar y Previsualizar Noticia" tooltipPosition="top" (click)="openEditor(draft)">
                 <lucide-icon name="pencil"></lucide-icon>
               </button>
+              <button *ngIf="draft.status !== 'published'" pButton pRipple type="button" class="p-button-rounded p-button-warning p-button-text" 
+                      pTooltip="Publicar Borrador en Bluestacks CMS (sin publicar noticia)" tooltipPosition="top" (click)="publishDraftToCms(draft)">
+                <lucide-icon name="file-up"></lucide-icon>
+              </button>
               <button *ngIf="draft.status !== 'published'" pButton pRipple type="button" class="p-button-rounded p-button-success p-button-text" 
-                      pTooltip="Publicar en la Web Oficial" tooltipPosition="top" (click)="publishDraft(draft)">
+                      pTooltip="Publicar Noticia en la Web Oficial" tooltipPosition="top" (click)="publishDraft(draft)">
                 <lucide-icon name="globe"></lucide-icon>
               </button>
               <button *ngIf="draft.status !== 'published'" pButton pRipple type="button" class="p-button-rounded p-button-danger p-button-text" 
@@ -319,8 +323,8 @@
         <div>
           <h3 class="text-lg font-bold text-main m-0 flex align-items-center gap-2">
             Editor y Previsualizador de Noticia
-            <p-tag [severity]="currentDraft?.status === 'published' ? 'success' : 'warn'" 
-                   [value]="currentDraft?.status === 'published' ? 'Publicada' : 'Borrador'" [rounded]="true"></p-tag>
+            <p-tag [severity]="currentDraft?.status === 'published' ? 'success' : ((currentDraft?.cmsPath || currentArticleData.cmsPath) ? 'info' : 'warn')" 
+                   [value]="currentDraft?.status === 'published' ? 'Publicada' : ((currentDraft?.cmsPath || currentArticleData.cmsPath) ? 'Borrador en CMS' : 'Borrador')" [rounded]="true"></p-tag>
             <a *ngIf="currentDraft?.status === 'published' && currentDraft?.path" 
                [href]="currentDraft?.path || ''" target="_blank" rel="noopener noreferrer"
                class="text-xs text-primary hover:underline inline-flex align-items-center gap-1 font-normal ml-2"
@@ -584,7 +588,15 @@
           <lucide-icon name="save" class="mr-2" [size]="16"></lucide-icon>Guardar Cambios
         </button>
         <button *ngIf="currentDraft?.status !== 'published'" pButton pRipple type="button" 
+                class="p-button-warning border-round-lg"
+                [loading]="publishingDraftToCms()"
+                (click)="publishCurrentDraftToCms()" 
+                pTooltip="Crear borrador en Bluestacks CMS sin publicar la noticia" tooltipPosition="top">
+          <lucide-icon name="file-up" class="mr-2" [size]="16"></lucide-icon>Publicar Borrador
+        </button>
+        <button *ngIf="currentDraft?.status !== 'published'" pButton pRipple type="button" 
                 class="p-button-success border-round-lg"
+                [loading]="publishingNews()"
                 (click)="publishCurrentDraft()" 
                 pTooltip="Publicar definitivamente en el sitio web oficial" tooltipPosition="top">
           <lucide-icon name="globe" class="mr-2" [size]="16"></lucide-icon>Publicar Noticia

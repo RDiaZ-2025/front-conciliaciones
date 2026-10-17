@@ -39,6 +39,7 @@ export interface NewsArticleData {
     section?: string;
     author?: string;
     sourcesUsed?: any[];
+    cmsPath?: string;
 }
 
 export interface CreateNewsScheduleDto {
@@ -561,7 +562,8 @@ export class NocNewsSchedulerService {
                 createdAt: d.createdAt,
                 updatedAt: d.updatedAt,
                 publishedAt: d.publishedAt,
-                coverImage: parsedArticle?.coverImage?.url || null
+                coverImage: parsedArticle?.coverImage?.url || null,
+                cmsPath: parsedArticle?.cmsPath || null
             };
         });
     }
@@ -596,6 +598,7 @@ export class NocNewsSchedulerService {
             createdAt: draft.createdAt,
             updatedAt: draft.updatedAt,
             publishedAt: draft.publishedAt,
+            cmsPath: articleData.cmsPath || null,
             articleData
         };
     }
@@ -610,6 +613,15 @@ export class NocNewsSchedulerService {
             throw new Error(`Borrador con ID ${id} no encontrado`);
         }
 
+        if (draft.content && !articleData.cmsPath) {
+            try {
+                const existing = JSON.parse(draft.content);
+                if (existing?.cmsPath) {
+                    articleData.cmsPath = existing.cmsPath;
+                }
+            } catch {}
+        }
+
         draft.title = articleData.title || draft.title;
         draft.subtitle = articleData.subtitle || draft.subtitle;
         draft.content = JSON.stringify(articleData);
@@ -618,6 +630,7 @@ export class NocNewsSchedulerService {
         const saved = await draftRepo.save(draft);
         return {
             ...saved,
+            cmsPath: articleData.cmsPath || null,
             articleData
         };
     }
@@ -793,6 +806,64 @@ export class NocNewsSchedulerService {
                 data: err.response?.data
             });
             throw new Error(`Error al regenerar imagen con IA: ${err.response?.data?.message || err.message}`);
+        }
+    }
+
+    async publishDraftToCmsOnly(draftId: number) {
+        console.log(`📝 [Publish Draft to CMS Only] Iniciando creación de borrador en Bluestacks CMS para ID: ${draftId}`);
+
+        if (!AppDataSource.isInitialized) {
+            throw new Error('Database not initialized');
+        }
+        const draftRepo = AppDataSource.getRepository(NocNewsDraft);
+        const draft = await draftRepo.findOne({ where: { id: draftId } });
+        if (!draft) {
+            throw new Error(`Borrador con ID ${draftId} no encontrado`);
+        }
+
+        if (!draft.content) {
+            throw new Error(`El borrador ID ${draftId} no tiene contenido para enviar a Bluestacks CMS`);
+        }
+
+        let articleData: NewsArticleData;
+        try {
+            articleData = JSON.parse(draft.content);
+        } catch (parseErr: any) {
+            throw new Error(`El contenido del borrador ID ${draftId} no es un JSON válido: ${parseErr.message}`);
+        }
+
+        try {
+            const bluestacksCms = new BluestacksCmsService();
+            console.log(`📝 [Publish Draft to CMS Only] Creando borrador en Bluestacks CMS para borrador ID ${draftId}...`);
+            const createRes = await bluestacksCms.createNewsDraft(articleData);
+            const cmsPath = createRes.cmsPath;
+            if (!cmsPath) {
+                throw new Error('Bluestacks CMS no devolvió un cmsPath válido al crear el borrador');
+            }
+
+            articleData.cmsPath = cmsPath;
+            draft.content = JSON.stringify(articleData);
+            draft.updatedAt = new Date();
+            const savedDraft = await draftRepo.save(draft);
+
+            console.log(`✅ [Publish Draft to CMS Only][SUCCESS] Borrador ID ${draftId} creado en Bluestacks CMS (sin publicar):`, JSON.stringify({
+                id: savedDraft.id,
+                status: savedDraft.status,
+                cmsPath
+            }));
+
+            return {
+                ...savedDraft,
+                cmsPath,
+                articleData
+            };
+        } catch (cmsErr: any) {
+            console.error(`❌ [Publish Draft to CMS Only][ERROR] Falló la creación del borrador ID ${draftId} en Bluestacks CMS:`, {
+                draftId,
+                message: cmsErr.message,
+                stack: cmsErr.stack
+            });
+            throw cmsErr;
         }
     }
 

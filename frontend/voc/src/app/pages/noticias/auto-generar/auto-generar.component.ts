@@ -913,6 +913,103 @@ export class AutoGenerarComponent implements OnInit {
     this.currentArticleData.blocks.splice(index, 1);
   }
 
+  publishingDraftToCms = signal<boolean>(false);
+  publishingNews = signal<boolean>(false);
+
+  publishCurrentDraftToCms(): void {
+    if (!this.currentDraft) return;
+
+    this.confirmationService.confirm({
+      message: `¿Deseas publicar el borrador "${this.currentArticleData.title}" en Bluestacks CMS (sin publicar aún la noticia en el portal)?`,
+      header: 'Confirmar Borrador en CMS',
+      icon: 'file-up',
+      acceptLabel: 'Publicar Borrador',
+      rejectLabel: 'Cancelar',
+      accept: () => {
+        this.publishingDraftToCms.set(true);
+        this.schedulerService.updateDraft(this.currentDraft!.id, this.currentArticleData).subscribe({
+          next: () => {
+            this.schedulerService.publishDraftToCms(this.currentDraft!.id).subscribe({
+              next: (res: any) => {
+                this.publishingDraftToCms.set(false);
+                if (res?.cmsPath) {
+                  this.currentArticleData.cmsPath = res.cmsPath;
+                  if (this.currentDraft) {
+                    this.currentDraft.cmsPath = res.cmsPath;
+                  }
+                }
+                this.messageService.add({
+                  severity: 'success',
+                  summary: '¡Borrador Creado en CMS!',
+                  detail: 'El borrador fue enviado a Bluestacks CMS sin publicar la noticia.'
+                });
+                if (this.selectedScheduleForDrafts) {
+                  this.loadDrafts(this.selectedScheduleForDrafts.id);
+                }
+              },
+              error: (err) => {
+                console.error('Error creating draft in CMS', err);
+                this.publishingDraftToCms.set(false);
+                this.messageService.add({
+                  severity: 'error',
+                  summary: 'Error al Crear Borrador en CMS',
+                  detail: err?.error?.message || 'No se pudo crear el borrador en Bluestacks CMS.'
+                });
+              }
+            });
+          },
+          error: (err) => {
+            console.error('Error saving draft before CMS creation', err);
+            this.publishingDraftToCms.set(false);
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error al Guardar',
+              detail: 'No se pudieron guardar los cambios antes de enviar el borrador a CMS.'
+            });
+          }
+        });
+      }
+    });
+  }
+
+  publishDraftToCms(draft: any): void {
+    this.confirmationService.confirm({
+      message: `¿Deseas publicar el borrador "${draft.title || draft.path}" en Bluestacks CMS (sin publicar aún la noticia en el portal)?`,
+      header: 'Confirmar Borrador en CMS',
+      icon: 'file-up',
+      acceptLabel: 'Publicar Borrador',
+      rejectLabel: 'Cancelar',
+      accept: () => {
+        this.publishingDraftToCms.set(true);
+        this.schedulerService.publishDraftToCms(draft.id).subscribe({
+          next: (res: any) => {
+            this.publishingDraftToCms.set(false);
+            if (res && draft) {
+              draft.cmsPath = res.cmsPath;
+            }
+            this.messageService.add({
+              severity: 'success',
+              summary: '¡Borrador Creado en CMS!',
+              detail: 'El borrador fue enviado a Bluestacks CMS sin publicar la noticia.'
+            });
+            if (this.selectedScheduleForDrafts) {
+              this.loadDrafts(this.selectedScheduleForDrafts.id);
+            }
+          },
+          error: (err) => {
+            console.error('Error creating draft in CMS', err);
+            this.publishingDraftToCms.set(false);
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error al Crear Borrador en CMS',
+              detail: err?.error?.message || 'No se pudo crear el borrador en Bluestacks CMS.'
+            });
+          }
+        });
+      }
+    });
+  }
+
   publishCurrentDraft(): void {
     if (!this.currentDraft) return;
 
@@ -923,11 +1020,12 @@ export class AutoGenerarComponent implements OnInit {
       acceptLabel: 'Publicar Ahora',
       rejectLabel: 'Cancelar',
       accept: () => {
-
+        this.publishingNews.set(true);
         this.schedulerService.updateDraft(this.currentDraft!.id, this.currentArticleData).subscribe({
           next: () => {
             this.schedulerService.publishDraft(this.currentDraft!.id).subscribe({
               next: (published: any) => {
+                this.publishingNews.set(false);
                 if (published && this.currentDraft) {
                   this.currentDraft.status = 'published';
                   this.currentDraft.path = published.path;
@@ -946,12 +1044,22 @@ export class AutoGenerarComponent implements OnInit {
               },
               error: (err) => {
                 console.error('Error publishing draft', err);
+                this.publishingNews.set(false);
                 this.messageService.add({
                   severity: 'error',
                   summary: 'Error al Publicar',
                   detail: err?.error?.message || 'No se pudo publicar la noticia.'
                 });
               }
+            });
+          },
+          error: (err) => {
+            console.error('Error saving draft before publishing', err);
+            this.publishingNews.set(false);
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error al Guardar',
+              detail: 'No se pudieron guardar los cambios antes de publicar la noticia.'
             });
           }
         });
@@ -967,8 +1075,10 @@ export class AutoGenerarComponent implements OnInit {
       acceptLabel: 'Publicar',
       rejectLabel: 'Cancelar',
       accept: () => {
+        this.publishingNews.set(true);
         this.schedulerService.publishDraft(draft.id).subscribe({
           next: (published: any) => {
+            this.publishingNews.set(false);
             if (published && draft) {
               draft.status = 'published';
               draft.path = published.path;
@@ -986,6 +1096,7 @@ export class AutoGenerarComponent implements OnInit {
           },
           error: (err) => {
             console.error('Error publishing draft', err);
+            this.publishingNews.set(false);
             this.messageService.add({
               severity: 'error',
               summary: 'Error al Publicar',

@@ -105,6 +105,26 @@ export class NocNewsSchedulerController {
         res.status(200).json(preview);
     });
 
+    publishDraftToCms = asyncHandler(async (req: Request, res: Response) => {
+        const { id } = req.params;
+        console.log(`📥 [HTTP Request][POST /api/news-scheduler/drafts/${id}/publish-draft] Solicitud recibida para crear borrador en CMS ID: ${id}`);
+        try {
+            const draft = await schedulerService.publishDraftToCmsOnly(parseInt(id, 10));
+            console.log(`📤 [HTTP Response][POST /api/news-scheduler/drafts/${id}/publish-draft] Status: 200 | Resultado:`, JSON.stringify({
+                id: draft.id,
+                status: draft.status,
+                cmsPath: draft.cmsPath
+            }));
+            res.status(200).json(draft);
+        } catch (error: any) {
+            console.error(`❌ [HTTP Response][POST /api/news-scheduler/drafts/${id}/publish-draft] Status: 500 | Error:`, error.message);
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    });
+
     publishDraft = asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
         console.log(`📥 [HTTP Request][POST /api/news-scheduler/drafts/${id}/publish] Solicitud recibida para publicar borrador ID: ${id}`);
