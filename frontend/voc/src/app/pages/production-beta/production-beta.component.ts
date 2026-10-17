@@ -5,7 +5,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, of, firstValueFrom, Subject, Subscription } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { filter, take, debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { filter, take, debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { ChipModule } from 'primeng/chip';
@@ -372,8 +372,42 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   });
 
   canCreateRequest = computed(() => {
-    return this.authService.isCommercialOrAdmin();
+    return !!this.authService.currentUser();
   });
+
+  getUserTeamId(): number | null {
+    const user = this.authService.currentUser();
+    if (!user) return null;
+    if (user.teamId != null && !isNaN(Number(user.teamId)) && Number(user.teamId) > 0) {
+      return Number(user.teamId);
+    }
+    const allTeams = this.teams() || [];
+    if (user.teams && user.teams.length > 0) {
+      const firstTeamName = (user.teams[0] || '').trim().toLowerCase();
+      const matched = allTeams.find((t: any) => (t.name || '').trim().toLowerCase() === firstTeamName);
+      if (matched) return Number(matched.id);
+    }
+    const matchedByMember = allTeams.find((t: any) =>
+      Number(t.leaderId) === Number(user.id) ||
+      (Array.isArray(t.users) && t.users.some((u: any) => Number(u.id) === Number(user.id)))
+    );
+    return matchedByMember ? Number(matchedByMember.id) : null;
+  }
+
+  getUserTeamName(): string {
+    const user = this.authService.currentUser();
+    if (!user) return 'Sin equipo';
+    const teamId = this.getUserTeamId();
+    const allTeams = this.teams() || [];
+    if (teamId) {
+      const found = allTeams.find((t: any) => Number(t.id) === Number(teamId));
+      if (found && found.name) return found.name;
+    }
+    if (user.teams && user.teams.length > 0 && user.teams[0]) {
+      return user.teams[0];
+    }
+    return 'Sin equipo asignado';
+  }
 
   ref: DynamicDialogRef | undefined | null;
 
@@ -692,17 +726,88 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.dynamicListRows = {};
     this.selectedInitialFormId.set(null);
 
-    this.productionService.getInitialForm().subscribe({
-      next: (forms: any[]) => {
-        const formsList = (Array.isArray(forms) ? forms : (forms ? [forms] : [])).map(f => ({
+    this.requireClosingStep.set(false);
+    this.selectedClosingType.set('form');
+    this.selectedClosingFormId.set(null);
+    this.selectedClosingWorkflowId.set(null);
+
+    if (this.canAdminForms()) {
+      this.productionService.adminGetForms().subscribe({
+        next: (forms) => {
+          this.availableClosingForms.set((forms || []).filter(f => f.isActive !== false));
+        },
+        error: () => {}
+      });
+
+      this.productionService.adminGetWorkflows().subscribe({
+        next: (wfs) => {
+          this.availableClosingWorkflows.set((wfs || []).filter(w => w.isActive !== false));
+        },
+        error: () => {}
+      });
+    }
+
+    forkJoin({
+      forms: this.productionService.getInitialForm().pipe(catchError((err) => {
+        console.error('Error loading initial forms:', err);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar la lista de formularios iniciales.' });
+        return of([]);
+      })),
+      teamsRes: this.teamService.getTeams().pipe(catchError((err) => {
+        console.error('Error loading teams:', err);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los equipos.' });
+        return of({ success: false, data: [] });
+      }))
+    }).subscribe({
+      next: ({ forms, teamsRes }) => {
+        if (teamsRes && teamsRes.success) {
+          this.teams.set((teamsRes.data || []).map((t: any) => {
+            let defaultMode: 'leader' | 'random' | 'workflow' = 'leader';
+            if (!t.leaderId && (!t.users || t.users.length === 0)) {
+              defaultMode = 'workflow';
+            } else if (!t.leaderId && t.users && t.users.length > 0) {
+              defaultMode = 'random';
+            }
+            return {
+              ...t,
+              selected: false,
+              assignmentMode: defaultMode,
+              selectedSubteamId: 0
+            };
+          }));
+        }
+
+        const userTeamId = this.getUserTeamId();
+        const rawForms = Array.isArray(forms) ? forms : (forms ? [forms] : []);
+
+        const allowedForms = rawForms.filter(f => {
+          if (!userTeamId) return false;
+          let meta: any = {};
+          if (f.metadata) {
+            try {
+              meta = typeof f.metadata === 'object' ? f.metadata : JSON.parse(f.metadata);
+            } catch (e) {
+              meta = {};
+            }
+          }
+          const allowedCreatorTeamIds: number[] = Array.isArray(meta?.allowedCreatorTeamIds)
+            ? meta.allowedCreatorTeamIds.map((id: any) => Number(id)).filter((id: number) => !isNaN(id) && id > 0)
+            : [];
+          return allowedCreatorTeamIds.length > 0 && allowedCreatorTeamIds.includes(Number(userTeamId));
+        });
+
+        const formsList = allowedForms.map(f => ({
           ...f,
           disabled: !f.workflowId
         }));
+
         this.initialForms.set(formsList);
         const usableForms = formsList.filter(f => f.workflowId);
         if (usableForms.length === 1) {
           this.selectedInitialFormId.set(usableForms[0].id);
         }
+
+        this.showTypeSelectionDialog.set(true);
 
         if (formsList.length > 0) {
           const fieldsObservables = formsList.map(form =>
@@ -750,57 +855,6 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         } else {
           this.loadingRequestTypes.set(false);
         }
-      },
-      error: (err) => {
-        console.error('Error loading initial forms:', err);
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar la lista de formularios iniciales.' });
-        this.loadingRequestTypes.set(false);
-      }
-    });
-
-    this.requireClosingStep.set(false);
-    this.selectedClosingType.set('form');
-    this.selectedClosingFormId.set(null);
-    this.selectedClosingWorkflowId.set(null);
-
-    this.productionService.adminGetForms().subscribe({
-      next: (forms) => {
-        this.availableClosingForms.set((forms || []).filter(f => f.isActive !== false));
-      },
-      error: () => {}
-    });
-
-    this.productionService.adminGetWorkflows().subscribe({
-      next: (wfs) => {
-        this.availableClosingWorkflows.set((wfs || []).filter(w => w.isActive !== false));
-      },
-      error: () => {}
-    });
-
-    this.teamService.getTeams().subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.teams.set((res.data || []).map((t: any) => {
-            let defaultMode: 'leader' | 'random' | 'workflow' = 'leader';
-            if (!t.leaderId && (!t.users || t.users.length === 0)) {
-              defaultMode = 'workflow';
-            } else if (!t.leaderId && t.users && t.users.length > 0) {
-              defaultMode = 'random';
-            }
-            return {
-              ...t,
-              selected: false,
-              assignmentMode: defaultMode,
-              selectedSubteamId: 0
-            };
-          }));
-        }
-        this.showTypeSelectionDialog.set(true);
-      },
-      error: (err) => {
-        console.error('Error loading teams:', err);
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los equipos.' });
-        this.showTypeSelectionDialog.set(true);
       }
     });
   }
@@ -1767,10 +1821,13 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }
   }
 
+  commentTempFiles = signal<File[]>([]);
+
   openActionDialog(task: any) {
     console.log('Task selected in dashboard inbox:', task);
     this.selectedTask.set(task);
     this.comments.set('');
+    this.commentTempFiles.set([]);
     this.chosenNextAssignee = null;
     this.chosenMemberUserId = null;
     if (task?.allowChooseNextStageAssignee && task?.nextStageAssigneeOptions?.length === 1) {
@@ -2066,40 +2123,100 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       }
     }
 
-    if (action === 'reject') {
-      this.loadingAction.set(true);
-      this.productionService.actionApproval(task.stateId, action, notes, undefined).subscribe({
-        next: () => {
-          this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Solicitud rechazada/devuelta.' });
-          this.showActionDialog.set(false);
-          this.loadPendingTasks();
-          this.loadRequests();
-          this.loadingAction.set(false);
-        },
-        error: () => {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Ocurrió un error al procesar la acción.' });
-          this.loadingAction.set(false);
-        }
-      });
-    } else {
-      this.uploadStageFilesAndAction(task, action, notes);
-    }
+    this.uploadStageFilesAndAction(task, action, notes);
   }
 
-  addCommentOnly() {
+  getCommentAllowedExtensions(task: any): string[] {
+    const raw = task?.commentAllowedFormats;
+    if (!raw || typeof raw !== 'string' || !raw.trim()) return [];
+    return raw
+      .split(/[,;]+/)
+      .map((ext: string) => ext.trim().toLowerCase())
+      .filter((ext: string) => ext.length > 0 && ext !== '*')
+      .map((ext: string) => (ext.startsWith('.') ? ext : `.${ext}`));
+  }
+
+  onCommentFileSelected(event: any) {
+    const files: FileList = event.target.files;
+    if (!files || files.length === 0) return;
+
     const task = this.selectedTask();
-    const notes = this.comments();
-    if (!notes || !notes.trim()) {
-      this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'Debe ingresar un comentario.' });
+    const maxMB = task?.commentMaxFileSizeMB ? Number(task.commentMaxFileSizeMB) : null;
+    const allowedExtensions = this.getCommentAllowedExtensions(task);
+    const currentList = [...this.commentTempFiles()];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (allowedExtensions.length > 0) {
+        const lowerName = (file.name || '').toLowerCase();
+        const matches = allowedExtensions.some((ext) => lowerName.endsWith(ext));
+        if (!matches) {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Formato no permitido',
+            detail: `El archivo "${file.name}" no tiene un formato permitido en esta etapa (${allowedExtensions.join(', ')}).`
+          });
+          continue;
+        }
+      }
+      if (maxMB && maxMB > 0 && file.size > maxMB * 1024 * 1024) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Archivo muy grande',
+          detail: `El archivo "${file.name}" supera el peso máximo permitido de ${maxMB}MB en esta etapa.`
+        });
+        continue;
+      }
+      currentList.push(file);
+    }
+
+    this.commentTempFiles.set(currentList);
+    event.target.value = '';
+  }
+
+  removeCommentSelectedFile(index: number) {
+    const current = [...this.commentTempFiles()];
+    current.splice(index, 1);
+    this.commentTempFiles.set(current);
+  }
+
+  async addCommentOnly() {
+    const task = this.selectedTask();
+    const notes = this.comments() || '';
+    const filesToUpload = this.commentTempFiles();
+    if (!notes.trim() && filesToUpload.length === 0) {
+      this.messageService.add({ severity: 'error', summary: 'Validación', detail: 'Debe ingresar un comentario o adjuntar al menos un archivo.' });
       return;
     }
 
     this.loadingAction.set(true);
-    this.productionService.addApprovalComment(task.stateId, notes).subscribe({
+    const uploadedAttachments: { name: string; url: string }[] = [];
+    for (const file of filesToUpload) {
+      const folderPath = `dynamic-submissions/task_${task.stateId}/comments`;
+      const res = await this.azureService.uploadFile(file, { containerName: 'private', folderPath });
+      if (res.success && res.url) {
+        uploadedAttachments.push({ name: file.name, url: res.url });
+      } else {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error de carga',
+          detail: `No se pudo subir el archivo adjunto: ${file.name}. ${res.error || ''}`
+        });
+        this.loadingAction.set(false);
+        return;
+      }
+    }
+
+    this.productionService.addApprovalComment(
+      task.stateId,
+      notes,
+      uploadedAttachments.length > 0 ? uploadedAttachments : undefined
+    ).subscribe({
       next: (saved) => {
         this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Comentario guardado.' });
         this.selectedTask.set({ ...task, comments: [...(task.comments || []), saved] });
         this.comments.set('');
+        this.commentTempFiles.set([]);
         this.loadPendingTasks();
         this.loadingAction.set(false);
       },
@@ -2332,34 +2449,11 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   async uploadStageFilesAndAction(task: any, action: 'approve' | 'reject', notes: string) {
     this.loadingAction.set(true);
 
-    const fields = this.stageFormFields();
-    for (const field of fields) {
-      if (field.type === 'file') {
-        const filesToUpload = this.stageTempFiles[field.name] || [];
-        if (filesToUpload.length > 0) {
-          const uploadResults = [];
-          for (const file of filesToUpload) {
-            const folderPath = `dynamic-submissions/task_${task.stateId}/${field.name}`;
-            const res = await this.azureService.uploadFile(file, { containerName: 'private', folderPath });
-            if (res.success) {
-              uploadResults.push({ name: file.name, url: res.url });
-            } else {
-              this.messageService.add({ severity: 'error', summary: 'Error de carga', detail: `No se pudo subir el archivo: ${file.name}. ${res.error}` });
-              this.loadingAction.set(false);
-              return;
-            }
-          }
-          this.stageFormValues[field.name] = JSON.stringify(uploadResults);
-        }
-      }
-    }
-
-    const parentForms = task.parentForms || [];
-    for (const form of parentForms) {
-      for (const field of form.fields) {
+    if (action === 'approve') {
+      const fields = this.stageFormFields();
+      for (const field of fields) {
         if (field.type === 'file') {
-          const fileKey = form.formId + '_' + field.name;
-          const filesToUpload = this.stageTempFiles[fileKey] || [];
+          const filesToUpload = this.stageTempFiles[field.name] || [];
           if (filesToUpload.length > 0) {
             const uploadResults = [];
             for (const file of filesToUpload) {
@@ -2373,17 +2467,16 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
                 return;
               }
             }
-            this.stageFormValues[fileKey] = JSON.stringify(uploadResults);
+            this.stageFormValues[field.name] = JSON.stringify(uploadResults);
           }
         }
       }
-    }
 
-    if (task.formIdToFill === -1 && this.getSelectedMultiForms().length > 0) {
-      for (const mForm of this.getSelectedMultiForms()) {
-        for (const field of mForm.fields) {
+      const parentForms = task.parentForms || [];
+      for (const form of parentForms) {
+        for (const field of form.fields) {
           if (field.type === 'file') {
-            const fileKey = mForm.formId + '_' + field.name;
+            const fileKey = form.formId + '_' + field.name;
             const filesToUpload = this.stageTempFiles[fileKey] || [];
             if (filesToUpload.length > 0) {
               const uploadResults = [];
@@ -2403,6 +2496,50 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           }
         }
       }
+
+      if (task.formIdToFill === -1 && this.getSelectedMultiForms().length > 0) {
+        for (const mForm of this.getSelectedMultiForms()) {
+          for (const field of mForm.fields) {
+            if (field.type === 'file') {
+              const fileKey = mForm.formId + '_' + field.name;
+              const filesToUpload = this.stageTempFiles[fileKey] || [];
+              if (filesToUpload.length > 0) {
+                const uploadResults = [];
+                for (const file of filesToUpload) {
+                  const folderPath = `dynamic-submissions/task_${task.stateId}/${field.name}`;
+                  const res = await this.azureService.uploadFile(file, { containerName: 'private', folderPath });
+                  if (res.success) {
+                    uploadResults.push({ name: file.name, url: res.url });
+                  } else {
+                    this.messageService.add({ severity: 'error', summary: 'Error de carga', detail: `No se pudo subir el archivo: ${file.name}. ${res.error}` });
+                    this.loadingAction.set(false);
+                    return;
+                  }
+                }
+                this.stageFormValues[fileKey] = JSON.stringify(uploadResults);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    const commentFiles = this.commentTempFiles();
+    const uploadedCommentAttachments: { name: string; url: string }[] = [];
+    for (const file of commentFiles) {
+      const folderPath = `dynamic-submissions/task_${task.stateId}/comments`;
+      const res = await this.azureService.uploadFile(file, { containerName: 'private', folderPath });
+      if (res.success && res.url) {
+        uploadedCommentAttachments.push({ name: file.name, url: res.url });
+      } else {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error de carga',
+          detail: `No se pudo subir el adjunto del comentario: ${file.name}. ${res.error || ''}`
+        });
+        this.loadingAction.set(false);
+        return;
+      }
     }
 
     const nextAssigneePayload = (action === 'approve' && this.chosenNextAssignee)
@@ -2415,10 +2552,12 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       notes,
       action === 'approve' ? this.stageFormValues : undefined,
       undefined,
-      nextAssigneePayload
+      nextAssigneePayload,
+      uploadedCommentAttachments.length > 0 ? uploadedCommentAttachments : undefined
     ).subscribe({
       next: (res) => {
         this.stageTempFiles = {};
+        this.commentTempFiles.set([]);
         this.chosenNextAssignee = null;
         this.chosenMemberUserId = null;
         this.showActionDialog.set(false);

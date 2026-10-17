@@ -453,6 +453,7 @@
                               (onChange)="onInitialFormChange()"
                               optionLabel="name" optionValue="id" optionDisabled="disabled"
                               placeholder="Seleccione el formulario inicial a diligenciar..."
+                              emptyMessage="Ningún formulario disponible para tu equipo"
                               class="w-full" styleClass="w-full" [appendTo]="'body'">
                         <ng-template let-item pTemplate="item">
                             <div class="flex align-items-center justify-content-between w-full py-1"
@@ -466,6 +467,18 @@
                             </div>
                         </ng-template>
                     </p-select>
+
+                    <!-- Alerta cuando ningún formulario inicial tiene configurado el equipo del usuario -->
+                    <div *ngIf="initialForms().length === 0"
+                         class="flex align-items-start gap-3 p-3 mt-2 border-round-lg bg-orange-50 border-1 border-orange-300 text-orange-900">
+                        <i class="pi pi-exclamation-triangle text-orange-600 text-xl mt-1 flex-shrink-0"></i>
+                        <div class="flex flex-column gap-1 text-sm line-height-3">
+                            <span class="font-bold">Sin formularios habilitados para tu equipo</span>
+                            <span>
+                                Ningún formulario está configurado para que su equipo (<strong>{{ getUserTeamName() }}</strong>) pueda crear solicitudes. Por favor, contáctese con un administrador para que le asigne a algún formulario inicial el equipo <strong>{{ getUserTeamName() }}</strong>.
+                            </span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 2. Campos del Formulario Inicial Seleccionado -->
@@ -899,7 +912,7 @@
                 <p-button [text]="true" severity="secondary" (onClick)="cancelTypeSelection()">
                     <lucide-icon name="x" class="mr-2"></lucide-icon>Cancelar
                 </p-button>
-                <p-button severity="primary" (onClick)="submitInitialRequest()" [disabled]="loadingRequestTypes()">
+                <p-button severity="primary" (onClick)="submitInitialRequest()" [disabled]="loadingRequestTypes() || initialForms().length === 0">
                     <lucide-icon name="send" class="mr-2"></lucide-icon>Enviar Solicitud
                 </p-button>
             </div>
@@ -1132,7 +1145,16 @@
                 Comentarios
             </span>
             <div *ngFor="let c of req.comments" class="border-round border-1 surface-border p-3 surface-card text-xs flex flex-column gap-1">
-                <span class="text-700 font-semibold italic">"{{ c.comment }}"</span>
+                <span *ngIf="c.comment" class="text-700 font-semibold italic">"{{ c.comment }}"</span>
+                <div *ngIf="c.attachments && c.attachments.length > 0" class="flex flex-wrap gap-2 mt-1">
+                    <div *ngFor="let att of c.attachments" class="flex align-items-center gap-2 surface-100 px-2 py-1 border-round border-1 surface-border">
+                        <lucide-icon name="file-text" class="text-primary" style="width: 0.9rem; height: 0.9rem; flex-shrink: 0;"></lucide-icon>
+                        <a href="javascript:void(0)" (click)="downloadStageFormFile(att, $event)" class="text-primary font-medium hover:underline cursor-pointer" [title]="att.name">{{ att.name }}</a>
+                        <button pButton type="button" class="p-button-rounded p-button-text p-button-sm p-1 text-primary ml-1" (click)="downloadStageFormFile(att, $event)" pTooltip="Descargar adjunto">
+                            <lucide-icon name="download" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                        </button>
+                    </div>
+                </div>
                 <span class="text-500">
                     <strong>{{ c.userName }}</strong> <span *ngIf="c.userEmail">({{ c.userEmail }})</span>
                     <span *ngIf="c.stageName"> · Etapa: {{ c.stageName }}</span>
@@ -2056,8 +2078,34 @@
 
             <!-- Section 3: Comments -->
             <div class="flex flex-column gap-2 mt-2">
-                <label for="comments" class="font-bold text-sm text-900">{{ isCorrection(selectedTask()) ? 'Notas de la Corrección (Opcional)' : 'Comentarios / Observaciones' }}</label>
+                <div class="flex justify-content-between align-items-center flex-wrap gap-2">
+                    <label for="comments" class="font-bold text-sm text-900">{{ isCorrection(selectedTask()) ? 'Notas de la Corrección (Opcional)' : 'Comentarios / Observaciones' }}</label>
+                    <div class="flex align-items-center gap-2 flex-wrap">
+                        <span *ngIf="selectedTask()?.commentAllowedFormats || selectedTask()?.commentMaxFileSizeMB" class="text-xs text-500">
+                            <ng-container *ngIf="selectedTask()?.commentAllowedFormats">Formatos: {{ selectedTask()?.commentAllowedFormats }}</ng-container>
+                            <ng-container *ngIf="selectedTask()?.commentAllowedFormats && selectedTask()?.commentMaxFileSizeMB"> · </ng-container>
+                            <ng-container *ngIf="selectedTask()?.commentMaxFileSizeMB">Máx: {{ selectedTask()?.commentMaxFileSizeMB }}MB</ng-container>
+                        </span>
+                        <input type="file" #commentFileInput class="hidden" multiple [accept]="getCommentAllowedExtensions(selectedTask()).join(',') || '*'" (change)="onCommentFileSelected($event)" />
+                        <p-button severity="secondary" [outlined]="true" size="small" styleClass="py-1 px-2 text-xs" (onClick)="commentFileInput.click()">
+                            <lucide-icon name="upload" class="mr-1" style="width: 0.9rem; height: 0.9rem;"></lucide-icon>
+                            Adjuntar archivo
+                        </p-button>
+                    </div>
+                </div>
                 <textarea id="comments" class="w-full p-inputtext border-round" [(ngModel)]="comments" rows="2" [placeholder]="isCorrection(selectedTask()) ? 'Explica brevemente los cambios realizados...' : 'Escribe notas adicionales o la razón en caso de rechazo...'" style="resize: vertical; font-family: inherit;"></textarea>
+
+                <!-- Lista de archivos adjuntos seleccionados para el comentario -->
+                <div class="flex flex-wrap gap-2 mt-1" *ngIf="commentTempFiles().length > 0">
+                    <div *ngFor="let f of commentTempFiles(); let idx = index" class="flex align-items-center gap-2 surface-100 px-3 py-1 border-round border-1 surface-border text-xs">
+                        <lucide-icon name="file-text" class="text-primary" style="width: 0.9rem; height: 0.9rem; flex-shrink: 0;"></lucide-icon>
+                        <span class="text-700 font-medium">{{ f.name }}</span>
+                        <span class="text-500">({{ (f.size / 1024 / 1024) | number:'1.1-2' }} MB)</span>
+                        <button pButton type="button" class="p-button-rounded p-button-text p-button-danger p-button-sm p-1 ml-1" (click)="removeCommentSelectedFile(idx)" pTooltip="Quitar adjunto">
+                            <lucide-icon name="x" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 

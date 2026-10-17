@@ -283,17 +283,17 @@ export const getPendingApprovals = asyncHandler(async (req: Request, res: Respon
 
 export const actionApproval = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
     const { stateId } = req.params;
-    const { action, notes, formValues, consecutive, chosenNextAssignee } = req.body;
+    const { action, notes, formValues, consecutive, chosenNextAssignee, attachments } = req.body;
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: 'Usuario no autenticado' });
-    const result = await productionService.actionApproval(parseInt(stateId), userId, action, notes, formValues, consecutive, chosenNextAssignee);
+    const result = await productionService.actionApproval(parseInt(stateId), userId, action, notes, formValues, consecutive, chosenNextAssignee, attachments);
     return res.json(result);
 });
 
 export const addApprovalComment = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: 'Usuario no autenticado' });
-    const comment = await productionService.addApprovalComment(parseInt(req.params.stateId), userId, req.body.comment);
+    const comment = await productionService.addApprovalComment(parseInt(req.params.stateId), userId, req.body.comment, req.body.attachments);
     return res.status(201).json(comment);
 });
 

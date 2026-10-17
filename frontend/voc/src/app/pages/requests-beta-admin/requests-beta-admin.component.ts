@@ -82,6 +82,8 @@ interface WorkflowStageItem {
   maxSelectedForms?: number | null;
   allowChooseNextStageAssignee?: boolean;
   nextStageAssigneeOptions?: NextStageAssigneeOptionConfig[];
+  commentAllowedFormats?: string;
+  commentMaxFileSizeMB?: number | null;
 }
 
 @Component({
@@ -159,10 +161,27 @@ export class RequestsBetaAdminComponent implements OnInit {
   });
 
   formTeamWorkflows = signal<{ [teamId: number]: number | null }>({});
+  formAllowedCreatorTeamIds = signal<number[]>([]);
   formRequireClosingStep = signal<boolean>(false);
   formClosingType = signal<'form' | 'workflow'>('form');
   formClosingFormId = signal<number | null>(null);
   formClosingWorkflowId = signal<number | null>(null);
+
+  getAllowedCreatorTeamsNames(form: any): string[] {
+    if (!form || !form.isInitialForm || !form.metadata) return [];
+    try {
+      const meta = typeof form.metadata === 'object' ? form.metadata : JSON.parse(form.metadata);
+      if (!meta || !Array.isArray(meta.allowedCreatorTeamIds)) return [];
+      const ids = meta.allowedCreatorTeamIds.map((id: any) => Number(id)).filter((id: number) => !isNaN(id) && id > 0);
+      const allTeams = this.teams() || [];
+      return ids.map((id: number) => {
+        const found = allTeams.find((t: any) => Number(t.id) === id);
+        return found ? found.name : `Equipo #${id}`;
+      });
+    } catch (e) {
+      return [];
+    }
+  }
 
   closingTypeOptions = [
     { label: 'Formulario Dinámico', value: 'form' },
@@ -449,6 +468,7 @@ export class RequestsBetaAdminComponent implements OnInit {
     this.formMetadataText = '';
     this.conditionsList.set([]);
     this.formTeamWorkflows.set({});
+    this.formAllowedCreatorTeamIds.set([]);
     this.selectedForm.set({
       id: null,
       name: '',
@@ -475,6 +495,7 @@ export class RequestsBetaAdminComponent implements OnInit {
     this.formMetadataText = form.metadata ? (typeof form.metadata === 'object' ? JSON.stringify(form.metadata, null, 2) : form.metadata) : '';
 
     let teamWfs: { [teamId: number]: number | null } = {};
+    let allowedCreatorTeams: number[] = [];
     let closingCfg: any = null;
     if (form.metadata) {
       try {
@@ -486,12 +507,18 @@ export class RequestsBetaAdminComponent implements OnInit {
             }
           }
         }
+        if (meta && Array.isArray(meta.allowedCreatorTeamIds)) {
+          allowedCreatorTeams = meta.allowedCreatorTeamIds
+            .map((id: any) => Number(id))
+            .filter((id: number) => !isNaN(id) && id > 0);
+        }
         if (meta && meta.closingConfig) {
           closingCfg = meta.closingConfig;
         }
       } catch (e) {}
     }
     this.formTeamWorkflows.set(teamWfs);
+    this.formAllowedCreatorTeamIds.set(allowedCreatorTeams);
     this.formRequireClosingStep.set(!!(closingCfg && closingCfg.requireClosingStep));
     this.formClosingType.set(closingCfg?.closingType || 'form');
     this.formClosingFormId.set(closingCfg?.closingFormId || closingCfg?.formId || null);
@@ -537,8 +564,12 @@ export class RequestsBetaAdminComponent implements OnInit {
         }
       }
       meta.teamWorkflows = cleanWfs;
+      meta.allowedCreatorTeamIds = (this.formAllowedCreatorTeamIds() || [])
+        .map(id => Number(id))
+        .filter(id => !isNaN(id) && id > 0);
     } else {
       delete meta.teamWorkflows;
+      delete meta.allowedCreatorTeamIds;
     }
 
     const requireClosing = this.formRequireClosingStep();
@@ -1432,7 +1463,9 @@ export class RequestsBetaAdminComponent implements OnInit {
             multiFormsConfig,
             maxSelectedForms,
             allowChooseNextStageAssignee: !!s.allowChooseNextStageAssignee,
-            nextStageAssigneeOptions
+            nextStageAssigneeOptions,
+            commentAllowedFormats: s.commentAllowedFormats || '',
+            commentMaxFileSizeMB: s.commentMaxFileSizeMB ?? null
           };
         });
         this.refreshDynamicAssignees(loadedStages);
@@ -1599,7 +1632,9 @@ export class RequestsBetaAdminComponent implements OnInit {
       customForms: {},
       multiFormsConfig: [],
       allowChooseNextStageAssignee: false,
-      nextStageAssigneeOptions: []
+      nextStageAssigneeOptions: [],
+      commentAllowedFormats: '',
+      commentMaxFileSizeMB: null
     };
     const updated = [...current, newStage];
     this.refreshDynamicAssignees(updated);
@@ -1811,7 +1846,9 @@ export class RequestsBetaAdminComponent implements OnInit {
         excludeTeamLeader: isDynamic ? false : !!s.excludeTeamLeader,
         assigneeUserIds: assigneeUserIdsObj,
         allowChooseNextStageAssignee: !isLastStage && !!s.allowChooseNextStageAssignee,
-        nextStageAssigneeOptions: !isLastStage && s.allowChooseNextStageAssignee && s.nextStageAssigneeOptions ? JSON.stringify(s.nextStageAssigneeOptions) : null
+        nextStageAssigneeOptions: !isLastStage && s.allowChooseNextStageAssignee && s.nextStageAssigneeOptions ? JSON.stringify(s.nextStageAssigneeOptions) : null,
+        commentAllowedFormats: s.commentAllowedFormats ? s.commentAllowedFormats.trim() : null,
+        commentMaxFileSizeMB: s.commentMaxFileSizeMB ? Number(s.commentMaxFileSizeMB) : null
       };
     });
 

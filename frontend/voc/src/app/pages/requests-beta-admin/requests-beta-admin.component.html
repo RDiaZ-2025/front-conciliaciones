@@ -53,6 +53,18 @@
                             <div class="flex flex-column align-items-center gap-1" *ngIf="form.isInitialForm">
                                 <p-tag value="Solicitud Inicial" severity="info"></p-tag>
                                 <span class="text-xs text-500 font-semibold">Orden: {{ form.displayOrder ?? 0 }}</span>
+                                <div class="flex flex-wrap justify-content-center gap-1 mt-1" *ngIf="getAllowedCreatorTeamsNames(form).length > 0">
+                                    <span *ngFor="let tName of getAllowedCreatorTeamsNames(form)"
+                                          class="text-xs text-blue-700 bg-blue-50 border-1 border-blue-200 px-2 py-0.5 border-round font-semibold"
+                                          pTooltip="Equipo autorizado para crear esta solicitud">
+                                        <i class="pi pi-users mr-1" style="font-size: 0.65rem;"></i>{{ tName }}
+                                    </span>
+                                </div>
+                                <span *ngIf="getAllowedCreatorTeamsNames(form).length === 0"
+                                      class="text-xs text-orange-700 bg-orange-50 border-1 border-orange-200 px-2 py-0.5 border-round font-semibold mt-1"
+                                      pTooltip="Ningún equipo tiene permiso configurado para crear solicitudes con este formulario">
+                                    <i class="pi pi-exclamation-triangle mr-1 text-xs"></i>Sin equipos creadores
+                                </span>
                             </div>
                             <div *ngIf="!form.isInitialForm" class="flex flex-column align-items-center gap-1">
                                 <p-tag value="Formulario" severity="secondary"></p-tag>
@@ -391,6 +403,23 @@
                                     <p-select [options]="teams()" [(ngModel)]="stage.rejectionTargetTeamId" optionLabel="name" optionValue="id" placeholder="Seleccione equipo..." class="w-full"></p-select>
                                 </div>
 
+                                <!-- Restricciones de Adjuntos en Comentarios de la Etapa -->
+                                <div class="col-12 md:col-6 flex flex-column gap-2 mt-2">
+                                    <label class="font-semibold text-sm flex align-items-center gap-1">
+                                        <lucide-icon name="paperclip" class="w-1rem h-1rem text-indigo-500"></lucide-icon>
+                                        Formatos permitidos en comentarios (extensiones)
+                                    </label>
+                                    <input pInputText [(ngModel)]="stage.commentAllowedFormats" placeholder="Ej: .pdf,.png,.jpg,.xlsx (Vacío = Todos)" class="w-full" />
+                                </div>
+
+                                <div class="col-12 md:col-6 flex flex-column gap-2 mt-2">
+                                    <label class="font-semibold text-sm flex align-items-center gap-1">
+                                        <lucide-icon name="hard-drive" class="w-1rem h-1rem text-indigo-500"></lucide-icon>
+                                        Peso máximo de adjunto en comentarios (MB)
+                                    </label>
+                                    <input pInputText type="number" min="1" [(ngModel)]="stage.commentMaxFileSizeMB" placeholder="Ej: 10 (Vacío = Sin límite)" class="w-full" />
+                                </div>
+
                                 <div class="col-12 flex flex-wrap align-items-center gap-4 mt-3 pt-3 border-top-1 surface-border">
                                     <div class="flex align-items-center gap-2">
                                         <p-checkbox [(ngModel)]="stage.requireCommentOnApprove" [binary]="true" [id]="'req-comm-' + i"></p-checkbox>
@@ -562,6 +591,38 @@
             <div class="flex align-items-center gap-3 mt-2">
                 <p-checkbox [(ngModel)]="selectedForm().isInitialForm" [binary]="true" id="isInitialForm"></p-checkbox>
                 <label for="isInitialForm" class="font-medium cursor-pointer">Definir como "Solicitud Inicial" principal</label>
+            </div>
+
+            <!-- Equipos Autorizados para Crear esta Solicitud (Solo para Solicitudes Iniciales) -->
+            <div class="flex flex-column gap-2 mt-2 bg-blue-50 p-3 border-round border-1 border-blue-200" *ngIf="selectedForm().isInitialForm">
+                <div class="flex flex-column gap-1">
+                    <label for="formAllowedCreatorTeams" class="font-semibold text-sm text-900 flex align-items-center gap-2">
+                        <lucide-icon name="users" class="text-primary" style="width: 1.1rem; height: 1.1rem;"></lucide-icon>
+                        <span>Equipos Autorizados para Crear esta Solicitud *</span>
+                    </label>
+                    <span class="text-xs text-600">
+                        Selecciona qué equipos tienen permitido ver y crear solicitudes con este formulario inicial. Si un equipo no está seleccionado aquí, este formulario no les aparecerá al intentar crear una solicitud.
+                    </span>
+                </div>
+                <p-multiSelect id="formAllowedCreatorTeams"
+                               [options]="teams()"
+                               [ngModel]="formAllowedCreatorTeamIds()"
+                               (ngModelChange)="formAllowedCreatorTeamIds.set($event || [])"
+                               optionLabel="name"
+                               optionValue="id"
+                               placeholder="Seleccione los equipos que pueden crear esta solicitud..."
+                               display="chip"
+                               [filter]="true"
+                               filterBy="name"
+                               [showClear]="true"
+                               class="w-full mt-1"
+                               styleClass="w-full text-sm"
+                               [appendTo]="'body'">
+                </p-multiSelect>
+                <div *ngIf="formAllowedCreatorTeamIds().length === 0" class="flex align-items-center gap-2 text-xs text-orange-700 bg-orange-50 border-1 border-orange-200 p-2 border-round mt-1">
+                    <i class="pi pi-exclamation-triangle text-sm"></i>
+                    <span>Ningún equipo asignado: ningún usuario verá este formulario en la lista desplegable al intentar crear una solicitud.</span>
+                </div>
             </div>
 
             <!-- Flujo de Trabajo Asociado (General) -->

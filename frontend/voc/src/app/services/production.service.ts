@@ -251,12 +251,12 @@ export class ProductionService extends BaseApiService {
     return this.http.get<any>(`${this.apiUrl}/approvals/pending`, { params: httpParams });
   }
 
-  actionApproval(stateId: number, action: 'approve' | 'reject', notes: string, formValues?: any, consecutive?: string, chosenNextAssignee?: any): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/approvals/${stateId}/action`, { action, notes, formValues, consecutive, chosenNextAssignee });
+  actionApproval(stateId: number, action: 'approve' | 'reject', notes: string, formValues?: any, consecutive?: string, chosenNextAssignee?: any, attachments?: { name: string; url: string }[]): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/approvals/${stateId}/action`, { action, notes, formValues, consecutive, chosenNextAssignee, attachments });
   }
 
-  addApprovalComment(stateId: number, comment: string): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/approvals/${stateId}/comment`, { comment });
+  addApprovalComment(stateId: number, comment: string, attachments?: { name: string; url: string }[]): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/approvals/${stateId}/comment`, { comment, attachments });
   }
 
   deleteSubmission(submissionId: number, reason: string): Observable<any> {

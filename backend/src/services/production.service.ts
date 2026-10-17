@@ -1871,6 +1871,71 @@ export class ProductionService {
         });
     }
 
+    private parseStageExtendedConfig(stage: any): {
+        nextStageAssigneeOptions: any[];
+        commentAllowedFormats: string;
+        commentMaxFileSizeMB: number | null;
+    } {
+        let nextStageAssigneeOptions: any[] = [];
+        let commentAllowedFormats = '';
+        let commentMaxFileSizeMB: number | null = null;
+
+        if (stage?.nextStageAssigneeOptions) {
+            try {
+                const parsed = typeof stage.nextStageAssigneeOptions === 'string'
+                    ? JSON.parse(stage.nextStageAssigneeOptions)
+                    : stage.nextStageAssigneeOptions;
+                if (Array.isArray(parsed)) {
+                    nextStageAssigneeOptions = parsed;
+                } else if (parsed && typeof parsed === 'object') {
+                    if (Array.isArray(parsed.options)) {
+                        nextStageAssigneeOptions = parsed.options;
+                    }
+                    if (typeof parsed.commentAllowedFormats === 'string') {
+                        commentAllowedFormats = parsed.commentAllowedFormats.trim();
+                    }
+                    if (parsed.commentMaxFileSizeMB !== undefined && parsed.commentMaxFileSizeMB !== null && Number(parsed.commentMaxFileSizeMB) > 0) {
+                        commentMaxFileSizeMB = Number(parsed.commentMaxFileSizeMB);
+                    }
+                }
+            } catch (e) {}
+        }
+
+        if (typeof stage?.commentAllowedFormats === 'string') {
+            commentAllowedFormats = stage.commentAllowedFormats.trim();
+        }
+        if (stage?.commentMaxFileSizeMB !== undefined && stage?.commentMaxFileSizeMB !== null && Number(stage.commentMaxFileSizeMB) > 0) {
+            commentMaxFileSizeMB = Number(stage.commentMaxFileSizeMB);
+        }
+
+        return {
+            nextStageAssigneeOptions,
+            commentAllowedFormats,
+            commentMaxFileSizeMB
+        };
+    }
+
+    private serializeStageExtendedConfig(stageInput: any): string | null {
+        const ext = this.parseStageExtendedConfig(stageInput);
+        const options = ext.nextStageAssigneeOptions || [];
+        const commentAllowedFormats = ext.commentAllowedFormats || '';
+        const commentMaxFileSizeMB = ext.commentMaxFileSizeMB;
+
+        if (options.length === 0 && !commentAllowedFormats && commentMaxFileSizeMB === null) {
+            return null;
+        }
+
+        if (!commentAllowedFormats && commentMaxFileSizeMB === null) {
+            return JSON.stringify(options);
+        }
+
+        return JSON.stringify({
+            options,
+            commentAllowedFormats,
+            commentMaxFileSizeMB
+        });
+    }
+
     async adminGetWorkflowStages(workflowId: number) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const stages = await AppDataSource.getRepository(DynamicWorkflowStage).find({
@@ -1887,12 +1952,7 @@ export class ProductionService {
                     parsedIds = JSON.parse(s.assigneeUserIds);
                 } catch(e) {}
             }
-            let parsedNextAssigneeOptions: any = [];
-            if (s.nextStageAssigneeOptions) {
-                try {
-                    parsedNextAssigneeOptions = typeof s.nextStageAssigneeOptions === 'string' ? JSON.parse(s.nextStageAssigneeOptions) : s.nextStageAssigneeOptions;
-                } catch(e) {}
-            }
+            const extCfg = this.parseStageExtendedConfig(s);
             const isMultiForms = (parsedIds && !Array.isArray(parsedIds) && parsedIds.multiFormsConfig && parsedIds.multiFormsConfig.length > 0)
                 || (Array.isArray(parsedIds) && parsedIds.length > 0 && (parsedIds[0].sourceFormId !== undefined || parsedIds[0].targetFormIdToFill !== undefined || parsedIds[0].targetSubflowFormId !== undefined || parsedIds[0].targetSubflowWorkflowId !== undefined));
             return {
@@ -1900,7 +1960,9 @@ export class ProductionService {
                 formIdToFill: isMultiForms ? -1 : s.formIdToFill,
                 assigneeUserIds: parsedIds,
                 allowChooseNextStageAssignee: !!s.allowChooseNextStageAssignee,
-                nextStageAssigneeOptions: parsedNextAssigneeOptions
+                nextStageAssigneeOptions: extCfg.nextStageAssigneeOptions,
+                commentAllowedFormats: extCfg.commentAllowedFormats,
+                commentMaxFileSizeMB: extCfg.commentMaxFileSizeMB
             };
         });
     }
@@ -1949,7 +2011,7 @@ export class ProductionService {
                         excludeTeamLeader: !!s.excludeTeamLeader,
                         assigneeUserIds: s.assigneeUserIds ? (typeof s.assigneeUserIds === 'string' ? s.assigneeUserIds : JSON.stringify(s.assigneeUserIds)) : null,
                         allowChooseNextStageAssignee: !!s.allowChooseNextStageAssignee,
-                        nextStageAssigneeOptions: s.nextStageAssigneeOptions ? (typeof s.nextStageAssigneeOptions === 'string' ? s.nextStageAssigneeOptions : JSON.stringify(s.nextStageAssigneeOptions)) : null
+                        nextStageAssigneeOptions: this.serializeStageExtendedConfig(s)
                     });
                 } else {
                     stageEntity.isDeleted = false;
@@ -1972,8 +2034,8 @@ export class ProductionService {
                         stageEntity.assigneeUserIds = s.assigneeUserIds ? (typeof s.assigneeUserIds === 'string' ? s.assigneeUserIds : JSON.stringify(s.assigneeUserIds)) : null;
                     }
                     if (s.allowChooseNextStageAssignee !== undefined) stageEntity.allowChooseNextStageAssignee = !!s.allowChooseNextStageAssignee;
-                    if (s.nextStageAssigneeOptions !== undefined) {
-                        stageEntity.nextStageAssigneeOptions = s.nextStageAssigneeOptions ? (typeof s.nextStageAssigneeOptions === 'string' ? s.nextStageAssigneeOptions : JSON.stringify(s.nextStageAssigneeOptions)) : null;
+                    if (s.nextStageAssigneeOptions !== undefined || (s as any).commentAllowedFormats !== undefined || (s as any).commentMaxFileSizeMB !== undefined) {
+                        stageEntity.nextStageAssigneeOptions = this.serializeStageExtendedConfig(s);
                     }
                 }
 
@@ -2023,8 +2085,8 @@ export class ProductionService {
                         break;
                     }
 
-                    const incNextOpts = parseSafe(inc.nextStageAssigneeOptions);
-                    const extNextOpts = parseSafe(ext.nextStageAssigneeOptions);
+                    const incNextOpts = this.parseStageExtendedConfig(inc).nextStageAssigneeOptions;
+                    const extNextOpts = this.parseStageExtendedConfig(ext).nextStageAssigneeOptions;
                     if (JSON.stringify(incNextOpts) !== JSON.stringify(extNextOpts)) {
                         hasStructuralChanges = true;
                         break;
@@ -2626,12 +2688,12 @@ export class ProductionService {
                 submittedValuesRaw,
                 requireCommentOnApprove: state.stage ? !!state.stage.requireCommentOnApprove : false,
                 allowChooseNextStageAssignee: state.stage ? !!state.stage.allowChooseNextStageAssignee : false,
+                commentAllowedFormats: this.parseStageExtendedConfig(state.stage).commentAllowedFormats || null,
+                commentMaxFileSizeMB: this.parseStageExtendedConfig(state.stage).commentMaxFileSizeMB || null,
                 nextStageAssigneeOptions: (() => {
                     if (!state.stage?.allowChooseNextStageAssignee || !state.stage?.nextStageAssigneeOptions) return [];
                     try {
-                        const raw = typeof state.stage.nextStageAssigneeOptions === 'string'
-                            ? JSON.parse(state.stage.nextStageAssigneeOptions)
-                            : state.stage.nextStageAssigneeOptions;
+                        const raw = this.parseStageExtendedConfig(state.stage).nextStageAssigneeOptions;
                         if (!Array.isArray(raw)) return [];
                         return raw.map((opt: any) => {
                             let defaultLabel = '';
@@ -2746,9 +2808,7 @@ export class ProductionService {
         // If currentStage has configured nextStageAssigneeOptions, enforce that the option matches the DB configuration
         if (currentStage?.nextStageAssigneeOptions) {
             try {
-                const parsedOptions = typeof currentStage.nextStageAssigneeOptions === 'string'
-                    ? JSON.parse(currentStage.nextStageAssigneeOptions)
-                    : currentStage.nextStageAssigneeOptions;
+                const parsedOptions = this.parseStageExtendedConfig(currentStage).nextStageAssigneeOptions;
                 if (Array.isArray(parsedOptions) && parsedOptions.length > 0) {
                     const optionId = typeof opt === 'object' && opt !== null ? opt.id : opt;
                     const matched = parsedOptions.find((o: any) => o.id === optionId || (opt && o.id === opt.id));
@@ -3146,27 +3206,89 @@ export class ProductionService {
         }
     }
 
+    private serializeCommentWithAttachments(comment: string, attachments?: { name: string; url: string }[]): string {
+        const text = (comment || '').trim();
+        const cleanAttachments = Array.isArray(attachments)
+            ? attachments.filter(a => a && a.url).map(a => ({ name: a.name || 'Adjunto', url: a.url }))
+            : [];
+        if (cleanAttachments.length === 0) {
+            return text;
+        }
+        return JSON.stringify({
+            __vocCommentV1: true,
+            text,
+            attachments: cleanAttachments
+        });
+    }
+
+    private parseCommentWithAttachments(raw: string | null | undefined): { text: string; attachments: { name: string; url: string }[] } {
+        if (!raw) return { text: '', attachments: [] };
+        const trimmed = raw.trim();
+        if (trimmed.startsWith('{') && trimmed.includes('"__vocCommentV1"')) {
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (parsed && parsed.__vocCommentV1) {
+                    return {
+                        text: typeof parsed.text === 'string' ? parsed.text : '',
+                        attachments: Array.isArray(parsed.attachments) ? parsed.attachments : []
+                    };
+                }
+            } catch (e) {}
+        }
+        return { text: raw, attachments: [] };
+    }
+
     private async getSubmissionComments(treeIds: number[]) {
         const comments = await AppDataSource.getRepository(DynamicSubmissionComment).find({
             where: { submissionId: In(treeIds) },
             relations: ['user', 'state', 'state.stage'],
             order: { id: 'ASC' }
         });
-        return comments.map(c => ({
-            id: c.id,
-            submissionId: c.submissionId,
-            stageName: c.state?.stage?.name || '',
-            userName: c.user?.name || '',
-            userEmail: c.user?.email || '',
-            comment: c.comment,
-            createdAt: c.createdAt
-        }));
+        return comments.map(c => {
+            const parsed = this.parseCommentWithAttachments(c.comment);
+            return {
+                id: c.id,
+                submissionId: c.submissionId,
+                stageName: c.state?.stage?.name || '',
+                userName: c.user?.name || '',
+                userEmail: c.user?.email || '',
+                comment: parsed.text,
+                attachments: parsed.attachments,
+                createdAt: c.createdAt
+            };
+        });
     }
 
-    async addApprovalComment(stateId: number, userId: number, comment: string) {
+    private validateStageCommentAttachments(stage: any, attachments: { name: string; url: string }[]) {
+        if (!stage || !attachments || attachments.length === 0) return;
+        const extCfg = this.parseStageExtendedConfig(stage);
+        if (!extCfg.commentAllowedFormats) return;
+        const allowedExts = extCfg.commentAllowedFormats
+            .toLowerCase()
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean)
+            .map(s => (s.startsWith('.') ? s : `.${s}`));
+        if (allowedExts.length === 0) return;
+        for (const att of attachments) {
+            const fileName = (att.name || '').trim();
+            const dotIdx = fileName.lastIndexOf('.');
+            const ext = dotIdx >= 0 ? fileName.substring(dotIdx).toLowerCase() : '';
+            if (!ext || !allowedExts.includes(ext)) {
+                throw new Error(`El formato del archivo "${fileName}" no está permitido en los comentarios de esta etapa. Formatos permitidos: ${allowedExts.join(', ')}`);
+            }
+        }
+    }
+
+    async addApprovalComment(stateId: number, userId: number, comment: string, attachments?: { name: string; url: string }[]) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const text = (comment || '').trim();
-        if (!text) throw new Error('El comentario no puede estar vacío');
+        const cleanAttachments = Array.isArray(attachments)
+            ? attachments.filter(a => a && a.url).map(a => ({ name: a.name || 'Adjunto', url: a.url }))
+            : [];
+        if (!text && cleanAttachments.length === 0) {
+            throw new Error('Debe ingresar un comentario o adjuntar al menos un archivo');
+        }
 
         const state = await AppDataSource.getRepository(DynamicSubmissionWorkflowState).findOne({
             where: { id: stateId, assignedUserId: userId, status: 'Pending' },
@@ -3174,21 +3296,28 @@ export class ProductionService {
         });
         if (!state) throw new Error('Tarea pendiente no encontrada o ya procesada');
 
+        this.validateStageCommentAttachments(state.stage, cleanAttachments);
+
+        const storedComment = this.serializeCommentWithAttachments(text, cleanAttachments);
+
         const saved = await AppDataSource.getRepository(DynamicSubmissionComment).save({
             submissionId: state.submissionId,
             stateId: state.id,
             userId,
-            comment: text
+            comment: storedComment
         });
         const author = await AppDataSource.getRepository(User).findOneBy({ id: userId });
 
         const requesterId = state.submission.requesterUserId;
         if (requesterId && requesterId !== userId) {
             try {
+                const notifDetail = text
+                    ? `${author?.name || 'Un aprobador'} comentó en la etapa "${state.stage?.name || ''}" de la solicitud de "${state.submission.form?.name || 'Solicitud'}": "${text}"`
+                    : `${author?.name || 'Un aprobador'} adjuntó ${cleanAttachments.length} archivo(s) en la etapa "${state.stage?.name || ''}" de la solicitud de "${state.submission.form?.name || 'Solicitud'}".`;
                 await notificationService.createNotification(
                     requesterId,
                     'Nuevo comentario en tu solicitud',
-                    `${author?.name || 'Un aprobador'} comentó en la etapa "${state.stage?.name || ''}" de la solicitud de "${state.submission.form?.name || 'Solicitud'}": "${text}"`,
+                    notifDetail,
                     'info'
                 );
             } catch (err) {
@@ -3201,12 +3330,13 @@ export class ProductionService {
             stageName: state.stage?.name || '',
             userName: author?.name || '',
             userEmail: author?.email || '',
-            comment: saved.comment,
+            comment: text,
+            attachments: cleanAttachments,
             createdAt: saved.createdAt
         };
     }
 
-    async actionApproval(stateId: number, userId: number, action: 'approve' | 'reject', notes: string, formValues?: Record<string, string>, consecutive?: string, chosenNextAssignee?: any) {
+    async actionApproval(stateId: number, userId: number, action: 'approve' | 'reject', notes: string, formValues?: Record<string, string>, consecutive?: string, chosenNextAssignee?: any, attachments?: { name: string; url: string }[]) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         return await AppDataSource.transaction(async (manager) => {
             const stateRepo = manager.getRepository(DynamicSubmissionWorkflowState);
@@ -3223,6 +3353,19 @@ export class ProductionService {
 
             const submission = currentState.submission;
             const stage = currentState.stage;
+
+            const cleanAttachments = Array.isArray(attachments)
+                ? attachments.filter(a => a && a.url).map(a => ({ name: a.name || 'Adjunto', url: a.url }))
+                : [];
+            if (cleanAttachments.length > 0) {
+                this.validateStageCommentAttachments(stage, cleanAttachments);
+                await manager.getRepository(DynamicSubmissionComment).save({
+                    submissionId: submission.id,
+                    stateId: currentState.id,
+                    userId,
+                    comment: this.serializeCommentWithAttachments(notes || '', cleanAttachments)
+                });
+            }
 
             const isCorrection = (submission.status === 'Rejected');
             const lastRejectionState = isCorrection ? await stateRepo.findOne({
