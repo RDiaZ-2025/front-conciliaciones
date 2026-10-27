@@ -2214,7 +2214,18 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (saved) => {
         this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Comentario guardado.' });
-        this.selectedTask.set({ ...task, comments: [...(task.comments || []), saved] });
+        const updatedHistoryStages = Array.isArray(task.historyStages)
+          ? task.historyStages.map((hs: any) =>
+              hs.stateId === task.stateId
+                ? { ...hs, comments: [...(hs.comments || []), saved] }
+                : hs
+            )
+          : [];
+        this.selectedTask.set({
+          ...task,
+          comments: [...(task.comments || []), saved],
+          historyStages: updatedHistoryStages
+        });
         this.comments.set('');
         this.commentTempFiles.set([]);
         this.loadPendingTasks();

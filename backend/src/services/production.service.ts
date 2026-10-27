@@ -1062,10 +1062,14 @@ export class ProductionService {
         }
         const nextStageTemp = sub.currentStage ? await nextStageQuery.orderBy("stage.stepOrder", "ASC").getOne() : null;
         const isFinalStage = !nextStageTemp;
+        const allComments = await this.getSubmissionComments(treeIds);
 
          const historyStages = allStatesToInclude.map((cState) => {
              const isChildSub = cState.submissionId !== sub.id;
              let stageVals = allValuesToInclude.filter(v => v && v.field && v.workflowStateId === cState.id);
+             const stageComments = allComments.filter(c => c.stateId === cState.id);
+             const trimmedNotes = (cState.notes || '').trim();
+             const hasDuplicateNoteInComments = trimmedNotes.length > 0 && stageComments.some(c => (c.comment || '').trim() === trimmedNotes);
 
              const isRequesterAction = (cState.actionedByUserId && (cState as any).submission?.requesterUserId && cState.actionedByUserId === (cState as any).submission?.requesterUserId);
              const isRequesterAssigned = (cState.assignedUserId && (cState as any).submission?.requesterUserId && cState.assignedUserId === (cState as any).submission?.requesterUserId);
@@ -1130,6 +1134,8 @@ export class ProductionService {
              }
 
              return {
+                 stateId: cState.id,
+                 stageId: cState.stageId || cState.stage?.id || null,
                  submissionId: cState.submissionId,
                  consecutive: (cState as any).submission?.consecutive || null,
                  isCurrentSubmission: cState.submissionId === sub.id,
@@ -1140,8 +1146,12 @@ export class ProductionService {
                  actionedByUserEmail: user?.email || '',
                  actionedAt: cState.updatedAt,
                  status: stateStatus,
-                 notes: cState.notes,
+                 notes: hasDuplicateNoteInComments ? null : cState.notes,
+                 comments: stageComments,
                  values: (() => {
+                     if (cState.status === 'Pending' && stageVals.length === 0) {
+                         return [];
+                     }
                      if (resolvedForm && resolvedForm.fields) {
                           const sortedFields = resolvedForm.fields.sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0));
                          return sortedFields.map((field: any) => {
@@ -1303,7 +1313,7 @@ export class ProductionService {
                  };
              }),
             historyStages,
-            comments: await this.getSubmissionComments(treeIds)
+            comments: allComments
         };
     }
 
@@ -2296,11 +2306,15 @@ export class ProductionService {
             const hasPriorApprovedState = allStatesToInclude.some(cs => cs.status === 'Approved' && cs.id < state.id);
             const hasStageFormToFill = !!(state.customFormIdToFill || (state.stage?.formIdToFill && (state.stage.stepOrder > 1 || hasPriorApprovedState)));
             const isInitialRequestCorrection = isCorrection && isRequesterUser && !hasStageFormToFill;
-            const statesForHistory = allStatesToInclude.filter(cs => cs.id !== state.id);
+            const statesForHistory = allStatesToInclude;
+            const allComments = await this.getSubmissionComments(treeIds);
 
             const historyStages = statesForHistory.map((cState) => {
                 const isChildSub = cState.submissionId !== state.submissionId;
                 let stageVals = allValuesToInclude.filter(v => v && v.field && v.workflowStateId === cState.id);
+                const stageComments = allComments.filter(c => c.stateId === cState.id);
+                const trimmedNotes = (cState.notes || '').trim();
+                const hasDuplicateNoteInComments = trimmedNotes.length > 0 && stageComments.some(c => (c.comment || '').trim() === trimmedNotes);
 
                 const isRequesterAction = (cState.actionedByUserId && (cState as any).submission?.requesterUserId && cState.actionedByUserId === (cState as any).submission?.requesterUserId);
                 const isRequesterAssigned = (cState.assignedUserId && (cState as any).submission?.requesterUserId && cState.assignedUserId === (cState as any).submission?.requesterUserId);
@@ -2342,7 +2356,9 @@ export class ProductionService {
                 const user = cState.actionedByUser || cState.assignedUser;
 
                 let displayName = cState.stage ? cState.stage.name : 'Etapa';
-                if (cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir'))) {
+                if (cState.status === 'Deleted') {
+                    displayName = `${displayName} - Eliminada por Administrador`;
+                } else if (cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir'))) {
                     displayName = `${displayName} (Corrección)`;
                 }
 
@@ -2363,18 +2379,24 @@ export class ProductionService {
                 }
 
                 return {
+                    stateId: cState.id,
+                    stageId: cState.stageId || cState.stage?.id || null,
                     submissionId: cState.submissionId,
                     consecutive: (cState as any).submission?.consecutive || null,
                     isCurrentSubmission: cState.submissionId === state.submissionId,
                     submissionFormName: (cState as any).submission?.form?.name || null,
                     stageName: displayName,
                     formName: formName,
-                    actionedByUserName: user?.name || 'Sin Asignar',
+                    actionedByUserName: user?.name || (cState.status === 'Deleted' ? 'Administrador' : 'Sin Asignar'),
                     actionedByUserEmail: user?.email || '',
                     actionedAt: cState.updatedAt,
                     status: stateStatus,
-                    notes: cState.notes,
+                    notes: hasDuplicateNoteInComments ? null : cState.notes,
+                    comments: stageComments,
                     values: (() => {
+                      if (cState.status === 'Pending' && stageVals.length === 0) {
+                          return [];
+                      }
                       if (resolvedForm && resolvedForm.fields) {
                           const sortedFields = resolvedForm.fields.sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0));
                           return sortedFields.map((field: any) => {
@@ -2765,7 +2787,7 @@ export class ProductionService {
                     }
                 })(),
                 historyStages,
-                comments: await this.getSubmissionComments(treeIds)
+                comments: allComments
             });
         }
 
@@ -3249,6 +3271,8 @@ export class ProductionService {
             return {
                 id: c.id,
                 submissionId: c.submissionId,
+                stateId: c.stateId,
+                stageId: c.state?.stageId || null,
                 stageName: c.state?.stage?.name || '',
                 userName: c.user?.name || '',
                 userEmail: c.user?.email || '',
@@ -3327,6 +3351,8 @@ export class ProductionService {
         return {
             id: saved.id,
             submissionId: saved.submissionId,
+            stateId: state.id,
+            stageId: state.stageId || null,
             stageName: state.stage?.name || '',
             userName: author?.name || '',
             userEmail: author?.email || '',
