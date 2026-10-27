@@ -3345,7 +3345,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     if (maxCols >= 7) return '1150px';
     if (maxCols >= 4) return '920px';
     if (maxCols >= 2) return '820px';
-    return '720px';
+    return '780px';
   }
 
   private parsedListCache = new Map<string, any[]>();
