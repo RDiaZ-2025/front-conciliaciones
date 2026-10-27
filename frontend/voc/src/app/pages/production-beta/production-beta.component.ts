@@ -122,6 +122,14 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   deleteError = signal<string>('');
   isDeletingSub = signal<boolean>(false);
 
+  // --- Modal de Regresar Solicitud a Etapa Previa (Solo Creador de la Solicitud) ---
+  showReturnStageDialog = signal<boolean>(false);
+  subToReturn = signal<any>(null);
+  selectedReturnStageOption: any = null;
+  returnStageComment = signal<string>('');
+  returnStageError = signal<string>('');
+  isReturningStage = signal<boolean>(false);
+
   statusOptions = [
     { label: 'Pendientes de mi Aprobación', value: 'pending_me' },
     { label: 'En Proceso', value: 'in_progress' },
@@ -326,6 +334,87 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           severity: 'error',
           summary: 'Error',
           detail: err?.error?.message || 'Ocurrió un error al intentar eliminar la solicitud.'
+        });
+      }
+    });
+  }
+
+  canReturnToPreviousStage(subOrTask: any): boolean {
+    if (!subOrTask) return false;
+    const status = subOrTask.status || subOrTask.submissionStatus;
+    if (status === 'Completed' || status === 'Deleted') return false;
+    const currentUser = this.authService.currentUser();
+    if (!currentUser) return false;
+    const isCreator =
+      (subOrTask.requesterUserId && Number(currentUser.id) === Number(subOrTask.requesterUserId)) ||
+      (subOrTask.requesterEmail && currentUser.email && subOrTask.requesterEmail.toLowerCase() === currentUser.email.toLowerCase());
+    if (!isCreator) return false;
+    const stages = subOrTask.returnableStages;
+    return Array.isArray(stages) && stages.length > 0;
+  }
+
+  openReturnStageDialog(subOrTask: any) {
+    if (!this.canReturnToPreviousStage(subOrTask)) return;
+    this.subToReturn.set(subOrTask);
+    const stages = subOrTask.returnableStages || [];
+    this.selectedReturnStageOption = stages.length > 0 ? stages[stages.length - 1] : null;
+    this.returnStageComment.set('');
+    this.returnStageError.set('');
+    this.showReturnStageDialog.set(true);
+  }
+
+  executeReturnToStage() {
+    const sub = this.subToReturn();
+    const subId = sub?.submissionId || sub?.id;
+    if (!subId) return;
+
+    if (!this.selectedReturnStageOption || !this.selectedReturnStageOption.stageId) {
+      this.returnStageError.set('Debes seleccionar la etapa previa a la cual deseas regresar la solicitud.');
+      return;
+    }
+
+    const comment = this.returnStageComment().trim();
+    if (!comment) {
+      this.returnStageError.set('Debes ingresar obligatoriamente el comentario indicando por qué se regresa a esa etapa y qué se debe corregir o ajustar.');
+      return;
+    }
+
+    this.returnStageError.set('');
+    this.isReturningStage.set(true);
+
+    this.productionService.returnSubmissionToStage(
+      subId,
+      Number(this.selectedReturnStageOption.stageId),
+      comment,
+      this.selectedReturnStageOption.submissionId ? Number(this.selectedReturnStageOption.submissionId) : undefined
+    ).subscribe({
+      next: () => {
+        const targetName = this.selectedReturnStageOption?.stageName || 'la etapa seleccionada';
+        this.isReturningStage.set(false);
+        this.showReturnStageDialog.set(false);
+        if (this.showActionDialog()) {
+          this.showActionDialog.set(false);
+        }
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Solicitud Regresada a Etapa Previa',
+          detail: `La solicitud #${subId} fue regresada a "${targetName}". El responsable ha sido notificado con tus observaciones.`
+        });
+
+        if (this.showDetailsDialog() && (this.selectedDetails()?.id === subId || this.selectedDetails()?.submissionId === subId)) {
+          this.viewSubmissionDetails(subId);
+        }
+
+        this.loadPendingTasks();
+        this.loadRequests();
+      },
+      error: (err) => {
+        this.isReturningStage.set(false);
+        this.returnStageError.set(err?.error?.message || 'Ocurrió un error al intentar regresar la solicitud a la etapa seleccionada.');
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: err?.error?.message || 'Ocurrió un error al intentar regresar la solicitud a la etapa seleccionada.'
         });
       }
     });
@@ -1828,10 +1917,33 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.selectedTask.set(task);
     this.comments.set('');
     this.commentTempFiles.set([]);
+    this.stageTempFiles = {};
     this.chosenNextAssignee = null;
     this.chosenMemberUserId = null;
-    if (task?.allowChooseNextStageAssignee && task?.nextStageAssigneeOptions?.length === 1) {
-      this.chosenNextAssignee = task.nextStageAssigneeOptions[0];
+    if (task?.allowChooseNextStageAssignee && task?.nextStageAssigneeOptions?.length > 0) {
+      if (task.nextStageAssigneeOptions.length === 1) {
+        this.chosenNextAssignee = task.nextStageAssigneeOptions[0];
+      }
+      if (task.previousNextStageAssigneeUserId) {
+        const prevUserId = Number(task.previousNextStageAssigneeUserId);
+        const directMatch = task.nextStageAssigneeOptions.find(
+          (opt: any) => opt.type === 'specific_user' && Number(opt.userId) === prevUserId
+        );
+        if (directMatch) {
+          this.chosenNextAssignee = directMatch;
+        } else {
+          const memberMatch = task.nextStageAssigneeOptions.find(
+            (opt: any) =>
+              (opt.type === 'team_members' || opt.type === 'subteam_members') &&
+              Array.isArray(opt.members) &&
+              opt.members.some((m: any) => Number(m.id) === prevUserId)
+          );
+          if (memberMatch) {
+            this.chosenNextAssignee = memberMatch;
+            this.chosenMemberUserId = prevUserId;
+          }
+        }
+      }
     }
     this.stageFormFields.set([]);
     this.stageFormValues = {};
@@ -1877,13 +1989,22 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     } else if (task.formIdToFill === -1) {
       this.loadingStageFields.set(false);
       this.stageFormFields.set([]);
-      this.selectedMultiFormIds.set([]);
+      const autoSelectedIds: number[] = [];
       const initialValues: Record<string, string> = {};
       if (task.availableMultiForms && task.availableMultiForms.length > 0) {
+        const rawMap = task.submittedValuesRaw || {};
         task.availableMultiForms.forEach((frm: any) => {
+          let hasPreloadedValInForm = false;
           (frm.fields || []).forEach((f: any) => {
             const key = frm.formId + '_' + f.name;
-            const prevVal = task.submittedValuesRaw ? (task.submittedValuesRaw[f.name] ?? '') : '';
+            const formScopedVal = rawMap[key];
+            const fieldIdVal = f.id ? rawMap['field_' + f.id] : undefined;
+            const prevVal = formScopedVal !== undefined
+              ? formScopedVal
+              : (fieldIdVal !== undefined ? fieldIdVal : (rawMap[f.name] ?? ''));
+            if (formScopedVal !== undefined && String(formScopedVal).trim() !== '') {
+              hasPreloadedValInForm = true;
+            }
             if (prevVal !== '') {
               initialValues[key] = prevVal;
             } else if (f.defaultValueExpression) {
@@ -1898,19 +2019,28 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
               this.initMultiselectField(key, initialValues[key]);
             }
           });
+          if (hasPreloadedValInForm && !autoSelectedIds.includes(frm.formId)) {
+            autoSelectedIds.push(frm.formId);
+          }
         });
       }
+      this.selectedMultiFormIds.set(autoSelectedIds);
       this.stageFormValues = initialValues;
     } else if (task.formIdToFill) {
       this.loadingStageFields.set(true);
       this.productionService.getDynamicFormFields(task.formIdToFill).subscribe({
         next: (fields) => {
           const initialValues: Record<string, string> = {};
+          const rawMap = task.submittedValuesRaw || {};
           fields.forEach(f => {
             if (f.metadata && typeof f.metadata === 'string') {
               try { f.metadata = JSON.parse(f.metadata); } catch(e){}
             }
-            const prevVal = task.submittedValuesRaw ? (task.submittedValuesRaw[f.name] ?? '') : '';
+            const formScopedKey = `${task.formIdToFill}_${f.name}`;
+            const fieldIdKey = f.id ? `field_${f.id}` : '';
+            const prevVal = rawMap[formScopedKey] !== undefined
+              ? rawMap[formScopedKey]
+              : (fieldIdKey && rawMap[fieldIdKey] !== undefined ? rawMap[fieldIdKey] : (rawMap[f.name] ?? ''));
             if (prevVal !== '') {
               initialValues[f.name] = prevVal;
             } else if (f.defaultValueExpression) {
@@ -2323,6 +2453,15 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.stageTempFiles[fieldName] = current;
   }
 
+  removeStageUploadedFile(fieldKey: string, index: number) {
+    const currentVal = this.stageFormValues[fieldKey];
+    const list = [...this.getStageUploadedFiles(currentVal)];
+    if (index >= 0 && index < list.length) {
+      list.splice(index, 1);
+      this.stageFormValues[fieldKey] = list.length > 0 ? JSON.stringify(list) : '';
+    }
+  }
+
   private downloadingFileKeys = new Set<string>();
 
   getStageUploadedFiles(valueStr: any): any[] {
@@ -2478,7 +2617,9 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
                 return;
               }
             }
-            this.stageFormValues[field.name] = JSON.stringify(uploadResults);
+            const maxCount = field.metadata?.maxFileCount || 1;
+            const existingUploaded = maxCount > 1 ? this.getStageUploadedFiles(this.stageFormValues[field.name]) : [];
+            this.stageFormValues[field.name] = JSON.stringify([...existingUploaded, ...uploadResults].slice(0, maxCount));
           }
         }
       }
@@ -2502,7 +2643,9 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
                   return;
                 }
               }
-              this.stageFormValues[fileKey] = JSON.stringify(uploadResults);
+              const maxCount = field.metadata?.maxFileCount || 1;
+              const existingUploaded = maxCount > 1 ? this.getStageUploadedFiles(this.stageFormValues[fileKey]) : [];
+              this.stageFormValues[fileKey] = JSON.stringify([...existingUploaded, ...uploadResults].slice(0, maxCount));
             }
           }
         }
@@ -2527,7 +2670,9 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
                     return;
                   }
                 }
-                this.stageFormValues[fileKey] = JSON.stringify(uploadResults);
+                const maxCount = field.metadata?.maxFileCount || 1;
+                const existingUploaded = maxCount > 1 ? this.getStageUploadedFiles(this.stageFormValues[fileKey]) : [];
+                this.stageFormValues[fileKey] = JSON.stringify([...existingUploaded, ...uploadResults].slice(0, maxCount));
               }
             }
           }

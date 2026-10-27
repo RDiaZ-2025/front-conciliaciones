@@ -937,6 +937,7 @@ export class ProductionService {
                 createdAt: sub.createdAt,
                 stageName: displayStageName,
                 status: sub.status,
+                requesterUserId: sub.requesterUserId,
                 requesterName: (sub as any).requesterUser ? (sub as any).requesterUser.name : (sub.requesterUserId ? `Usuario #${sub.requesterUserId}` : 'Usuario'),
                 requesterEmail: (sub as any).requesterUser ? (sub as any).requesterUser.email : '',
                 assigneeName,
@@ -1020,6 +1021,157 @@ export class ProductionService {
         return ancestors;
     }
 
+    private getFlowSubmissionIds(sub: DynamicFormSubmission, allStatesToInclude: DynamicSubmissionWorkflowState[]): Set<number> {
+        const flowSubIds = new Set<number>([sub.id]);
+
+        // If sub is an internal subflow of a parent submission that itself has workflow states, include that parent
+        let currParentId = sub.parentSubmissionId;
+        const visitedUp = new Set<number>([sub.id]);
+        while (currParentId && !visitedUp.has(currParentId)) {
+            visitedUp.add(currParentId);
+            const parentHasStates = allStatesToInclude.some(s => s.submissionId === currParentId);
+            if (parentHasStates) {
+                flowSubIds.add(currParentId);
+                const parentState = allStatesToInclude.find(s => s.submissionId === currParentId);
+                currParentId = (parentState as any)?.submission?.parentSubmissionId || null;
+            } else {
+                break;
+            }
+        }
+
+        // Include all descendant submissions that belong to this flow branch
+        let added = true;
+        while (added) {
+            added = false;
+            for (const st of allStatesToInclude) {
+                const stSub = (st as any).submission;
+                if (stSub && stSub.parentSubmissionId && flowSubIds.has(stSub.parentSubmissionId) && !flowSubIds.has(stSub.id)) {
+                    flowSubIds.add(stSub.id);
+                    added = true;
+                }
+            }
+        }
+
+        return flowSubIds;
+    }
+
+    private getReturnableStages(sub: DynamicFormSubmission, allStatesToInclude: DynamicSubmissionWorkflowState[]) {
+        if (!sub || ['Completed', 'Approved', 'Deleted', 'Blocked'].includes(sub.status)) {
+            return [];
+        }
+
+        const flowSubIds = this.getFlowSubmissionIds(sub, allStatesToInclude);
+        const pendingStatesInFlow = allStatesToInclude.filter(
+            st => flowSubIds.has(st.submissionId) && st.status === 'Pending'
+        );
+
+        if (pendingStatesInFlow.length === 0) {
+            return [];
+        }
+
+        const pendingStageKeys = new Set<string>(
+            pendingStatesInFlow
+                .filter(ps => ps.stageId != null)
+                .map(ps => `${ps.submissionId}_${ps.stageId}`)
+        );
+
+        const stageMap = new Map<string, {
+            key: string;
+            stageId: number;
+            submissionId: number;
+            stageName: string;
+            stepOrder: number;
+            workflowId: number | null;
+            workflowName: string | null;
+            formName: string | null;
+            ownerUserId: number | null;
+            ownerUserName: string;
+            ownerUserEmail: string;
+            lastApprovedAt: Date;
+            firstSeenOrder: number;
+            hasMainOwnerState: boolean;
+            displayLabel: string;
+        }>();
+
+        let orderCounter = 0;
+
+        for (const cState of allStatesToInclude) {
+            if (!flowSubIds.has(cState.submissionId)) continue;
+            if (cState.status !== 'Approved') continue;
+            if (!cState.stageId || !cState.stage || cState.stage.isDeleted) continue;
+
+            const key = `${cState.submissionId}_${cState.stageId}`;
+            if (pendingStageKeys.has(key)) continue;
+
+            // Check if there is an active pending state in the same submission & workflow
+            const sameWfPending = pendingStatesInFlow.filter(
+                ps => ps.submissionId === cState.submissionId && ps.stage && ps.stage.workflowId === cState.stage.workflowId
+            );
+            if (sameWfPending.length > 0) {
+                const minPendingStepOrder = Math.min(...sameWfPending.map(ps => ps.stage.stepOrder ?? 999999));
+                if ((cState.stage.stepOrder ?? 0) >= minPendingStepOrder) {
+                    continue;
+                }
+            } else {
+                // Different workflow or closing step: must have been approved prior to the pending state
+                const maxPendingId = Math.max(...pendingStatesInFlow.map(ps => ps.id));
+                if (cState.id >= maxPendingId) {
+                    continue;
+                }
+            }
+
+            const user = cState.actionedByUser || cState.assignedUser;
+            const userId = cState.actionedByUserId || cState.assignedUserId || null;
+            const userName = user?.name || 'Sin Asignar';
+            const userEmail = user?.email || '';
+            const isMainStageState = !cState.customFormIdToFill || cState.customFormIdToFill === cState.stage.formIdToFill;
+
+            const existing = stageMap.get(key);
+            const firstSeenOrder = existing ? existing.firstSeenOrder : (++orderCounter);
+
+            // Preserve main owner if a multi-form stage had recipient sub-states
+            const keepExistingOwner = existing && existing.hasMainOwnerState && !isMainStageState;
+            const finalOwnerId = keepExistingOwner ? existing.ownerUserId : userId;
+            const finalOwnerName = keepExistingOwner ? existing.ownerUserName : userName;
+            const finalOwnerEmail = keepExistingOwner ? existing.ownerUserEmail : userEmail;
+            const finalHasMainOwner = (existing?.hasMainOwnerState || false) || isMainStageState;
+
+            const wfName = cState.stage.workflow?.name || null;
+            const subFormName = (cState as any).submission?.form?.name || null;
+            let prefix = '';
+            if (cState.submissionId !== sub.id && subFormName) {
+                prefix = `${subFormName} · `;
+            } else if (wfName && sub.workflowId && cState.stage.workflowId !== sub.workflowId) {
+                prefix = `${wfName} · `;
+            }
+
+            const stepNum = cState.stage.stepOrder || firstSeenOrder;
+            const displayLabel = `${prefix}Etapa ${stepNum}: ${cState.stage.name} (Responsable: ${finalOwnerName})`;
+
+            stageMap.set(key, {
+                key,
+                stageId: cState.stageId,
+                submissionId: cState.submissionId,
+                stageName: cState.stage.name,
+                stepOrder: cState.stage.stepOrder || firstSeenOrder,
+                workflowId: cState.stage.workflowId || null,
+                workflowName: wfName,
+                formName: cState.stage.formToFill?.name || subFormName || null,
+                ownerUserId: finalOwnerId,
+                ownerUserName: finalOwnerName,
+                ownerUserEmail: finalOwnerEmail,
+                lastApprovedAt: cState.updatedAt,
+                firstSeenOrder,
+                hasMainOwnerState: finalHasMainOwner,
+                displayLabel
+            });
+        }
+
+        return Array.from(stageMap.values())
+            .sort((a, b) => a.firstSeenOrder - b.firstSeenOrder)
+            .map(({ hasMainOwnerState, firstSeenOrder, ...rest }) => rest);
+    }
+
     async getSubmissionDetails(submissionId: number) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const subRepo = AppDataSource.getRepository(DynamicFormSubmission);
@@ -1073,8 +1225,11 @@ export class ProductionService {
 
              const isRequesterAction = (cState.actionedByUserId && (cState as any).submission?.requesterUserId && cState.actionedByUserId === (cState as any).submission?.requesterUserId);
              const isRequesterAssigned = (cState.assignedUserId && (cState as any).submission?.requesterUserId && cState.assignedUserId === (cState as any).submission?.requesterUserId);
-             const isCorrectionState = (cState.status === 'Approved' && (isRequesterAction || isRequesterAssigned)) ||
-                 (cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir')));
+             const isCorrectionState = cState.status === 'Approved' && (
+                 isRequesterAction ||
+                 isRequesterAssigned ||
+                 !!(cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir')))
+             );
 
              let resolvedForm = null;
              let resolvedFormId = null;
@@ -1113,7 +1268,7 @@ export class ProductionService {
              let displayName = cState.stage ? cState.stage.name : 'Etapa';
              if (cState.status === 'Deleted') {
                  displayName = `${displayName} - Eliminada por Administrador`;
-             } else if (cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir'))) {
+             } else if (cState.status === 'Approved' && cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir'))) {
                  displayName = `${displayName} (Corrección)`;
              }
 
@@ -1149,7 +1304,7 @@ export class ProductionService {
                  notes: hasDuplicateNoteInComments ? null : cState.notes,
                  comments: stageComments,
                  values: (() => {
-                     if (cState.status === 'Pending' && stageVals.length === 0) {
+                     if (cState.status !== 'Approved' && stageVals.length === 0) {
                          return [];
                      }
                      if (resolvedForm && resolvedForm.fields) {
@@ -1272,6 +1427,8 @@ export class ProductionService {
         }
 
         const deletionState = allStatesToInclude.slice().reverse().find(s => s.status === 'Deleted');
+        const rootRequesterId = parentSubmissions.length > 0 ? parentSubmissions[0].requesterUserId : sub.requesterUserId;
+        const returnableStages = this.getReturnableStages(sub, allStatesToInclude);
 
         return {
             id: sub.id,
@@ -1280,8 +1437,10 @@ export class ProductionService {
             status: sub.status,
             consecutive: sub.consecutive,
             stageName: sub.status === 'Deleted' ? 'Eliminada' : (sub.currentStage ? sub.currentStage.name : 'Completado'),
+            requesterUserId: sub.requesterUserId || rootRequesterId,
             requesterName: sub.requesterUser ? sub.requesterUser.name : 'Usuario',
             requesterEmail: sub.requesterUser ? sub.requesterUser.email : '',
+            returnableStages,
             deletionReason: deletionState?.notes || null,
             deletedByUserName: deletionState?.actionedByUser?.name || null,
             deletedByUserEmail: deletionState?.actionedByUser?.email || null,
@@ -2296,6 +2455,7 @@ export class ProductionService {
                 if (v && v.field) {
                     submittedValuesRaw[v.field.name] = v.value || '';
                     submittedValuesRaw[`${v.field.formId}_${v.field.name}`] = v.value || '';
+                    submittedValuesRaw[`field_${v.field.id}`] = v.value || '';
                 }
             }
 
@@ -2318,8 +2478,11 @@ export class ProductionService {
 
                 const isRequesterAction = (cState.actionedByUserId && (cState as any).submission?.requesterUserId && cState.actionedByUserId === (cState as any).submission?.requesterUserId);
                 const isRequesterAssigned = (cState.assignedUserId && (cState as any).submission?.requesterUserId && cState.assignedUserId === (cState as any).submission?.requesterUserId);
-                const isCorrectionState = (cState.status === 'Approved' && (isRequesterAction || isRequesterAssigned)) ||
-                    (cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir')));
+                const isCorrectionState = cState.status === 'Approved' && (
+                    isRequesterAction ||
+                    isRequesterAssigned ||
+                    !!(cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir')))
+                );
 
                 let resolvedForm = null;
                 let resolvedFormId = null;
@@ -2358,7 +2521,7 @@ export class ProductionService {
                 let displayName = cState.stage ? cState.stage.name : 'Etapa';
                 if (cState.status === 'Deleted') {
                     displayName = `${displayName} - Eliminada por Administrador`;
-                } else if (cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir'))) {
+                } else if (cState.status === 'Approved' && cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir'))) {
                     displayName = `${displayName} (Corrección)`;
                 }
 
@@ -2394,7 +2557,7 @@ export class ProductionService {
                     notes: hasDuplicateNoteInComments ? null : cState.notes,
                     comments: stageComments,
                     values: (() => {
-                      if (cState.status === 'Pending' && stageVals.length === 0) {
+                      if (cState.status !== 'Approved' && stageVals.length === 0) {
                           return [];
                       }
                       if (resolvedForm && resolvedForm.fields) {
@@ -2564,7 +2727,14 @@ export class ProductionService {
                     parsedAssigneeConfig = JSON.parse(state.stage.assigneeUserIds);
                     cfgList = Array.isArray(parsedAssigneeConfig) ? parsedAssigneeConfig : (parsedAssigneeConfig.multiFormsConfig || []);
                     if (cfgList.length > 0 && (cfgList[0].sourceFormId !== undefined || cfgList[0].targetFormIdToFill !== undefined)) {
-                        const stageApprovedStates = allStatesToInclude.filter((cs: any) => cs.stageId === state.stage?.id && cs.status === 'Approved');
+                        const priorStatesForSub = allStatesToInclude.filter((cs: any) => cs.submissionId === state.submissionId && cs.id < state.id);
+                        const lastBoundaryState = [...priorStatesForSub].reverse().find(
+                            (cs: any) => cs.stageId !== state.stage?.id || cs.status === 'Returned' || cs.status === 'Rejected'
+                        );
+                        const minStateIdForCurrentVisit = lastBoundaryState ? lastBoundaryState.id : 0;
+                        const stageApprovedStates = priorStatesForSub.filter(
+                            (cs: any) => cs.stageId === state.stage?.id && cs.status === 'Approved' && cs.id > minStateIdForCurrentVisit
+                        );
                         if (stageApprovedStates.length === 0) {
                             isMultiForms = true;
                         }
@@ -2653,17 +2823,50 @@ export class ProductionService {
                 .sort((a, b) => a.displayOrder - b.displayOrder)
                 .map(cf => ({ label: cf.label, value: cf.value, fieldType: cf.fieldType, metadata: cf.metadata }));
 
+            const flowSubIds = this.getFlowSubmissionIds(state.submission, allStatesToInclude);
+            const priorFlowStates = allStatesToInclude.filter(cs => flowSubIds.has(cs.submissionId) && cs.id < state.id);
+            const priorNonPending = priorFlowStates.filter(cs => cs.status !== 'Pending');
+            const lastActionedPriorState = priorNonPending.length > 0 ? priorNonPending[priorNonPending.length - 1] : null;
+            const isReturnedByRequester = lastActionedPriorState?.status === 'Returned';
+            const returnNotes = isReturnedByRequester ? lastActionedPriorState.notes : null;
+            const returnedByUserName = isReturnedByRequester
+                ? (lastActionedPriorState.actionedByUser?.name || state.submission.requesterUser?.name || 'Solicitante')
+                : null;
+            const returnedFromStageName = isReturnedByRequester ? (lastActionedPriorState.stage?.name || null) : null;
+            const returnedAt = isReturnedByRequester ? lastActionedPriorState.updatedAt : null;
+            const hasPreviousStageExecution = state.stageId
+                ? priorFlowStates.some(cs => cs.stageId === state.stageId && cs.status === 'Approved')
+                : false;
+            const previousNextStageAssigneeUserId = (() => {
+                if (!state.stage?.allowChooseNextStageAssignee || !nextStage) return null;
+                const prevNextStates = allStatesToInclude.filter(
+                    cs => cs.submissionId === state.submissionId && cs.stageId === nextStage.id && (cs.actionedByUserId || cs.assignedUserId)
+                );
+                if (prevNextStates.length === 0) return null;
+                const latestNext = prevNextStates[prevNextStates.length - 1];
+                return latestNext.actionedByUserId || latestNext.assignedUserId || null;
+            })();
+            const returnableStages = this.getReturnableStages(state.submission, allStatesToInclude);
+
             results.push({
                 id: state.submissionId,
                 stateId: state.id,
                 submissionId: state.submissionId,
                 parentSubmissionId: state.submission.parentSubmissionId,
                 formId: state.submission.formId,
-                requesterUserId: state.submission.requesterUserId,
+                requesterUserId: state.submission.requesterUserId || rootRequesterId,
                 status: state.submission.status,
                 submissionStatus: state.submission.status,
                 consecutive: state.submission.consecutive,
                 rejectionNotes,
+                isReturnedByRequester,
+                returnNotes,
+                returnedByUserName,
+                returnedFromStageName,
+                returnedAt,
+                hasPreviousStageExecution,
+                previousNextStageAssigneeUserId,
+                returnableStages,
                 formName: state.submission.form.name,
                 cardFields,
                 requesterName: state.submission.requesterUser ? state.submission.requesterUser.name : 'Usuario',
@@ -2680,7 +2883,7 @@ export class ProductionService {
                 maxSelectedForms,
                 isFinalStage,
                 icon: state.submission.form.icon,
-                values: values.filter(v => v && v.field && v.field.formId === state.submission.formId).map(v => {
+                values: values.filter(v => v && v.field && v.field.formId === state.submission.formId && !v.workflowStateId).map(v => {
                     let parsedMeta = v.field.metadata;
                     if (parsedMeta && typeof parsedMeta === 'string') {
                         try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
@@ -2936,7 +3139,13 @@ export class ProductionService {
         return undefined;
     }
 
-    async createStageStates(manager: any, submission: any, targetStage: any, preferredAssigneeUserId?: number) {
+    async createStageStates(
+        manager: any,
+        submission: any,
+        targetStage: any,
+        preferredAssigneeUserId?: number,
+        customNotification?: { title: string; message: string; type?: 'info' | 'warning' | 'success' | 'error' }
+    ) {
         const stateRepo = manager.getRepository(DynamicSubmissionWorkflowState);
         const userRepo = manager.getRepository(User);
         const valRepo = manager.getRepository(DynamicFormFieldValue);
@@ -2958,8 +3167,24 @@ export class ProductionService {
                 submission.currentStageId = targetStage.id;
                 await manager.getRepository(DynamicFormSubmission).save(submission);
 
-                await this.createStageStates(manager, submission, firstSubflowStage, preferredAssigneeUserId);
+                await this.createStageStates(manager, submission, firstSubflowStage, preferredAssigneeUserId, customNotification);
                 return;
+            }
+        }
+
+        // Si la etapa ya fue ejecutada y aprobada previamente en esta solicitud (ej. tras regresar a una etapa previa),
+        // preservar al responsable activo que la ejecutó originalmente a menos que se indique un destinatario explícito.
+        if (!preferredAssigneeUserId && targetStage.assigneeType !== 'multiple_users') {
+            const prevApprovedForStage = await stateRepo.findOne({
+                where: { submissionId: submission.id, stageId: targetStage.id, status: 'Approved' },
+                order: { id: 'DESC' }
+            });
+            const prevOwnerId = prevApprovedForStage?.actionedByUserId || prevApprovedForStage?.assignedUserId;
+            if (prevOwnerId) {
+                const prevOwner = await userRepo.findOne({ where: { id: prevOwnerId } });
+                if (prevOwner && (prevOwner.status === 1 || prevOwner.status === null || prevOwner.status === undefined)) {
+                    preferredAssigneeUserId = prevOwner.id;
+                }
             }
         }
 
@@ -3097,9 +3322,9 @@ export class ProductionService {
             try {
                 await notificationService.createNotification(
                     mapping.userId,
-                    'Nueva Tarea de Flujo Asignada',
-                    `Se te ha asignado la tarea: "${targetStage.name}" para la solicitud dinámica de ${submission.form.name}`,
-                    'info'
+                    customNotification?.title || 'Nueva Tarea de Flujo Asignada',
+                    customNotification?.message || `Se te ha asignado la tarea: "${targetStage.name}" para la solicitud dinámica de ${submission.form?.name || 'Producción'}`,
+                    customNotification?.type || 'info'
                 );
             } catch (err) {
                 console.error('Error sending notification:', err);
@@ -3188,7 +3413,7 @@ export class ProductionService {
         }
 
         const pendingSiblingsCount = await subRepo.count({
-            where: { parentSubmissionId: submission.parentSubmissionId, status: Not('Completed') }
+            where: { parentSubmissionId: submission.parentSubmissionId, status: In(['In Progress', 'Pending', 'Rejected']) }
         });
 
         if (pendingSiblingsCount > 0) {
@@ -3463,10 +3688,18 @@ export class ProductionService {
             }
             const isMultiFormsStage = multiFormsConfig.length > 0 && (multiFormsConfig[0].sourceFormId !== undefined || multiFormsConfig[0].targetFormIdToFill !== undefined || multiFormsConfig[0].targetSubflowFormId !== undefined);
 
-            const previousApprovedInStage = await stateRepo.find({
-                where: { submissionId: submission.id, stageId: stage.id, status: 'Approved' },
-                order: { createdAt: 'ASC' }
+            const allSubStates = await stateRepo.find({
+                where: { submissionId: submission.id },
+                order: { id: 'ASC' }
             });
+            const priorSubStates = allSubStates.filter(cs => cs.id < currentState.id);
+            const lastBoundaryState = [...priorSubStates].reverse().find(
+                cs => cs.stageId !== stage.id || cs.status === 'Returned' || cs.status === 'Rejected'
+            );
+            const minStateIdForCurrentVisit = lastBoundaryState ? lastBoundaryState.id : 0;
+            const previousApprovedInStage = priorSubStates.filter(
+                cs => cs.stageId === stage.id && cs.status === 'Approved' && cs.id > minStateIdForCurrentVisit
+            );
             const isInitialDispatch = isMultiFormsStage && previousApprovedInStage.length === 0;
 
             if (action === 'approve' && formValues) {
@@ -3676,7 +3909,7 @@ export class ProductionService {
                 }
 
                 const pendingChildSubsCount = await subRepo.count({
-                    where: { parentSubmissionId: submission.id, status: Not('Completed') }
+                    where: { parentSubmissionId: submission.id, status: In(['In Progress', 'Pending', 'Rejected']) }
                 });
                 if (pendingChildSubsCount > 0) {
 
@@ -3873,6 +4106,173 @@ export class ProductionService {
             }
 
             return submission;
+        });
+    }
+
+    /**
+     * Permite al usuario creador de la solicitud regresarla desde su etapa actual
+     * hacia cualquier etapa previa ya ejecutada/aprobada en el mismo flujo,
+     * registrando un evento lineal ('Returned') con el motivo obligatorio y
+     * creando un nuevo estado 'Pending' en la etapa elegida para continuar el flujo.
+     */
+    async returnSubmissionToStage(
+        submissionId: number,
+        userId: number,
+        targetStageId: number,
+        notes: string,
+        targetSubmissionId?: number
+    ) {
+        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+
+        const cleanNotes = (notes || '').trim();
+        if (!cleanNotes) {
+            throw new Error('Debe ingresar un comentario indicando el motivo por el cual regresa la solicitud a la etapa seleccionada.');
+        }
+        if (!targetStageId || isNaN(Number(targetStageId))) {
+            throw new Error('Debe seleccionar una etapa previa válida a la cual regresar la solicitud.');
+        }
+
+        const treeIds = await this.getSubmissionTreeIds(submissionId);
+        const parentSubmissions = await this.getAncestorSubmissions(submissionId);
+
+        return await AppDataSource.transaction(async (manager) => {
+            const subRepo = manager.getRepository(DynamicFormSubmission);
+            const stateRepo = manager.getRepository(DynamicSubmissionWorkflowState);
+            const stageRepo = manager.getRepository(DynamicWorkflowStage);
+            const userRepo = manager.getRepository(User);
+
+            const sub = await subRepo.findOne({
+                where: { id: submissionId },
+                relations: ['form', 'currentStage', 'requesterUser']
+            });
+            if (!sub) {
+                throw new Error('Solicitud no encontrada.');
+            }
+            if (sub.status === 'Completed' || sub.status === 'Deleted') {
+                throw new Error('No es posible regresar una solicitud que ya se encuentra finalizada o eliminada.');
+            }
+
+            const rootSub = parentSubmissions.length > 0 ? parentSubmissions[0] : sub;
+            const isRequester =
+                Number(userId) === Number(sub.requesterUserId) ||
+                Number(userId) === Number(rootSub.requesterUserId);
+
+            if (!isRequester) {
+                throw new Error('Solo el usuario creador de la solicitud tiene permisos para regresarla a una etapa previa.');
+            }
+
+            const allStates = await stateRepo.find({
+                where: { submissionId: In(treeIds) },
+                relations: [
+                    'stage',
+                    'stage.workflow',
+                    'actionedByUser',
+                    'assignedUser',
+                    'submission',
+                    'submission.form'
+                ],
+                order: { id: 'ASC' }
+            });
+
+            const returnableStages = this.getReturnableStages(sub, allStates);
+            const targetOption = returnableStages.find(
+                rs =>
+                    Number(rs.stageId) === Number(targetStageId) &&
+                    (!targetSubmissionId || Number(rs.submissionId) === Number(targetSubmissionId))
+            );
+
+            if (!targetOption) {
+                throw new Error('La etapa seleccionada no es una etapa previa válida para regresar en este momento.');
+            }
+
+            const targetStage = await stageRepo.findOne({
+                where: { id: Number(targetOption.stageId), isDeleted: false },
+                relations: ['workflow', 'formToFill']
+            });
+            if (!targetStage) {
+                throw new Error('La etapa destino seleccionada no existe o fue eliminada.');
+            }
+
+            const targetSub =
+                Number(targetOption.submissionId) === Number(sub.id)
+                    ? sub
+                    : await subRepo.findOne({
+                          where: { id: Number(targetOption.submissionId) },
+                          relations: ['form', 'currentStage', 'requesterUser']
+                      });
+            if (!targetSub) {
+                throw new Error('No se encontró la solicitud asociada a la etapa seleccionada.');
+            }
+
+            const flowSubIds = this.getFlowSubmissionIds(sub, allStates);
+            const pendingStates = allStates.filter(
+                cs => flowSubIds.has(cs.submissionId) && cs.status === 'Pending'
+            );
+            if (pendingStates.length === 0) {
+                throw new Error('La solicitud no tiene tareas pendientes activas en este momento.');
+            }
+
+            const returnHistoryNote = `[Devuelta a la etapa "${targetStage.name}"]: ${cleanNotes}`;
+            for (const pState of pendingStates) {
+                pState.status = 'Returned';
+                pState.actionedByUserId = userId;
+                pState.notes = returnHistoryNote;
+                await stateRepo.save(pState);
+            }
+
+            // Determinar ancestros de targetSub para no cerrar un padre del cual dependa targetSub
+            const targetAncestorIds = new Set<number>();
+            let currParentId = targetSub.parentSubmissionId;
+            while (currParentId) {
+                targetAncestorIds.add(currParentId);
+                const parentFound = parentSubmissions.find(p => p.id === currParentId);
+                currParentId = parentFound ? parentFound.parentSubmissionId : null;
+            }
+
+            // Cerrar sub-solicitudes hijas que quedaron interrumpidas cuando se regresa a una etapa padre
+            const otherFlowSubIds = Array.from(flowSubIds).filter(
+                id => id !== targetSub.id && !targetAncestorIds.has(id)
+            );
+            if (otherFlowSubIds.length > 0) {
+                const otherSubs = await subRepo.find({
+                    where: { id: In(otherFlowSubIds), status: In(['In Progress', 'Pending', 'Rejected']) }
+                });
+                for (const oSub of otherSubs) {
+                    oSub.status = 'Returned';
+                    oSub.currentStageId = null;
+                    await subRepo.save(oSub);
+                }
+            }
+
+            targetSub.currentStageId = targetStage.id;
+            targetSub.status = 'In Progress';
+            await subRepo.save(targetSub);
+
+            let preferredAssigneeUserId: number | undefined = undefined;
+            if (targetOption.ownerUserId) {
+                const ownerUser = await userRepo.findOne({ where: { id: Number(targetOption.ownerUserId) } });
+                if (ownerUser && (ownerUser.status === 1 || ownerUser.status === null || ownerUser.status === undefined)) {
+                    preferredAssigneeUserId = ownerUser.id;
+                }
+            }
+
+            const requesterUser = await userRepo.findOne({ where: { id: userId } });
+            const requesterName = requesterUser?.name || sub.requesterUser?.name || 'El creador de la solicitud';
+            const formLabel = targetSub.form?.name || sub.form?.name || 'Solicitud';
+
+            await this.createStageStates(
+                manager,
+                targetSub,
+                targetStage,
+                preferredAssigneeUserId,
+                {
+                    title: 'Solicitud Regresada a tu Etapa',
+                    message: `${requesterName} regresó la solicitud "${formLabel}" a la etapa "${targetStage.name}". Motivo: "${cleanNotes}"`,
+                    type: 'warning'
+                }
+            );
+
+            return targetSub;
         });
     }
 }

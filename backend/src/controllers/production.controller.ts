@@ -322,3 +322,39 @@ export const deleteSubmission = asyncHandler(async (req: Request, res: Response)
     return res.json({ success: true, message: 'Solicitud eliminada exitosamente' });
 });
 
+export const returnSubmissionToStage = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ message: 'Usuario no autenticado' });
+
+    const submissionId = parseInt(req.params.submissionId, 10);
+    if (isNaN(submissionId)) {
+        return res.status(400).json({ message: 'ID de solicitud inválido' });
+    }
+
+    const { targetStageId, notes, comment, targetSubmissionId } = req.body || {};
+    const parsedTargetStageId = parseInt(targetStageId, 10);
+    if (isNaN(parsedTargetStageId)) {
+        return res.status(400).json({ message: 'Debe seleccionar una etapa destino válida.' });
+    }
+
+    const cleanNotes = (notes || comment || '').toString().trim();
+    if (!cleanNotes) {
+        return res.status(400).json({ message: 'Debe ingresar un comentario indicando el motivo por el cual regresa la solicitud a esa etapa.' });
+    }
+
+    const parsedTargetSubmissionId = targetSubmissionId ? parseInt(targetSubmissionId, 10) : undefined;
+    const result = await productionService.returnSubmissionToStage(
+        submissionId,
+        userId,
+        parsedTargetStageId,
+        cleanNotes,
+        !isNaN(parsedTargetSubmissionId as number) ? parsedTargetSubmissionId : undefined
+    );
+    return res.json({
+        success: true,
+        message: 'La solicitud ha sido regresada a la etapa seleccionada exitosamente.',
+        submission: result
+    });
+});
+
+
