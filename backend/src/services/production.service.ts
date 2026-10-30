@@ -845,10 +845,13 @@ export class ProductionService {
             if (sub.parentSubmissionId) pagedTreeIds.add(sub.parentSubmissionId);
         }
 
-        const allActiveStates = pagedTreeIds.size > 0 ? await stateRepo.find({
-            where: { submissionId: In(Array.from(pagedTreeIds)), status: 'Pending' },
-            relations: ['assignedUser', 'stage', 'stage.workflow', 'submission', 'submission.form']
+        const allStatesForPaged = pagedTreeIds.size > 0 ? await stateRepo.find({
+            where: { submissionId: In(Array.from(pagedTreeIds)) },
+            relations: ['assignedUser', 'actionedByUser', 'stage', 'stage.workflow', 'stage.formToFill', 'submission', 'submission.form'],
+            order: { id: 'ASC' }
         }) : [];
+
+        const allActiveStates = allStatesForPaged.filter(s => s.status === 'Pending');
 
         const valRepo = AppDataSource.getRepository(DynamicFormFieldValue);
         const allValues = pagedTreeIds.size > 0 ? await valRepo.find({
@@ -863,6 +866,12 @@ export class ProductionService {
                 treeSubIds.add(sub.parentSubmissionId);
             }
             const activeStatesForThisSub = allActiveStates.filter(s => treeSubIds.has(s.submissionId));
+            const statesForThisSubTree = allStatesForPaged.filter(s => treeSubIds.has(s.submissionId));
+            const returnableStages = this.getReturnableStages(sub, statesForThisSubTree);
+
+            const rootParent = sub.parentSubmissionId ? subMap.get(sub.parentSubmissionId) : null;
+            const effectiveRequesterUserId = sub.requesterUserId || rootParent?.requesterUserId || null;
+            const effectiveRequesterUser = (sub as any).requesterUser || (rootParent as any)?.requesterUser || null;
 
             let assigneeName = 'Sin Asignar';
             let assigneeEmail: string | undefined = undefined;
@@ -937,14 +946,15 @@ export class ProductionService {
                 createdAt: sub.createdAt,
                 stageName: displayStageName,
                 status: sub.status,
-                requesterUserId: sub.requesterUserId,
-                requesterName: (sub as any).requesterUser ? (sub as any).requesterUser.name : (sub.requesterUserId ? `Usuario #${sub.requesterUserId}` : 'Usuario'),
-                requesterEmail: (sub as any).requesterUser ? (sub as any).requesterUser.email : '',
+                requesterUserId: effectiveRequesterUserId,
+                requesterName: effectiveRequesterUser ? effectiveRequesterUser.name : (effectiveRequesterUserId ? `Usuario #${effectiveRequesterUserId}` : 'Usuario'),
+                requesterEmail: effectiveRequesterUser ? effectiveRequesterUser.email : '',
                 assigneeName,
                 assigneeEmail,
                 consecutive: sub.consecutive,
                 icon: sub.form ? sub.form.icon : undefined,
-                cardFields
+                cardFields,
+                returnableStages
             };
         });
 
@@ -1001,12 +1011,12 @@ export class ProductionService {
             visited.add(currId);
             const curr: any = await subRepo.findOne({
                 where: { id: currId },
-                relations: ['form']
+                relations: ['form', 'requesterUser']
             });
             if (curr && curr.parentSubmissionId) {
                 const parent = await subRepo.findOne({
                     where: { id: curr.parentSubmissionId },
-                    relations: ['form']
+                    relations: ['form', 'requesterUser']
                 });
                 if (parent) {
                     ancestors.unshift(parent);
@@ -1056,7 +1066,7 @@ export class ProductionService {
     }
 
     private getReturnableStages(sub: DynamicFormSubmission, allStatesToInclude: DynamicSubmissionWorkflowState[]) {
-        if (!sub || ['Completed', 'Approved', 'Deleted', 'Blocked'].includes(sub.status)) {
+        if (!sub || ['Deleted', 'Blocked'].includes(sub.status)) {
             return [];
         }
 
@@ -1427,7 +1437,9 @@ export class ProductionService {
         }
 
         const deletionState = allStatesToInclude.slice().reverse().find(s => s.status === 'Deleted');
-        const rootRequesterId = parentSubmissions.length > 0 ? parentSubmissions[0].requesterUserId : sub.requesterUserId;
+        const rootSub = parentSubmissions.length > 0 ? parentSubmissions[0] : sub;
+        const rootRequesterId = rootSub.requesterUserId || sub.requesterUserId;
+        const rootRequesterUser = (rootSub as any).requesterUser || sub.requesterUser;
         const returnableStages = this.getReturnableStages(sub, allStatesToInclude);
 
         return {
@@ -1438,8 +1450,8 @@ export class ProductionService {
             consecutive: sub.consecutive,
             stageName: sub.status === 'Deleted' ? 'Eliminada' : (sub.currentStage ? sub.currentStage.name : 'Completado'),
             requesterUserId: sub.requesterUserId || rootRequesterId,
-            requesterName: sub.requesterUser ? sub.requesterUser.name : 'Usuario',
-            requesterEmail: sub.requesterUser ? sub.requesterUser.email : '',
+            requesterName: sub.requesterUser?.name || rootRequesterUser?.name || 'Usuario',
+            requesterEmail: sub.requesterUser?.email || rootRequesterUser?.email || '',
             returnableStages,
             deletionReason: deletionState?.notes || null,
             deletedByUserName: deletionState?.actionedByUser?.name || null,
@@ -4148,14 +4160,26 @@ export class ProductionService {
             if (!sub) {
                 throw new Error('Solicitud no encontrada.');
             }
-            if (sub.status === 'Completed' || sub.status === 'Deleted') {
-                throw new Error('No es posible regresar una solicitud que ya se encuentra finalizada o eliminada.');
+            if (sub.status === 'Deleted') {
+                throw new Error('No es posible regresar una solicitud que ya se encuentra eliminada.');
             }
 
-            const rootSub = parentSubmissions.length > 0 ? parentSubmissions[0] : sub;
+            const allRequesterIds = new Set<number>();
+            if (sub.requesterUserId) allRequesterIds.add(Number(sub.requesterUserId));
+            for (const p of parentSubmissions) {
+                if (p.requesterUserId) allRequesterIds.add(Number(p.requesterUserId));
+            }
+
+            const currentUser = await userRepo.findOne({ where: { id: userId } });
+            const allRequesterEmails = new Set<string>();
+            if (sub.requesterUser?.email) allRequesterEmails.add(sub.requesterUser.email.toLowerCase().trim());
+            for (const p of parentSubmissions) {
+                if ((p as any).requesterUser?.email) allRequesterEmails.add((p as any).requesterUser.email.toLowerCase().trim());
+            }
+
             const isRequester =
-                Number(userId) === Number(sub.requesterUserId) ||
-                Number(userId) === Number(rootSub.requesterUserId);
+                allRequesterIds.has(Number(userId)) ||
+                (currentUser?.email && allRequesterEmails.has(currentUser.email.toLowerCase().trim()));
 
             if (!isRequester) {
                 throw new Error('Solo el usuario creador de la solicitud tiene permisos para regresarla a una etapa previa.');

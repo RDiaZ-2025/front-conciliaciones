@@ -342,15 +342,33 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   canReturnToPreviousStage(subOrTask: any): boolean {
     if (!subOrTask) return false;
     const status = subOrTask.status || subOrTask.submissionStatus;
-    if (status === 'Completed' || status === 'Deleted') return false;
+    if (status === 'Deleted') return false;
     const currentUser = this.authService.currentUser();
     if (!currentUser) return false;
     const isCreator =
       (subOrTask.requesterUserId && Number(currentUser.id) === Number(subOrTask.requesterUserId)) ||
-      (subOrTask.requesterEmail && currentUser.email && subOrTask.requesterEmail.toLowerCase() === currentUser.email.toLowerCase());
+      (subOrTask.requesterEmail && currentUser.email && subOrTask.requesterEmail.toLowerCase().trim() === currentUser.email.toLowerCase().trim());
     if (!isCreator) return false;
     const stages = subOrTask.returnableStages;
     return Array.isArray(stages) && stages.length > 0;
+  }
+
+  canReturnToThisStage(req: any, hStage: any): boolean {
+    if (!this.canReturnToPreviousStage(req)) return false;
+    if (hStage.status !== 'Approved' || !hStage.stageId) return false;
+    const stages = req.returnableStages || [];
+    return stages.some((s: any) => Number(s.stageId) === Number(hStage.stageId) && (!hStage.submissionId || Number(s.submissionId) === Number(hStage.submissionId)));
+  }
+
+  openReturnToSpecificStageDialog(req: any, hStage: any) {
+    if (!this.canReturnToPreviousStage(req)) return;
+    this.subToReturn.set(req);
+    const stages = req.returnableStages || [];
+    const target = stages.find((s: any) => Number(s.stageId) === Number(hStage.stageId) && (!hStage.submissionId || Number(s.submissionId) === Number(hStage.submissionId)));
+    this.selectedReturnStageOption = target || (stages.length > 0 ? stages[stages.length - 1] : null);
+    this.returnStageComment.set('');
+    this.returnStageError.set('');
+    this.showReturnStageDialog.set(true);
   }
 
   openReturnStageDialog(subOrTask: any) {
