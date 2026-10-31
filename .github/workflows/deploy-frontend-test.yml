@@ -40,7 +40,7 @@ jobs:
           output_location: "dist/voc/browser"
           app_build_command: "npm run build:test"
         env:
-          NODE_VERSION: '22.22.0'
+          NODE_VERSION: '~22'
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'

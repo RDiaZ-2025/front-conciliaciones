@@ -1,6 +1,6 @@
 {
   "name": "voc-monorepo",
-  "version": "1.18.2",
+  "version": "1.18.4",
   "versionDate": "2026-10-30",
   "description": "VOC Sistema de Conciliaciones - Monorepo",
   "private": true,
@@ -69,10 +69,10 @@
     "nodemon": "^3.1.10",
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
+    "typescript": "~5.9.2"
   },
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=22.23.4",
     "npm": ">=10.0.0"
   },
   "author": "VOC Team",
