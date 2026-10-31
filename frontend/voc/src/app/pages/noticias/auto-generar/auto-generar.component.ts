@@ -314,7 +314,7 @@ export class AutoGenerarComponent implements OnInit {
           this.messageService.add({
             severity: 'success',
             summary: 'Éxito',
-            detail: 'Agendamiento actualizado correctamente.'
+            detail: 'Artículo actualizado correctamente.'
           });
           this.loadSchedules();
           this.displayDialog = false;
@@ -324,7 +324,7 @@ export class AutoGenerarComponent implements OnInit {
           this.messageService.add({
             severity: 'error',
             summary: 'Error',
-            detail: 'No se pudo actualizar el agendamiento.'
+            detail: 'No se pudo actualizar el artículo.'
           });
         }
       });
@@ -334,7 +334,7 @@ export class AutoGenerarComponent implements OnInit {
           this.messageService.add({
             severity: 'success',
             summary: 'Éxito',
-            detail: 'Nuevo agendamiento creado correctamente.'
+            detail: 'Nuevo artículo creado correctamente.'
           });
           this.loadSchedules();
           this.displayDialog = false;
@@ -344,7 +344,7 @@ export class AutoGenerarComponent implements OnInit {
           this.messageService.add({
             severity: 'error',
             summary: 'Error',
-            detail: 'No se pudo crear el agendamiento.'
+            detail: 'No se pudo crear el artículo.'
           });
         }
       });
@@ -357,7 +357,7 @@ export class AutoGenerarComponent implements OnInit {
         this.messageService.add({
           severity: 'info',
           summary: 'Estado Actualizado',
-          detail: `El agendamiento "${schedule.name}" ahora está ${updated.isActive ? 'Activo' : 'Inactivo'}.`
+          detail: `El artículo "${schedule.name}" ahora está ${updated.isActive ? 'Activo' : 'Inactivo'}.`
         });
         this.loadSchedules();
       },
@@ -366,7 +366,7 @@ export class AutoGenerarComponent implements OnInit {
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
-          detail: 'No se pudo cambiar el estado del agendamiento.'
+          detail: 'No se pudo cambiar el estado del artículo.'
         });
       }
     });
@@ -374,7 +374,7 @@ export class AutoGenerarComponent implements OnInit {
 
   confirmDelete(schedule: NewsSchedule): void {
     this.confirmationService.confirm({
-      message: `¿Estás seguro de que deseas eliminar el agendamiento "${schedule.name}"?`,
+      message: `¿Estás seguro de que deseas eliminar el artículo "${schedule.name}"?`,
       header: 'Confirmar Eliminación',
       icon: 'alert-triangle',
       acceptLabel: 'Sí, eliminar',
@@ -386,7 +386,7 @@ export class AutoGenerarComponent implements OnInit {
             this.messageService.add({
               severity: 'success',
               summary: 'Eliminado',
-              detail: 'El agendamiento ha sido eliminado.'
+              detail: 'El artículo ha sido eliminado.'
             });
             this.loadSchedules();
           },
@@ -395,7 +395,7 @@ export class AutoGenerarComponent implements OnInit {
             this.messageService.add({
               severity: 'error',
               summary: 'Error',
-              detail: 'No se pudo eliminar el agendamiento.'
+              detail: 'No se pudo eliminar el artículo.'
             });
           }
         });
@@ -433,7 +433,7 @@ export class AutoGenerarComponent implements OnInit {
         }
       },
       error: (err) => {
-        console.error('Error al ejecutar agendamiento:', err);
+        console.error('Error al ejecutar artículo:', err);
         this.decrementGenerating(schedule.id);
         this.loadSchedules();
         this.messageService.add({

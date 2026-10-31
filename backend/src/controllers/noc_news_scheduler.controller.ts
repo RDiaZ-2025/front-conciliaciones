@@ -14,7 +14,7 @@ export class NocNewsSchedulerController {
         const { id } = req.params;
         const schedule = await schedulerService.getScheduleById(id);
         if (!schedule) {
-            res.status(404).json({ message: 'Agendamiento no encontrado' });
+            res.status(404).json({ message: 'Artículo no encontrado' });
             return;
         }
         res.status(200).json(schedule);
@@ -23,7 +23,7 @@ export class NocNewsSchedulerController {
     createSchedule = asyncHandler(async (req: Request, res: Response) => {
         const { name, topic, userInstructions, sources, startAt, scheduleConfig, isActive, publishAutomatically } = req.body;
         if (!name || !topic || !sources || !startAt || !scheduleConfig) {
-            res.status(400).json({ message: 'Faltan campos requeridos para el agendamiento' });
+            res.status(400).json({ message: 'Faltan campos requeridos para el artículo' });
             return;
         }
         const schedule = await schedulerService.createSchedule({
@@ -43,7 +43,7 @@ export class NocNewsSchedulerController {
         const { id } = req.params;
         const updated = await schedulerService.updateSchedule(id, req.body);
         if (!updated) {
-            res.status(404).json({ message: 'Agendamiento no encontrado' });
+            res.status(404).json({ message: 'Artículo no encontrado' });
             return;
         }
         res.status(200).json(updated);
@@ -53,7 +53,7 @@ export class NocNewsSchedulerController {
         const { id } = req.params;
         const updated = await schedulerService.toggleActive(id);
         if (!updated) {
-            res.status(404).json({ message: 'Agendamiento no encontrado' });
+            res.status(404).json({ message: 'Artículo no encontrado' });
             return;
         }
         res.status(200).json(updated);
@@ -63,17 +63,17 @@ export class NocNewsSchedulerController {
         const { id } = req.params;
         const success = await schedulerService.deleteSchedule(id);
         if (!success) {
-            res.status(404).json({ message: 'Agendamiento no encontrado o ya eliminado' });
+            res.status(404).json({ message: 'Artículo no encontrado o ya eliminado' });
             return;
         }
-        res.status(200).json({ message: 'Agendamiento eliminado correctamente' });
+        res.status(200).json({ message: 'Artículo eliminado correctamente' });
     });
 
     recordExecution = asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
         const updated = await schedulerService.recordExecution(id);
         if (!updated) {
-            res.status(404).json({ message: 'Agendamiento no encontrado' });
+            res.status(404).json({ message: 'Artículo no encontrado' });
             return;
         }
         res.status(200).json(updated);

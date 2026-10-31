@@ -2480,6 +2480,11 @@ export class ProductionService {
             const isInitialRequestCorrection = isCorrection && isRequesterUser && !hasStageFormToFill;
             const statesForHistory = allStatesToInclude;
             const allComments = await this.getSubmissionComments(treeIds);
+            const rejectionAttachments = prevState
+                ? allComments
+                      .filter(c => c.stateId === prevState.id && Array.isArray(c.attachments) && c.attachments.length > 0)
+                      .flatMap(c => c.attachments)
+                : [];
 
             const historyStages = statesForHistory.map((cState) => {
                 const isChildSub = cState.submissionId !== state.submissionId;
@@ -2871,6 +2876,7 @@ export class ProductionService {
                 submissionStatus: state.submission.status,
                 consecutive: state.submission.consecutive,
                 rejectionNotes,
+                rejectionAttachments,
                 isReturnedByRequester,
                 returnNotes,
                 returnedByUserName,
@@ -3620,17 +3626,20 @@ export class ProductionService {
             const cleanAttachments = Array.isArray(attachments)
                 ? attachments.filter(a => a && a.url).map(a => ({ name: a.name || 'Adjunto', url: a.url }))
                 : [];
+            const isCorrection = (submission.status === 'Rejected');
             if (cleanAttachments.length > 0) {
                 this.validateStageCommentAttachments(stage, cleanAttachments);
+                const commentTextForAttachment = (notes && notes.trim())
+                    ? notes
+                    : (isCorrection && action === 'approve' ? 'Corrección enviada' : '');
                 await manager.getRepository(DynamicSubmissionComment).save({
                     submissionId: submission.id,
                     stateId: currentState.id,
                     userId,
-                    comment: this.serializeCommentWithAttachments(notes || '', cleanAttachments)
+                    comment: this.serializeCommentWithAttachments(commentTextForAttachment, cleanAttachments)
                 });
             }
 
-            const isCorrection = (submission.status === 'Rejected');
             const lastRejectionState = isCorrection ? await stateRepo.findOne({
                 where: { submissionId: submission.id, status: 'Rejected' },
                 order: { id: 'DESC' },

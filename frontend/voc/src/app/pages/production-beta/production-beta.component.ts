@@ -2731,6 +2731,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (res) => {
         this.stageTempFiles = {};
+        this.comments.set('');
         this.commentTempFiles.set([]);
         this.chosenNextAssignee = null;
         this.chosenMemberUserId = null;

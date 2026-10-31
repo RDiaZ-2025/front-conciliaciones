@@ -1315,6 +1315,16 @@
                 </div>
                 <p class="m-0 text-sm font-semibold">Comentarios del revisor:</p>
                 <p class="m-0 text-sm mt-1 italic">"{{ selectedTask().rejectionNotes || 'Sin comentarios.' }}"</p>
+                <div *ngIf="selectedTask().rejectionAttachments && selectedTask().rejectionAttachments.length > 0" class="flex flex-wrap gap-2 mt-2">
+                    <div *ngFor="let att of selectedTask().rejectionAttachments"
+                         class="flex align-items-center gap-2 surface-card border-1 border-red-200 border-round px-2 py-1 text-xs cursor-pointer hover:surface-100 transition-colors text-900"
+                         (click)="downloadStageFormFile(att, $event)"
+                         pTooltip="Descargar archivo adjunto del rechazo" tooltipPosition="top">
+                        <lucide-icon name="paperclip" class="text-red-600" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                        <span class="font-medium text-primary underline">{{ att.name || 'Archivo adjunto' }}</span>
+                        <lucide-icon name="download" class="text-500" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                    </div>
+                </div>
             </div>
 
             <!-- Banner de Solicitud Regresada a Etapa Previa por el Creador -->

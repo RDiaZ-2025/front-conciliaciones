@@ -9,17 +9,17 @@
         <span class="text-3xl">📰</span>
         <h1 class="text-2xl font-bold text-main m-0">Auto Generar Noticias</h1>
       </div>
-      <p class="text-muted m-0">Configura agendamientos automáticos para que la IA genere noticias periódicamente basándose en fuentes y temas específicos.</p>
+      <p class="text-muted m-0">Configura artículos automáticos para que la IA genere noticias periódicamente basándose en fuentes y temas específicos.</p>
     </div>
     <div>
-      <button pButton pRipple type="button" label="Nuevo Agendamiento"  class="p-button-primary p-button-raised border-round-lg" (click)="openNew()"></button>
+      <button pButton pRipple type="button" label="Nuevo Artículo"  class="p-button-primary p-button-raised border-round-lg" (click)="openNew()"></button>
     </div>
   </div>
 
   <!-- Table Card -->
   <div class="surface-card p-4 border-round-xl shadow-3 border-1 border-main">
     <h2 class="text-xl font-semibold text-main mb-3 flex align-items-center gap-2">
-      <lucide-icon name="calendar-plus" class="text-primary mr-2"></lucide-icon> Listado de Agendamientos
+      <lucide-icon name="calendar-plus" class="text-primary mr-2"></lucide-icon> Listado de Artículos
     </h2>
 
     <p-table [value]="schedules()" responsiveLayout="scroll" [rows]="10" [paginator]="true" styleClass="p-datatable-striped custom-schedule-table">
@@ -108,7 +108,7 @@
       <ng-template pTemplate="emptymessage">
         <tr>
           <td colspan="6" class="text-center p-5 text-muted">
-            No hay agendamientos creados aún. Haz clic en <strong class="text-main">"Nuevo Agendamiento"</strong> para comenzar.
+            No hay artículos creados aún. Haz clic en <strong class="text-main">"Nuevo Artículo"</strong> para comenzar.
           </td>
         </tr>
       </ng-template>
@@ -117,14 +117,14 @@
 </div>
 
 <!-- Modal Form Dialog -->
-<p-dialog [(visible)]="displayDialog" [header]="isEditMode ? 'Editar Agendamiento' : 'Nuevo Agendamiento'" 
+<p-dialog [(visible)]="displayDialog" [header]="isEditMode ? 'Editar Artículo' : 'Nuevo Artículo'" 
           [modal]="true" [style]="{width: '620px'}" [breakpoints]="{'960px': '75vw', '640px': '95vw'}" 
           styleClass="custom-scheduler-modal">
   <ng-template pTemplate="content">
     <form [formGroup]="scheduleForm" class="modal-form-container">
       <!-- Nombre -->
       <div class="form-field">
-        <label for="name" class="form-label">Nombre del Agendamiento <span class="text-primary">*</span></label>
+        <label for="name" class="form-label">Nombre del Artículo <span class="text-primary">*</span></label>
         <input id="name" type="text" pInputText formControlName="name" placeholder="Ej: Noticias Tecnología Diario" class="w-full form-input" />
         <small class="p-error block mt-1" *ngIf="scheduleForm.get('name')?.invalid && scheduleForm.get('name')?.touched">
           El nombre es requerido (mínimo 3 caracteres).
@@ -214,7 +214,7 @@
       <div class="form-field">
         <label for="endAt" class="form-label">Fecha Límite de Ejecución (Opcional)</label>
         <input id="endAt" type="datetime-local" pInputText formControlName="endAt" class="w-full form-input" />
-        <small class="form-help">El agendamiento se desactivará automáticamente después de esta fecha.</small>
+        <small class="form-help">El artículo se desactivará automáticamente después de esta fecha.</small>
       </div>
 
       <!-- Publicación Automática -->
@@ -226,7 +226,7 @@
       <!-- Estado Activo/Inactivo -->
       <div class="form-checkbox-field flex align-items-center gap-2 mt-2 p-3 border-round-lg border-1 border-main">
         <input type="checkbox" id="isActive" formControlName="isActive" class="custom-checkbox" />
-        <label for="isActive" class="form-label cursor-pointer m-0 text-sm font-medium">Activar este agendamiento inmediatamente</label>
+        <label for="isActive" class="form-label cursor-pointer m-0 text-sm font-medium">Activar este artículo inmediatamente</label>
       </div>
     </form>
   </ng-template>
@@ -234,7 +234,7 @@
   <ng-template pTemplate="footer">
     <div class="flex justify-content-end gap-2 pt-2">
       <button pButton pRipple class="p-button-text p-button-secondary border-round-lg" (click)="displayDialog = false"><lucide-icon name="x" class="mr-2"></lucide-icon>Cancelar</button>
-      <button pButton pRipple class="p-button-primary border-round-lg" (click)="saveSchedule()"><lucide-icon name="check" class="mr-2"></lucide-icon>Guardar Agendamiento</button>
+      <button pButton pRipple class="p-button-primary border-round-lg" (click)="saveSchedule()"><lucide-icon name="check" class="mr-2"></lucide-icon>Guardar Artículo</button>
     </div>
   </ng-template>
 </p-dialog>
@@ -299,7 +299,7 @@
       <ng-template pTemplate="emptymessage">
         <tr>
           <td colspan="4" class="text-center p-4 text-muted">
-            No hay borradores registrados para este agendamiento.
+            No hay borradores registrados para este artículo.
           </td>
         </tr>
       </ng-template>
