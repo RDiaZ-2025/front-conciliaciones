@@ -324,6 +324,8 @@ export class RequestsBetaAdminComponent implements OnInit {
     { label: 'Número Decimal', value: 'decimal' },
     { label: 'Fecha Simple', value: 'date' },
     { label: 'Fecha y Hora (24h)', value: 'datetime' },
+    { label: 'Calendario (Fecha Inicio / Fecha Fin)', value: 'date_range' },
+    { label: 'Calendario y Reloj (Fecha-Hora Inicio / Fecha-Hora Fin)', value: 'datetime_range' },
     { label: 'Lista Desplegable / Listado', value: 'select' },
     { label: 'Selección Múltiple / Multiselect', value: 'multiselect' },
     { label: 'Archivo / Adjunto', value: 'file' },

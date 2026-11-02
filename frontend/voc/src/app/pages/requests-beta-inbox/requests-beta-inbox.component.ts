@@ -22,6 +22,7 @@ import { ProductionService } from '../../services/production.service';
 import { AuthService } from '../../services/auth.service';
 import { AzureStorageService } from '../../services/azure-storage.service';
 import { CustomerAutocompleteComponent } from '../../components/customer-autocomplete/customer-autocomplete.component';
+import { FilePreviewComponent } from '../../components/file-preview/file-preview.component';
 
 @Component({
   selector: 'app-requests-beta-inbox',
@@ -45,7 +46,8 @@ import { CustomerAutocompleteComponent } from '../../components/customer-autocom
     BadgeModule,
     PageHeaderComponent,
     LucideIconComponent,
-    CustomerAutocompleteComponent
+    CustomerAutocompleteComponent,
+    FilePreviewComponent
   ],
   templateUrl: './requests-beta-inbox.component.html',
   styleUrls: ['./requests-beta-inbox.component.css'],
@@ -350,6 +352,10 @@ export class RequestsBetaInboxComponent implements OnInit {
         evaluated = evaluated.replace(/\{\{CURRENT_DATE_TIME\}\}/g, formattedDateTimeLocal);
       } else if (f.type === 'date') {
         evaluated = evaluated.replace(/\{\{CURRENT_DATE_TIME\}\}/g, formattedDate);
+      } else if (f.type === 'date_range') {
+        return JSON.stringify({ start: formattedDate, end: formattedDate });
+      } else if (f.type === 'datetime_range') {
+        return JSON.stringify({ start: formattedDateTimeLocal, end: formattedDateTimeLocal });
       } else {
         const formattedDateTimeSpace = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
         evaluated = evaluated.replace(/\{\{CURRENT_DATE_TIME\}\}/g, formattedDateTimeSpace);
@@ -368,10 +374,142 @@ export class RequestsBetaInboxComponent implements OnInit {
     return evaluated;
   }
 
+  private singleDateCache: Record<string, { raw: string; date: Date | null }> = {};
+  private dateRangeCache: Record<string, { raw: string; start: Date | null; end: Date | null }> = {};
+
+  private parseDateStringToLocal(str: string): Date | null {
+    if (!str || !str.trim()) return null;
+    const s = str.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      const [y, m, d] = s.split('-').map(Number);
+      const dt = new Date(y, m - 1, d, 0, 0, 0, 0);
+      return isNaN(dt.getTime()) ? null : dt;
+    }
+    if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(s)) {
+      const [datePart, timePart] = s.split(/[T ]/);
+      const [y, m, d] = datePart.split('-').map(Number);
+      const [hh, mm] = timePart.split(':').map(Number);
+      const dt = new Date(y, m - 1, d, hh || 0, mm || 0, 0, 0);
+      return isNaN(dt.getTime()) ? null : dt;
+    }
+    const dt = new Date(s);
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+
+  private formatLocalDate(dt: Date, includeTime: boolean): string {
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const datePart = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+    if (!includeTime) return datePart;
+    return `${datePart}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+  }
+
+  private formatDisplayDateStr(str: string, includeTime: boolean): string {
+    const dt = this.parseDateStringToLocal(str);
+    if (!dt) return str || '';
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const dStr = `${pad(dt.getDate())}/${pad(dt.getMonth() + 1)}/${dt.getFullYear()}`;
+    if (!includeTime) return dStr;
+    return `${dStr} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+  }
+
+  getSingleDateValue(valuesObj: Record<string, string>, key: string): Date | null {
+    const raw = valuesObj?.[key] || '';
+    const cacheKey = `${key}`;
+    if (this.singleDateCache[cacheKey]?.raw === raw) {
+      return this.singleDateCache[cacheKey].date;
+    }
+    const parsed = this.parseDateStringToLocal(raw);
+    this.singleDateCache[cacheKey] = { raw, date: parsed };
+    return parsed;
+  }
+
+  onSingleDateChange(valuesObj: Record<string, string>, key: string, dt: Date | null, includeTime: boolean, formContext: 'initial' | 'stage' | 'parent') {
+    const strVal = dt ? this.formatLocalDate(dt, includeTime) : '';
+    valuesObj[key] = strVal;
+    this.singleDateCache[key] = { raw: strVal, date: dt };
+    if (formContext === 'stage') {
+      this.recalculateStageFormulas();
+    } else if (formContext === 'parent') {
+      this.recalculateParentFormulas();
+    }
+  }
+
+  getDateRangePart(valuesObj: Record<string, string>, key: string, part: 'start' | 'end'): Date | null {
+    const raw = valuesObj?.[key] || '';
+    if (this.dateRangeCache[key]?.raw === raw) {
+      return this.dateRangeCache[key][part];
+    }
+    let start: Date | null = null;
+    let end: Date | null = null;
+    if (raw && raw.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(raw);
+        start = this.parseDateStringToLocal(parsed.start || '');
+        end = this.parseDateStringToLocal(parsed.end || '');
+      } catch (e) {}
+    }
+    this.dateRangeCache[key] = { raw, start, end };
+    return part === 'start' ? start : end;
+  }
+
+  onDateRangePartChange(valuesObj: Record<string, string>, key: string, part: 'start' | 'end', dt: Date | null, includeTime: boolean, formContext: 'initial' | 'stage' | 'parent') {
+    const raw = valuesObj?.[key] || '';
+    let startStr = '';
+    let endStr = '';
+    if (raw && raw.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(raw);
+        startStr = parsed.start || '';
+        endStr = parsed.end || '';
+      } catch (e) {}
+    }
+    const formatted = dt ? this.formatLocalDate(dt, includeTime) : '';
+    if (part === 'start') {
+      startStr = formatted;
+    } else {
+      endStr = formatted;
+    }
+    const newRaw = (!startStr && !endStr) ? '' : JSON.stringify({ start: startStr, end: endStr });
+    valuesObj[key] = newRaw;
+    this.dateRangeCache[key] = {
+      raw: newRaw,
+      start: this.parseDateStringToLocal(startStr),
+      end: this.parseDateStringToLocal(endStr)
+    };
+    if (formContext === 'stage') {
+      this.recalculateStageFormulas();
+    } else if (formContext === 'parent') {
+      this.recalculateParentFormulas();
+    }
+  }
+
+  isDateRangeIncomplete(val: any): boolean {
+    if (val === undefined || val === null || String(val).trim() === '') return true;
+    const raw = String(val).trim();
+    if (raw.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(raw);
+        return !parsed.start || !String(parsed.start).trim() || !parsed.end || !String(parsed.end).trim();
+      } catch (e) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   hasValue(val: any): boolean {
     if (val === undefined || val === null) return false;
     const s = String(val).trim();
-    return s !== '' && s !== '[]' && s !== '""' && s !== 'null';
+    if (s === '' || s === '[]' || s === '""' || s === 'null') return false;
+    if (s.startsWith('{') && s.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(s);
+        if ('start' in parsed || 'end' in parsed) {
+          return Boolean((parsed.start && String(parsed.start).trim()) || (parsed.end && String(parsed.end).trim()));
+        }
+      } catch (e) {}
+    }
+    return true;
   }
 
   isSectionHeaderVisible(values: any[], currentIndex: number): boolean {
@@ -391,6 +529,23 @@ export class RequestsBetaInboxComponent implements OnInit {
   formatValue(val: any): string {
     if (!val || val.value === undefined || val.value === null) return '';
     const rawValue = String(val.value);
+    if (val.fieldType === 'date_range' || val.fieldType === 'datetime_range' || (rawValue.trim().startsWith('{') && rawValue.includes('"start"'))) {
+      try {
+        const parsed = JSON.parse(rawValue);
+        if (parsed && ('start' in parsed || 'end' in parsed)) {
+          const isTime = val.fieldType === 'datetime_range' || String(parsed.start || parsed.end || '').includes('T');
+          const s = parsed.start ? this.formatDisplayDateStr(parsed.start, isTime) : '—';
+          const e = parsed.end ? this.formatDisplayDateStr(parsed.end, isTime) : '—';
+          return `Inicio: ${s}  —  Fin: ${e}`;
+        }
+      } catch (e) {}
+    }
+    if (val.fieldType === 'date') {
+      return this.formatDisplayDateStr(rawValue, false);
+    }
+    if (val.fieldType === 'datetime') {
+      return this.formatDisplayDateStr(rawValue, true);
+    }
     if (this.isMultiSelectValue(val.value)) {
       return this.parseMultiSelect(val.value).join(', ');
     }
@@ -445,6 +600,12 @@ export class RequestsBetaInboxComponent implements OnInit {
             return `${parsed.length} ítem(s)`;
           }
           return parsed.join(', ');
+        }
+        if (parsed && typeof parsed === 'object' && ('start' in parsed || 'end' in parsed)) {
+          const isTime = cf.fieldType === 'datetime_range' || String(parsed.start || parsed.end || '').includes('T');
+          const s = parsed.start ? this.formatDisplayDateStr(parsed.start, isTime) : '—';
+          const e = parsed.end ? this.formatDisplayDateStr(parsed.end, isTime) : '—';
+          return `${s} → ${e}`;
         }
       } catch (e) {}
     }
@@ -664,6 +825,16 @@ export class RequestsBetaInboxComponent implements OnInit {
                   });
                   return;
                 }
+              } else if (field.type === 'date_range' || field.type === 'datetime_range') {
+                const val = this.stageFormValues[key];
+                if (this.isDateRangeIncomplete(val)) {
+                  this.messageService.add({
+                    severity: 'error',
+                    summary: 'Validación',
+                    detail: `En "${frm.formName}", debe seleccionar tanto la fecha de inicio como la fecha de fin en "${field.label}".`
+                  });
+                  return;
+                }
               } else {
                 const val = this.stageFormValues[key];
                 if (val === undefined || val === null || String(val).trim() === '') {
@@ -704,6 +875,16 @@ export class RequestsBetaInboxComponent implements OnInit {
                   });
                   return;
                 }
+              } else if (field.type === 'date_range' || field.type === 'datetime_range') {
+                const val = this.stageFormValues[key];
+                if (this.isDateRangeIncomplete(val)) {
+                  this.messageService.add({
+                    severity: 'error',
+                    summary: 'Validación',
+                    detail: `En "${frm.formName}", debe seleccionar tanto la fecha de inicio como la fecha de fin en "${field.label}".`
+                  });
+                  return;
+                }
               } else {
                 const val = this.stageFormValues[key];
                 if (val === undefined || val === null || String(val).trim() === '') {
@@ -731,6 +912,16 @@ export class RequestsBetaInboxComponent implements OnInit {
                   severity: 'error',
                   summary: 'Validación',
                   detail: `El campo "${field.label}" requiere cargar al menos un archivo.`
+                });
+                return;
+              }
+            } else if (field.type === 'date_range' || field.type === 'datetime_range') {
+              const val = this.stageFormValues[field.name];
+              if (this.isDateRangeIncomplete(val)) {
+                this.messageService.add({
+                  severity: 'error',
+                  summary: 'Validación',
+                  detail: `Debe seleccionar tanto la fecha de inicio como la fecha de fin en "${field.label}".`
                 });
                 return;
               }
@@ -886,7 +1077,7 @@ export class RequestsBetaInboxComponent implements OnInit {
   }
 
   downloadFormFile(file: any, event?: Event) {
-    return this.downloadStageFormFile(file, event);
+    return this.previewOrDownloadStageFormFile(file, event);
   }
 
   isFileListValue(value: string): boolean {
@@ -1701,6 +1892,80 @@ export class RequestsBetaInboxComponent implements OnInit {
       });
     }
     return [];
+  }
+
+  previewVisible = signal<boolean>(false);
+  previewFile = signal<File | string | null>(null);
+  previewFileName = signal<string>('');
+  private currentPreviewRawFile: any = null;
+
+  private readonly PREVIEWABLE_EXTENSIONS = new Set([
+    'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg',
+    'pdf',
+    'mp4', 'webm', 'ogg', 'mov',
+    'mp3', 'wav', 'aac', 'm4a',
+    'txt', 'csv', 'json'
+  ]);
+
+  isPreviewableFile(file: any): boolean {
+    if (!file) return false;
+    const fileUrl = file.url || (typeof file === 'string' && (file.startsWith('http://') || file.startsWith('https://')) ? file : '');
+    const fileName = file.name || (fileUrl ? decodeURIComponent(fileUrl.split('?')[0].split('/').pop() || '') : (typeof file === 'string' ? file : ''));
+    const ext = (fileName.split('?')[0].split('.').pop() || '').toLowerCase();
+    return this.PREVIEWABLE_EXTENSIONS.has(ext);
+  }
+
+  async previewOrDownloadStageFormFile(file: any, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    if (!file) return;
+
+    if (!this.isPreviewableFile(file)) {
+      return this.downloadStageFormFile(file, event);
+    }
+
+    const fileUrl = file.url || (typeof file === 'string' && (file.startsWith('http://') || file.startsWith('https://')) ? file : '');
+    const fileName = file.name || (fileUrl ? decodeURIComponent(fileUrl.split('?')[0].split('/').pop() || 'archivo') : (typeof file === 'string' ? file : 'archivo'));
+    const target = fileUrl || fileName;
+
+    this.currentPreviewRawFile = file;
+    this.previewFileName.set(fileName);
+    this.previewFile.set(null);
+    this.previewVisible.set(true);
+
+    try {
+      const blob = await this.azureService.getBlobData(target, fileName);
+      const fileObj = new File([blob], fileName, { type: blob.type });
+      this.previewFile.set(fileObj);
+    } catch (error) {
+      console.warn('Error loading preview blob, falling back to direct download:', error);
+      this.previewVisible.set(false);
+      await this.downloadStageFormFile(file);
+    }
+  }
+
+  downloadPreviewFile() {
+    const file = this.previewFile();
+    if (file instanceof File) {
+      const url = URL.createObjectURL(file);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Éxito',
+        detail: `Archivo ${file.name} descargado correctamente.`,
+        life: 3000
+      });
+    } else if (this.currentPreviewRawFile) {
+      this.downloadStageFormFile(this.currentPreviewRawFile);
+    }
   }
 
   async downloadStageFormFile(file: any, event?: Event) {
