@@ -2846,6 +2846,11 @@ export class ProductionService {
             const lastActionedPriorState = priorNonPending.length > 0 ? priorNonPending[priorNonPending.length - 1] : null;
             const isReturnedByRequester = lastActionedPriorState?.status === 'Returned';
             const returnNotes = isReturnedByRequester ? lastActionedPriorState.notes : null;
+            const returnAttachments = isReturnedByRequester && lastActionedPriorState
+                ? allComments
+                      .filter(c => c.stateId === lastActionedPriorState.id && Array.isArray(c.attachments) && c.attachments.length > 0)
+                      .flatMap(c => c.attachments)
+                : [];
             const returnedByUserName = isReturnedByRequester
                 ? (lastActionedPriorState.actionedByUser?.name || state.submission.requesterUser?.name || 'Solicitante')
                 : null;
@@ -2879,6 +2884,7 @@ export class ProductionService {
                 rejectionAttachments,
                 isReturnedByRequester,
                 returnNotes,
+                returnAttachments,
                 returnedByUserName,
                 returnedFromStageName,
                 returnedAt,
@@ -4141,7 +4147,8 @@ export class ProductionService {
         userId: number,
         targetStageId: number,
         notes: string,
-        targetSubmissionId?: number
+        targetSubmissionId?: number,
+        attachments?: { name: string; url: string }[]
     ) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
 
@@ -4153,6 +4160,10 @@ export class ProductionService {
             throw new Error('Debe seleccionar una etapa previa válida a la cual regresar la solicitud.');
         }
 
+        const cleanAttachments = Array.isArray(attachments)
+            ? attachments.filter(a => a && a.url).map(a => ({ name: a.name || 'Adjunto', url: a.url }))
+            : [];
+
         const treeIds = await this.getSubmissionTreeIds(submissionId);
         const parentSubmissions = await this.getAncestorSubmissions(submissionId);
 
@@ -4161,6 +4172,7 @@ export class ProductionService {
             const stateRepo = manager.getRepository(DynamicSubmissionWorkflowState);
             const stageRepo = manager.getRepository(DynamicWorkflowStage);
             const userRepo = manager.getRepository(User);
+            const commentRepo = manager.getRepository(DynamicSubmissionComment);
 
             const sub = await subRepo.findOne({
                 where: { id: submissionId },
@@ -4251,6 +4263,15 @@ export class ProductionService {
                 pState.actionedByUserId = userId;
                 pState.notes = returnHistoryNote;
                 await stateRepo.save(pState);
+
+                if (cleanAttachments.length > 0) {
+                    await commentRepo.save({
+                        submissionId: pState.submissionId,
+                        stateId: pState.id,
+                        userId,
+                        comment: this.serializeCommentWithAttachments(returnHistoryNote, cleanAttachments)
+                    });
+                }
             }
 
             // Determinar ancestros de targetSub para no cerrar un padre del cual dependa targetSub

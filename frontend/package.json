@@ -1,7 +1,7 @@
 {
   "name": "frontend",
-  "version": "1.18.8",
-  "versionDate": "2026-10-31",
+  "version": "1.18.9",
+  "versionDate": "2026-11-05",
   "scripts": {
     "ng": "ng",
     "start": "ng serve voc",

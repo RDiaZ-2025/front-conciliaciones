@@ -129,6 +129,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   returnStageComment = signal<string>('');
   returnStageError = signal<string>('');
   isReturningStage = signal<boolean>(false);
+  returnStageTempFiles = signal<File[]>([]);
 
   statusOptions = [
     { label: 'Pendientes de mi Aprobación', value: 'pending_me' },
@@ -368,6 +369,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.selectedReturnStageOption = target || (stages.length > 0 ? stages[stages.length - 1] : null);
     this.returnStageComment.set('');
     this.returnStageError.set('');
+    this.returnStageTempFiles.set([]);
     this.showReturnStageDialog.set(true);
   }
 
@@ -378,10 +380,41 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.selectedReturnStageOption = stages.length > 0 ? stages[stages.length - 1] : null;
     this.returnStageComment.set('');
     this.returnStageError.set('');
+    this.returnStageTempFiles.set([]);
     this.showReturnStageDialog.set(true);
   }
 
-  executeReturnToStage() {
+  onReturnStageFileSelected(event: any) {
+    const files: FileList = event.target?.files;
+    if (!files || files.length === 0) return;
+
+    const maxMB = 20;
+    const currentList = [...this.returnStageTempFiles()];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.size > maxMB * 1024 * 1024) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Archivo demasiado grande',
+          detail: `El archivo "${file.name}" supera el tamaño máximo permitido (${maxMB}MB).`
+        });
+        continue;
+      }
+      currentList.push(file);
+    }
+
+    this.returnStageTempFiles.set(currentList);
+    event.target.value = '';
+  }
+
+  removeReturnStageSelectedFile(index: number) {
+    const current = [...this.returnStageTempFiles()];
+    current.splice(index, 1);
+    this.returnStageTempFiles.set(current);
+  }
+
+  async executeReturnToStage() {
     const sub = this.subToReturn();
     const subId = sub?.submissionId || sub?.id;
     if (!subId) return;
@@ -400,15 +433,38 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.returnStageError.set('');
     this.isReturningStage.set(true);
 
+    const uploadedAttachments: { name: string; url: string }[] = [];
+    const filesToUpload = this.returnStageTempFiles();
+    if (filesToUpload.length > 0) {
+      const folderPath = `dynamic-submissions/sub_${subId}/returns`;
+      for (const file of filesToUpload) {
+        const res = await this.azureService.uploadFile(file, { containerName: 'private', folderPath });
+        if (res.success && res.url) {
+          uploadedAttachments.push({ name: file.name, url: res.url });
+        } else {
+          this.isReturningStage.set(false);
+          this.returnStageError.set(`No se pudo subir el archivo adjunto: ${file.name}.`);
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error de carga',
+            detail: `No se pudo subir el archivo adjunto: ${file.name}. ${res.error || ''}`
+          });
+          return;
+        }
+      }
+    }
+
     this.productionService.returnSubmissionToStage(
       subId,
       Number(this.selectedReturnStageOption.stageId),
       comment,
-      this.selectedReturnStageOption.submissionId ? Number(this.selectedReturnStageOption.submissionId) : undefined
+      this.selectedReturnStageOption.submissionId ? Number(this.selectedReturnStageOption.submissionId) : undefined,
+      uploadedAttachments.length > 0 ? uploadedAttachments : undefined
     ).subscribe({
       next: () => {
         const targetName = this.selectedReturnStageOption?.stageName || 'la etapa seleccionada';
         this.isReturningStage.set(false);
+        this.returnStageTempFiles.set([]);
         this.showReturnStageDialog.set(false);
         if (this.showActionDialog()) {
           this.showActionDialog.set(false);
