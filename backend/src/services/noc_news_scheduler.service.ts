@@ -1203,7 +1203,7 @@ export class NocNewsSchedulerService {
         }
         const schedule = await this.repository.findOne({ where: { id } });
         if (!schedule) {
-            throw new Error(`Agendamiento con ID ${id} no encontrado`);
+            throw new Error(`Artículo con ID ${id} no encontrado`);
         }
 
         const sources = schedule.sources ? (typeof schedule.sources === 'string' ? JSON.parse(schedule.sources) : schedule.sources) : [];

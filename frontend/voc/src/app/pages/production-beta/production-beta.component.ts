@@ -129,6 +129,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   returnStageComment = signal<string>('');
   returnStageError = signal<string>('');
   isReturningStage = signal<boolean>(false);
+  returnStageTempFiles = signal<File[]>([]);
 
   statusOptions = [
     { label: 'Pendientes de mi Aprobación', value: 'pending_me' },
@@ -368,6 +369,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.selectedReturnStageOption = target || (stages.length > 0 ? stages[stages.length - 1] : null);
     this.returnStageComment.set('');
     this.returnStageError.set('');
+    this.returnStageTempFiles.set([]);
     this.showReturnStageDialog.set(true);
   }
 
@@ -378,10 +380,41 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.selectedReturnStageOption = stages.length > 0 ? stages[stages.length - 1] : null;
     this.returnStageComment.set('');
     this.returnStageError.set('');
+    this.returnStageTempFiles.set([]);
     this.showReturnStageDialog.set(true);
   }
 
-  executeReturnToStage() {
+  onReturnStageFileSelected(event: any) {
+    const files: FileList = event.target?.files;
+    if (!files || files.length === 0) return;
+
+    const maxMB = 20;
+    const currentList = [...this.returnStageTempFiles()];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.size > maxMB * 1024 * 1024) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Archivo demasiado grande',
+          detail: `El archivo "${file.name}" supera el tamaño máximo permitido (${maxMB}MB).`
+        });
+        continue;
+      }
+      currentList.push(file);
+    }
+
+    this.returnStageTempFiles.set(currentList);
+    event.target.value = '';
+  }
+
+  removeReturnStageSelectedFile(index: number) {
+    const current = [...this.returnStageTempFiles()];
+    current.splice(index, 1);
+    this.returnStageTempFiles.set(current);
+  }
+
+  async executeReturnToStage() {
     const sub = this.subToReturn();
     const subId = sub?.submissionId || sub?.id;
     if (!subId) return;
@@ -400,15 +433,38 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.returnStageError.set('');
     this.isReturningStage.set(true);
 
+    const uploadedAttachments: { name: string; url: string }[] = [];
+    const filesToUpload = this.returnStageTempFiles();
+    if (filesToUpload.length > 0) {
+      const folderPath = `dynamic-submissions/sub_${subId}/returns`;
+      for (const file of filesToUpload) {
+        const res = await this.azureService.uploadFile(file, { containerName: 'private', folderPath });
+        if (res.success && res.url) {
+          uploadedAttachments.push({ name: file.name, url: res.url });
+        } else {
+          this.isReturningStage.set(false);
+          this.returnStageError.set(`No se pudo subir el archivo adjunto: ${file.name}.`);
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error de carga',
+            detail: `No se pudo subir el archivo adjunto: ${file.name}. ${res.error || ''}`
+          });
+          return;
+        }
+      }
+    }
+
     this.productionService.returnSubmissionToStage(
       subId,
       Number(this.selectedReturnStageOption.stageId),
       comment,
-      this.selectedReturnStageOption.submissionId ? Number(this.selectedReturnStageOption.submissionId) : undefined
+      this.selectedReturnStageOption.submissionId ? Number(this.selectedReturnStageOption.submissionId) : undefined,
+      uploadedAttachments.length > 0 ? uploadedAttachments : undefined
     ).subscribe({
       next: () => {
         const targetName = this.selectedReturnStageOption?.stageName || 'la etapa seleccionada';
         this.isReturningStage.set(false);
+        this.returnStageTempFiles.set([]);
         this.showReturnStageDialog.set(false);
         if (this.showActionDialog()) {
           this.showActionDialog.set(false);
@@ -808,6 +864,10 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
         evaluated = evaluated.replace(/\{\{CURRENT_DATE_TIME\}\}/g, formattedDateTimeLocal);
       } else if (f.type === 'date') {
         evaluated = evaluated.replace(/\{\{CURRENT_DATE_TIME\}\}/g, formattedDate);
+      } else if (f.type === 'date_range') {
+        return JSON.stringify({ start: formattedDate, end: formattedDate });
+      } else if (f.type === 'datetime_range') {
+        return JSON.stringify({ start: formattedDateTimeLocal, end: formattedDateTimeLocal });
       } else {
         const formattedDateTimeSpace = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
         evaluated = evaluated.replace(/\{\{CURRENT_DATE_TIME\}\}/g, formattedDateTimeSpace);
@@ -997,6 +1057,16 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
             });
             return;
           }
+        } else if (field.type === 'date_range' || field.type === 'datetime_range') {
+          const val = values[form.id + '_' + field.name];
+          if (this.isDateRangeIncomplete(val)) {
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error de Validación',
+              detail: `El campo "${field.label}" requiere seleccionar tanto la fecha de inicio como la fecha de fin.`
+            });
+            return;
+          }
         } else {
           const val = values[form.id + '_' + field.name];
           if (val === undefined || val === null || String(val).trim() === '') {
@@ -1177,6 +1247,16 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
               severity: 'error',
               summary: 'Error de Validación',
               detail: `El campo "${field.label}" requiere cargar al menos un archivo.`
+            });
+            return;
+          }
+        } else if (field.type === 'date_range' || field.type === 'datetime_range') {
+          const val = this.formValues[field.name];
+          if (this.isDateRangeIncomplete(val)) {
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error de Validación',
+              detail: `El campo "${field.label}" requiere seleccionar tanto la fecha de inicio como la fecha de fin.`
             });
             return;
           }
@@ -1764,10 +1844,64 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     }
   }
 
+  previewFileName = signal<string>('');
+  private currentPreviewRawFile: any = null;
+
+  private readonly PREVIEWABLE_EXTENSIONS = new Set([
+    'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg',
+    'pdf',
+    'mp4', 'webm', 'ogg', 'mov',
+    'mp3', 'wav', 'aac', 'm4a',
+    'txt', 'csv', 'json'
+  ]);
+
+  isPreviewableFile(file: any): boolean {
+    if (!file) return false;
+    const fileUrl = file.url || (typeof file === 'string' && (file.startsWith('http://') || file.startsWith('https://')) ? file : '');
+    const fileName = file.name || (fileUrl ? decodeURIComponent(fileUrl.split('?')[0].split('/').pop() || '') : (typeof file === 'string' ? file : ''));
+    const ext = (fileName.split('?')[0].split('.').pop() || '').toLowerCase();
+    return this.PREVIEWABLE_EXTENSIONS.has(ext);
+  }
+
+  async previewOrDownloadStageFormFile(file: any, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    if (!file) return;
+
+    if (!this.isPreviewableFile(file)) {
+      return this.downloadStageFormFile(file, event);
+    }
+
+    const fileUrl = file.url || (typeof file === 'string' && (file.startsWith('http://') || file.startsWith('https://')) ? file : '');
+    const fileName = file.name || (fileUrl ? decodeURIComponent(fileUrl.split('?')[0].split('/').pop() || 'archivo') : (typeof file === 'string' ? file : 'archivo'));
+    const target = fileUrl || fileName;
+
+    this.currentPreviewRawFile = file;
+    this.previewFileName.set(fileName);
+    this.previewFile.set(null);
+    this.previewVisible.set(true);
+    this.isPreviewLoading.set(true);
+
+    try {
+      const blob = await this.azureService.getBlobData(target, fileName);
+      const fileObj = new File([blob], fileName, { type: blob.type });
+      this.previewFile.set(fileObj);
+    } catch (error) {
+      console.warn('Error loading preview blob, falling back to direct download:', error);
+      this.previewVisible.set(false);
+      await this.downloadStageFormFile(file);
+    } finally {
+      this.isPreviewLoading.set(false);
+    }
+  }
+
   async openPreview(file: UploadedFile) {
     this.isPreviewLoading.set(true);
     try {
-      const blob = await this.azureService.getBlobData(file.id);
+      this.previewFileName.set(file.name);
+      const blob = await this.azureService.getBlobData(file.id, file.name);
       const fileObj = new File([blob], file.name, { type: blob.type });
       this.previewFile.set(fileObj);
       this.previewVisible.set(true);
@@ -1789,6 +1923,14 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Éxito',
+        detail: `Archivo ${file.name} descargado correctamente.`,
+        life: 3000
+      });
+    } else if (this.currentPreviewRawFile) {
+      this.downloadStageFormFile(this.currentPreviewRawFile);
     }
   }
 
@@ -1826,7 +1968,130 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   hasValue(val: any): boolean {
     if (val === undefined || val === null) return false;
     const s = String(val).trim();
-    return s !== '' && s !== '[]' && s !== '""' && s !== 'null';
+    if (s === '' || s === '[]' || s === '""' || s === 'null') return false;
+    if (s.startsWith('{') && s.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(s);
+        if (parsed && typeof parsed === 'object' && ('start' in parsed || 'end' in parsed)) {
+          return !!(parsed.start || parsed.end);
+        }
+      } catch (e) {}
+    }
+    return true;
+  }
+
+  singleDateCache: Record<string, { raw: string; date: Date | null }> = {};
+  dateRangeCache: Record<string, { raw: string; start: Date | null; end: Date | null }> = {};
+
+  private parseDateStringToLocal(str: string | undefined | null): Date | null {
+    if (!str || !String(str).trim()) return null;
+    const s = String(str).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      const [y, m, d] = s.split('-').map(Number);
+      return new Date(y, m - 1, d, 0, 0, 0, 0);
+    }
+    const match = s.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/);
+    if (match) {
+      const [, y, m, d, hh, mm] = match;
+      return new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), 0, 0);
+    }
+    const parsed = new Date(s);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  private formatLocalDate(date: Date | null | undefined, includeTime: boolean): string {
+    if (!date || !(date instanceof Date) || isNaN(date.getTime())) return '';
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    if (!includeTime) {
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    const hh = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+  }
+
+  private formatDisplayDateStr(str: string | undefined | null): string {
+    if (!str || !String(str).trim()) return '';
+    const s = String(str).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      const [y, m, d] = s.split('-');
+      return `${d}/${m}/${y}`;
+    }
+    const match = s.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/);
+    if (match) {
+      const [, y, m, d, hh, mm] = match;
+      return `${d}/${m}/${y} ${hh}:${mm}`;
+    }
+    return s;
+  }
+
+  getSingleDateValue(key: string, rawVal: any): Date | null {
+    const rawStr = rawVal ? String(rawVal).trim() : '';
+    const cached = this.singleDateCache[key];
+    if (cached && cached.raw === rawStr) {
+      return cached.date;
+    }
+    const date = this.parseDateStringToLocal(rawStr);
+    this.singleDateCache[key] = { raw: rawStr, date };
+    return date;
+  }
+
+  onSingleDateChange(key: string, dateVal: Date | null, includeTime: boolean, formScope: 'initial' | 'stage' | 'parent') {
+    const formatted = this.formatLocalDate(dateVal, includeTime);
+    this.singleDateCache[key] = { raw: formatted, date: dateVal };
+    this.setFormValue(key, formatted, formScope);
+  }
+
+  getDateRangePart(key: string, part: 'start' | 'end', rawVal: any): Date | null {
+    const rawStr = rawVal ? String(rawVal).trim() : '';
+    const cached = this.dateRangeCache[key];
+    if (cached && cached.raw === rawStr) {
+      return cached[part];
+    }
+    let start: Date | null = null;
+    let end: Date | null = null;
+    if (rawStr) {
+      try {
+        const parsed = JSON.parse(rawStr);
+        if (parsed && typeof parsed === 'object') {
+          start = this.parseDateStringToLocal(parsed.start);
+          end = this.parseDateStringToLocal(parsed.end);
+        }
+      } catch (e) {
+        const parts = rawStr.split(/\s*(?:\||a|al|->|—)\s*/i);
+        if (parts.length >= 2) {
+          start = this.parseDateStringToLocal(parts[0]);
+          end = this.parseDateStringToLocal(parts[1]);
+        }
+      }
+    }
+    this.dateRangeCache[key] = { raw: rawStr, start, end };
+    return part === 'start' ? start : end;
+  }
+
+  onDateRangePartChange(key: string, part: 'start' | 'end', dateVal: Date | null, includeTime: boolean, formScope: 'initial' | 'stage' | 'parent', currentRawVal?: any) {
+    const currentStart = part === 'start' ? dateVal : this.getDateRangePart(key, 'start', currentRawVal);
+    let currentEnd = part === 'end' ? dateVal : this.getDateRangePart(key, 'end', currentRawVal);
+    if (currentStart && currentEnd && currentEnd.getTime() < currentStart.getTime()) {
+      currentEnd = new Date(currentStart.getTime());
+    }
+    const startStr = this.formatLocalDate(currentStart, includeTime);
+    const endStr = this.formatLocalDate(currentEnd, includeTime);
+    const serialized = (!startStr && !endStr) ? '' : JSON.stringify({ start: startStr, end: endStr });
+    this.dateRangeCache[key] = { raw: serialized, start: currentStart, end: currentEnd };
+    this.setFormValue(key, serialized, formScope);
+  }
+
+  isDateRangeIncomplete(val: any): boolean {
+    if (!val || String(val).trim() === '') return true;
+    try {
+      const parsed = JSON.parse(String(val));
+      return !parsed || !parsed.start || !parsed.end;
+    } catch (e) {
+      return true;
+    }
   }
 
   isSectionHeaderVisible(values: any[], currentIndex: number): boolean {
@@ -1848,6 +2113,20 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     const rawValue = String(val.value);
     if (this.isMultiSelectValue(val.value)) {
       return this.parseMultiSelect(val.value).join(', ');
+    }
+    if (val.fieldType === 'date_range' || val.fieldType === 'datetime_range' || (rawValue.trim().startsWith('{') && rawValue.includes('"start"'))) {
+      try {
+        const parsed = JSON.parse(rawValue);
+        if (parsed && typeof parsed === 'object' && ('start' in parsed || 'end' in parsed)) {
+          const sDisp = this.formatDisplayDateStr(parsed.start);
+          const eDisp = this.formatDisplayDateStr(parsed.end);
+          if (sDisp && eDisp) return `Inicio: ${sDisp} — Fin: ${eDisp}`;
+          return sDisp || eDisp || '';
+        }
+      } catch (e) {}
+    }
+    if (val.fieldType === 'date' || val.fieldType === 'datetime') {
+      return this.formatDisplayDateStr(rawValue);
     }
     if (val.fieldType === 'number' || val.fieldType === 'decimal') {
       const format = val.metadata?.numberFormat || 'none';
@@ -1900,6 +2179,12 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
             return `${parsed.length} ítem(s)`;
           }
           return parsed.join(', ');
+        }
+        if (parsed && typeof parsed === 'object' && ('start' in parsed || 'end' in parsed)) {
+          const sDisp = this.formatDisplayDateStr(parsed.start);
+          const eDisp = this.formatDisplayDateStr(parsed.end);
+          if (sDisp && eDisp) return `${sDisp} → ${eDisp}`;
+          return sDisp || eDisp || '';
         }
       } catch (e) {}
     }
@@ -2166,6 +2451,16 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
                   });
                   return;
                 }
+              } else if (field.type === 'date_range' || field.type === 'datetime_range') {
+                const val = this.stageFormValues[key];
+                if (this.isDateRangeIncomplete(val)) {
+                  this.messageService.add({
+                    severity: 'error',
+                    summary: 'Validación',
+                    detail: `En "${frm.formName}", el campo "${field.label}" requiere seleccionar tanto la fecha de inicio como la fecha de fin.`
+                  });
+                  return;
+                }
               } else {
                 const val = this.stageFormValues[key];
                 if (val === undefined || val === null || String(val).trim() === '') {
@@ -2206,6 +2501,16 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
                   });
                   return;
                 }
+              } else if (field.type === 'date_range' || field.type === 'datetime_range') {
+                const val = this.stageFormValues[key];
+                if (this.isDateRangeIncomplete(val)) {
+                  this.messageService.add({
+                    severity: 'error',
+                    summary: 'Validación',
+                    detail: `En "${frm.formName}", el campo "${field.label}" requiere seleccionar tanto la fecha de inicio como la fecha de fin.`
+                  });
+                  return;
+                }
               } else {
                 const val = this.stageFormValues[key];
                 if (val === undefined || val === null || String(val).trim() === '') {
@@ -2233,6 +2538,16 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
                   severity: 'error',
                   summary: 'Validación',
                   detail: `El campo "${field.label}" requiere cargar al menos un archivo.`
+                });
+                return;
+              }
+            } else if (field.type === 'date_range' || field.type === 'datetime_range') {
+              const val = this.stageFormValues[field.name];
+              if (this.isDateRangeIncomplete(val)) {
+                this.messageService.add({
+                  severity: 'error',
+                  summary: 'Validación',
+                  detail: `El campo "${field.label}" requiere seleccionar tanto la fecha de inicio como la fecha de fin.`
                 });
                 return;
               }
@@ -2731,6 +3046,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (res) => {
         this.stageTempFiles = {};
+        this.comments.set('');
         this.commentTempFiles.set([]);
         this.chosenNextAssignee = null;
         this.chosenMemberUserId = null;

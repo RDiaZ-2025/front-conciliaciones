@@ -475,8 +475,20 @@ export class AzureStorageService extends BaseApiService {
       'jpg': 'image/jpeg',
       'jpeg': 'image/jpeg',
       'gif': 'image/gif',
-      'txt': 'text/plain',
-      'csv': 'text/csv'
+      'webp': 'image/webp',
+      'bmp': 'image/bmp',
+      'svg': 'image/svg+xml',
+      'mp4': 'video/mp4',
+      'webm': 'video/webm',
+      'ogg': 'video/ogg',
+      'mov': 'video/quicktime',
+      'mp3': 'audio/mpeg',
+      'wav': 'audio/wav',
+      'aac': 'audio/aac',
+      'm4a': 'audio/mp4',
+      'txt': 'text/plain;charset=utf-8',
+      'csv': 'text/csv;charset=utf-8',
+      'json': 'application/json;charset=utf-8'
     };
     return mimeTypes[extension] || 'application/octet-stream';
   }
@@ -725,14 +737,38 @@ export class AzureStorageService extends BaseApiService {
     }
   }
 
-  async getBlobData(blobNameOrUrl: string): Promise<Blob> {
+  async getBlobData(blobNameOrUrl: string, fileName?: string, containerName: string = 'private'): Promise<Blob> {
+    const inferredExt = ((fileName || blobNameOrUrl.split('?')[0])?.split('.').pop() || '').toLowerCase();
+    const expectedMime = this.getMimeType(inferredExt);
+    const ensureMime = (blob: Blob): Blob => {
+      if ((!blob.type || blob.type === 'application/octet-stream') && expectedMime !== 'application/octet-stream') {
+        return new Blob([blob], { type: expectedMime });
+      }
+      return blob;
+    };
+
     try {
-      const containerClient = await this.getContainerClient();
+      const url = `${environment.apiUrl}/storage/download?path=${encodeURIComponent(blobNameOrUrl)}&name=${encodeURIComponent(fileName || '')}&container=${encodeURIComponent(containerName)}`;
+      const blob = await firstValueFrom(
+        this.http.get(url, { responseType: 'blob' })
+      );
+      if (blob) {
+        return ensureMime(blob);
+      }
+    } catch (proxyError) {
+      console.warn('Backend proxy getBlobData failed, falling back to direct Azure Storage client:', proxyError);
+    }
+
+    try {
+      const containerClient = await this.getContainerClient(containerName);
       let resolvedBlobName = blobNameOrUrl;
       if (/^https?:\/\//i.test(blobNameOrUrl)) {
         const url = new URL(blobNameOrUrl);
         const parts = url.pathname.split('/').filter(Boolean);
         resolvedBlobName = decodeURIComponent(parts.slice(1).join('/'));
+      }
+      if (resolvedBlobName.includes('?')) {
+        resolvedBlobName = resolvedBlobName.split('?')[0];
       }
 
       const blockBlobClient = containerClient.getBlockBlobClient(resolvedBlobName);
@@ -741,7 +777,7 @@ export class AzureStorageService extends BaseApiService {
       if (!blobBody) {
         throw new Error('Blob body not available');
       }
-      return await blobBody;
+      return ensureMime(await blobBody);
     } catch (error) {
       console.error('Error getting blob data:', error);
       throw error;

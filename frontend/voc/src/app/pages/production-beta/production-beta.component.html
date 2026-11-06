@@ -439,7 +439,7 @@
         <span class="text-white font-bold mt-3 text-xl">Procesando cambio de etapa...</span>
     </div>
 
-    <app-file-preview [(visible)]="previewVisible" [file]="previewFile()" (onDownload)="downloadPreviewFile()">
+    <app-file-preview [(visible)]="previewVisible" [file]="previewFile()" [fileName]="previewFileName()" (onDownload)="downloadPreviewFile()">
     </app-file-preview>
 
     <app-ans-dialog [(visible)]="slaRulesVisible"></app-ans-dialog>
@@ -506,12 +506,120 @@
 
                         <ng-container [ngSwitch]="field.type">
                             <!-- Date type -->
-                            <input *ngSwitchCase="'date'" type="date" pInputText [id]="'initial-' + form.id + '-' + field.name"
-                                [(ngModel)]="initialFormValues()[form.id + '_' + field.name]" (ngModelChange)="recalculateInitialFormulas()" [disabled]="field.isReadOnly" class="w-full" />
+                            <p-datepicker *ngSwitchCase="'date'"
+                                          [inputId]="'initial-' + form.id + '-' + field.name"
+                                          [ngModel]="getSingleDateValue('init_' + form.id + '_' + field.name, initialFormValues()[form.id + '_' + field.name])"
+                                          (ngModelChange)="onSingleDateChange(form.id + '_' + field.name, $event, false, 'initial')"
+                                          dateFormat="dd/mm/yy"
+                                          [showIcon]="true"
+                                          [showButtonBar]="true"
+                                          [disabled]="field.isReadOnly"
+                                          [placeholder]="field.placeholder || 'dd/mm/aaaa'"
+                                          appendTo="body"
+                                          styleClass="w-full"
+                                          inputStyleClass="w-full"
+                                          class="w-full"></p-datepicker>
 
                             <!-- Datetime type -->
-                            <input *ngSwitchCase="'datetime'" type="datetime-local" pInputText [id]="'initial-' + form.id + '-' + field.name"
-                                [(ngModel)]="initialFormValues()[form.id + '_' + field.name]" (ngModelChange)="recalculateInitialFormulas()" [disabled]="field.isReadOnly" class="w-full" />
+                            <p-datepicker *ngSwitchCase="'datetime'"
+                                          [inputId]="'initial-' + form.id + '-' + field.name"
+                                          [ngModel]="getSingleDateValue('init_' + form.id + '_' + field.name, initialFormValues()[form.id + '_' + field.name])"
+                                          (ngModelChange)="onSingleDateChange(form.id + '_' + field.name, $event, true, 'initial')"
+                                          dateFormat="dd/mm/yy"
+                                          [showTime]="true"
+                                          hourFormat="24"
+                                          [showIcon]="true"
+                                          [showButtonBar]="true"
+                                          [disabled]="field.isReadOnly"
+                                          [placeholder]="field.placeholder || 'dd/mm/aaaa hh:mm'"
+                                          appendTo="body"
+                                          styleClass="w-full"
+                                          inputStyleClass="w-full"
+                                          class="w-full"></p-datepicker>
+
+                            <!-- Date Range type (Fecha Inicio / Fecha Fin) -->
+                            <div *ngSwitchCase="'date_range'" class="grid formgrid p-2 surface-50 border-round border-1 surface-border m-0 row-gap-2">
+                                <div class="col-12 md:col-6 flex flex-column gap-1 px-2">
+                                    <label class="text-xs font-semibold text-700 flex align-items-center gap-1">
+                                        <lucide-icon name="calendar" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                        <span>Fecha Inicio</span>
+                                    </label>
+                                    <p-datepicker [inputId]="'initial-start-' + form.id + '-' + field.name"
+                                                  [ngModel]="getDateRangePart(form.id + '_' + field.name, 'start', initialFormValues()[form.id + '_' + field.name])"
+                                                  (ngModelChange)="onDateRangePartChange(form.id + '_' + field.name, 'start', $event, false, 'initial', initialFormValues()[form.id + '_' + field.name])"
+                                                  dateFormat="dd/mm/yy"
+                                                  [showIcon]="true"
+                                                  [showButtonBar]="true"
+                                                  [disabled]="field.isReadOnly"
+                                                  placeholder="dd/mm/aaaa"
+                                                  appendTo="body"
+                                                  styleClass="w-full"
+                                                  inputStyleClass="w-full"></p-datepicker>
+                                </div>
+                                <div class="col-12 md:col-6 flex flex-column gap-1 px-2">
+                                    <label class="text-xs font-semibold text-700 flex align-items-center gap-1">
+                                        <lucide-icon name="calendar" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                        <span>Fecha Fin</span>
+                                    </label>
+                                    <p-datepicker [inputId]="'initial-end-' + form.id + '-' + field.name"
+                                                  [ngModel]="getDateRangePart(form.id + '_' + field.name, 'end', initialFormValues()[form.id + '_' + field.name])"
+                                                  (ngModelChange)="onDateRangePartChange(form.id + '_' + field.name, 'end', $event, false, 'initial', initialFormValues()[form.id + '_' + field.name])"
+                                                  [minDate]="getDateRangePart(form.id + '_' + field.name, 'start', initialFormValues()[form.id + '_' + field.name])"
+                                                  dateFormat="dd/mm/yy"
+                                                  [showIcon]="true"
+                                                  [showButtonBar]="true"
+                                                  [disabled]="field.isReadOnly"
+                                                  placeholder="dd/mm/aaaa"
+                                                  appendTo="body"
+                                                  styleClass="w-full"
+                                                  inputStyleClass="w-full"></p-datepicker>
+                                </div>
+                            </div>
+
+                            <!-- Datetime Range type (Fecha-Hora Inicio / Fecha-Hora Fin) -->
+                            <div *ngSwitchCase="'datetime_range'" class="grid formgrid p-2 surface-50 border-round border-1 surface-border m-0 row-gap-2">
+                                <div class="col-12 md:col-6 flex flex-column gap-1 px-2">
+                                    <label class="text-xs font-semibold text-700 flex align-items-center gap-1">
+                                        <lucide-icon name="calendar" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                        <lucide-icon name="clock" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                        <span>Fecha y Hora Inicio</span>
+                                    </label>
+                                    <p-datepicker [inputId]="'initial-start-dt-' + form.id + '-' + field.name"
+                                                  [ngModel]="getDateRangePart(form.id + '_' + field.name, 'start', initialFormValues()[form.id + '_' + field.name])"
+                                                  (ngModelChange)="onDateRangePartChange(form.id + '_' + field.name, 'start', $event, true, 'initial', initialFormValues()[form.id + '_' + field.name])"
+                                                  dateFormat="dd/mm/yy"
+                                                  [showTime]="true"
+                                                  hourFormat="24"
+                                                  [showIcon]="true"
+                                                  [showButtonBar]="true"
+                                                  [disabled]="field.isReadOnly"
+                                                  placeholder="dd/mm/aaaa hh:mm"
+                                                  appendTo="body"
+                                                  styleClass="w-full"
+                                                  inputStyleClass="w-full"></p-datepicker>
+                                </div>
+                                <div class="col-12 md:col-6 flex flex-column gap-1 px-2">
+                                    <label class="text-xs font-semibold text-700 flex align-items-center gap-1">
+                                        <lucide-icon name="calendar" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                        <lucide-icon name="clock" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                        <span>Fecha y Hora Fin</span>
+                                    </label>
+                                    <p-datepicker [inputId]="'initial-end-dt-' + form.id + '-' + field.name"
+                                                  [ngModel]="getDateRangePart(form.id + '_' + field.name, 'end', initialFormValues()[form.id + '_' + field.name])"
+                                                  (ngModelChange)="onDateRangePartChange(form.id + '_' + field.name, 'end', $event, true, 'initial', initialFormValues()[form.id + '_' + field.name])"
+                                                  [minDate]="getDateRangePart(form.id + '_' + field.name, 'start', initialFormValues()[form.id + '_' + field.name])"
+                                                  dateFormat="dd/mm/yy"
+                                                  [showTime]="true"
+                                                  hourFormat="24"
+                                                  [showIcon]="true"
+                                                  [showButtonBar]="true"
+                                                  [disabled]="field.isReadOnly"
+                                                  placeholder="dd/mm/aaaa hh:mm"
+                                                  appendTo="body"
+                                                  styleClass="w-full"
+                                                  inputStyleClass="w-full"></p-datepicker>
+                                </div>
+                            </div>
 
                             <!-- Textarea type -->
                             <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'initial-' + form.id + '-' + field.name"
@@ -1005,9 +1113,9 @@
                             <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                             <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                 <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                    <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                    <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
-                                        <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
+                                    <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="previewOrDownloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                    <p-button [text]="true" severity="primary" size="small" (click)="previewOrDownloadStageFormFile(file, $event)" (onClick)="previewOrDownloadStageFormFile(file, $event)" [pTooltip]="isPreviewableFile(file) ? 'Previsualizar archivo' : 'Descargar archivo'">
+                                        <lucide-icon [name]="isPreviewableFile(file) ? 'eye' : 'download'" class="pointer-events-none"></lucide-icon>
                                     </p-button>
                                 </div>
                             </div>
@@ -1085,9 +1193,9 @@
                         <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                         <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                             <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
-                                    <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
+                                <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="previewOrDownloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                <p-button [text]="true" severity="primary" size="small" (click)="previewOrDownloadStageFormFile(file, $event)" (onClick)="previewOrDownloadStageFormFile(file, $event)" [pTooltip]="isPreviewableFile(file) ? 'Previsualizar archivo' : 'Descargar archivo'">
+                                    <lucide-icon [name]="isPreviewableFile(file) ? 'eye' : 'download'" class="pointer-events-none"></lucide-icon>
                                 </p-button>
                             </div>
                         </div>
@@ -1191,9 +1299,9 @@
                             <div *ngIf="c.attachments && c.attachments.length > 0" class="flex flex-wrap gap-2 mt-1">
                                 <div *ngFor="let att of c.attachments" class="flex align-items-center gap-2 surface-card px-2 py-1 border-round border-1 surface-border">
                                     <lucide-icon name="file-text" class="text-primary" style="width: 0.9rem; height: 0.9rem; flex-shrink: 0;"></lucide-icon>
-                                    <a href="javascript:void(0)" (click)="downloadStageFormFile(att, $event)" class="text-primary font-medium hover:underline cursor-pointer" [title]="att.name">{{ att.name }}</a>
-                                    <button pButton type="button" class="p-button-rounded p-button-text p-button-sm p-1 text-primary ml-1" (click)="downloadStageFormFile(att, $event)" pTooltip="Descargar adjunto">
-                                        <lucide-icon name="download" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                    <a href="javascript:void(0)" (click)="previewOrDownloadStageFormFile(att, $event)" class="text-primary font-medium hover:underline cursor-pointer" [title]="att.name">{{ att.name }}</a>
+                                    <button pButton type="button" class="p-button-rounded p-button-text p-button-sm p-1 text-primary ml-1" (click)="previewOrDownloadStageFormFile(att, $event)" [pTooltip]="isPreviewableFile(att) ? 'Previsualizar adjunto' : 'Descargar adjunto'">
+                                        <lucide-icon [name]="isPreviewableFile(att) ? 'eye' : 'download'" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
                                     </button>
                                 </div>
                             </div>
@@ -1225,9 +1333,9 @@
                                 <span class="text-xs text-500 font-medium">{{ val.label }}</span>
                                 <div class="surface-100 p-2 border-round flex flex-column gap-1" *ngIf="isFileListValue(val.value)">
                                     <div *ngFor="let file of getStageUploadedFiles(val.value)" class="flex justify-content-between align-items-center bg-white p-1 px-2 border-round text-sm border-1 surface-border">
-                                        <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
-                                        <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
-                                            <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
+                                        <span class="font-medium text-blue-700 text-xs truncate max-w-15rem cursor-pointer hover:underline" (click)="previewOrDownloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                        <p-button [text]="true" severity="primary" size="small" (click)="previewOrDownloadStageFormFile(file, $event)" (onClick)="previewOrDownloadStageFormFile(file, $event)" [pTooltip]="isPreviewableFile(file) ? 'Previsualizar archivo' : 'Descargar archivo'">
+                                            <lucide-icon [name]="isPreviewableFile(file) ? 'eye' : 'download'" class="pointer-events-none"></lucide-icon>
                                         </p-button>
                                     </div>
                                 </div>
@@ -1315,6 +1423,16 @@
                 </div>
                 <p class="m-0 text-sm font-semibold">Comentarios del revisor:</p>
                 <p class="m-0 text-sm mt-1 italic">"{{ selectedTask().rejectionNotes || 'Sin comentarios.' }}"</p>
+                <div *ngIf="selectedTask().rejectionAttachments && selectedTask().rejectionAttachments.length > 0" class="flex flex-wrap gap-2 mt-2">
+                    <div *ngFor="let att of selectedTask().rejectionAttachments"
+                         class="flex align-items-center gap-2 surface-card border-1 border-red-200 border-round px-2 py-1 text-xs cursor-pointer hover:surface-100 transition-colors text-900"
+                         (click)="previewOrDownloadStageFormFile(att, $event)"
+                         [pTooltip]="isPreviewableFile(att) ? 'Previsualizar archivo adjunto del rechazo' : 'Descargar archivo adjunto del rechazo'" tooltipPosition="top">
+                        <lucide-icon name="paperclip" class="text-red-600" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                        <span class="font-medium text-primary underline">{{ att.name || 'Archivo adjunto' }}</span>
+                        <lucide-icon [name]="isPreviewableFile(att) ? 'eye' : 'download'" class="text-500" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                    </div>
+                </div>
             </div>
 
             <!-- Banner de Solicitud Regresada a Etapa Previa por el Creador -->
@@ -1330,6 +1448,16 @@
                 </p>
                 <p class="m-0 text-sm font-semibold text-orange-900">Motivo e indicaciones de ajuste:</p>
                 <p class="m-0 text-sm mt-1 italic bg-white p-2 border-round border-1 border-orange-200" style="white-space: pre-line;">"{{ selectedTask().returnNotes || 'Por favor revisar y volver a aprobar esta etapa.' }}"</p>
+                <div *ngIf="selectedTask().returnAttachments && selectedTask().returnAttachments.length > 0" class="flex flex-wrap gap-2 mt-2">
+                    <div *ngFor="let att of selectedTask().returnAttachments"
+                         class="flex align-items-center gap-2 surface-card border-1 border-orange-300 border-round px-2 py-1 text-xs cursor-pointer hover:surface-100 transition-colors text-900"
+                         (click)="previewOrDownloadStageFormFile(att, $event)"
+                         [pTooltip]="isPreviewableFile(att) ? 'Previsualizar archivo adjunto de la devolución' : 'Descargar archivo adjunto de la devolución'" tooltipPosition="top">
+                        <lucide-icon name="paperclip" class="text-orange-700" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                        <span class="font-medium text-primary underline">{{ att.name || 'Archivo adjunto' }}</span>
+                        <lucide-icon [name]="isPreviewableFile(att) ? 'eye' : 'download'" class="text-500" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                    </div>
+                </div>
             </div>
 
             <!-- Detalle Unificado e Historial de la Solicitud -->
@@ -1363,9 +1491,117 @@
                                 <span class="text-xs text-500 mb-1" *ngIf="field.description && field.type !== 'section_header'">{{ field.description }}</span>
 
                                 <ng-container [ngSwitch]="field.type">
-                                    <input *ngSwitchCase="'date'" type="date" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
+                                    <p-datepicker *ngSwitchCase="'date'"
+                                                  [inputId]="'corr-field-' + form.formId + '-' + field.name"
+                                                  [ngModel]="getSingleDateValue('corr_' + form.formId + '_' + field.name, stageFormValues[form.formId + '_' + field.name])"
+                                                  (ngModelChange)="onSingleDateChange(form.formId + '_' + field.name, $event, false, 'parent')"
+                                                  dateFormat="dd/mm/yy"
+                                                  [showIcon]="true"
+                                                  [showButtonBar]="true"
+                                                  [disabled]="field.isReadOnly"
+                                                  [placeholder]="field.placeholder || 'dd/mm/aaaa'"
+                                                  appendTo="body"
+                                                  styleClass="w-full"
+                                                  inputStyleClass="w-full"
+                                                  class="w-full"></p-datepicker>
 
-                                    <input *ngSwitchCase="'datetime'" type="datetime-local" pInputText [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
+                                    <p-datepicker *ngSwitchCase="'datetime'"
+                                                  [inputId]="'corr-field-' + form.formId + '-' + field.name"
+                                                  [ngModel]="getSingleDateValue('corr_' + form.formId + '_' + field.name, stageFormValues[form.formId + '_' + field.name])"
+                                                  (ngModelChange)="onSingleDateChange(form.formId + '_' + field.name, $event, true, 'parent')"
+                                                  dateFormat="dd/mm/yy"
+                                                  [showTime]="true"
+                                                  hourFormat="24"
+                                                  [showIcon]="true"
+                                                  [showButtonBar]="true"
+                                                  [disabled]="field.isReadOnly"
+                                                  [placeholder]="field.placeholder || 'dd/mm/aaaa hh:mm'"
+                                                  appendTo="body"
+                                                  styleClass="w-full"
+                                                  inputStyleClass="w-full"
+                                                  class="w-full"></p-datepicker>
+
+                                    <div *ngSwitchCase="'date_range'" class="grid formgrid p-2 surface-50 border-round border-1 surface-border m-0 row-gap-2">
+                                        <div class="col-12 md:col-6 flex flex-column gap-1 px-2">
+                                            <label class="text-xs font-semibold text-700 flex align-items-center gap-1">
+                                                <lucide-icon name="calendar" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                                <span>Fecha Inicio</span>
+                                            </label>
+                                            <p-datepicker [inputId]="'corr-start-' + form.formId + '-' + field.name"
+                                                          [ngModel]="getDateRangePart(form.formId + '_' + field.name, 'start', stageFormValues[form.formId + '_' + field.name])"
+                                                          (ngModelChange)="onDateRangePartChange(form.formId + '_' + field.name, 'start', $event, false, 'parent', stageFormValues[form.formId + '_' + field.name])"
+                                                          dateFormat="dd/mm/yy"
+                                                          [showIcon]="true"
+                                                          [showButtonBar]="true"
+                                                          [disabled]="field.isReadOnly"
+                                                          placeholder="dd/mm/aaaa"
+                                                          appendTo="body"
+                                                          styleClass="w-full"
+                                                          inputStyleClass="w-full"></p-datepicker>
+                                        </div>
+                                        <div class="col-12 md:col-6 flex flex-column gap-1 px-2">
+                                            <label class="text-xs font-semibold text-700 flex align-items-center gap-1">
+                                                <lucide-icon name="calendar" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                                <span>Fecha Fin</span>
+                                            </label>
+                                            <p-datepicker [inputId]="'corr-end-' + form.formId + '-' + field.name"
+                                                          [ngModel]="getDateRangePart(form.formId + '_' + field.name, 'end', stageFormValues[form.formId + '_' + field.name])"
+                                                          (ngModelChange)="onDateRangePartChange(form.formId + '_' + field.name, 'end', $event, false, 'parent', stageFormValues[form.formId + '_' + field.name])"
+                                                          [minDate]="getDateRangePart(form.formId + '_' + field.name, 'start', stageFormValues[form.formId + '_' + field.name])"
+                                                          dateFormat="dd/mm/yy"
+                                                          [showIcon]="true"
+                                                          [showButtonBar]="true"
+                                                          [disabled]="field.isReadOnly"
+                                                          placeholder="dd/mm/aaaa"
+                                                          appendTo="body"
+                                                          styleClass="w-full"
+                                                          inputStyleClass="w-full"></p-datepicker>
+                                        </div>
+                                    </div>
+
+                                    <div *ngSwitchCase="'datetime_range'" class="grid formgrid p-2 surface-50 border-round border-1 surface-border m-0 row-gap-2">
+                                        <div class="col-12 md:col-6 flex flex-column gap-1 px-2">
+                                            <label class="text-xs font-semibold text-700 flex align-items-center gap-1">
+                                                <lucide-icon name="calendar" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                                <lucide-icon name="clock" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                                <span>Fecha y Hora Inicio</span>
+                                            </label>
+                                            <p-datepicker [inputId]="'corr-start-dt-' + form.formId + '-' + field.name"
+                                                          [ngModel]="getDateRangePart(form.formId + '_' + field.name, 'start', stageFormValues[form.formId + '_' + field.name])"
+                                                          (ngModelChange)="onDateRangePartChange(form.formId + '_' + field.name, 'start', $event, true, 'parent', stageFormValues[form.formId + '_' + field.name])"
+                                                          dateFormat="dd/mm/yy"
+                                                          [showTime]="true"
+                                                          hourFormat="24"
+                                                          [showIcon]="true"
+                                                          [showButtonBar]="true"
+                                                          [disabled]="field.isReadOnly"
+                                                          placeholder="dd/mm/aaaa hh:mm"
+                                                          appendTo="body"
+                                                          styleClass="w-full"
+                                                          inputStyleClass="w-full"></p-datepicker>
+                                        </div>
+                                        <div class="col-12 md:col-6 flex flex-column gap-1 px-2">
+                                            <label class="text-xs font-semibold text-700 flex align-items-center gap-1">
+                                                <lucide-icon name="calendar" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                                <lucide-icon name="clock" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                                <span>Fecha y Hora Fin</span>
+                                            </label>
+                                            <p-datepicker [inputId]="'corr-end-dt-' + form.formId + '-' + field.name"
+                                                          [ngModel]="getDateRangePart(form.formId + '_' + field.name, 'end', stageFormValues[form.formId + '_' + field.name])"
+                                                          (ngModelChange)="onDateRangePartChange(form.formId + '_' + field.name, 'end', $event, true, 'parent', stageFormValues[form.formId + '_' + field.name])"
+                                                          [minDate]="getDateRangePart(form.formId + '_' + field.name, 'start', stageFormValues[form.formId + '_' + field.name])"
+                                                          dateFormat="dd/mm/yy"
+                                                          [showTime]="true"
+                                                          hourFormat="24"
+                                                          [showIcon]="true"
+                                                          [showButtonBar]="true"
+                                                          [disabled]="field.isReadOnly"
+                                                          placeholder="dd/mm/aaaa hh:mm"
+                                                          appendTo="body"
+                                                          styleClass="w-full"
+                                                          inputStyleClass="w-full"></p-datepicker>
+                                        </div>
+                                    </div>
 
                                     <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'corr-field-' + form.formId + '-' + field.name" [(ngModel)]="stageFormValues[form.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
 
@@ -1570,10 +1806,10 @@
                                             <!-- Uploaded files list (for viewing/downloading) -->
                                             <div class="flex flex-column gap-1 mt-1" *ngIf="getStageUploadedFiles(stageFormValues[form.formId + '_' + field.name]).length > 0">
                                                 <div *ngFor="let file of getStageUploadedFiles(stageFormValues[form.formId + '_' + field.name]); let uIdx = index" class="flex justify-content-between align-items-center bg-blue-50 p-2 border-round text-sm border-1 border-blue-200">
-                                                    <span class="font-medium text-blue-700 cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                                    <span class="font-medium text-blue-700 cursor-pointer hover:underline" (click)="previewOrDownloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
                                                     <div class="flex align-items-center gap-1">
-                                                        <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
-                                                            <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
+                                                        <p-button [text]="true" severity="primary" size="small" (click)="previewOrDownloadStageFormFile(file, $event)" (onClick)="previewOrDownloadStageFormFile(file, $event)" [pTooltip]="isPreviewableFile(file) ? 'Previsualizar archivo' : 'Descargar archivo'">
+                                                            <lucide-icon [name]="isPreviewableFile(file) ? 'eye' : 'download'" class="pointer-events-none"></lucide-icon>
                                                         </p-button>
                                                         <p-button *ngIf="!field.isReadOnly" [text]="true" severity="danger" size="small" (onClick)="removeStageUploadedFile(form.formId + '_' + field.name, uIdx)" pTooltip="Quitar archivo precargado">
                                                             <lucide-icon name="trash"></lucide-icon>
@@ -1608,9 +1844,117 @@
                             <span class="text-xs text-500 mb-1" *ngIf="field.description && field.type !== 'section_header'">{{ field.description }}</span>
 
                             <ng-container [ngSwitch]="field.type">
-                                <input *ngSwitchCase="'date'" type="date" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [disabled]="field.isReadOnly" />
+                                <p-datepicker *ngSwitchCase="'date'"
+                                              [inputId]="'stage-field-' + field.name"
+                                              [ngModel]="getSingleDateValue('stage_' + field.name, stageFormValues[field.name])"
+                                              (ngModelChange)="onSingleDateChange(field.name, $event, false, 'stage')"
+                                              dateFormat="dd/mm/yy"
+                                              [showIcon]="true"
+                                              [showButtonBar]="true"
+                                              [disabled]="field.isReadOnly"
+                                              [placeholder]="field.placeholder || 'dd/mm/aaaa'"
+                                              appendTo="body"
+                                              styleClass="w-full"
+                                              inputStyleClass="w-full"
+                                              class="w-full"></p-datepicker>
 
-                                <input *ngSwitchCase="'datetime'" type="datetime-local" pInputText [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [disabled]="field.isReadOnly" />
+                                <p-datepicker *ngSwitchCase="'datetime'"
+                                              [inputId]="'stage-field-' + field.name"
+                                              [ngModel]="getSingleDateValue('stage_' + field.name, stageFormValues[field.name])"
+                                              (ngModelChange)="onSingleDateChange(field.name, $event, true, 'stage')"
+                                              dateFormat="dd/mm/yy"
+                                              [showTime]="true"
+                                              hourFormat="24"
+                                              [showIcon]="true"
+                                              [showButtonBar]="true"
+                                              [disabled]="field.isReadOnly"
+                                              [placeholder]="field.placeholder || 'dd/mm/aaaa hh:mm'"
+                                              appendTo="body"
+                                              styleClass="w-full"
+                                              inputStyleClass="w-full"
+                                              class="w-full"></p-datepicker>
+
+                                <div *ngSwitchCase="'date_range'" class="grid formgrid p-2 surface-50 border-round border-1 surface-border m-0 row-gap-2">
+                                    <div class="col-12 md:col-6 flex flex-column gap-1 px-2">
+                                        <label class="text-xs font-semibold text-700 flex align-items-center gap-1">
+                                            <lucide-icon name="calendar" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                            <span>Fecha Inicio</span>
+                                        </label>
+                                        <p-datepicker [inputId]="'stage-start-' + field.name"
+                                                      [ngModel]="getDateRangePart(field.name, 'start', stageFormValues[field.name])"
+                                                      (ngModelChange)="onDateRangePartChange(field.name, 'start', $event, false, 'stage', stageFormValues[field.name])"
+                                                      dateFormat="dd/mm/yy"
+                                                      [showIcon]="true"
+                                                      [showButtonBar]="true"
+                                                      [disabled]="field.isReadOnly"
+                                                      placeholder="dd/mm/aaaa"
+                                                      appendTo="body"
+                                                      styleClass="w-full"
+                                                      inputStyleClass="w-full"></p-datepicker>
+                                    </div>
+                                    <div class="col-12 md:col-6 flex flex-column gap-1 px-2">
+                                        <label class="text-xs font-semibold text-700 flex align-items-center gap-1">
+                                            <lucide-icon name="calendar" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                            <span>Fecha Fin</span>
+                                        </label>
+                                        <p-datepicker [inputId]="'stage-end-' + field.name"
+                                                      [ngModel]="getDateRangePart(field.name, 'end', stageFormValues[field.name])"
+                                                      (ngModelChange)="onDateRangePartChange(field.name, 'end', $event, false, 'stage', stageFormValues[field.name])"
+                                                      [minDate]="getDateRangePart(field.name, 'start', stageFormValues[field.name])"
+                                                      dateFormat="dd/mm/yy"
+                                                      [showIcon]="true"
+                                                      [showButtonBar]="true"
+                                                      [disabled]="field.isReadOnly"
+                                                      placeholder="dd/mm/aaaa"
+                                                      appendTo="body"
+                                                      styleClass="w-full"
+                                                      inputStyleClass="w-full"></p-datepicker>
+                                    </div>
+                                </div>
+
+                                <div *ngSwitchCase="'datetime_range'" class="grid formgrid p-2 surface-50 border-round border-1 surface-border m-0 row-gap-2">
+                                    <div class="col-12 md:col-6 flex flex-column gap-1 px-2">
+                                        <label class="text-xs font-semibold text-700 flex align-items-center gap-1">
+                                            <lucide-icon name="calendar" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                            <lucide-icon name="clock" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                            <span>Fecha y Hora Inicio</span>
+                                        </label>
+                                        <p-datepicker [inputId]="'stage-start-dt-' + field.name"
+                                                      [ngModel]="getDateRangePart(field.name, 'start', stageFormValues[field.name])"
+                                                      (ngModelChange)="onDateRangePartChange(field.name, 'start', $event, true, 'stage', stageFormValues[field.name])"
+                                                      dateFormat="dd/mm/yy"
+                                                      [showTime]="true"
+                                                      hourFormat="24"
+                                                      [showIcon]="true"
+                                                      [showButtonBar]="true"
+                                                      [disabled]="field.isReadOnly"
+                                                      placeholder="dd/mm/aaaa hh:mm"
+                                                      appendTo="body"
+                                                      styleClass="w-full"
+                                                      inputStyleClass="w-full"></p-datepicker>
+                                    </div>
+                                    <div class="col-12 md:col-6 flex flex-column gap-1 px-2">
+                                        <label class="text-xs font-semibold text-700 flex align-items-center gap-1">
+                                            <lucide-icon name="calendar" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                            <lucide-icon name="clock" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                            <span>Fecha y Hora Fin</span>
+                                        </label>
+                                        <p-datepicker [inputId]="'stage-end-dt-' + field.name"
+                                                      [ngModel]="getDateRangePart(field.name, 'end', stageFormValues[field.name])"
+                                                      (ngModelChange)="onDateRangePartChange(field.name, 'end', $event, true, 'stage', stageFormValues[field.name])"
+                                                      [minDate]="getDateRangePart(field.name, 'start', stageFormValues[field.name])"
+                                                      dateFormat="dd/mm/yy"
+                                                      [showTime]="true"
+                                                      hourFormat="24"
+                                                      [showIcon]="true"
+                                                      [showButtonBar]="true"
+                                                      [disabled]="field.isReadOnly"
+                                                      placeholder="dd/mm/aaaa hh:mm"
+                                                      appendTo="body"
+                                                      styleClass="w-full"
+                                                      inputStyleClass="w-full"></p-datepicker>
+                                    </div>
+                                </div>
 
                                 <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'stage-field-' + field.name" [(ngModel)]="stageFormValues[field.name]" (ngModelChange)="recalculateStageFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
 
@@ -1815,10 +2159,10 @@
                                         <!-- Uploaded files list (for viewing/downloading) -->
                                         <div class="flex flex-column gap-1 mt-1" *ngIf="getStageUploadedFiles(stageFormValues[field.name]).length > 0">
                                             <div *ngFor="let file of getStageUploadedFiles(stageFormValues[field.name]); let uIdx = index" class="flex justify-content-between align-items-center bg-blue-50 p-2 border-round text-sm border-1 border-blue-200">
-                                                <span class="font-medium text-blue-700 cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                                <span class="font-medium text-blue-700 cursor-pointer hover:underline" (click)="previewOrDownloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
                                                 <div class="flex align-items-center gap-1">
-                                                    <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
-                                                        <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
+                                                    <p-button [text]="true" severity="primary" size="small" (click)="previewOrDownloadStageFormFile(file, $event)" (onClick)="previewOrDownloadStageFormFile(file, $event)" [pTooltip]="isPreviewableFile(file) ? 'Previsualizar archivo' : 'Descargar archivo'">
+                                                        <lucide-icon [name]="isPreviewableFile(file) ? 'eye' : 'download'" class="pointer-events-none"></lucide-icon>
                                                     </p-button>
                                                     <p-button *ngIf="!field.isReadOnly" [text]="true" severity="danger" size="small" (onClick)="removeStageUploadedFile(field.name, uIdx)" pTooltip="Quitar archivo precargado">
                                                         <lucide-icon name="trash"></lucide-icon>
@@ -1896,9 +2240,117 @@
                                     <span class="text-xs text-500 mb-1" *ngIf="field.description && field.type !== 'section_header'">{{ field.description }}</span>
 
                                     <ng-container [ngSwitch]="field.type">
-                                        <input *ngSwitchCase="'date'" type="date" pInputText [id]="'pb-mf-field-' + mForm.formId + '-' + field.name" [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
+                                        <p-datepicker *ngSwitchCase="'date'"
+                                                      [inputId]="'pb-mf-field-' + mForm.formId + '-' + field.name"
+                                                      [ngModel]="getSingleDateValue('mf_' + mForm.formId + '_' + field.name, stageFormValues[mForm.formId + '_' + field.name])"
+                                                      (ngModelChange)="onSingleDateChange(mForm.formId + '_' + field.name, $event, false, 'parent')"
+                                                      dateFormat="dd/mm/yy"
+                                                      [showIcon]="true"
+                                                      [showButtonBar]="true"
+                                                      [disabled]="field.isReadOnly"
+                                                      [placeholder]="field.placeholder || 'dd/mm/aaaa'"
+                                                      appendTo="body"
+                                                      styleClass="w-full"
+                                                      inputStyleClass="w-full"
+                                                      class="w-full"></p-datepicker>
 
-                                        <input *ngSwitchCase="'datetime'" type="datetime-local" pInputText [id]="'pb-mf-field-' + mForm.formId + '-' + field.name" [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [disabled]="field.isReadOnly" />
+                                        <p-datepicker *ngSwitchCase="'datetime'"
+                                                      [inputId]="'pb-mf-field-' + mForm.formId + '-' + field.name"
+                                                      [ngModel]="getSingleDateValue('mf_' + mForm.formId + '_' + field.name, stageFormValues[mForm.formId + '_' + field.name])"
+                                                      (ngModelChange)="onSingleDateChange(mForm.formId + '_' + field.name, $event, true, 'parent')"
+                                                      dateFormat="dd/mm/yy"
+                                                      [showTime]="true"
+                                                      hourFormat="24"
+                                                      [showIcon]="true"
+                                                      [showButtonBar]="true"
+                                                      [disabled]="field.isReadOnly"
+                                                      [placeholder]="field.placeholder || 'dd/mm/aaaa hh:mm'"
+                                                      appendTo="body"
+                                                      styleClass="w-full"
+                                                      inputStyleClass="w-full"
+                                                      class="w-full"></p-datepicker>
+
+                                        <div *ngSwitchCase="'date_range'" class="grid formgrid p-2 surface-50 border-round border-1 surface-border m-0 row-gap-2">
+                                            <div class="col-12 md:col-6 flex flex-column gap-1 px-2">
+                                                <label class="text-xs font-semibold text-700 flex align-items-center gap-1">
+                                                    <lucide-icon name="calendar" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                                    <span>Fecha Inicio</span>
+                                                </label>
+                                                <p-datepicker [inputId]="'pb-mf-start-' + mForm.formId + '-' + field.name"
+                                                              [ngModel]="getDateRangePart(mForm.formId + '_' + field.name, 'start', stageFormValues[mForm.formId + '_' + field.name])"
+                                                              (ngModelChange)="onDateRangePartChange(mForm.formId + '_' + field.name, 'start', $event, false, 'parent', stageFormValues[mForm.formId + '_' + field.name])"
+                                                              dateFormat="dd/mm/yy"
+                                                              [showIcon]="true"
+                                                              [showButtonBar]="true"
+                                                              [disabled]="field.isReadOnly"
+                                                              placeholder="dd/mm/aaaa"
+                                                              appendTo="body"
+                                                              styleClass="w-full"
+                                                              inputStyleClass="w-full"></p-datepicker>
+                                            </div>
+                                            <div class="col-12 md:col-6 flex flex-column gap-1 px-2">
+                                                <label class="text-xs font-semibold text-700 flex align-items-center gap-1">
+                                                    <lucide-icon name="calendar" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                                    <span>Fecha Fin</span>
+                                                </label>
+                                                <p-datepicker [inputId]="'pb-mf-end-' + mForm.formId + '-' + field.name"
+                                                              [ngModel]="getDateRangePart(mForm.formId + '_' + field.name, 'end', stageFormValues[mForm.formId + '_' + field.name])"
+                                                              (ngModelChange)="onDateRangePartChange(mForm.formId + '_' + field.name, 'end', $event, false, 'parent', stageFormValues[mForm.formId + '_' + field.name])"
+                                                              [minDate]="getDateRangePart(mForm.formId + '_' + field.name, 'start', stageFormValues[mForm.formId + '_' + field.name])"
+                                                              dateFormat="dd/mm/yy"
+                                                              [showIcon]="true"
+                                                              [showButtonBar]="true"
+                                                              [disabled]="field.isReadOnly"
+                                                              placeholder="dd/mm/aaaa"
+                                                              appendTo="body"
+                                                              styleClass="w-full"
+                                                              inputStyleClass="w-full"></p-datepicker>
+                                            </div>
+                                        </div>
+
+                                        <div *ngSwitchCase="'datetime_range'" class="grid formgrid p-2 surface-50 border-round border-1 surface-border m-0 row-gap-2">
+                                            <div class="col-12 md:col-6 flex flex-column gap-1 px-2">
+                                                <label class="text-xs font-semibold text-700 flex align-items-center gap-1">
+                                                    <lucide-icon name="calendar" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                                    <lucide-icon name="clock" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                                    <span>Fecha y Hora Inicio</span>
+                                                </label>
+                                                <p-datepicker [inputId]="'pb-mf-start-dt-' + mForm.formId + '-' + field.name"
+                                                              [ngModel]="getDateRangePart(mForm.formId + '_' + field.name, 'start', stageFormValues[mForm.formId + '_' + field.name])"
+                                                              (ngModelChange)="onDateRangePartChange(mForm.formId + '_' + field.name, 'start', $event, true, 'parent', stageFormValues[mForm.formId + '_' + field.name])"
+                                                              dateFormat="dd/mm/yy"
+                                                              [showTime]="true"
+                                                              hourFormat="24"
+                                                              [showIcon]="true"
+                                                              [showButtonBar]="true"
+                                                              [disabled]="field.isReadOnly"
+                                                              placeholder="dd/mm/aaaa hh:mm"
+                                                              appendTo="body"
+                                                              styleClass="w-full"
+                                                              inputStyleClass="w-full"></p-datepicker>
+                                            </div>
+                                            <div class="col-12 md:col-6 flex flex-column gap-1 px-2">
+                                                <label class="text-xs font-semibold text-700 flex align-items-center gap-1">
+                                                    <lucide-icon name="calendar" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                                    <lucide-icon name="clock" class="text-primary" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                                                    <span>Fecha y Hora Fin</span>
+                                                </label>
+                                                <p-datepicker [inputId]="'pb-mf-end-dt-' + mForm.formId + '-' + field.name"
+                                                              [ngModel]="getDateRangePart(mForm.formId + '_' + field.name, 'end', stageFormValues[mForm.formId + '_' + field.name])"
+                                                              (ngModelChange)="onDateRangePartChange(mForm.formId + '_' + field.name, 'end', $event, true, 'parent', stageFormValues[mForm.formId + '_' + field.name])"
+                                                              [minDate]="getDateRangePart(mForm.formId + '_' + field.name, 'start', stageFormValues[mForm.formId + '_' + field.name])"
+                                                              dateFormat="dd/mm/yy"
+                                                              [showTime]="true"
+                                                              hourFormat="24"
+                                                              [showIcon]="true"
+                                                              [showButtonBar]="true"
+                                                              [disabled]="field.isReadOnly"
+                                                              placeholder="dd/mm/aaaa hh:mm"
+                                                              appendTo="body"
+                                                              styleClass="w-full"
+                                                              inputStyleClass="w-full"></p-datepicker>
+                                            </div>
+                                        </div>
 
                                         <textarea *ngSwitchCase="'textarea'" class="w-full p-inputtext border-round" [id]="'pb-mf-field-' + mForm.formId + '-' + field.name" [(ngModel)]="stageFormValues[mForm.formId + '_' + field.name]" (ngModelChange)="recalculateParentFormulas()" [placeholder]="field.placeholder || ''" [disabled]="field.isReadOnly" rows="3" style="resize: vertical; font-family: inherit;"></textarea>
 
@@ -2074,10 +2526,10 @@
                                             </div>
                                             <div *ngIf="getStageUploadedFiles(stageFormValues[mForm.formId + '_' + field.name]).length > 0" class="flex flex-column gap-1">
                                                 <div *ngFor="let file of getStageUploadedFiles(stageFormValues[mForm.formId + '_' + field.name]); let uIdx = index" class="flex justify-content-between align-items-center bg-blue-50 p-2 border-round text-sm border-1 border-blue-200">
-                                                    <span class="font-medium text-blue-700 cursor-pointer hover:underline" (click)="downloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
+                                                    <span class="font-medium text-blue-700 cursor-pointer hover:underline" (click)="previewOrDownloadStageFormFile(file, $event)" [title]="file.name"><lucide-icon name="file" class="mr-2"></lucide-icon>{{ file.name }}</span>
                                                     <div class="flex align-items-center gap-1">
-                                                        <p-button [text]="true" severity="primary" size="small" (click)="downloadStageFormFile(file, $event)" (onClick)="downloadStageFormFile(file, $event)" pTooltip="Descargar archivo">
-                                                            <lucide-icon name="download" class="pointer-events-none"></lucide-icon>
+                                                        <p-button [text]="true" severity="primary" size="small" (click)="previewOrDownloadStageFormFile(file, $event)" (onClick)="previewOrDownloadStageFormFile(file, $event)" [pTooltip]="isPreviewableFile(file) ? 'Previsualizar archivo' : 'Descargar archivo'">
+                                                            <lucide-icon [name]="isPreviewableFile(file) ? 'eye' : 'download'" class="pointer-events-none"></lucide-icon>
                                                         </p-button>
                                                         <p-button *ngIf="!field.isReadOnly" [text]="true" severity="danger" size="small" (onClick)="removeStageUploadedFile(mForm.formId + '_' + field.name, uIdx)" pTooltip="Quitar archivo precargado">
                                                             <lucide-icon name="trash"></lucide-icon>
@@ -2350,9 +2802,18 @@
             </div>
 
             <div class="flex flex-column gap-2 mt-1">
-                <label for="returnStageCommentInput" class="font-bold text-sm text-900">
-                    Motivo de la devolución / Instrucciones de ajuste <span class="text-red-500">*</span>
-                </label>
+                <div class="flex justify-content-between align-items-center flex-wrap gap-2">
+                    <label for="returnStageCommentInput" class="font-bold text-sm text-900">
+                        Motivo de la devolución / Instrucciones de ajuste <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex align-items-center gap-2">
+                        <input type="file" #returnStageFileInput class="hidden" multiple (change)="onReturnStageFileSelected($event)" />
+                        <p-button severity="secondary" [outlined]="true" size="small" styleClass="py-1 px-2 text-xs" (onClick)="returnStageFileInput.click()" [disabled]="isReturningStage()">
+                            <lucide-icon name="upload" class="mr-1" style="width: 0.9rem; height: 0.9rem;"></lucide-icon>
+                            Adjuntar archivo
+                        </p-button>
+                    </div>
+                </div>
                 <textarea id="returnStageCommentInput"
                           pTextarea
                           [(ngModel)]="returnStageComment"
@@ -2360,8 +2821,21 @@
                           placeholder="Explica por qué se regresa la solicitud a esta etapa y qué debe corregir, ajustar o validar el responsable..."
                           class="w-full"
                           style="resize: vertical; font-family: inherit;"></textarea>
+
+                <!-- Lista de archivos adjuntos seleccionados para la devolución -->
+                <div class="flex flex-wrap gap-2 mt-1" *ngIf="returnStageTempFiles().length > 0">
+                    <div *ngFor="let f of returnStageTempFiles(); let idx = index" class="flex align-items-center gap-2 surface-100 px-3 py-1 border-round border-1 surface-border text-xs">
+                        <lucide-icon name="file-text" class="text-primary" style="width: 0.9rem; height: 0.9rem; flex-shrink: 0;"></lucide-icon>
+                        <span class="text-700 font-medium">{{ f.name }}</span>
+                        <span class="text-500">({{ (f.size / 1024 / 1024) | number:'1.1-2' }} MB)</span>
+                        <button pButton type="button" class="p-button-rounded p-button-text p-button-danger p-button-sm p-1 ml-1" (click)="removeReturnStageSelectedFile(idx)" pTooltip="Quitar adjunto" [disabled]="isReturningStage()">
+                            <lucide-icon name="x" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                        </button>
+                    </div>
+                </div>
+
                 <small class="text-xs text-500">
-                    Este comentario será visible de forma destacada para el responsable de la etapa elegida y quedará en el historial lineal de la solicitud.
+                    Este comentario y los archivos adjuntos serán visibles de forma destacada para el responsable de la etapa elegida y quedarán en el historial lineal de la solicitud.
                 </small>
                 <small *ngIf="returnStageError()" class="text-red-500 font-semibold">{{ returnStageError() }}</small>
             </div>

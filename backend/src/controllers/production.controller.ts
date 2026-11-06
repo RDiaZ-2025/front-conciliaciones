@@ -331,7 +331,7 @@ export const returnSubmissionToStage = asyncHandler(async (req: Request, res: Re
         return res.status(400).json({ message: 'ID de solicitud inválido' });
     }
 
-    const { targetStageId, notes, comment, targetSubmissionId } = req.body || {};
+    const { targetStageId, notes, comment, targetSubmissionId, attachments } = req.body || {};
     const parsedTargetStageId = parseInt(targetStageId, 10);
     if (isNaN(parsedTargetStageId)) {
         return res.status(400).json({ message: 'Debe seleccionar una etapa destino válida.' });
@@ -348,7 +348,8 @@ export const returnSubmissionToStage = asyncHandler(async (req: Request, res: Re
         userId,
         parsedTargetStageId,
         cleanNotes,
-        !isNaN(parsedTargetSubmissionId as number) ? parsedTargetSubmissionId : undefined
+        !isNaN(parsedTargetSubmissionId as number) ? parsedTargetSubmissionId : undefined,
+        Array.isArray(attachments) ? attachments : undefined
     );
     return res.json({
         success: true,

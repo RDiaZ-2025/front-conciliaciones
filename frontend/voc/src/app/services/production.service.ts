@@ -263,11 +263,12 @@ export class ProductionService extends BaseApiService {
     return this.http.delete<any>(`${this.apiUrl}/submissions/${submissionId}`, { body: { reason } });
   }
 
-  returnSubmissionToStage(submissionId: number, targetStageId: number, notes: string, targetSubmissionId?: number): Observable<any> {
+  returnSubmissionToStage(submissionId: number, targetStageId: number, notes: string, targetSubmissionId?: number, attachments?: { name: string; url: string }[]): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/submissions/${submissionId}/return-stage`, {
       targetStageId,
       notes,
-      targetSubmissionId
+      targetSubmissionId,
+      attachments
     });
   }
 }

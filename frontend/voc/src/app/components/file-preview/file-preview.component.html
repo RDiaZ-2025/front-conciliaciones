@@ -61,6 +61,11 @@
                 (load)="onLoadComplete()"></iframe>
         </ng-container>
 
+        <!-- Text / CSV / JSON Preview -->
+        <ng-container *ngIf="fileType() === 'text'">
+            <div class="w-full bg-white border-round p-4 overflow-auto text-900 text-sm font-mono" style="max-height: 65vh; white-space: pre-wrap; word-break: break-word;">{{ textContent() }}</div>
+        </ng-container>
+
         <!-- Presentation Preview (PPTX) -->
         <ng-container *ngIf="fileType() === 'presentation' && presentationUrl()">
             <iframe [src]="presentationUrl()! | safeUrl" width="100%" height="600px"
@@ -70,7 +75,7 @@
         </ng-container>
 
         <!-- Document/Other Preview -->
-        <ng-container *ngIf="fileType() === 'document' || fileType() === 'unknown'">
+        <ng-container *ngIf="(fileType() === 'document' || fileType() === 'unknown' || (fileType() === 'presentation' && !presentationUrl())) && !loading()">
             <div class="flex flex-column align-items-center gap-3 p-5 bg-white border-round">
                 <lucide-icon name="file" class="text-6xl text-gray-500"></lucide-icon>
                 <div class="text-xl font-medium text-900">Vista previa no disponible</div>
@@ -100,4 +105,20 @@
             </div>
         </div>
     </div>
+
+    <ng-template pTemplate="footer">
+        <div class="flex justify-content-between align-items-center w-full pt-2 px-2">
+            <span class="text-xs text-500 truncate max-w-20rem">{{ displayName() }}</span>
+            <div class="flex align-items-center gap-2">
+                <p-button severity="secondary" [outlined]="true" size="small" (onClick)="onHide()">
+                    <lucide-icon name="x" class="mr-2"></lucide-icon>
+                    Cerrar
+                </p-button>
+                <p-button severity="primary" size="small" (onClick)="download()" [disabled]="loading()">
+                    <lucide-icon name="download" class="mr-2"></lucide-icon>
+                    Descargar archivo
+                </p-button>
+            </div>
+        </div>
+    </ng-template>
 </p-dialog>

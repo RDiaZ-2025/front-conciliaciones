@@ -2531,6 +2531,11 @@ export class ProductionService {
             const isAtStage1 = !state.stage || state.stage.stepOrder === 1;
             const isInitialRequestCorrection = isCorrection && isRequesterUser && isAtStage1 && !hasPriorApprovedStageInSub && !state.customFormIdToFill;
             const allComments = await this.getSubmissionComments(treeIds);
+            const rejectionAttachments = prevState
+                ? allComments
+                      .filter(c => c.stateId === prevState.id && Array.isArray(c.attachments) && c.attachments.length > 0)
+                      .flatMap(c => c.attachments)
+                : [];
 
             const historyStages = this.buildHistoryStages(
                 state.submission,
@@ -2728,6 +2733,11 @@ export class ProductionService {
             const lastActionedPriorState = priorNonPending.length > 0 ? priorNonPending[priorNonPending.length - 1] : null;
             const isReturnedByRequester = lastActionedPriorState?.status === 'Returned';
             const returnNotes = isReturnedByRequester ? lastActionedPriorState.notes : null;
+            const returnAttachments = isReturnedByRequester && lastActionedPriorState
+                ? allComments
+                      .filter(c => c.stateId === lastActionedPriorState.id && Array.isArray(c.attachments) && c.attachments.length > 0)
+                      .flatMap(c => c.attachments)
+                : [];
             const returnedByUserName = isReturnedByRequester
                 ? (lastActionedPriorState.actionedByUser?.name || state.submission.requesterUser?.name || 'Solicitante')
                 : null;
@@ -2758,8 +2768,10 @@ export class ProductionService {
                 submissionStatus: state.submission.status,
                 consecutive: state.submission.consecutive,
                 rejectionNotes,
+                rejectionAttachments,
                 isReturnedByRequester,
                 returnNotes,
+                returnAttachments,
                 returnedByUserName,
                 returnedFromStageName,
                 returnedAt,
@@ -3507,13 +3519,17 @@ export class ProductionService {
             const cleanAttachments = Array.isArray(attachments)
                 ? attachments.filter(a => a && a.url).map(a => ({ name: a.name || 'Adjunto', url: a.url }))
                 : [];
+            const isCorrection = (submission.status === 'Rejected');
             if (cleanAttachments.length > 0) {
                 this.validateStageCommentAttachments(stage, cleanAttachments);
+                const commentTextForAttachment = (notes && notes.trim())
+                    ? notes
+                    : (isCorrection && action === 'approve' ? 'Corrección enviada' : '');
                 await manager.getRepository(DynamicSubmissionComment).save({
                     submissionId: submission.id,
                     stateId: currentState.id,
                     userId,
-                    comment: this.serializeCommentWithAttachments(notes || '', cleanAttachments)
+                    comment: this.serializeCommentWithAttachments(commentTextForAttachment, cleanAttachments)
                 });
             }
 
@@ -3523,7 +3539,6 @@ export class ProductionService {
             });
             const priorSubStates = allSubStates.filter(cs => cs.id < currentState.id);
 
-            const isCorrection = (submission.status === 'Rejected');
             const lastRejectionState = isCorrection ? await stateRepo.findOne({
                 where: { submissionId: submission.id, status: 'Rejected' },
                 order: { id: 'DESC' },
@@ -4008,7 +4023,8 @@ export class ProductionService {
         userId: number,
         targetStageId: number,
         notes: string,
-        targetSubmissionId?: number
+        targetSubmissionId?: number,
+        attachments?: { name: string; url: string }[]
     ) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
 
@@ -4020,6 +4036,10 @@ export class ProductionService {
             throw new Error('Debe seleccionar una etapa previa válida a la cual regresar la solicitud.');
         }
 
+        const cleanAttachments = Array.isArray(attachments)
+            ? attachments.filter(a => a && a.url).map(a => ({ name: a.name || 'Adjunto', url: a.url }))
+            : [];
+
         const treeIds = await this.getSubmissionTreeIds(submissionId);
         const parentSubmissions = await this.getAncestorSubmissions(submissionId);
 
@@ -4028,6 +4048,7 @@ export class ProductionService {
             const stateRepo = manager.getRepository(DynamicSubmissionWorkflowState);
             const stageRepo = manager.getRepository(DynamicWorkflowStage);
             const userRepo = manager.getRepository(User);
+            const commentRepo = manager.getRepository(DynamicSubmissionComment);
 
             const sub = await subRepo.findOne({
                 where: { id: submissionId },
@@ -4118,6 +4139,15 @@ export class ProductionService {
                 pState.actionedByUserId = userId;
                 pState.notes = returnHistoryNote;
                 await stateRepo.save(pState);
+
+                if (cleanAttachments.length > 0) {
+                    await commentRepo.save({
+                        submissionId: pState.submissionId,
+                        stateId: pState.id,
+                        userId,
+                        comment: this.serializeCommentWithAttachments(returnHistoryNote, cleanAttachments)
+                    });
+                }
             }
 
             // Determinar ancestros de targetSub para no cerrar un padre del cual dependa targetSub

@@ -25,6 +25,7 @@ export class FilePreviewComponent implements OnDestroy {
   onDownload = output<void>();
 
   fileUrl = signal<string | null>(null);
+  textContent = signal<string>('');
   zoom = signal<number>(1);
   rotation = signal<number>(0);
   error = signal<string | null>(null);
@@ -49,21 +50,21 @@ export class FilePreviewComponent implements OnDestroy {
       name = this.fileName() || (typeof fileData === 'string' ? fileData : '');
     }
 
-    const extension = (name || '').toLowerCase().split('.').pop() || '';
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(extension)) return 'image';
+    const extension = (name || '').toLowerCase().split('?')[0].split('.').pop() || '';
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(extension)) return 'image';
     if (['mp4', 'webm', 'ogg', 'mov', 'avi'].includes(extension)) return 'video';
     if (['mp3', 'wav', 'ogg', 'aac', 'm4a'].includes(extension)) return 'audio';
     if (extension === 'pdf') return 'pdf';
+    if (['txt', 'csv', 'json'].includes(extension)) return 'text';
     if (['pptx', 'ppt'].includes(extension)) return 'presentation';
-    if (['doc', 'docx', 'txt', 'rtf'].includes(extension)) return 'document';
+    if (['doc', 'docx', 'rtf', 'xls', 'xlsx'].includes(extension)) return 'document';
     return 'unknown';
   });
 
   presentationUrl = computed(() => {
     const url = this.fileUrl();
     const type = this.fileType();
-    if (type === 'presentation' && url) {
-
+    if (type === 'presentation' && url && !url.startsWith('blob:')) {
       return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
     }
     return null;
@@ -71,14 +72,18 @@ export class FilePreviewComponent implements OnDestroy {
 
   constructor() {
     effect(() => {
-
       const fileData = this.file();
       const isVisible = this.visible();
       const type = this.fileType();
       const size = this.fileSize();
 
-      if (fileData && isVisible) {
+      if (isVisible && !fileData) {
+        this.loading.set(true);
+        this.error.set(null);
+        return;
+      }
 
+      if (fileData && isVisible) {
         if (type === 'presentation' && size > 250 * 1024 * 1024) {
           this.error.set('El archivo es demasiado grande para previsualizarlo con el visor de Office (Máximo 250MB). Por favor, descárgalo para verlo.');
           return;
@@ -86,11 +91,25 @@ export class FilePreviewComponent implements OnDestroy {
 
         try {
           this.loading.set(true);
+          this.textContent.set('');
           if (fileData instanceof File) {
             const url = URL.createObjectURL(fileData);
             this.fileUrl.set(url);
+            if (type === 'text') {
+              fileData.text().then(txt => {
+                this.textContent.set(txt);
+                this.loading.set(false);
+              }).catch(() => {
+                this.loading.set(false);
+              });
+            } else if (type === 'document' || type === 'unknown') {
+              this.loading.set(false);
+            }
           } else if (typeof fileData === 'string') {
             this.fileUrl.set(fileData);
+            if (type === 'document' || type === 'unknown') {
+              this.loading.set(false);
+            }
           }
           this.resetState();
           this.error.set(null);
