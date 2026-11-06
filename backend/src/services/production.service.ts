@@ -1182,6 +1182,227 @@ export class ProductionService {
             .map(({ hasMainOwnerState, firstSeenOrder, ...rest }) => rest);
     }
 
+    private getInitialFormIds(
+        currentSub: DynamicFormSubmission,
+        parentSubmissions: DynamicFormSubmission[]
+    ): Set<number> {
+        const rootSub = parentSubmissions.length > 0 ? parentSubmissions[0] : currentSub;
+        return new Set<number>([rootSub.formId]);
+    }
+
+    private buildHistoryStages(
+        currentSub: DynamicFormSubmission,
+        parentSubmissions: DynamicFormSubmission[],
+        allStatesToInclude: DynamicSubmissionWorkflowState[],
+        allValuesToInclude: DynamicFormFieldValue[],
+        allComments: any[]
+    ) {
+        const initialFormIds = this.getInitialFormIds(currentSub, parentSubmissions);
+        const rootRequesterId = parentSubmissions.length > 0 ? parentSubmissions[0].requesterUserId : currentSub.requesterUserId;
+
+        return allStatesToInclude.map((cState) => {
+            let stageVals = allValuesToInclude.filter(v => v && v.field && v.workflowStateId === cState.id);
+            const stageComments = allComments.filter(c => c.stateId === cState.id);
+            const trimmedNotes = (cState.notes || '').trim();
+            const hasDuplicateNoteInComments = trimmedNotes.length > 0 && stageComments.some(c => (c.comment || '').trim() === trimmedNotes);
+
+            const priorStatesInSub = allStatesToInclude.filter(cs => cs.submissionId === cState.submissionId && cs.id < cState.id);
+            const prevNonPendingInSub = [...priorStatesInSub].reverse().find(cs => cs.status !== 'Pending');
+            const wasImmediatelyPrecededByRejection = prevNonPendingInSub?.status === 'Rejected';
+            const hasPriorApprovedStageInSub = priorStatesInSub.some(
+                cs => cs.status === 'Approved' && cs.stageId !== cState.stageId
+            );
+
+            const subRequesterId = (cState as any).submission?.requesterUserId || rootRequesterId;
+            const isRequesterAction = !!(cState.actionedByUserId && subRequesterId && cState.actionedByUserId === subRequesterId);
+            const isRequesterAssigned = !!(cState.assignedUserId && subRequesterId && cState.assignedUserId === subRequesterId);
+            const hasExplicitCorrectionNote = !!(cState.notes && (
+                cState.notes.toLowerCase().includes('corrección') ||
+                cState.notes.toLowerCase().includes('corregid') ||
+                cState.notes.toLowerCase().includes('corregir')
+            ));
+
+            const isCorrectionState = cState.status === 'Approved' && (
+                wasImmediatelyPrecededByRejection || hasExplicitCorrectionNote
+            );
+
+            const isStage1InitialFormCorrection = isCorrectionState &&
+                (!cState.stage || cState.stage.stepOrder === 1) &&
+                !hasPriorApprovedStageInSub &&
+                (isRequesterAction || isRequesterAssigned || hasExplicitCorrectionNote);
+
+            // Initial request form values must ONLY appear in historyStages when Stage 1 rejected
+            // the initial request and the requester re-submitted/corrected the initial form.
+            if (!isStage1InitialFormCorrection) {
+                stageVals = stageVals.filter(v => v.field && !initialFormIds.has(v.field.formId));
+            }
+
+            let resolvedForm: any = null;
+            let resolvedFormId: number | null = null;
+
+            if (isStage1InitialFormCorrection && stageVals.length > 0 && stageVals[0].field?.form) {
+                const correctedFormId = stageVals[0].field.formId;
+                if ((cState as any).submission?.form && (cState as any).submission.formId === correctedFormId) {
+                    resolvedForm = (cState as any).submission.form;
+                    resolvedFormId = correctedFormId;
+                } else {
+                    resolvedForm = stageVals[0].field.form;
+                    resolvedFormId = correctedFormId;
+                }
+            } else if (cState.customFormToFill && !initialFormIds.has(cState.customFormIdToFill!)) {
+                if (stageVals.length > 0 && stageVals[0].field?.form && stageVals[0].field.formId !== cState.customFormIdToFill) {
+                    resolvedForm = stageVals[0].field.form;
+                    resolvedFormId = stageVals[0].field.formId;
+                } else {
+                    resolvedForm = cState.customFormToFill;
+                    resolvedFormId = cState.customFormIdToFill;
+                }
+            } else if (stageVals.length > 0 && stageVals[0].field?.form && cState.stage?.formToFill && stageVals[0].field.formId !== cState.stage.formIdToFill) {
+                resolvedForm = stageVals[0].field.form;
+                resolvedFormId = stageVals[0].field.formId;
+            } else if (cState.stage?.formToFill && !initialFormIds.has(cState.stage.formIdToFill!)) {
+                resolvedForm = cState.stage.formToFill;
+                resolvedFormId = cState.stage.formIdToFill;
+            } else if (stageVals.length > 0 && stageVals[0].field?.form) {
+                const uniqueStageFormIds = new Set(stageVals.map(sv => sv.field?.formId).filter(Boolean));
+                if (uniqueStageFormIds.size === 1) {
+                    resolvedForm = stageVals[0].field.form;
+                    resolvedFormId = stageVals[0].field.formId;
+                }
+            }
+
+            const user = cState.actionedByUser || cState.assignedUser;
+
+            let displayName = cState.stage ? cState.stage.name : 'Etapa';
+            if (cState.status === 'Deleted') {
+                displayName = `${displayName} - Eliminada por Administrador`;
+            } else if (isCorrectionState) {
+                displayName = `${displayName} (Corrección)`;
+            }
+
+            if (cState.stage?.workflow && (!currentSub.workflowId || cState.stage.workflowId !== currentSub.workflowId)) {
+                displayName = `${cState.stage.workflow.name}: ${displayName}`;
+            } else if (cState.submissionId !== currentSub.id && (cState as any).submission?.form) {
+                displayName = `${(cState as any).submission.form.name}: ${displayName}`;
+            }
+
+            const stateStatus = cState.status;
+
+            let formName = resolvedForm ? resolvedForm.name : displayName;
+            if (!resolvedForm && stageVals.length > 0) {
+                const uniqueFormNames = Array.from(new Set(stageVals.map(sv => sv.field?.form?.name).filter(Boolean)));
+                if (uniqueFormNames.length > 0) {
+                    formName = uniqueFormNames.join(', ');
+                }
+            }
+
+            return {
+                stateId: cState.id,
+                stageId: cState.stageId || cState.stage?.id || null,
+                submissionId: cState.submissionId,
+                consecutive: (cState as any).submission?.consecutive || null,
+                isCurrentSubmission: cState.submissionId === currentSub.id,
+                submissionFormName: (cState as any).submission?.form?.name || null,
+                stageName: displayName,
+                formName: formName,
+                actionedByUserName: user?.name || (cState.status === 'Deleted' ? 'Administrador' : 'Sin Asignar'),
+                actionedByUserEmail: user?.email || '',
+                actionedAt: cState.updatedAt,
+                status: stateStatus,
+                notes: hasDuplicateNoteInComments ? null : cState.notes,
+                comments: stageComments,
+                values: (() => {
+                    if (stageVals.length === 0) {
+                        return [];
+                    }
+                    if (resolvedForm && resolvedForm.fields) {
+                        const sortedFields = [...resolvedForm.fields].sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0));
+                        const mappedVals = sortedFields.map((field: any) => {
+                            let parsedMeta = field.metadata;
+                            if (parsedMeta && typeof parsedMeta === 'string') {
+                                try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
+                            }
+                            if (field.type === 'section_header') {
+                                return {
+                                    label: field.label,
+                                    value: '',
+                                    fieldType: 'section_header',
+                                    metadata: parsedMeta || {}
+                                };
+                            }
+                            const valObj = stageVals.find(sv => sv.fieldId === field.id);
+                            if (valObj) {
+                                if (valObj.value !== undefined && valObj.value !== null && String(valObj.value).trim() !== '') {
+                                    return {
+                                        label: field.label,
+                                        value: valObj.value,
+                                        fieldType: field.type,
+                                        metadata: parsedMeta || {}
+                                    };
+                                }
+                                return null;
+                            }
+                            if (cState.status === 'Approved' || isCorrectionState) {
+                                const fallbackVal = allValuesToInclude
+                                    .filter(v => v && v.fieldId === field.id && (
+                                        (isStage1InitialFormCorrection && !v.workflowStateId) ||
+                                        (v.workflowStateId != null && v.workflowStateId <= cState.id)
+                                    ))
+                                    .sort((a, b) => b.id - a.id)[0];
+                                if (fallbackVal && fallbackVal.value !== undefined && fallbackVal.value !== null && fallbackVal.value !== '') {
+                                    return {
+                                        label: field.label,
+                                        value: fallbackVal.value,
+                                        fieldType: field.type,
+                                        metadata: parsedMeta || {}
+                                    };
+                                }
+                            }
+                            return null;
+                        }).filter(Boolean);
+                        const hasRealValues = mappedVals.some((mv: any) => mv.fieldType !== 'section_header' && mv.value !== undefined && mv.value !== null && String(mv.value).trim() !== '');
+                        return hasRealValues ? mappedVals : [];
+                    } else {
+                        const formGroups = new Map<number, { formName: string; vals: typeof stageVals }>();
+                        stageVals.forEach(sv => {
+                            const fId = sv.field?.formId || 0;
+                            const fName = sv.field?.form?.name || 'Formulario';
+                            if (!formGroups.has(fId)) {
+                                formGroups.set(fId, { formName: fName, vals: [] });
+                            }
+                            formGroups.get(fId)!.vals.push(sv);
+                        });
+
+                        const resultValues: any[] = [];
+                        formGroups.forEach((grp) => {
+                            resultValues.push({
+                                label: grp.formName,
+                                value: '',
+                                fieldType: 'section_header',
+                                metadata: {}
+                            });
+                            grp.vals.sort((a, b) => (a.field?.displayOrder || 0) - (b.field?.displayOrder || 0)).forEach(v => {
+                                let parsedMeta = v.field?.metadata;
+                                if (parsedMeta && typeof parsedMeta === 'string') {
+                                    try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
+                                }
+                                resultValues.push({
+                                    label: v.field?.label || 'Campo',
+                                    value: v.value,
+                                    fieldType: v.field?.type || 'text',
+                                    metadata: parsedMeta || {}
+                                });
+                            });
+                        });
+
+                        const hasRealValues = resultValues.some((rv: any) => rv.fieldType !== 'section_header' && rv.value !== undefined && rv.value !== null && String(rv.value).trim() !== '');
+                        return hasRealValues ? resultValues : [];
+                    }
+                })()
+            };
+        });
+    }
+
     async getSubmissionDetails(submissionId: number) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const subRepo = AppDataSource.getRepository(DynamicFormSubmission);
@@ -1226,179 +1447,8 @@ export class ProductionService {
         const isFinalStage = !nextStageTemp;
         const allComments = await this.getSubmissionComments(treeIds);
 
-         const historyStages = allStatesToInclude.map((cState) => {
-             const isChildSub = cState.submissionId !== sub.id;
-             let stageVals = allValuesToInclude.filter(v => v && v.field && v.workflowStateId === cState.id);
-             const stageComments = allComments.filter(c => c.stateId === cState.id);
-             const trimmedNotes = (cState.notes || '').trim();
-             const hasDuplicateNoteInComments = trimmedNotes.length > 0 && stageComments.some(c => (c.comment || '').trim() === trimmedNotes);
-
-             const isRequesterAction = (cState.actionedByUserId && (cState as any).submission?.requesterUserId && cState.actionedByUserId === (cState as any).submission?.requesterUserId);
-             const isRequesterAssigned = (cState.assignedUserId && (cState as any).submission?.requesterUserId && cState.assignedUserId === (cState as any).submission?.requesterUserId);
-             const isCorrectionState = cState.status === 'Approved' && (
-                 isRequesterAction ||
-                 isRequesterAssigned ||
-                 !!(cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir')))
-             );
-
-             let resolvedForm = null;
-             let resolvedFormId = null;
-
-             if (cState.customFormToFill) {
-                 resolvedForm = cState.customFormToFill;
-                 resolvedFormId = cState.customFormIdToFill;
-             } else if (isCorrectionState) {
-                 if (stageVals.length > 0 && stageVals[0].field?.form) {
-                     resolvedForm = stageVals[0].field.form;
-                     resolvedFormId = stageVals[0].field.formId;
-                 } else if ((cState as any).submission?.form) {
-                     resolvedForm = (cState as any).submission.form;
-                     resolvedFormId = (cState as any).submission.formId;
-                 }
-             } else if (stageVals.length > 0 && stageVals[0].field?.form && cState.stage?.formToFill && stageVals[0].field.formId !== cState.stage.formIdToFill) {
-                 resolvedForm = stageVals[0].field.form;
-                 resolvedFormId = stageVals[0].field.formId;
-             } else if (cState.stage?.formToFill) {
-                 resolvedForm = cState.stage.formToFill;
-                 resolvedFormId = cState.stage.formIdToFill;
-             } else if (isChildSub && (cState as any).submission?.form) {
-                 resolvedForm = (cState as any).submission.form;
-                 resolvedFormId = (cState as any).submission.formId;
-             } else if (stageVals.length > 0 && stageVals[0].field?.form) {
-                 resolvedForm = stageVals[0].field.form;
-                 resolvedFormId = stageVals[0].field.formId;
-             }
-
-             if (stageVals.length === 0 && isChildSub && resolvedFormId && (!cState.stage || cState.stage.stepOrder === 1) && cState.status === 'Approved' && !cState.notes?.toLowerCase().includes('rechaz')) {
-                 stageVals = allValuesToInclude.filter(v => v && v.field && v.submissionId === cState.submissionId && !v.workflowStateId && v.field.formId === resolvedFormId);
-             }
-
-             const user = cState.actionedByUser || cState.assignedUser;
-
-             let displayName = cState.stage ? cState.stage.name : 'Etapa';
-             if (cState.status === 'Deleted') {
-                 displayName = `${displayName} - Eliminada por Administrador`;
-             } else if (cState.status === 'Approved' && cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir'))) {
-                 displayName = `${displayName} (Corrección)`;
-             }
-
-             if (cState.stage?.workflow && sub.workflowId && cState.stage.workflowId !== sub.workflowId) {
-                 displayName = `${cState.stage.workflow.name}: ${displayName}`;
-             } else if (cState.submissionId !== sub.id && (cState as any).submission?.form) {
-                 displayName = `${(cState as any).submission.form.name}: ${displayName}`;
-             }
-
-             let stateStatus = cState.status;
-
-             let formName = resolvedForm ? resolvedForm.name : displayName;
-             if (!resolvedForm && stageVals.length > 0) {
-                 const uniqueFormNames = Array.from(new Set(stageVals.map(sv => sv.field?.form?.name).filter(Boolean)));
-                 if (uniqueFormNames.length > 0) {
-                     formName = uniqueFormNames.join(', ');
-                 }
-             }
-
-             return {
-                 stateId: cState.id,
-                 stageId: cState.stageId || cState.stage?.id || null,
-                 submissionId: cState.submissionId,
-                 consecutive: (cState as any).submission?.consecutive || null,
-                 isCurrentSubmission: cState.submissionId === sub.id,
-                 submissionFormName: (cState as any).submission?.form?.name || null,
-                 stageName: displayName,
-                 formName: formName,
-                 actionedByUserName: user?.name || (cState.status === 'Deleted' ? 'Administrador' : 'Sin Asignar'),
-                 actionedByUserEmail: user?.email || '',
-                 actionedAt: cState.updatedAt,
-                 status: stateStatus,
-                 notes: hasDuplicateNoteInComments ? null : cState.notes,
-                 comments: stageComments,
-                 values: (() => {
-                     if (cState.status !== 'Approved' && stageVals.length === 0) {
-                         return [];
-                     }
-                     if (resolvedForm && resolvedForm.fields) {
-                          const sortedFields = resolvedForm.fields.sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0));
-                         return sortedFields.map((field: any) => {
-                             let parsedMeta = field.metadata;
-                             if (parsedMeta && typeof parsedMeta === 'string') {
-                                 try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
-                             }
-                             if (field.type === 'section_header') {
-                                 return {
-                                     label: field.label,
-                                     value: '',
-                                     fieldType: 'section_header',
-                                     metadata: parsedMeta || {}
-                                 };
-                             }
-                             const valObj = stageVals.find(sv => sv.fieldId === field.id);
-                             if (valObj) {
-                                 return {
-                                     label: field.label,
-                                     value: valObj.value,
-                                     fieldType: field.type,
-                                     metadata: parsedMeta || {}
-                                 };
-                             }
-                             // Fallback for approved/corrected stages so unchanged fields are also visible
-                             if (cState.status === 'Approved' || isCorrectionState) {
-                                 const fallbackVal = allValuesToInclude
-                                     .filter(v => v && v.fieldId === field.id && (!v.workflowStateId || v.workflowStateId <= cState.id))
-                                     .sort((a, b) => b.id - a.id)[0];
-                                 if (fallbackVal && fallbackVal.value !== undefined && fallbackVal.value !== null && fallbackVal.value !== '') {
-                                     return {
-                                         label: field.label,
-                                         value: fallbackVal.value,
-                                         fieldType: field.type,
-                                         metadata: parsedMeta || {}
-                                     };
-                                 }
-                             }
-                             return null;
-                         }).filter(Boolean);
-                     } else if (stageVals.length > 0) {
-                         const formGroups = new Map<number, { formName: string; vals: typeof stageVals }>();
-                         stageVals.forEach(sv => {
-                             const fId = sv.field?.formId || 0;
-                             const fName = sv.field?.form?.name || 'Formulario';
-                             if (!formGroups.has(fId)) {
-                                 formGroups.set(fId, { formName: fName, vals: [] });
-                             }
-                             formGroups.get(fId)!.vals.push(sv);
-                         });
-
-                         const resultValues: any[] = [];
-                         formGroups.forEach((grp) => {
-                             resultValues.push({
-                                 label: grp.formName,
-                                 value: '',
-                                 fieldType: 'section_header',
-                                 metadata: {}
-                             });
-                             grp.vals.sort((a, b) => (a.field?.displayOrder || 0) - (b.field?.displayOrder || 0)).forEach(v => {
-                                 let parsedMeta = v.field?.metadata;
-                                 if (parsedMeta && typeof parsedMeta === 'string') {
-                                     try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
-                                 }
-                                 resultValues.push({
-                                     label: v.field?.label || 'Campo',
-                                     value: v.value,
-                                     fieldType: v.field?.type || 'text',
-                                     metadata: parsedMeta || {}
-                                 });
-                             });
-                         });
-
-                         return resultValues;
-                     } else {
-                         return [];
-                     }
-                 })()
-             };
-         });
-
         const parentSubmissions = await this.getAncestorSubmissions(sub.id);
+        const historyStages = this.buildHistoryStages(sub, parentSubmissions, allStatesToInclude, allValuesToInclude, allComments);
         const initialParentSubmissions = parentSubmissions.filter(p => p.form && (p.form.isInitialForm || p.form.isEntryForm || !p.parentSubmissionId));
         const parentSubIds = initialParentSubmissions.map(p => p.id);
         const parentValues: any[] = [];
@@ -2475,183 +2525,20 @@ export class ProductionService {
             const isCorrection = (state.submission.status === 'Rejected');
             const rootRequesterId = parentSubmissions.length > 0 ? parentSubmissions[0].requesterUserId : state.submission.requesterUserId;
             const isRequesterUser = (state.assignedUserId === state.submission.requesterUserId || state.assignedUserId === rootRequesterId);
-            const hasPriorApprovedState = allStatesToInclude.some(cs => cs.status === 'Approved' && cs.id < state.id);
-            const hasStageFormToFill = !!(state.customFormIdToFill || (state.stage?.formIdToFill && (state.stage.stepOrder > 1 || hasPriorApprovedState)));
-            const isInitialRequestCorrection = isCorrection && isRequesterUser && !hasStageFormToFill;
-            const statesForHistory = allStatesToInclude;
+            const hasPriorApprovedStageInSub = allStatesToInclude.some(
+                cs => cs.submissionId === state.submissionId && cs.status === 'Approved' && cs.id < state.id && cs.stageId !== state.stageId
+            );
+            const isAtStage1 = !state.stage || state.stage.stepOrder === 1;
+            const isInitialRequestCorrection = isCorrection && isRequesterUser && isAtStage1 && !hasPriorApprovedStageInSub && !state.customFormIdToFill;
             const allComments = await this.getSubmissionComments(treeIds);
 
-            const historyStages = statesForHistory.map((cState) => {
-                const isChildSub = cState.submissionId !== state.submissionId;
-                let stageVals = allValuesToInclude.filter(v => v && v.field && v.workflowStateId === cState.id);
-                const stageComments = allComments.filter(c => c.stateId === cState.id);
-                const trimmedNotes = (cState.notes || '').trim();
-                const hasDuplicateNoteInComments = trimmedNotes.length > 0 && stageComments.some(c => (c.comment || '').trim() === trimmedNotes);
-
-                const isRequesterAction = (cState.actionedByUserId && (cState as any).submission?.requesterUserId && cState.actionedByUserId === (cState as any).submission?.requesterUserId);
-                const isRequesterAssigned = (cState.assignedUserId && (cState as any).submission?.requesterUserId && cState.assignedUserId === (cState as any).submission?.requesterUserId);
-                const isCorrectionState = cState.status === 'Approved' && (
-                    isRequesterAction ||
-                    isRequesterAssigned ||
-                    !!(cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir')))
-                );
-
-                let resolvedForm = null;
-                let resolvedFormId = null;
-
-                if (cState.customFormToFill) {
-                    resolvedForm = cState.customFormToFill;
-                    resolvedFormId = cState.customFormIdToFill;
-                } else if (isCorrectionState) {
-                    if (stageVals.length > 0 && stageVals[0].field?.form) {
-                        resolvedForm = stageVals[0].field.form;
-                        resolvedFormId = stageVals[0].field.formId;
-                    } else if ((cState as any).submission?.form) {
-                        resolvedForm = (cState as any).submission.form;
-                        resolvedFormId = (cState as any).submission.formId;
-                    }
-                } else if (stageVals.length > 0 && stageVals[0].field?.form && cState.stage?.formToFill && stageVals[0].field.formId !== cState.stage.formIdToFill) {
-                    resolvedForm = stageVals[0].field.form;
-                    resolvedFormId = stageVals[0].field.formId;
-                } else if (cState.stage?.formToFill) {
-                    resolvedForm = cState.stage.formToFill;
-                    resolvedFormId = cState.stage.formIdToFill;
-                } else if (isChildSub && (cState as any).submission?.form) {
-                    resolvedForm = (cState as any).submission.form;
-                    resolvedFormId = (cState as any).submission.formId;
-                } else if (stageVals.length > 0 && stageVals[0].field?.form) {
-                    resolvedForm = stageVals[0].field.form;
-                    resolvedFormId = stageVals[0].field.formId;
-                }
-
-                if (stageVals.length === 0 && isChildSub && resolvedFormId && (!cState.stage || cState.stage.stepOrder === 1) && cState.status === 'Approved' && !cState.notes?.toLowerCase().includes('rechaz')) {
-                    stageVals = allValuesToInclude.filter(v => v && v.field && v.submissionId === cState.submissionId && !v.workflowStateId && v.field.formId === resolvedFormId);
-                }
-
-                const user = cState.actionedByUser || cState.assignedUser;
-
-                let displayName = cState.stage ? cState.stage.name : 'Etapa';
-                if (cState.status === 'Deleted') {
-                    displayName = `${displayName} - Eliminada por Administrador`;
-                } else if (cState.status === 'Approved' && cState.notes && (cState.notes.toLowerCase().includes('corrección') || cState.notes.toLowerCase().includes('corregid') || cState.notes.toLowerCase().includes('corregir'))) {
-                    displayName = `${displayName} (Corrección)`;
-                }
-
-                if (cState.stage?.workflow && state.submission.workflowId && cState.stage.workflowId !== state.submission.workflowId) {
-                    displayName = `${cState.stage.workflow.name}: ${displayName}`;
-                } else if (cState.submissionId !== state.submissionId && (cState as any).submission?.form) {
-                    displayName = `${(cState as any).submission.form.name}: ${displayName}`;
-                }
-
-                let stateStatus = cState.status;
-
-                let formName = resolvedForm ? resolvedForm.name : displayName;
-                if (!resolvedForm && stageVals.length > 0) {
-                    const uniqueFormNames = Array.from(new Set(stageVals.map(sv => sv.field?.form?.name).filter(Boolean)));
-                    if (uniqueFormNames.length > 0) {
-                        formName = uniqueFormNames.join(', ');
-                    }
-                }
-
-                return {
-                    stateId: cState.id,
-                    stageId: cState.stageId || cState.stage?.id || null,
-                    submissionId: cState.submissionId,
-                    consecutive: (cState as any).submission?.consecutive || null,
-                    isCurrentSubmission: cState.submissionId === state.submissionId,
-                    submissionFormName: (cState as any).submission?.form?.name || null,
-                    stageName: displayName,
-                    formName: formName,
-                    actionedByUserName: user?.name || (cState.status === 'Deleted' ? 'Administrador' : 'Sin Asignar'),
-                    actionedByUserEmail: user?.email || '',
-                    actionedAt: cState.updatedAt,
-                    status: stateStatus,
-                    notes: hasDuplicateNoteInComments ? null : cState.notes,
-                    comments: stageComments,
-                    values: (() => {
-                      if (cState.status !== 'Approved' && stageVals.length === 0) {
-                          return [];
-                      }
-                      if (resolvedForm && resolvedForm.fields) {
-                          const sortedFields = resolvedForm.fields.sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0));
-                          return sortedFields.map((field: any) => {
-                              let parsedMeta = field.metadata;
-                              if (parsedMeta && typeof parsedMeta === 'string') {
-                                  try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
-                              }
-                              if (field.type === 'section_header') {
-                                  return {
-                                      label: field.label,
-                                      value: '',
-                                      fieldType: 'section_header',
-                                      metadata: parsedMeta || {}
-                                  };
-                              }
-                              const valObj = stageVals.find(sv => sv.fieldId === field.id);
-                              if (valObj) {
-                                  return {
-                                      label: field.label,
-                                      value: valObj.value,
-                                      fieldType: field.type,
-                                      metadata: parsedMeta || {}
-                                  };
-                              }
-                              // Fallback for approved/corrected stages so unchanged fields are also visible
-                              if (cState.status === 'Approved' || isCorrectionState) {
-                                  const fallbackVal = allValuesToInclude
-                                      .filter(v => v && v.fieldId === field.id && (!v.workflowStateId || v.workflowStateId <= cState.id))
-                                      .sort((a, b) => b.id - a.id)[0];
-                                  if (fallbackVal && fallbackVal.value !== undefined && fallbackVal.value !== null && fallbackVal.value !== '') {
-                                      return {
-                                          label: field.label,
-                                          value: fallbackVal.value,
-                                          fieldType: field.type,
-                                          metadata: parsedMeta || {}
-                                      };
-                                  }
-                              }
-                              return null;
-                          }).filter(Boolean);
-                      } else if (stageVals.length > 0) {
-                          const formGroups = new Map<number, { formName: string; vals: typeof stageVals }>();
-                          stageVals.forEach(sv => {
-                              const fId = sv.field?.formId || 0;
-                              const fName = sv.field?.form?.name || 'Formulario';
-                              if (!formGroups.has(fId)) {
-                                  formGroups.set(fId, { formName: fName, vals: [] });
-                              }
-                              formGroups.get(fId)!.vals.push(sv);
-                          });
-
-                          const resultValues: any[] = [];
-                          formGroups.forEach((grp) => {
-                              resultValues.push({
-                                  label: grp.formName,
-                                  value: '',
-                                  fieldType: 'section_header',
-                                  metadata: {}
-                              });
-                              grp.vals.sort((a, b) => (a.field?.displayOrder || 0) - (b.field?.displayOrder || 0)).forEach(v => {
-                                  let parsedMeta = v.field?.metadata;
-                                  if (parsedMeta && typeof parsedMeta === 'string') {
-                                      try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
-                                  }
-                                  resultValues.push({
-                                      label: v.field?.label || 'Campo',
-                                      value: v.value,
-                                      fieldType: v.field?.type || 'text',
-                                      metadata: parsedMeta || {}
-                                  });
-                              });
-                          });
-
-                          return resultValues;
-                      } else {
-                          return [];
-                      }
-                  })()
-                };
-            });
+            const historyStages = this.buildHistoryStages(
+                state.submission,
+                parentSubmissions,
+                allStatesToInclude,
+                allValuesToInclude,
+                allComments
+            );
 
             const initialParentSubmissions = parentSubmissions.filter(p => p.form && (p.form.isInitialForm || p.form.isEntryForm || !p.parentSubmissionId));
             const parentSubIds = initialParentSubmissions.map(p => p.id);
@@ -2755,8 +2642,8 @@ export class ProductionService {
             }
 
             const maxSelectedForms = (parsedAssigneeConfig && parsedAssigneeConfig.maxSelectedForms !== undefined) ? parsedAssigneeConfig.maxSelectedForms : null;
-            const formIdToFill = isInitialRequestCorrection ? null : (isMultiForms ? -1 : (state.customFormIdToFill || state.stage?.formIdToFill || (isCorrection ? state.submission.formId : null)));
-            let formToFill = isInitialRequestCorrection ? null : (state.customFormToFill || state.stage?.formToFill || (isCorrection ? state.submission.form : null));
+            const formIdToFill = isInitialRequestCorrection ? null : (isMultiForms ? -1 : (state.customFormIdToFill || state.stage?.formIdToFill || null));
+            let formToFill = isInitialRequestCorrection ? null : (state.customFormToFill || state.stage?.formToFill || null);
 
             if (formIdToFill && formIdToFill > 0 && (!formToFill || !formToFill.fields || formToFill.fields.length === 0)) {
                 formToFill = await AppDataSource.getRepository(DynamicForm).findOne({
@@ -3630,6 +3517,12 @@ export class ProductionService {
                 });
             }
 
+            const allSubStates = await stateRepo.find({
+                where: { submissionId: submission.id },
+                order: { id: 'ASC' }
+            });
+            const priorSubStates = allSubStates.filter(cs => cs.id < currentState.id);
+
             const isCorrection = (submission.status === 'Rejected');
             const lastRejectionState = isCorrection ? await stateRepo.findOne({
                 where: { submissionId: submission.id, status: 'Rejected' },
@@ -3639,12 +3532,19 @@ export class ProductionService {
 
             if (isCorrection) {
                 if (formValues) {
+                    const hasPriorApprovedOtherStage = priorSubStates.some(
+                        cs => cs.status === 'Approved' && cs.stageId !== stage?.id
+                    );
+                    const isInitialRequestCorrection = (!stage || stage.stepOrder === 1) && !hasPriorApprovedOtherStage && !currentState.customFormIdToFill;
+
                     const targetFormIds = new Set<number>();
                     if (currentState.customFormIdToFill) targetFormIds.add(currentState.customFormIdToFill);
                     if (stage?.formIdToFill) targetFormIds.add(stage.formIdToFill);
-                    targetFormIds.add(submission.formId);
-                    const parentSubs = await this.getAncestorSubmissions(submission.id);
-                    parentSubs.forEach(p => targetFormIds.add(p.formId));
+                    if (isInitialRequestCorrection) {
+                        targetFormIds.add(submission.formId);
+                        const parentSubs = await this.getAncestorSubmissions(submission.id);
+                        parentSubs.forEach(p => targetFormIds.add(p.formId));
+                    }
 
                     const valsToSave: DynamicFormFieldValue[] = [];
                     for (const fId of Array.from(targetFormIds)) {
@@ -3700,11 +3600,6 @@ export class ProductionService {
             }
             const isMultiFormsStage = multiFormsConfig.length > 0 && (multiFormsConfig[0].sourceFormId !== undefined || multiFormsConfig[0].targetFormIdToFill !== undefined || multiFormsConfig[0].targetSubflowFormId !== undefined);
 
-            const allSubStates = await stateRepo.find({
-                where: { submissionId: submission.id },
-                order: { id: 'ASC' }
-            });
-            const priorSubStates = allSubStates.filter(cs => cs.id < currentState.id);
             const lastBoundaryState = [...priorSubStates].reverse().find(
                 cs => cs.stageId !== stage.id || cs.status === 'Returned' || cs.status === 'Rejected'
             );
@@ -3759,28 +3654,6 @@ export class ProductionService {
                                     workflowStateId: currentState.id
                                 });
                                 await valRepo.save(fieldValue);
-                            }
-                        }
-                    } else if (formValues && Object.keys(formValues).length > 0) {
-                        const targetFormIds = new Set<number>();
-                        targetFormIds.add(submission.formId);
-                        const parentSubs = await this.getAncestorSubmissions(submission.id);
-                        parentSubs.forEach(p => targetFormIds.add(p.formId));
-
-                        for (const fId of Array.from(targetFormIds)) {
-                            const fields = await manager.getRepository(DynamicFormField).find({ where: { formId: fId } });
-                            for (const field of fields) {
-                                const valStr = formValues[fId + '_' + field.name] !== undefined
-                                    ? formValues[fId + '_' + field.name]
-                                    : formValues[field.name];
-                                if (valStr !== undefined && valStr !== null) {
-                                    await valRepo.save(valRepo.create({
-                                        submissionId: submission.id,
-                                        fieldId: field.id,
-                                        workflowStateId: currentState.id,
-                                        value: String(valStr)
-                                    }));
-                                }
                             }
                         }
                     }
@@ -4038,9 +3911,12 @@ export class ProductionService {
                 let prevState: any = null;
 
                 if (targetType === 'previous_sender') {
-
+                    const wherePrevApproved: any = { submissionId: submission.id, status: 'Approved' };
+                    if (!isMultiFormsStage || previousApprovedInStage.length === 0) {
+                        wherePrevApproved.stageId = Not(stage.id);
+                    }
                     prevState = await stateRepo.findOne({
-                        where: { submissionId: submission.id, status: 'Approved' },
+                        where: wherePrevApproved,
                         order: { updatedAt: 'DESC' },
                         relations: ['stage', 'stage.formToFill']
                     });
