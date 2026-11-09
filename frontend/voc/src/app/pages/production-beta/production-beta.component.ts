@@ -157,16 +157,24 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   historyTotal = signal<number>(0);
 
   allFormOptions = signal<{ label: string; value: string }[]>([]);
+  knownFormNames = signal<string[]>([]);
   private searchSubject = new Subject<string>();
+  private requesterSubject = new Subject<string>();
   private searchSub?: Subscription;
+  private requesterSub?: Subscription;
+  private queryParamsSub?: Subscription;
+  private requestsLoadSub?: Subscription;
+  private tasksLoadSub?: Subscription;
+  private requestsSeq = 0;
+  private tasksSeq = 0;
 
   activeFiltersCount = computed(() => {
     let count = 0;
-    if (this.filterSearch().trim()) count++;
-    if (this.filterSelectedForms().length > 0) count++;
-    if (this.filterStatus().length > 0) count++;
+    if ((this.filterSearch() || '').trim()) count++;
+    if ((this.filterSelectedForms() || []).length > 0) count++;
+    if ((this.filterStatus() || []).length > 0) count++;
     if (this.filterDatePreset() !== 'all') count++;
-    if (this.filterRequester().trim()) count++;
+    if ((this.filterRequester() || '').trim()) count++;
     if (this.filterAllUsers()) count++;
     return count;
   });
@@ -174,10 +182,26 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   availableFormOptions = computed(() => {
     const set = new Set<string>();
     this.allFormOptions().forEach(f => set.add(f.value));
-    (this.pendingTasks() || []).forEach(t => { if (t.formName) set.add(t.formName); });
-    (this.dynamicSubmissions() || []).forEach(s => { if (s.formName) set.add(s.formName); });
+    this.knownFormNames().forEach(name => set.add(name));
+    (this.pendingTasks() || []).forEach(t => { if (t?.formName) set.add(t.formName); });
+    (this.dynamicSubmissions() || []).forEach(s => { if (s?.formName) set.add(s.formName); });
     return Array.from(set).sort().map(name => ({ label: name, value: name }));
   });
+
+  private recordKnownForms(items: any[]) {
+    if (!Array.isArray(items) || items.length === 0) return;
+    const current = new Set(this.knownFormNames());
+    let added = false;
+    for (const item of items) {
+      if (item?.formName && !current.has(item.formName)) {
+        current.add(item.formName);
+        added = true;
+      }
+    }
+    if (added) {
+      this.knownFormNames.set(Array.from(current));
+    }
+  }
 
   baseHistorySubmissions = computed(() => this.dynamicSubmissions());
   displayedPendingTasks = computed(() => this.pendingTasks());
@@ -185,8 +209,33 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   sortedAllSubmissions = computed(() => this.displayedSubmissions());
 
   onSearchInput(value: string) {
-    this.filterSearch.set(value);
-    this.searchSubject.next(value);
+    const normalized = value || '';
+    this.filterSearch.set(normalized);
+    if (!normalized.trim()) {
+      this.onFilterChange();
+    } else {
+      this.searchSubject.next(normalized);
+    }
+  }
+
+  onRequesterInput(value: string) {
+    const normalized = value || '';
+    this.filterRequester.set(normalized);
+    if (!normalized.trim()) {
+      this.onFilterChange();
+    } else {
+      this.requesterSubject.next(normalized);
+    }
+  }
+
+  onFormsFilterChange(selected: string[] | null) {
+    this.filterSelectedForms.set(Array.isArray(selected) ? selected : []);
+    this.onFilterChange();
+  }
+
+  onStatusFilterChange(selected: string[] | null) {
+    this.filterStatus.set(Array.isArray(selected) ? selected : []);
+    this.onFilterChange();
   }
 
   onFilterChange() {
@@ -238,7 +287,15 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
           this.allFormOptions.set(forms.filter(f => f.isActive !== false).map(f => ({ label: f.name, value: f.name })));
         }
       },
-      error: () => {}
+      error: () => {
+        this.productionService.getInitialForm().subscribe({
+          next: (forms) => {
+            const list = Array.isArray(forms) ? forms : (forms ? [forms] : []);
+            this.allFormOptions.set(list.filter(f => f && f.name).map(f => ({ label: f.name, value: f.name })));
+          },
+          error: () => {}
+        });
+      }
     });
   }
 
@@ -648,8 +705,13 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.searchSub = this.searchSubject.pipe(
-      debounceTime(350),
-      distinctUntilChanged()
+      debounceTime(300)
+    ).subscribe(() => {
+      this.onFilterChange();
+    });
+
+    this.requesterSub = this.requesterSubject.pipe(
+      debounceTime(300)
     ).subscribe(() => {
       this.onFilterChange();
     });
@@ -659,9 +721,20 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.loadWorkflowStages();
     this.loadPendingTasks();
 
-    this.route.queryParams.subscribe(params => {
+    this.queryParamsSub = this.route.queryParams.subscribe(params => {
       if (params['action'] === 'open' && params['requestName']) {
         this.handleDeepLink(params['requestName']);
+      }
+      if (params['openSubmissionId']) {
+        const subId = Number(params['openSubmissionId']);
+        if (!isNaN(subId) && subId > 0) {
+          this.router.navigate([], {
+            queryParams: { openSubmissionId: null, _t: null },
+            queryParamsHandling: 'merge',
+            replaceUrl: true
+          });
+          this.openSubmissionFromNotification(subId);
+        }
       }
     });
 
@@ -669,6 +742,31 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
       this.now.set(new Date());
       this.checkSLAAlerts();
     }, 60000);
+  }
+
+  openSubmissionFromNotification(submissionId: number) {
+    const existingTask = (this.pendingTasks() || []).find(
+      (t: any) => Number(t?.submissionId) === submissionId
+    );
+    if (existingTask) {
+      this.openActionDialog(existingTask);
+      return;
+    }
+
+    this.productionService.getPendingApprovals({ search: `#${submissionId}`, page: 1, limit: 20 }).subscribe({
+      next: (res) => {
+        const list = res && Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+        const matchedTask = list.find((t: any) => Number(t?.submissionId) === submissionId);
+        if (matchedTask) {
+          this.openActionDialog(matchedTask);
+        } else {
+          this.viewSubmissionDetails(submissionId);
+        }
+      },
+      error: () => {
+        this.viewSubmissionDetails(submissionId);
+      }
+    });
   }
 
   handleDeepLink(requestName: string) {
@@ -703,29 +801,37 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    if (this.searchSub) {
-      this.searchSub.unsubscribe();
-    }
+    this.searchSub?.unsubscribe();
+    this.requesterSub?.unsubscribe();
+    this.queryParamsSub?.unsubscribe();
+    this.requestsLoadSub?.unsubscribe();
+    this.tasksLoadSub?.unsubscribe();
     if (this.intervalId) {
       clearInterval(this.intervalId);
     }
   }
 
   loadRequests() {
+    this.requestsLoadSub?.unsubscribe();
+    const seq = ++this.requestsSeq;
     this.loading.set(true);
     const params = this.buildFilterParams(this.historyPage(), this.historyLimit());
-    this.productionService.getDynamicSubmissions(params).subscribe({
+    this.requestsLoadSub = this.productionService.getDynamicSubmissions(params).subscribe({
       next: (res) => {
+        if (seq !== this.requestsSeq) return;
         if (res && res.data) {
           this.dynamicSubmissions.set(res.data);
           this.historyTotal.set(res.total || 0);
+          this.recordKnownForms(res.data);
         } else if (Array.isArray(res)) {
           this.dynamicSubmissions.set(res);
           this.historyTotal.set(res.length);
+          this.recordKnownForms(res);
         }
         this.loading.set(false);
       },
-      error: (err) => {
+      error: () => {
+        if (seq !== this.requestsSeq) return;
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las solicitudes.' });
         this.loading.set(false);
       }
@@ -1935,20 +2041,26 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   }
 
   loadPendingTasks() {
+    this.tasksLoadSub?.unsubscribe();
+    const seq = ++this.tasksSeq;
     this.loadingTasks.set(true);
     const params = this.buildFilterParams(this.approvalsPage(), this.approvalsLimit());
-    this.productionService.getPendingApprovals(params).subscribe({
+    this.tasksLoadSub = this.productionService.getPendingApprovals(params).subscribe({
       next: (res) => {
+        if (seq !== this.tasksSeq) return;
         if (res && res.data) {
           this.pendingTasks.set(res.data);
           this.approvalsTotal.set(res.total || 0);
+          this.recordKnownForms(res.data);
         } else if (Array.isArray(res)) {
           this.pendingTasks.set(res);
           this.approvalsTotal.set(res.length);
+          this.recordKnownForms(res);
         }
         this.loadingTasks.set(false);
       },
       error: () => {
+        if (seq !== this.tasksSeq) return;
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las aprobaciones pendientes.' });
         this.loadingTasks.set(false);
       }

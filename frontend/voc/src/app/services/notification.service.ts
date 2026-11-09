@@ -12,6 +12,7 @@ export interface Notification {
   type: 'info' | 'success' | 'warning' | 'error';
   isRead: boolean;
   createdAt: string;
+  submissionId?: number | null;
 }
 
 export interface NotificationResponse {

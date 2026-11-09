@@ -46,11 +46,18 @@
                      (click)="handleNotificationClick(notification)">
                      <lucide-icon [name]="getNotificationIcon(notification.type)" class="text-xl mt-1" [ngClass]="notification.type === 'success' ? 'text-green-500' : notification.type === 'warning' ? 'text-yellow-500' : notification.type === 'error' ? 'text-red-500' : 'text-blue-500'"></lucide-icon>
                      <div class="flex flex-column gap-1 flex-1">
-                        <div class="flex justify-content-between align-items-start">
-                           <span class="font-bold text-900" [ngClass]="{'text-700': notification.isRead}">
-                              {{ notification.title }}
-                           </span>
-                           <span class="text-xs text-500">{{ notification.createdAt | date:'short' }}</span>
+                        <div class="flex justify-content-between align-items-start gap-2">
+                           <div class="flex align-items-center flex-wrap gap-2">
+                              <span class="font-bold text-900" [ngClass]="{'text-700': notification.isRead}">
+                                 {{ notification.title }}
+                              </span>
+                              <span *ngIf="getNotificationSubmissionId(notification) as subId"
+                                 class="inline-flex align-items-center px-2 py-0 border-round text-xs font-bold bg-primary-50 text-primary border-1 border-primary-200"
+                                 style="line-height: 1.4;">
+                                 Solicitud #{{ subId }}
+                              </span>
+                           </div>
+                           <span class="text-xs text-500 white-space-nowrap">{{ notification.createdAt | date:'short' }}</span>
                         </div>
                         <p class="m-0 text-700 text-sm line-height-3" [ngClass]="{'text-500': notification.isRead}">
                            {{ notification.message }}

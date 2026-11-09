@@ -2,7 +2,7 @@ import { LucideIconComponent } from '../lucide-icon/lucide-icon.component';
 import { CachedImagePipe } from '../../pipes/cached-image.pipe';
 import { CoreDialogService } from '../../services/core-dialog.service';
 import { DialogService } from 'primeng/dynamicdialog';
-import { Component, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, effect, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -13,7 +13,7 @@ import { ButtonModule } from 'primeng/button';
 import { RippleModule } from 'primeng/ripple';
 import { AvatarModule } from 'primeng/avatar';
 import { StyleClassModule } from 'primeng/styleclass';
-import { PopoverModule } from 'primeng/popover';
+import { PopoverModule, Popover } from 'primeng/popover';
 import { BadgeModule } from 'primeng/badge';
 import { DialogModule } from 'primeng/dialog';
 import { SelectModule } from 'primeng/select';
@@ -89,6 +89,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
   canViewHealthBottom = computed(() => 
     this.authService.isAdmin() && this.authService.hasPermission(PERMISSIONS.HEALTH_CHECKER)
   );
+
+  @ViewChild('op') notificationPopover?: Popover;
 
   notifications = this.notificationService.notifications;
   unreadCount = this.notificationService.unreadCount;
@@ -249,9 +251,30 @@ export class LayoutComponent implements OnInit, OnDestroy {
     return user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
   }
 
-  handleNotificationClick(notification: Notification) {
+  getNotificationSubmissionId(notification: Notification): number | null {
+    if (notification?.submissionId && Number.isFinite(Number(notification.submissionId)) && Number(notification.submissionId) > 0) {
+      return Number(notification.submissionId);
+    }
+    const combined = `${notification?.title || ''} ${notification?.message || ''}`;
+    const match = combined.match(/#(\d+)/) || combined.match(/Solicitud\s+#?(\d+)/i);
+    if (match && match[1]) {
+      const parsed = parseInt(match[1], 10);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+    return null;
+  }
 
+  handleNotificationClick(notification: Notification) {
+    this.notificationPopover?.hide();
     this.markAsRead(notification);
+
+    const subId = this.getNotificationSubmissionId(notification);
+    if (subId) {
+      this.router.navigate(['/requests-beta'], {
+        queryParams: { openSubmissionId: subId, _t: Date.now() }
+      });
+      return;
+    }
 
     if (notification.title === 'Nueva Solicitud Asignada') {
       const match = notification.message.match(/Se te ha asignado la solicitud de producción: (.*)/);
@@ -284,9 +307,10 @@ export class LayoutComponent implements OnInit, OnDestroy {
       notification.title.includes('Revisión Requerida') ||
       notification.title.includes('Cierre de Solicitud') ||
       notification.title.includes('Rechazada') ||
-      notification.title.includes('Solicitud Bloqueada')
+      notification.title.includes('Solicitud Bloqueada') ||
+      notification.title.includes('Solicitud Regresada')
     ) {
-      this.router.navigate(['/requests-beta/inbox']);
+      this.router.navigate(['/requests-beta']);
     }
   }
 

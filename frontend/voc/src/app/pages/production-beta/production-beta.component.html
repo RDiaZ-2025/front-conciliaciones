@@ -96,8 +96,9 @@
                 <label class="text-xs font-semibold text-700">Formulario / Flujo:</label>
                 <p-multiSelect
                     [options]="availableFormOptions()"
-                    [(ngModel)]="filterSelectedForms"
-                    (onChange)="onFilterChange()"
+                    [ngModel]="filterSelectedForms() || []"
+                    (ngModelChange)="onFormsFilterChange($event)"
+                    (onClear)="onFormsFilterChange([])"
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Todos los formularios"
@@ -113,8 +114,9 @@
                 <label class="text-xs font-semibold text-700">Estado de Solicitud:</label>
                 <p-multiSelect
                     [options]="statusOptions"
-                    [(ngModel)]="filterStatus"
-                    (onChange)="onFilterChange()"
+                    [ngModel]="filterStatus() || []"
+                    (ngModelChange)="onStatusFilterChange($event)"
+                    (onClear)="onStatusFilterChange([])"
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Todos los estados"
@@ -146,7 +148,7 @@
                     <input
                         pInputText
                         [ngModel]="filterRequester()"
-                        (input)="filterRequester.set($any($event.target).value); onFilterChange()"
+                        (input)="onRequesterInput($any($event.target).value)"
                         placeholder="Nombre o correo..."
                         class="p-inputtext-sm w-full pr-5" />
                     <button
@@ -156,7 +158,7 @@
                         [rounded]="true"
                         severity="secondary"
                         class="w-1.5rem h-1.5rem p-0 flex align-items-center justify-content-center absolute right-0 mr-1"
-                        (click)="filterRequester.set(''); onFilterChange()">
+                        (click)="onRequesterInput('')">
                         <lucide-icon name="x" style="width: 0.8rem; height: 0.8rem;"></lucide-icon>
                     </button>
                 </div>

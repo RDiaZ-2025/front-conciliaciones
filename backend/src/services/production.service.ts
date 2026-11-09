@@ -326,8 +326,9 @@ export class ProductionService {
                                             await notificationService.createNotification(
                                                 assignedUserId,
                                                 'Nueva Solicitud Asignada a tu Equipo',
-                                                `Se ha asignado la tarea "${firstStage.name}" para ${notifTarget}.`,
-                                                'info'
+                                                `Se ha asignado la tarea "${firstStage.name}" para ${notifTarget} (Solicitud #${savedChildSub.id}).`,
+                                                'info',
+                                                savedChildSub.id
                                             );
                                         } catch (err) {
                                             console.error('Error sending notification to assigned user:', err);
@@ -605,8 +606,9 @@ export class ProductionService {
                     await notificationService.createNotification(
                         assigneeUserId,
                         'Nueva Tarea de Flujo Asignada',
-                        `Se te ha asignado la tarea: "${firstStage.name}"`,
-                        'info'
+                        `Se te ha asignado la tarea: "${firstStage.name}" (Solicitud #${savedSubmission.id})`,
+                        'info',
+                        savedSubmission.id
                     );
                 } catch (err) {
                     console.error('Error sending notification:', err);
@@ -615,6 +617,79 @@ export class ProductionService {
 
             return savedSubmission;
         });
+    }
+
+    private async buildSubmissionTopology(): Promise<{
+        parentById: Map<number, number | null>;
+        childrenByParent: Map<number, number[]>;
+        getRootId: (subId: number) => number;
+        getDescendantIds: (subId: number) => Set<number>;
+        getFullTreeIds: (subId: number) => Set<number>;
+        getFlowTreeIds: (subId: number) => Set<number>;
+    }> {
+        const subRepo = AppDataSource.getRepository(DynamicFormSubmission);
+        const rows = await subRepo.find({ select: ['id', 'parentSubmissionId'] });
+        const parentById = new Map<number, number | null>();
+        const childrenByParent = new Map<number, number[]>();
+
+        for (const row of rows) {
+            parentById.set(row.id, row.parentSubmissionId || null);
+            if (row.parentSubmissionId) {
+                const list = childrenByParent.get(row.parentSubmissionId) || [];
+                list.push(row.id);
+                childrenByParent.set(row.parentSubmissionId, list);
+            }
+        }
+
+        const getRootId = (subId: number): number => {
+            let curr = subId;
+            const visited = new Set<number>();
+            while (curr && !visited.has(curr)) {
+                visited.add(curr);
+                const pId = parentById.get(curr);
+                if (pId) {
+                    curr = pId;
+                } else {
+                    break;
+                }
+            }
+            return curr;
+        };
+
+        const getDescendantIds = (subId: number): Set<number> => {
+            const ids = new Set<number>([subId]);
+            const queue = [subId];
+            while (queue.length > 0) {
+                const pId = queue.shift()!;
+                const children = childrenByParent.get(pId) || [];
+                for (const cId of children) {
+                    if (!ids.has(cId)) {
+                        ids.add(cId);
+                        queue.push(cId);
+                    }
+                }
+            }
+            return ids;
+        };
+
+        const getFullTreeIds = (subId: number): Set<number> => {
+            const rootId = getRootId(subId);
+            return getDescendantIds(rootId);
+        };
+
+        const getFlowTreeIds = (subId: number): Set<number> => {
+            const ids = getDescendantIds(subId);
+            let curr: number | null | undefined = parentById.get(subId);
+            const visited = new Set<number>([subId]);
+            while (curr && !visited.has(curr)) {
+                visited.add(curr);
+                ids.add(curr);
+                curr = parentById.get(curr);
+            }
+            return ids;
+        };
+
+        return { parentById, childrenByParent, getRootId, getDescendantIds, getFullTreeIds, getFlowTreeIds };
     }
 
     async getSubmissions(userId: number, options?: {
@@ -632,6 +707,7 @@ export class ProductionService {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const stateRepo = AppDataSource.getRepository(DynamicSubmissionWorkflowState);
         const subRepo = AppDataSource.getRepository(DynamicFormSubmission);
+        const topology = await this.buildSubmissionTopology();
 
         let submissions: DynamicFormSubmission[] = [];
 
@@ -662,7 +738,7 @@ export class ProductionService {
 
             const allTreeIds = new Set<number>();
             for (const subId of directSubIds) {
-                const tree = await this.getSubmissionTreeIds(subId);
+                const tree = topology.getFullTreeIds(subId);
                 tree.forEach(id => allTreeIds.add(id));
             }
 
@@ -700,14 +776,8 @@ export class ProductionService {
                 if (ps.submissionId) {
                     directlyPendingSubIds.add(ps.submissionId);
                     let curr = subMap.get(ps.submissionId);
-                    if (!curr) {
-                        curr = (await subRepo.findOne({ where: { id: ps.submissionId } })) || undefined;
-                    }
                     while (curr && curr.parentSubmissionId) {
-                        let parent = subMap.get(curr.parentSubmissionId);
-                        if (!parent) {
-                            parent = (await subRepo.findOne({ where: { id: curr.parentSubmissionId } })) || undefined;
-                        }
+                        const parent = subMap.get(curr.parentSubmissionId);
                         if (parent && (parent.workflowId !== null || parent.currentStageId !== null)) {
                             directlyPendingSubIds.add(parent.id);
                             curr = parent;
@@ -735,10 +805,18 @@ export class ProductionService {
             return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
 
-        // 3. Aplicar Filtro de Formularios
+        // 3. Aplicar Filtro de Formularios (incluyendo formularios del árbol de la solicitud)
         if (options?.forms && options.forms.length > 0) {
             const formSet = new Set(options.forms.map(f => f.toLowerCase().trim()));
-            candidateSubmissions = candidateSubmissions.filter(s => s.form && formSet.has(s.form.name.toLowerCase().trim()));
+            candidateSubmissions = candidateSubmissions.filter(s => {
+                if (s.form?.name && formSet.has(s.form.name.toLowerCase().trim())) return true;
+                const treeIds = topology.getFlowTreeIds(s.id);
+                for (const tId of treeIds) {
+                    const tSub = subMap.get(tId);
+                    if (tSub?.form?.name && formSet.has(tSub.form.name.toLowerCase().trim())) return true;
+                }
+                return false;
+            });
         }
 
         // 4. Aplicar Filtro de Estado
@@ -747,6 +825,7 @@ export class ProductionService {
             candidateSubmissions = candidateSubmissions.filter(s => {
                 const subSt = (s.status || '').toLowerCase();
                 return statuses.some(st => {
+                    if (st === 'pending_me') return false;
                     if (st === 'completed') return subSt === 'completed' || subSt === 'approved';
                     if (st === 'in_progress') return subSt === 'in progress' || subSt === 'in_progress';
                     if (st === 'rejected') return subSt === 'rejected';
@@ -758,12 +837,14 @@ export class ProductionService {
             });
         }
 
-        // 5. Aplicar Filtro de Solicitante
+        // 5. Aplicar Filtro de Solicitante (incluyendo solicitante de la solicitud raíz padre)
         if (options?.requester && options.requester.trim()) {
             const reqQ = options.requester.toLowerCase().trim();
             candidateSubmissions = candidateSubmissions.filter(s => {
-                const name = (s.requesterUser?.name || '').toLowerCase();
-                const email = (s.requesterUser?.email || '').toLowerCase();
+                const rootParent = s.parentSubmissionId ? (subMap.get(topology.getRootId(s.id)) || subMap.get(s.parentSubmissionId)) : null;
+                const effectiveReq = s.requesterUser || rootParent?.requesterUser;
+                const name = (effectiveReq?.name || '').toLowerCase();
+                const email = (effectiveReq?.email || '').toLowerCase();
                 return name.includes(reqQ) || email.includes(reqQ);
             });
         }
@@ -784,34 +865,53 @@ export class ProductionService {
             }
         }
 
-        // 7. Aplicar Búsqueda Global (ID, consecutivo, nombre formulario, etapa, solicitante, y campos de tarjeta)
+        // 7. Aplicar Búsqueda Global (ID, consecutivo, nombre formulario, etapa, solicitante, responsable y campos del árbol de la solicitud)
         if (options?.search && options.search.trim()) {
             const cleanQ = options.search.toLowerCase().trim();
             const isHashId = cleanQ.startsWith('#');
             const searchNum = isHashId ? cleanQ.replace('#', '').trim() : cleanQ;
 
-            const candidateIds = candidateSubmissions.map(s => s.id);
-            let subIdsWithMatchingValues = new Set<number>();
-            if (candidateIds.length > 0) {
+            const allCandidateTreeIds = new Set<number>();
+            for (const s of candidateSubmissions) {
+                topology.getFlowTreeIds(s.id).forEach(id => allCandidateTreeIds.add(id));
+            }
+            const candidateTreeIdArray = Array.from(allCandidateTreeIds);
+
+            const subIdsWithMatchingValues = new Set<number>();
+            const subIdsWithMatchingStates = new Set<number>();
+            if (candidateTreeIdArray.length > 0) {
                 const matchingVals = await AppDataSource.getRepository(DynamicFormFieldValue)
                     .createQueryBuilder('val')
                     .where('LOWER(val.value) LIKE :q', { q: `%${cleanQ}%` })
-                    .andWhere('val.submissionId IN (:...ids)', { ids: candidateIds })
+                    .andWhere('val.submissionId IN (:...ids)', { ids: candidateTreeIdArray })
                     .select('val.submissionId', 'submissionId')
                     .getRawMany();
-                matchingVals.forEach(m => subIdsWithMatchingValues.add(m.submissionId));
+                matchingVals.forEach(m => subIdsWithMatchingValues.add(Number(m.submissionId)));
+
+                const matchingStates = await stateRepo
+                    .createQueryBuilder('st')
+                    .leftJoin('st.stage', 'stage')
+                    .leftJoin('st.assignedUser', 'assignedUser')
+                    .where('st.submissionId IN (:...ids)', { ids: candidateTreeIdArray })
+                    .andWhere('(LOWER(stage.name) LIKE :q OR LOWER(assignedUser.name) LIKE :q OR LOWER(assignedUser.email) LIKE :q)', { q: `%${cleanQ}%` })
+                    .select('st.submissionId', 'submissionId')
+                    .getRawMany();
+                matchingStates.forEach(m => subIdsWithMatchingStates.add(Number(m.submissionId)));
             }
 
             candidateSubmissions = candidateSubmissions.filter(s => {
-                const idStr = String(s.id);
-                if (idStr === searchNum || idStr.includes(searchNum)) return true;
-                if (s.parentSubmissionId && (String(s.parentSubmissionId) === searchNum || String(s.parentSubmissionId).includes(searchNum))) return true;
-                if (s.form?.name && s.form.name.toLowerCase().includes(cleanQ)) return true;
+                const treeIds = topology.getFlowTreeIds(s.id);
+                for (const tId of treeIds) {
+                    const tIdStr = String(tId);
+                    if (isHashId ? tIdStr === searchNum : tIdStr.includes(searchNum)) return true;
+                    if (subIdsWithMatchingValues.has(tId) || subIdsWithMatchingStates.has(tId)) return true;
+                    const tSub = subMap.get(tId);
+                    if (tSub?.form?.name && tSub.form.name.toLowerCase().includes(cleanQ)) return true;
+                    if (tSub?.requesterUser?.name && tSub.requesterUser.name.toLowerCase().includes(cleanQ)) return true;
+                    if (tSub?.requesterUser?.email && tSub.requesterUser.email.toLowerCase().includes(cleanQ)) return true;
+                }
                 if (s.consecutive && s.consecutive.toLowerCase().includes(cleanQ)) return true;
-                if (s.requesterUser?.name && s.requesterUser.name.toLowerCase().includes(cleanQ)) return true;
-                if (s.requesterUser?.email && s.requesterUser.email.toLowerCase().includes(cleanQ)) return true;
                 if (s.currentStage?.name && s.currentStage.name.toLowerCase().includes(cleanQ)) return true;
-                if (subIdsWithMatchingValues.has(s.id)) return true;
                 return false;
             });
         }
@@ -823,26 +923,9 @@ export class ProductionService {
             ? candidateSubmissions.slice((page - 1) * limit, page * limit)
             : candidateSubmissions;
 
-        const getDescendantIds = (rootId: number): Set<number> => {
-            const ids = new Set<number>([rootId]);
-            let added = true;
-            while (added) {
-                added = false;
-                for (const s of submissions) {
-                    if (s.parentSubmissionId && ids.has(s.parentSubmissionId) && !ids.has(s.id)) {
-                        ids.add(s.id);
-                        added = true;
-                    }
-                }
-            }
-            return ids;
-        };
-
         const pagedTreeIds = new Set<number>();
         for (const sub of pagedSubmissions) {
-            const tree = getDescendantIds(sub.id);
-            tree.forEach(id => pagedTreeIds.add(id));
-            if (sub.parentSubmissionId) pagedTreeIds.add(sub.parentSubmissionId);
+            topology.getFlowTreeIds(sub.id).forEach(id => pagedTreeIds.add(id));
         }
 
         const allStatesForPaged = pagedTreeIds.size > 0 ? await stateRepo.find({
@@ -861,15 +944,12 @@ export class ProductionService {
         }) : [];
 
         const results = pagedSubmissions.map((sub) => {
-            const treeSubIds = getDescendantIds(sub.id);
-            if (sub.parentSubmissionId) {
-                treeSubIds.add(sub.parentSubmissionId);
-            }
+            const treeSubIds = topology.getFlowTreeIds(sub.id);
             const activeStatesForThisSub = allActiveStates.filter(s => treeSubIds.has(s.submissionId));
             const statesForThisSubTree = allStatesForPaged.filter(s => treeSubIds.has(s.submissionId));
             const returnableStages = this.getReturnableStages(sub, statesForThisSubTree);
 
-            const rootParent = sub.parentSubmissionId ? subMap.get(sub.parentSubmissionId) : null;
+            const rootParent = sub.parentSubmissionId ? (subMap.get(topology.getRootId(sub.id)) || subMap.get(sub.parentSubmissionId)) : null;
             const effectiveRequesterUserId = sub.requesterUserId || rootParent?.requesterUserId || null;
             const effectiveRequesterUser = (sub as any).requesterUser || (rootParent as any)?.requesterUser || null;
 
@@ -972,33 +1052,8 @@ export class ProductionService {
     }
 
     async getSubmissionTreeIds(submissionId: number): Promise<number[]> {
-        const subRepo = AppDataSource.getRepository(DynamicFormSubmission);
-        let rootId = submissionId;
-        const visitedUp = new Set<number>();
-        while (rootId && !visitedUp.has(rootId)) {
-            visitedUp.add(rootId);
-            const curr: any = await subRepo.findOne({ where: { id: rootId } });
-            if (curr && curr.parentSubmissionId) {
-                rootId = curr.parentSubmissionId;
-            } else {
-                break;
-            }
-        }
-
-        const allTreeIds = new Set<number>([rootId]);
-        const queue = [rootId];
-        while (queue.length > 0) {
-            const pId = queue.shift()!;
-            const children = await subRepo.find({ where: { parentSubmissionId: pId } });
-            for (const child of children) {
-                if (!allTreeIds.has(child.id)) {
-                    allTreeIds.add(child.id);
-                    queue.push(child.id);
-                }
-            }
-        }
-
-        return Array.from(allTreeIds);
+        const topology = await this.buildSubmissionTopology();
+        return Array.from(topology.getFullTreeIds(submissionId));
     }
 
     async getAncestorSubmissions(submissionId: number): Promise<DynamicFormSubmission[]> {
@@ -1403,6 +1458,50 @@ export class ProductionService {
         });
     }
 
+    private async loadStatesWithFormFields(treeIds: number[]): Promise<DynamicSubmissionWorkflowState[]> {
+        if (treeIds.length === 0) return [];
+        const stateRepo = AppDataSource.getRepository(DynamicSubmissionWorkflowState);
+        const states = await stateRepo.find({
+            where: { submissionId: In(treeIds) },
+            relations: ['stage', 'stage.workflow', 'actionedByUser', 'assignedUser', 'stage.formToFill', 'customFormToFill', 'submission', 'submission.form'],
+            order: { id: 'ASC' }
+        });
+
+        const formIds = new Set<number>();
+        for (const st of states) {
+            if (st.stage?.formToFill?.id) formIds.add(st.stage.formToFill.id);
+            if (st.customFormToFill?.id) formIds.add(st.customFormToFill.id);
+            if ((st as any).submission?.form?.id) formIds.add((st as any).submission.form.id);
+        }
+
+        if (formIds.size > 0) {
+            const fieldRepo = AppDataSource.getRepository(DynamicFormField);
+            const allFields = await fieldRepo.find({
+                where: { formId: In(Array.from(formIds)) },
+                order: { displayOrder: 'ASC' }
+            });
+            const fieldsByFormId = new Map<number, DynamicFormField[]>();
+            for (const f of allFields) {
+                const list = fieldsByFormId.get(f.formId) || [];
+                list.push(f);
+                fieldsByFormId.set(f.formId, list);
+            }
+            for (const st of states) {
+                if (st.stage?.formToFill?.id) {
+                    st.stage.formToFill.fields = fieldsByFormId.get(st.stage.formToFill.id) || [];
+                }
+                if (st.customFormToFill?.id) {
+                    st.customFormToFill.fields = fieldsByFormId.get(st.customFormToFill.id) || [];
+                }
+                if ((st as any).submission?.form?.id) {
+                    (st as any).submission.form.fields = fieldsByFormId.get((st as any).submission.form.id) || [];
+                }
+            }
+        }
+
+        return states;
+    }
+
     async getSubmissionDetails(submissionId: number) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const subRepo = AppDataSource.getRepository(DynamicFormSubmission);
@@ -1417,11 +1516,7 @@ export class ProductionService {
 
         const treeIds = await this.getSubmissionTreeIds(submissionId);
 
-        const allStatesToInclude = await stateRepo.find({
-            where: { submissionId: In(treeIds) },
-            relations: ['stage', 'stage.workflow', 'actionedByUser', 'assignedUser', 'stage.formToFill', 'stage.formToFill.fields', 'customFormToFill', 'customFormToFill.fields', 'submission', 'submission.form', 'submission.form.fields'],
-            order: { id: 'ASC' }
-        });
+        const allStatesToInclude = await this.loadStatesWithFormFields(treeIds);
 
         const allValuesToInclude = await valRepo.find({
             where: { submissionId: In(treeIds) },
@@ -1913,8 +2008,9 @@ export class ProductionService {
                     await notificationService.createNotification(
                         pState.assignedUserId,
                         'Solicitud Bloqueada',
-                        `La solicitud de "${subToBlock.form?.name || 'Formulario'}" ha sido bloqueada porque el flujo de trabajo original fue modificado o eliminado. Debe iniciar una solicitud nueva.`,
-                        'warning'
+                        `La solicitud #${subToBlock.id} de "${subToBlock.form?.name || 'Formulario'}" ha sido bloqueada porque el flujo de trabajo original fue modificado o eliminado. Debe iniciar una solicitud nueva.`,
+                        'warning',
+                        subToBlock.id
                     );
                 } catch (e) {}
             }
@@ -1923,8 +2019,9 @@ export class ProductionService {
                 await notificationService.createNotification(
                     subToBlock.requesterUserId,
                     'Solicitud Bloqueada',
-                    `Tu solicitud de "${subToBlock.form?.name || 'Formulario'}" ha sido bloqueada porque el flujo de trabajo original fue modificado o eliminado. Debe iniciar una solicitud nueva.`,
-                    'warning'
+                    `Tu solicitud #${subToBlock.id} de "${subToBlock.form?.name || 'Formulario'}" ha sido bloqueada porque el flujo de trabajo original fue modificado o eliminado. Debe iniciar una solicitud nueva.`,
+                    'warning',
+                    subToBlock.id
                 );
             } catch (e) {}
         }
@@ -2369,6 +2466,8 @@ export class ProductionService {
     }) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const stateRepo = AppDataSource.getRepository(DynamicSubmissionWorkflowState);
+        const subRepo = AppDataSource.getRepository(DynamicFormSubmission);
+        const topology = await this.buildSubmissionTopology();
 
         let whereCondition: any = { status: 'Pending' };
         if (!options?.allUsers) {
@@ -2383,10 +2482,36 @@ export class ProductionService {
 
         states = states.filter(s => s.submission && (s.submission.status === 'In Progress' || s.submission.status === 'Rejected'));
 
-        // 1. Filtro de Formularios
+        // Preload ancestor/tree submissions for accurate filtering across parent/child requests
+        const stateFlowIds = new Set<number>();
+        for (const s of states) {
+            if (s.submissionId) {
+                topology.getFlowTreeIds(s.submissionId).forEach(id => stateFlowIds.add(id));
+            }
+        }
+        const treeSubs = stateFlowIds.size > 0
+            ? await subRepo.find({
+                  where: { id: In(Array.from(stateFlowIds)) },
+                  relations: ['form', 'requesterUser']
+              })
+            : [];
+        const treeSubMap = new Map<number, DynamicFormSubmission>();
+        treeSubs.forEach(ts => treeSubMap.set(ts.id, ts));
+
+        // 1. Filtro de Formularios (incluyendo formularios del árbol de la solicitud)
         if (options?.forms && options.forms.length > 0) {
             const formSet = new Set(options.forms.map(f => f.toLowerCase().trim()));
-            states = states.filter(s => s.submission?.form && formSet.has(s.submission.form.name.toLowerCase().trim()));
+            states = states.filter(s => {
+                if (s.submission?.form?.name && formSet.has(s.submission.form.name.toLowerCase().trim())) return true;
+                if (s.stage?.formToFill?.name && formSet.has(s.stage.formToFill.name.toLowerCase().trim())) return true;
+                if (s.customFormToFill?.name && formSet.has(s.customFormToFill.name.toLowerCase().trim())) return true;
+                const treeIds = topology.getFlowTreeIds(s.submissionId);
+                for (const tId of treeIds) {
+                    const tSub = treeSubMap.get(tId);
+                    if (tSub?.form?.name && formSet.has(tSub.form.name.toLowerCase().trim())) return true;
+                }
+                return false;
+            });
         }
 
         // 2. Filtro de Estado
@@ -2395,20 +2520,24 @@ export class ProductionService {
             states = states.filter(s => {
                 const subSt = (s.submission?.status || '').toLowerCase();
                 return statuses.some(st => {
-                    if (st === 'completed') return false;
+                    if (st === 'pending_me') return true;
+                    if (st === 'completed' || st === 'deleted' || st === 'blocked') return false;
                     if (st === 'in_progress') return subSt === 'in progress' || subSt === 'in_progress';
                     if (st === 'rejected') return subSt === 'rejected';
-                    return true;
+                    return subSt === st;
                 });
             });
         }
 
-        // 3. Filtro de Solicitante
+        // 3. Filtro de Solicitante (incluyendo solicitante de la solicitud raíz padre)
         if (options?.requester && options.requester.trim()) {
             const reqQ = options.requester.toLowerCase().trim();
             states = states.filter(s => {
-                const name = (s.submission?.requesterUser?.name || '').toLowerCase();
-                const email = (s.submission?.requesterUser?.email || '').toLowerCase();
+                const rootId = topology.getRootId(s.submissionId);
+                const rootSub = treeSubMap.get(rootId);
+                const effectiveReq = s.submission?.requesterUser || rootSub?.requesterUser;
+                const name = (effectiveReq?.name || '').toLowerCase();
+                const email = (effectiveReq?.email || '').toLowerCase();
                 return name.includes(reqQ) || email.includes(reqQ);
             });
         }
@@ -2429,33 +2558,46 @@ export class ProductionService {
             }
         }
 
-        // 5. Búsqueda Global (ID, consecutivo, nombre formulario, etapa, solicitante, y campos de formulario)
+        // 5. Búsqueda Global (ID, consecutivo, nombre formulario, etapa, solicitante, responsable y campos del árbol de la solicitud)
         if (options?.search && options.search.trim()) {
             const cleanQ = options.search.toLowerCase().trim();
             const isHashId = cleanQ.startsWith('#');
             const searchNum = isHashId ? cleanQ.replace('#', '').trim() : cleanQ;
 
-            const subIds = states.map(s => s.submissionId).filter(Boolean);
-            let subIdsWithMatchingValues = new Set<number>();
-            if (subIds.length > 0) {
+            const allTreeIdsForStates = new Set<number>();
+            for (const s of states) {
+                if (s.submissionId) {
+                    topology.getFlowTreeIds(s.submissionId).forEach(id => allTreeIdsForStates.add(id));
+                }
+            }
+            const treeIdArray = Array.from(allTreeIdsForStates);
+
+            const subIdsWithMatchingValues = new Set<number>();
+            if (treeIdArray.length > 0) {
                 const matchingVals = await AppDataSource.getRepository(DynamicFormFieldValue)
                     .createQueryBuilder('val')
                     .where('LOWER(val.value) LIKE :q', { q: `%${cleanQ}%` })
-                    .andWhere('val.submissionId IN (:...ids)', { ids: subIds })
+                    .andWhere('val.submissionId IN (:...ids)', { ids: treeIdArray })
                     .select('val.submissionId', 'submissionId')
                     .getRawMany();
-                matchingVals.forEach(m => subIdsWithMatchingValues.add(m.submissionId));
+                matchingVals.forEach(m => subIdsWithMatchingValues.add(Number(m.submissionId)));
             }
 
             states = states.filter(s => {
-                const idStr = String(s.submissionId);
-                if (idStr === searchNum || idStr.includes(searchNum)) return true;
-                if (s.submission?.form?.name && s.submission.form.name.toLowerCase().includes(cleanQ)) return true;
+                const treeIds = topology.getFlowTreeIds(s.submissionId);
+                for (const tId of treeIds) {
+                    const tIdStr = String(tId);
+                    if (isHashId ? tIdStr === searchNum : tIdStr.includes(searchNum)) return true;
+                    if (subIdsWithMatchingValues.has(tId)) return true;
+                    const tSub = treeSubMap.get(tId);
+                    if (tSub?.form?.name && tSub.form.name.toLowerCase().includes(cleanQ)) return true;
+                    if (tSub?.requesterUser?.name && tSub.requesterUser.name.toLowerCase().includes(cleanQ)) return true;
+                    if (tSub?.requesterUser?.email && tSub.requesterUser.email.toLowerCase().includes(cleanQ)) return true;
+                }
                 if (s.submission?.consecutive && s.submission.consecutive.toLowerCase().includes(cleanQ)) return true;
-                if (s.submission?.requesterUser?.name && s.submission.requesterUser.name.toLowerCase().includes(cleanQ)) return true;
-                if (s.submission?.requesterUser?.email && s.submission.requesterUser.email.toLowerCase().includes(cleanQ)) return true;
                 if (s.stage?.name && s.stage.name.toLowerCase().includes(cleanQ)) return true;
-                if (subIdsWithMatchingValues.has(s.submissionId)) return true;
+                if (s.assignedUser?.name && s.assignedUser.name.toLowerCase().includes(cleanQ)) return true;
+                if (s.assignedUser?.email && s.assignedUser.email.toLowerCase().includes(cleanQ)) return true;
                 return false;
             });
         }
@@ -2472,17 +2614,38 @@ export class ProductionService {
         const allSubteamUsers = await AppDataSource.getRepository(SubteamUser).find({ relations: ['user'] });
 
         const valRepo = AppDataSource.getRepository(DynamicFormFieldValue);
+        const pagedFullTreeIdsSet = new Set<number>();
+        for (const st of pagedStates) {
+            topology.getFullTreeIds(st.submissionId).forEach(id => pagedFullTreeIdsSet.add(id));
+        }
+        const pagedFullTreeIds = Array.from(pagedFullTreeIdsSet);
+
+        const [allStatesForPagedTrees, allValuesForPagedTrees, allCommentsForPagedTrees] = pagedFullTreeIds.length > 0
+            ? await Promise.all([
+                  this.loadStatesWithFormFields(pagedFullTreeIds),
+                  valRepo.find({
+                      where: { submissionId: In(pagedFullTreeIds) },
+                      relations: ['field', 'field.form'],
+                      order: { id: 'ASC' }
+                  }),
+                  this.getSubmissionComments(pagedFullTreeIds)
+              ])
+            : [[], [], []];
+
         const results = [];
         for (const state of pagedStates) {
-            const values = await valRepo.find({
-                where: { submissionId: state.submissionId },
-                relations: ['field', 'field.form']
-            });
+            const treeIdsSet = topology.getFullTreeIds(state.submissionId);
+            const treeIds = Array.from(treeIdsSet);
+            const allStatesToInclude = allStatesForPagedTrees.filter(s => treeIdsSet.has(s.submissionId));
+            const allValuesToInclude = allValuesForPagedTrees.filter(v => treeIdsSet.has(v.submissionId));
+            const values = allValuesToInclude.filter(v => v.submissionId === state.submissionId);
 
-            const prevState = await stateRepo.findOne({
-                where: { submissionId: state.submissionId, status: 'Rejected' },
-                order: { updatedAt: 'DESC' }
-            });
+            const rejectedStatesForSub = allStatesToInclude.filter(
+                s => s.submissionId === state.submissionId && s.status === 'Rejected'
+            );
+            const prevState = rejectedStatesForSub.length > 0
+                ? rejectedStatesForSub.reduce((prev, curr) => (new Date(curr.updatedAt).getTime() >= new Date(prev.updatedAt).getTime() ? curr : prev))
+                : null;
             const rejectionNotes = prevState ? prevState.notes : null;
 
             const wfId = state.submission.workflowId || state.stage?.workflowId || (state.submission.form ? state.submission.form.workflowId : null);
@@ -2500,18 +2663,6 @@ export class ProductionService {
             const nextStage = await nextStageQuery.orderBy("stage.stepOrder", "ASC").getOne();
             const isFinalStage = !nextStage;
 
-            const treeIds = await this.getSubmissionTreeIds(state.submissionId);
-            const allStatesToInclude = await stateRepo.find({
-                where: { submissionId: In(treeIds) },
-                relations: ['stage', 'stage.workflow', 'actionedByUser', 'assignedUser', 'stage.formToFill', 'stage.formToFill.fields', 'customFormToFill', 'customFormToFill.fields', 'submission', 'submission.form', 'submission.form.fields'],
-                order: { id: 'ASC' }
-            });
-            const allValuesToInclude = await valRepo.find({
-                where: { submissionId: In(treeIds) },
-                relations: ['field', 'field.form'],
-                order: { id: 'ASC' }
-            });
-
             const submittedValuesRaw: Record<string, string> = {};
             for (const v of allValuesToInclude) {
                 if (v && v.field) {
@@ -2521,7 +2672,20 @@ export class ProductionService {
                 }
             }
 
-            const parentSubmissions = await this.getAncestorSubmissions(state.submissionId);
+            const parentSubmissions: DynamicFormSubmission[] = [];
+            let currPId = topology.parentById.get(state.submissionId) || null;
+            const visitedAnc = new Set<number>([state.submissionId]);
+            while (currPId && !visitedAnc.has(currPId)) {
+                visitedAnc.add(currPId);
+                const pSub = treeSubMap.get(currPId);
+                if (pSub) {
+                    parentSubmissions.unshift(pSub);
+                    currPId = topology.parentById.get(currPId) || null;
+                } else {
+                    break;
+                }
+            }
+
             const isCorrection = (state.submission.status === 'Rejected');
             const rootRequesterId = parentSubmissions.length > 0 ? parentSubmissions[0].requesterUserId : state.submission.requesterUserId;
             const isRequesterUser = (state.assignedUserId === state.submission.requesterUserId || state.assignedUserId === rootRequesterId);
@@ -2530,7 +2694,7 @@ export class ProductionService {
             );
             const isAtStage1 = !state.stage || state.stage.stepOrder === 1;
             const isInitialRequestCorrection = isCorrection && isRequesterUser && isAtStage1 && !hasPriorApprovedStageInSub && !state.customFormIdToFill;
-            const allComments = await this.getSubmissionComments(treeIds);
+            const allComments = allCommentsForPagedTrees.filter(c => treeIdsSet.has(c.submissionId));
             const rejectionAttachments = prevState
                 ? allComments
                       .filter(c => c.stateId === prevState.id && Array.isArray(c.attachments) && c.attachments.length > 0)
@@ -2546,14 +2710,10 @@ export class ProductionService {
             );
 
             const initialParentSubmissions = parentSubmissions.filter(p => p.form && (p.form.isInitialForm || p.form.isEntryForm || !p.parentSubmissionId));
-            const parentSubIds = initialParentSubmissions.map(p => p.id);
+            const parentSubIds = new Set(initialParentSubmissions.map(p => p.id));
             const parentVals: any[] = [];
-            if (parentSubIds.length > 0) {
-                const pVals = await valRepo.find({
-                    where: { submissionId: In(parentSubIds), workflowStateId: IsNull() },
-                    relations: ['field', 'field.form'],
-                    order: { id: 'ASC' }
-                });
+            if (parentSubIds.size > 0) {
+                const pVals = allValuesToInclude.filter(v => parentSubIds.has(v.submissionId) && !v.workflowStateId);
                 const seenParentFieldIds = new Set<number>();
                 for (const v of pVals) {
                     if (v && v.field && (v.field.form?.isInitialForm || v.field.form?.isEntryForm) && !seenParentFieldIds.has(v.field.id)) {
@@ -3234,8 +3394,9 @@ export class ProductionService {
                 await notificationService.createNotification(
                     mapping.userId,
                     customNotification?.title || 'Nueva Tarea de Flujo Asignada',
-                    customNotification?.message || `Se te ha asignado la tarea: "${targetStage.name}" para la solicitud dinámica de ${submission.form?.name || 'Producción'}`,
-                    customNotification?.type || 'info'
+                    customNotification?.message || `Se te ha asignado la tarea: "${targetStage.name}" para la solicitud #${submission.id} (${submission.form?.name || 'Producción'})`,
+                    customNotification?.type || 'info',
+                    submission.id
                 );
             } catch (err) {
                 console.error('Error sending notification:', err);
@@ -3300,8 +3461,9 @@ export class ProductionService {
                     await notificationService.createNotification(
                         submission.requesterUserId,
                         'Cierre de Solicitud Requerido',
-                        `Todas las áreas han finalizado. Por favor diligencia el formulario de cierre para "${formEntity?.name || 'Solicitud'}".`,
-                        'info'
+                        `Todas las áreas han finalizado. Por favor diligencia el formulario de cierre para la solicitud #${submission.id} ("${formEntity?.name || 'Solicitud'}").`,
+                        'info',
+                        submission.id
                     );
                 } catch (err) {}
                 return;
@@ -3316,8 +3478,9 @@ export class ProductionService {
                 await notificationService.createNotification(
                     submission.requesterUserId,
                     'Solicitud Completada',
-                    `Tu solicitud de "${formEntity?.name || 'Producción'}" ha sido completada y aprobada.`,
-                    'success'
+                    `Tu solicitud #${submission.id} de "${formEntity?.name || 'Producción'}" ha sido completada y aprobada.`,
+                    'success',
+                    submission.id
                 );
             } catch (err) {}
             return;
@@ -3472,13 +3635,14 @@ export class ProductionService {
         if (requesterId && requesterId !== userId) {
             try {
                 const notifDetail = text
-                    ? `${author?.name || 'Un aprobador'} comentó en la etapa "${state.stage?.name || ''}" de la solicitud de "${state.submission.form?.name || 'Solicitud'}": "${text}"`
-                    : `${author?.name || 'Un aprobador'} adjuntó ${cleanAttachments.length} archivo(s) en la etapa "${state.stage?.name || ''}" de la solicitud de "${state.submission.form?.name || 'Solicitud'}".`;
+                    ? `${author?.name || 'Un aprobador'} comentó en la etapa "${state.stage?.name || ''}" de la solicitud #${state.submission.id} ("${state.submission.form?.name || 'Solicitud'}"): "${text}"`
+                    : `${author?.name || 'Un aprobador'} adjuntó ${cleanAttachments.length} archivo(s) en la etapa "${state.stage?.name || ''}" de la solicitud #${state.submission.id} ("${state.submission.form?.name || 'Solicitud'}").`;
                 await notificationService.createNotification(
                     requesterId,
                     'Nuevo comentario en tu solicitud',
                     notifDetail,
-                    'info'
+                    'info',
+                    state.submission.id
                 );
             } catch (err) {
                 console.error('Error sending notification:', err);
@@ -3741,8 +3905,9 @@ export class ProductionService {
                                         await notificationService.createNotification(
                                             targetUserId,
                                             'Nueva Tarea de Flujo Asignada',
-                                            `Se te ha asignado una tarea para la solicitud de ${submission.form.name}`,
-                                            'info'
+                                            `Se te ha asignado una tarea para la solicitud #${savedChildSub.id} (${submission.form.name})`,
+                                            'info',
+                                            savedChildSub.id
                                         );
                                     } catch(e) {}
                                 }
@@ -3763,8 +3928,9 @@ export class ProductionService {
                                 await notificationService.createNotification(
                                     recipientUserId,
                                     'Nueva Tarea de Flujo Asignada',
-                                    `Se te ha asignado una tarea en la etapa: "${stage.name}" para la solicitud de ${submission.form.name}`,
-                                    'info'
+                                    `Se te ha asignado una tarea en la etapa: "${stage.name}" para la solicitud #${submission.id} (${submission.form.name})`,
+                                    'info',
+                                    submission.id
                                 );
                             } catch (err) {
                                 console.error('Error sending notification:', err);
@@ -3785,8 +3951,9 @@ export class ProductionService {
                                 await notificationService.createNotification(
                                     recipientUserId,
                                     'Nueva Tarea de Flujo Asignada',
-                                    `Se te ha asignado una tarea en la etapa: "${stage.name}" para la solicitud de ${submission.form.name}`,
-                                    'info'
+                                    `Se te ha asignado una tarea en la etapa: "${stage.name}" para la solicitud #${submission.id} (${submission.form.name})`,
+                                    'info',
+                                    submission.id
                                 );
                             } catch (err) {
                                 console.error('Error sending notification:', err);
@@ -3837,8 +4004,9 @@ export class ProductionService {
                             await notificationService.createNotification(
                                 initialOwnerId,
                                 'Respuestas y Sub-Flujos Completados - Revisión Requerida',
-                                `Todos los sub-flujos y destinatarios han respondido en la etapa "${stage.name}". Por favor revisa y aprueba para continuar el flujo.`,
-                                'info'
+                                `Todos los sub-flujos y destinatarios han respondido en la etapa "${stage.name}" de la solicitud #${submission.id}. Por favor revisa y aprueba para continuar el flujo.`,
+                                'info',
+                                submission.id
                             );
                         } catch (err) {
                             console.error('Error sending notification:', err);
@@ -4000,8 +4168,9 @@ export class ProductionService {
                     await notificationService.createNotification(
                         targetUserId,
                         'Solicitud Rechazada / Devuelta',
-                        `La solicitud de "${currentState.submission.form.name}" ha sido devuelta. Comentarios: "${notes}"`,
-                        'warning'
+                        `La solicitud #${submission.id} de "${currentState.submission.form.name}" ha sido devuelta. Comentarios: "${notes}"`,
+                        'warning',
+                        submission.id
                     );
                 } catch (err) {
                     console.error('Error sending notification:', err);
@@ -4197,7 +4366,7 @@ export class ProductionService {
                 preferredAssigneeUserId,
                 {
                     title: 'Solicitud Regresada a tu Etapa',
-                    message: `${requesterName} regresó la solicitud "${formLabel}" a la etapa "${targetStage.name}". Motivo: "${cleanNotes}"`,
+                    message: `${requesterName} regresó la solicitud #${targetSub.id} ("${formLabel}") a la etapa "${targetStage.name}". Motivo: "${cleanNotes}"`,
                     type: 'warning'
                 }
             );
