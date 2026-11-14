@@ -528,15 +528,13 @@ export class ProductionService {
                     assigneeUserId = requesterUserId;
                 } else if (firstStage.assigneeType === 'requester_boss') {
                     const requester = await userRepo.findOne({ where: { id: requesterUserId } });
-                    assigneeUserId = requester?.bossId || firstStage.assigneeUserId || 1;
+                    assigneeUserId = requester?.bossId || null;
                 } else if (firstStage.assigneeType === 'previous_stage_actioner') {
                     assigneeUserId = requesterUserId;
                 } else if (firstStage.assigneeType === 'previous_stage_team_random') {
                     const requester = await userRepo.findOne({ where: { id: requesterUserId } });
                     if (requester?.teamId) {
                         assigneeUserId = await this.resolveTeamUser(AppDataSource.manager, requester.teamId, 'random', !!firstStage.excludeTeamLeader, requesterUserId);
-                    } else {
-                        assigneeUserId = requesterUserId;
                     }
                 } else if (firstStage.assigneeType === 'team_leader' && firstStage.assigneeTeamId) {
                     assigneeUserId = await this.resolveTeamUser(AppDataSource.manager, firstStage.assigneeTeamId, 'leader');
@@ -563,15 +561,7 @@ export class ProductionService {
                         const randomIndex = Math.floor(Math.random() * candidates.length);
                         assigneeUserId = candidates[randomIndex].id;
                     } else {
-                        const subteam = await AppDataSource.manager.getRepository(Subteam).findOne({
-                            where: { id: firstStage.assigneeSubteamId },
-                            relations: ['leader']
-                        });
-                        if (subteam?.leader && (subteam.leader.status === 1 || subteam.leader.status === undefined)) {
-                            assigneeUserId = subteam.leader.id;
-                        } else if (firstStage.assigneeTeamId) {
-                            assigneeUserId = await this.resolveTeamUser(AppDataSource.manager, firstStage.assigneeTeamId, 'random', !!firstStage.excludeTeamLeader, requesterUserId);
-                        }
+                        throw new Error(`El subequipo asignado a la etapa "${firstStage.name}" no tiene integrantes activos disponibles.`);
                     }
                 } else if (firstStage.assigneeType === 'team' && firstStage.assigneeTeamId) {
 
@@ -588,11 +578,13 @@ export class ProductionService {
                         workloads.sort((a, b) => a.count - b.count);
                         assigneeUserId = workloads[0].userId;
                     } else {
-                        assigneeUserId = firstStage.assigneeUserId || 1;
+                        throw new Error(`El equipo asignado a la etapa "${firstStage.name}" no tiene integrantes activos disponibles.`);
                     }
                 }
 
-                if (!assigneeUserId) assigneeUserId = 1;
+                if (!assigneeUserId) {
+                    throw new Error(`No se pudo determinar el usuario responsable para la etapa "${firstStage.name}" (tipo de asignación: ${firstStage.assigneeType}).`);
+                }
 
                 const state = stateRepo.create({
                     submissionId: savedSubmission.id,
@@ -3144,7 +3136,10 @@ export class ProductionService {
 
         if (opt.type === 'requester_boss') {
             const requester = await userRepo.findOne({ where: { id: submission.requesterUserId } });
-            return requester?.bossId || submission.requesterUserId;
+            if (!requester?.bossId) {
+                throw new Error('El solicitante no tiene un jefe inmediato configurado.');
+            }
+            return requester.bossId;
         }
 
         if (opt.type === 'previous_stage_actioner') {
@@ -3191,15 +3186,7 @@ export class ProductionService {
                 const randomIndex = Math.floor(Math.random() * candidates.length);
                 return candidates[randomIndex].id;
             } else {
-                const subteam = await manager.getRepository(Subteam).findOne({
-                    where: { id: Number(opt.subteamId) },
-                    relations: ['leader']
-                });
-                if (subteam?.leader && (subteam.leader.status === 1 || subteam.leader.status === undefined)) {
-                    return subteam.leader.id;
-                } else if (opt.teamId) {
-                    return await this.resolveTeamUser(manager, Number(opt.teamId), 'random', !!nextStage.excludeTeamLeader);
-                }
+                throw new Error('El subequipo seleccionado no tiene integrantes activos disponibles.');
             }
         }
 
@@ -3241,6 +3228,7 @@ export class ProductionService {
                 await this.createStageStates(manager, submission, firstSubflowStage, preferredAssigneeUserId, customNotification);
                 return;
             }
+            throw new Error(`El sub-flujo configurado en la etapa "${targetStage.name}" no tiene etapas activas disponibles.`);
         }
 
         // Si la etapa ya fue ejecutada y aprobada previamente en esta solicitud (ej. tras regresar a una etapa previa),
@@ -3284,14 +3272,14 @@ export class ProductionService {
                                     formId: null
                                 };
                             }
-                        });
+                        }).filter((m: any) => m.userId > 0);
                     }
                 } catch (e) {
                     console.error("Error parsing AssigneeUserIds JSON:", e);
                 }
             }
             if (assigneeMappings.length === 0) {
-                assigneeMappings = [{ userId: targetStage.assigneeUserId || 1, formId: null }];
+                throw new Error(`La etapa "${targetStage.name}" está configurada para múltiples usuarios pero no tiene usuarios asignados válidos.`);
             }
         } else if (targetStage.assigneeType === 'team' && targetStage.assigneeTeamId) {
 
@@ -3301,7 +3289,7 @@ export class ProductionService {
             if (teamUsers.length > 0) {
                 assigneeMappings = teamUsers.map((u: any) => ({ userId: u.id, formId: targetStage.formIdToFill || null }));
             } else {
-                assigneeMappings = [{ userId: targetStage.assigneeUserId || 1, formId: null }];
+                throw new Error(`El equipo asignado a la etapa "${targetStage.name}" no tiene usuarios activos disponibles.`);
             }
         } else {
             let assigneeUserId: number | null = null;
@@ -3311,7 +3299,7 @@ export class ProductionService {
                 assigneeUserId = submission.requesterUserId;
             } else if (targetStage.assigneeType === 'requester_boss') {
                 const requester = await userRepo.findOne({ where: { id: submission.requesterUserId } });
-                assigneeUserId = requester?.bossId || targetStage.assigneeUserId || 1;
+                assigneeUserId = requester?.bossId || null;
             } else if (targetStage.assigneeType === 'previous_stage_actioner') {
                 const prevApproved = await stateRepo.findOne({
                     where: { submissionId: submission.id, status: 'Approved' },
@@ -3329,10 +3317,8 @@ export class ProductionService {
                     if (actioner?.teamId) {
                         assigneeUserId = await this.resolveTeamUser(manager, actioner.teamId, 'random', !!targetStage.excludeTeamLeader, actionerId);
                     } else {
-                        assigneeUserId = actionerId;
+                        throw new Error(`El usuario de la etapa anterior no pertenece a ningún equipo para asignar la etapa "${targetStage.name}".`);
                     }
-                } else {
-                    assigneeUserId = targetStage.assigneeUserId || submission.requesterUserId || 1;
                 }
             } else if (targetStage.assigneeType === 'team_leader' && targetStage.assigneeTeamId) {
                 assigneeUserId = await this.resolveTeamUser(manager, targetStage.assigneeTeamId, 'leader');
@@ -3359,25 +3345,18 @@ export class ProductionService {
                     const randomIndex = Math.floor(Math.random() * candidates.length);
                     assigneeUserId = candidates[randomIndex].id;
                 } else {
-                    const subteam = await manager.getRepository(Subteam).findOne({
-                        where: { id: targetStage.assigneeSubteamId },
-                        relations: ['leader']
-                    });
-                    if (subteam?.leader && (subteam.leader.status === 1 || subteam.leader.status === undefined)) {
-                        assigneeUserId = subteam.leader.id;
-                    } else if (targetStage.assigneeTeamId) {
-                        assigneeUserId = await this.resolveTeamUser(manager, targetStage.assigneeTeamId, 'random', !!targetStage.excludeTeamLeader);
-                    }
+                    throw new Error(`El subequipo asignado a la etapa "${targetStage.name}" no tiene integrantes activos disponibles.`);
                 }
             } else if (targetStage.assigneeType === 'team_random' && targetStage.assigneeTeamId) {
                 assigneeUserId = await this.resolveTeamUser(manager, targetStage.assigneeTeamId, 'random', !!targetStage.excludeTeamLeader);
             } else if (targetStage.assigneeType === 'team_workload' && targetStage.assigneeTeamId) {
                 assigneeUserId = await this.resolveTeamUser(manager, targetStage.assigneeTeamId, 'workload', !!targetStage.excludeTeamLeader);
-            } else if (targetStage.assigneeType === 'subflow' || targetStage.assigneeType === 'chosen_by_previous_stage') {
-                assigneeUserId = targetStage.assigneeUserId || submission.requesterUserId || 1;
             }
-            if (!assigneeUserId) assigneeUserId = 1;
-            assigneeMappings = [{ userId: assigneeUserId, formId: null }];
+
+            if (!assigneeUserId) {
+                throw new Error(`No se pudo determinar el usuario responsable para la etapa "${targetStage.name}" (tipo de asignación: ${targetStage.assigneeType}). Verifique la configuración del flujo.`);
+            }
+            assigneeMappings = [{ userId: Number(assigneeUserId), formId: null }];
         }
 
         for (const mapping of assigneeMappings) {
@@ -3777,7 +3756,7 @@ export class ProductionService {
                     multiFormsConfig = Array.isArray(parsed) ? parsed : (parsed.multiFormsConfig || []);
                 } catch(e) {}
             }
-            const isMultiFormsStage = multiFormsConfig.length > 0 && (multiFormsConfig[0].sourceFormId !== undefined || multiFormsConfig[0].targetFormIdToFill !== undefined || multiFormsConfig[0].targetSubflowFormId !== undefined);
+            const isMultiFormsStage = multiFormsConfig.length > 0 && (multiFormsConfig[0].sourceFormId !== undefined || multiFormsConfig[0].targetFormIdToFill !== undefined || multiFormsConfig[0].targetSubflowFormId !== undefined || multiFormsConfig[0].targetSubflowWorkflowId !== undefined);
 
             const lastBoundaryState = [...priorSubStates].reverse().find(
                 cs => cs.stageId !== stage.id || cs.status === 'Returned' || cs.status === 'Rejected'
@@ -3848,15 +3827,24 @@ export class ProductionService {
 
                 if (isInitialDispatch && activatedConfigs.length > 0) {
                     for (const cfg of activatedConfigs) {
-                        const targetType = cfg.targetType || (cfg.targetSubflowFormId ? 'subflow' : (cfg.assignedTeamId ? 'team_random' : 'user'));
+                        const targetType = cfg.targetType || (cfg.targetSubflowWorkflowId || cfg.targetSubflowFormId ? 'subflow' : (cfg.assignedTeamId ? 'team_random' : 'user'));
 
-                        if (targetType === 'subflow' || cfg.targetSubflowFormId) {
-                            const subflowTargetId = cfg.targetSubflowFormId || cfg.sourceFormId;
+                        if (targetType === 'subflow' || cfg.targetSubflowWorkflowId || cfg.targetSubflowFormId) {
+                            const subflowTargetId = cfg.targetSubflowWorkflowId || cfg.targetSubflowFormId || cfg.sourceFormId;
                             if (subflowTargetId) {
+                                const targetWorkflow = await manager.getRepository(DynamicWorkflow).findOne({ where: { id: subflowTargetId } });
+                                let childFormId = cfg.sourceFormId || submission.formId;
+                                let childWfId: number | null = targetWorkflow ? targetWorkflow.id : null;
 
-                                const isForm = await manager.getRepository(DynamicForm).findOne({ where: { id: subflowTargetId } });
-                                let childFormId = isForm ? isForm.id : (cfg.sourceFormId || submission.formId);
-                                let childWfId = isForm ? isForm.workflowId : subflowTargetId;
+                                if (!targetWorkflow) {
+                                    const isForm = await manager.getRepository(DynamicForm).findOne({ where: { id: subflowTargetId } });
+                                    if (isForm) {
+                                        childFormId = isForm.id;
+                                        childWfId = isForm.workflowId || null;
+                                    } else {
+                                        childWfId = subflowTargetId;
+                                    }
+                                }
 
                                 if (cfg.sourceFormId) {
                                     const srcForm = await manager.getRepository(DynamicForm).findOne({ where: { id: cfg.sourceFormId } });
@@ -3872,13 +3860,19 @@ export class ProductionService {
                                 });
                                 const savedChildSub = await subRepo.save(childSub);
 
-                                const childStages = await stageRepo.find({
-                                    where: [
-                                        { workflowId: childWfId || -1, isDeleted: false },
-                                        { formId: childFormId, isDeleted: false }
-                                    ],
-                                    order: { stepOrder: 'ASC' }
-                                });
+                                let childStages = childWfId
+                                    ? await stageRepo.find({
+                                        where: { workflowId: childWfId, isDeleted: false },
+                                        order: { stepOrder: 'ASC' }
+                                    })
+                                    : [];
+
+                                if (childStages.length === 0 && childFormId) {
+                                    childStages = await stageRepo.find({
+                                        where: { formId: childFormId, isDeleted: false },
+                                        order: { stepOrder: 'ASC' }
+                                    });
+                                }
 
                                 if (childStages.length > 0) {
                                     const firstChildStage = childStages[0];
@@ -3886,30 +3880,7 @@ export class ProductionService {
                                     await subRepo.save(savedChildSub);
                                     await this.createStageStates(manager, savedChildSub, firstChildStage);
                                 } else {
-
-                                    let targetUserId = cfg.assignedUserId;
-                                    if (!targetUserId && cfg.assignedTeamId) {
-                                        targetUserId = await this.resolveTeamUser(manager, cfg.assignedTeamId, cfg.targetType === 'team_leader' ? 'leader' : 'random');
-                                    }
-                                    if (!targetUserId) targetUserId = 1;
-
-                                    const childState = stateRepo.create({
-                                        submissionId: savedChildSub.id,
-                                        stageId: stage.id,
-                                        assignedUserId: targetUserId,
-                                        customFormIdToFill: cfg.targetFormIdToFill || null,
-                                        status: 'Pending'
-                                    });
-                                    await stateRepo.save(childState);
-                                    try {
-                                        await notificationService.createNotification(
-                                            targetUserId,
-                                            'Nueva Tarea de Flujo Asignada',
-                                            `Se te ha asignado una tarea para la solicitud #${savedChildSub.id} (${submission.form.name})`,
-                                            'info',
-                                            savedChildSub.id
-                                        );
-                                    } catch(e) {}
+                                    throw new Error(`El sub-flujo configurado (ID: ${subflowTargetId}) para la etapa "${stage.name}" no existe o no tiene etapas activas configuradas.`);
                                 }
                             }
                         } else if (targetType === 'team_random' || targetType === 'team_leader' || cfg.assignedTeamId) {
@@ -3936,7 +3907,10 @@ export class ProductionService {
                                 console.error('Error sending notification:', err);
                             }
                         } else {
-                            const recipientUserId = cfg.assignedUserId || 1;
+                            const recipientUserId = cfg.assignedUserId;
+                            if (!recipientUserId) {
+                                throw new Error(`La configuración de la etapa "${stage.name}" no tiene un usuario responsable asignado.`);
+                            }
                             const customFormIdToFill = cfg.targetFormIdToFill || null;
                             const recipientState = stateRepo.create({
                                 submissionId: submission.id,

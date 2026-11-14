@@ -67,17 +67,20 @@ export class ProductionAssignmentService {
 
     if (strategy === 'leader') {
       if (team && team.leaderId) {
-        const leaderUser = await manager.getRepository(User).findOne({ where: { id: team.leaderId, status: 1 } });
-        if (leaderUser) {
+        const leaderUser = await manager.getRepository(User).findOne({ where: { id: team.leaderId } });
+        if (leaderUser && (leaderUser.status === 1 || leaderUser.status === null || leaderUser.status === undefined)) {
           return leaderUser.id;
         }
       }
+      throw new Error(`El equipo "${team?.name || teamId}" no tiene un líder activo configurado para asignar la etapa.`);
     }
 
     const teamUsers = await manager.getRepository(User).find({
       where: { teamId, status: 1 }
     });
-    if (!teamUsers || teamUsers.length === 0) return 1;
+    if (!teamUsers || teamUsers.length === 0) {
+      throw new Error(`El equipo "${team?.name || teamId}" no tiene usuarios activos disponibles para asignar la etapa.`);
+    }
 
     // If excludeLeader is requested, filter out the team leader and/or previous actioner
     let candidates = teamUsers;
@@ -93,7 +96,7 @@ export class ProductionAssignmentService {
       const randomIndex = Math.floor(Math.random() * candidates.length);
       return candidates[randomIndex].id;
     }
-    if (strategy === 'first' || strategy === 'leader') {
+    if (strategy === 'first') {
       return candidates[0].id;
     }
     const stateRepo = manager.getRepository(DynamicSubmissionWorkflowState);
