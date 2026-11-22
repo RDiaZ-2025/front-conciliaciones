@@ -1,4 +1,4 @@
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import axios from 'axios';
 import {
     BlobServiceClient,
@@ -67,52 +67,125 @@ export interface UpdateNewsScheduleDto {
 
 export class NocNewsSchedulerService {
 
-    private get extractNewsUrl(): string {
-        const url = process.env.N8N_AI_EXTRACT_NEWS_URL?.trim();
+    private static readonly AZEMBLIA_AUTOMATIONS = {
+        newsResearch: '/Automations/news-research/executions',
+        newsDraft: '/Automations/news-draft/executions',
+        newsImage: '/Automations/news-image/executions',
+        newsAdjustParagraph: '/Automations/news-adjust-paragraph/executions',
+        newsRegenerateImage: '/Automations/news-regenerate-image/executions',
+        newsAdjustArticle: '/Automations/news-adjust-article/executions'
+    } as const;
+
+    private get azembliaApiUrl(): string {
+        const url = process.env.AZEMBLIA_API_URL?.trim().replace(/\/+$/, '');
         if (!url) {
-            throw new Error('La variable de entorno N8N_AI_EXTRACT_NEWS_URL es requerida y no está configurada o es inválida.');
+            throw new Error('La variable de entorno AZEMBLIA_API_URL es requerida y no está configurada.');
         }
         return url;
     }
 
-    private get draftArticleUrl(): string {
-        const url = process.env.N8N_AI_DRAFT_ARTICLE_URL?.trim();
-        if (!url) {
-            throw new Error('La variable de entorno N8N_AI_DRAFT_ARTICLE_URL es requerida y no está configurada o es inválida.');
+    private get azembliaApiKey(): string {
+        const apiKey = process.env.AZEMBLIA_API_KEY?.trim();
+        if (!apiKey) {
+            throw new Error('La variable de entorno AZEMBLIA_API_KEY es requerida y no está configurada.');
         }
-        return url;
+        return apiKey;
     }
 
-    private get generateImageUrl(): string {
-        const url = process.env.N8N_AI_GENERATE_IMAGE_URL?.trim();
-        if (!url) {
-            throw new Error('La variable de entorno N8N_AI_GENERATE_IMAGE_URL es requerida y no está configurada o es inválida.');
+    private get azembliaCompanyId(): string {
+        const companyId = process.env.AZEMBLIA_COMPANY_ID?.trim();
+        if (!companyId) {
+            throw new Error('La variable de entorno AZEMBLIA_COMPANY_ID es requerida y no está configurada.');
         }
-        return url;
+        return companyId;
     }
 
-    private get adjustParagraphUrl(): string {
-        const url = process.env.N8N_AI_ADJUST_PARAGRAPH_URL?.trim();
-        if (!url) {
-            throw new Error('La variable de entorno N8N_AI_ADJUST_PARAGRAPH_URL es requerida y no está configurada o es inválida.');
+    private buildAzembliaUrl(endpointPath: string, reference?: string): string {
+        const url = new URL(`${this.azembliaApiUrl}${endpointPath}`);
+        url.searchParams.set('companyId', this.azembliaCompanyId);
+        if (reference && reference.trim()) {
+            url.searchParams.set('reference', reference.trim().slice(0, 256));
         }
-        return url;
+        return url.toString();
     }
 
-    private get regenerateImageUrl(): string {
-        const url = process.env.N8N_AI_REGENERATE_IMAGE_URL?.trim();
-        if (!url) {
-            throw new Error('La variable de entorno N8N_AI_REGENERATE_IMAGE_URL es requerida y no está configurada o es inválida.');
-        }
-        return url;
+    private formatDraftReference(draftId?: number | null): string | undefined {
+        if (!draftId) return undefined;
+        return `borrador-${draftId}`.slice(0, 256);
     }
 
-    private get adjustArticleUrl(): string {
-        const url = process.env.N8N_AI_ADJUST_ARTICLE_URL?.trim();
-        if (!url) {
-            throw new Error('La variable de entorno N8N_AI_ADJUST_ARTICLE_URL es requerida y no está configurada o es inválida.');
+    private getAzembliaHeaders(): Record<string, string> {
+        return {
+            'Content-Type': 'application/json',
+            'x-api-key': this.azembliaApiKey
+        };
+    }
+
+    private async callAzembliaAutomation(
+        endpointPath: string,
+        payload: any,
+        timeoutMs: number,
+        stepLabel: string,
+        reference?: string
+    ): Promise<any> {
+        const requestUrl = this.buildAzembliaUrl(endpointPath, reference);
+        const headers = this.getAzembliaHeaders();
+
+        try {
+            console.log(`📡 [Azemblia API][${stepLabel}] POST ${requestUrl}`);
+            console.log(`📦 [Azemblia Payload][${stepLabel}]:`, JSON.stringify(payload, null, 2));
+            const startTime = Date.now();
+            const response = await axios.post(requestUrl, payload, {
+                timeout: timeoutMs,
+                headers
+            });
+            const duration = Date.now() - startTime;
+            console.log(`✅ [Azemblia Response][${stepLabel}] (${duration}ms) Status: ${response.status}`);
+            console.log(`📥 [Azemblia Response Data][${stepLabel}]:`, JSON.stringify(response.data, null, 2));
+
+            return response.data?.output || response.data;
+        } catch (err: any) {
+            const status: number | undefined = err.response?.status;
+            const respData = err.response?.data;
+            const rawDetail =
+                typeof respData === 'string'
+                    ? respData
+                    : respData?.message || respData?.error || respData?.detail || err.message;
+
+            console.error(`❌ [Azemblia Error][${stepLabel}] POST ${requestUrl} failed:`, {
+                message: err.message,
+                status,
+                data: respData
+            });
+
+            let errorMessage: string;
+            let statusCode = 500;
+
+            if (status === 400) {
+                statusCode = 400;
+                const fullText = `${rawDetail || ''} ${typeof respData === 'object' ? JSON.stringify(respData) : ''}`.toLowerCase();
+                if (fullText.includes('insufficient balance')) {
+                    errorMessage = `${stepLabel}: Saldo insuficiente en Azemblia para ejecutar la generación con IA (no se realizó ningún cobro).`;
+                } else {
+                    errorMessage = `${stepLabel}: Solicitud inválida en Azemblia (400): ${rawDetail}`;
+                }
+            } else if (status === 401) {
+                statusCode = 401;
+                errorMessage = `${stepLabel}: Error de autenticación con la API de Azemblia (401). Verifique AZEMBLIA_API_KEY en el servidor.`;
+            } else if (status === 403) {
+                statusCode = 403;
+                errorMessage = `${stepLabel}: Esta automatización no está habilitada para la cuenta configurada en Azemblia (403).`;
+            } else if (status && status >= 500) {
+                statusCode = 502;
+                errorMessage = `${stepLabel}: Error temporal en el servidor de Azemblia (${status}). No se realizó cobro; puede reintentar.`;
+            } else {
+                errorMessage = `${stepLabel}: ${rawDetail}`;
+            }
+
+            const wrappedError: any = new Error(errorMessage);
+            wrappedError.statusCode = statusCode;
+            throw wrappedError;
         }
-        return url;
     }
 
     private get repository(): Repository<NocNewsScheduler> {
@@ -287,7 +360,7 @@ export class NocNewsSchedulerService {
             topic: dto.topic,
             userInstructions: dto.userInstructions || null,
             sources: JSON.stringify(dto.sources || []),
-            url: this.extractNewsUrl,
+            url: `${this.azembliaApiUrl}${NocNewsSchedulerService.AZEMBLIA_AUTOMATIONS.newsResearch}`,
             method: 'POST',
             startAt: startAtDate,
             intervalMinutes: intervalMin,
@@ -542,7 +615,7 @@ export class NocNewsSchedulerService {
         }
         const draftRepo = AppDataSource.getRepository(NocNewsDraft);
         const drafts = await draftRepo.find({
-            where: { scheduleId },
+            where: { scheduleId, status: Not('generating') },
             order: { createdAt: 'DESC' }
         });
 
@@ -652,11 +725,6 @@ export class NocNewsSchedulerService {
     }
 
     async aiAdjustParagraph(draftId: number, blockId: string, currentText: string, instruction: string) {
-        const n8nAdjustParagraphUrl = this.adjustParagraphUrl;
-        if (!n8nAdjustParagraphUrl) {
-            throw new Error('La variable de entorno N8N_AI_ADJUST_PARAGRAPH_URL no está configurada en el servidor');
-        }
-
         const payload = {
             environment: 'prod',
             async: false,
@@ -668,46 +736,28 @@ export class NocNewsSchedulerService {
             }
         };
 
-        try {
-            console.log(`📡 [N8N Request][AI Adjust Paragraph] Sending to: ${n8nAdjustParagraphUrl}`);
-            console.log(`📦 [N8N Payload][AI Adjust Paragraph]:`, JSON.stringify(payload, null, 2));
-            const startTime = Date.now();
-            const response = await axios.post(n8nAdjustParagraphUrl, payload, {
-                timeout: 45000,
-                headers: this.getN8nHeaders()
-            });
-            const duration = Date.now() - startTime;
-            console.log(`✅ [N8N Response][AI Adjust Paragraph] (${duration}ms) Status: ${response.status}`);
-            console.log(`📥 [N8N Response Data][AI Adjust Paragraph]:`, JSON.stringify(response.data, null, 2));
+        const result = await this.callAzembliaAutomation(
+            NocNewsSchedulerService.AZEMBLIA_AUTOMATIONS.newsAdjustParagraph,
+            payload,
+            45000,
+            'Ajuste de Párrafo con IA',
+            this.formatDraftReference(draftId)
+        );
 
-            const result = response.data?.output || response.data;
-            if (result && result.adjustedText) {
-                return {
-                    success: true,
-                    blockId: result.blockId || blockId,
-                    adjustedText: result.adjustedText,
-                    plainText: result.plainText || result.adjustedText.replace(/<[^>]*>?/gm, '').trim(),
-                    instructionApplied: result.instructionApplied || instruction,
-                    timestamp: new Date().toISOString()
-                };
-            }
-            throw new Error('La respuesta de n8n no devolvió el texto ajustado (adjustedText)');
-        } catch (err: any) {
-            console.error(`❌ [N8N Error][AI Adjust Paragraph] Webhook call to ${n8nAdjustParagraphUrl} failed:`, {
-                message: err.message,
-                status: err.response?.status,
-                data: err.response?.data
-            });
-            throw new Error(`Error al ajustar párrafo con IA: ${err.response?.data?.message || err.message}`);
+        if (result && result.adjustedText) {
+            return {
+                success: true,
+                blockId: result.blockId || blockId,
+                adjustedText: result.adjustedText,
+                plainText: result.plainText || result.adjustedText.replace(/<[^>]*>?/gm, '').trim(),
+                instructionApplied: result.instructionApplied || instruction,
+                timestamp: new Date().toISOString()
+            };
         }
+        throw new Error('La respuesta de Azemblia no devolvió el texto ajustado (adjustedText)');
     }
 
     async aiAdjustArticle(draftId: number, instruction: string, articleData: NewsArticleData) {
-        const n8nAdjustArticleUrl = this.adjustArticleUrl;
-        if (!n8nAdjustArticleUrl) {
-            throw new Error('La variable de entorno N8N_AI_ADJUST_ARTICLE_URL no está configurada en el servidor');
-        }
-
         const payload = {
             environment: 'prod',
             async: false,
@@ -718,48 +768,30 @@ export class NocNewsSchedulerService {
             }
         };
 
-        try {
-            console.log(`📡 [N8N Request][AI Adjust Article] Sending to: ${n8nAdjustArticleUrl}`);
-            console.log(`📦 [N8N Payload][AI Adjust Article]:`, JSON.stringify(payload, null, 2));
-            const startTime = Date.now();
-            const response = await axios.post(n8nAdjustArticleUrl, payload, {
-                timeout: 60000,
-                headers: this.getN8nHeaders()
-            });
-            const duration = Date.now() - startTime;
-            console.log(`✅ [N8N Response][AI Adjust Article] (${duration}ms) Status: ${response.status}`);
-            console.log(`📥 [N8N Response Data][AI Adjust Article]:`, JSON.stringify(response.data, null, 2));
+        const result = await this.callAzembliaAutomation(
+            NocNewsSchedulerService.AZEMBLIA_AUTOMATIONS.newsAdjustArticle,
+            payload,
+            60000,
+            'Ajuste de Artículo con IA',
+            this.formatDraftReference(draftId)
+        );
 
-            const result = response.data?.output || response.data;
-            if (result && result.adjustedArticle) {
-                const finalArticle = result.adjustedArticle;
-                if (draftId) {
-                    await this.updateDraft(draftId, finalArticle);
-                }
-                return {
-                    success: true,
-                    adjustedArticle: finalArticle,
-                    summary: result.summary || `Se aplicó la directriz "${instruction}" a todo el artículo.`,
-                    timestamp: new Date().toISOString()
-                };
+        if (result && result.adjustedArticle) {
+            const finalArticle = result.adjustedArticle;
+            if (draftId) {
+                await this.updateDraft(draftId, finalArticle);
             }
-            throw new Error('La respuesta de n8n no devolvió el artículo ajustado (adjustedArticle)');
-        } catch (err: any) {
-            console.error(`❌ [N8N Error][AI Adjust Article] Webhook call to ${n8nAdjustArticleUrl} failed:`, {
-                message: err.message,
-                status: err.response?.status,
-                data: err.response?.data
-            });
-            throw new Error(`Error al ajustar artículo con IA: ${err.response?.data?.message || err.message}`);
+            return {
+                success: true,
+                adjustedArticle: finalArticle,
+                summary: result.summary || `Se aplicó la directriz "${instruction}" a todo el artículo.`,
+                timestamp: new Date().toISOString()
+            };
         }
+        throw new Error('La respuesta de Azemblia no devolvió el artículo ajustado (adjustedArticle)');
     }
 
     async aiRegenerateImage(draftId: number, blockId: string, currentUrl: string, prompt: string, instruction: string) {
-        const n8nRegenerateImageUrl = this.regenerateImageUrl;
-        if (!n8nRegenerateImageUrl) {
-            throw new Error('La variable de entorno N8N_AI_REGENERATE_IMAGE_URL no está configurada en el servidor');
-        }
-
         const payload = {
             environment: 'prod',
             async: false,
@@ -772,41 +804,28 @@ export class NocNewsSchedulerService {
             }
         };
 
-        try {
-            console.log(`📡 [N8N Request][AI Regenerate Image] Sending to: ${n8nRegenerateImageUrl}`);
-            console.log(`📦 [N8N Payload][AI Regenerate Image]:`, JSON.stringify(payload, null, 2));
-            const startTime = Date.now();
-            const response = await axios.post(n8nRegenerateImageUrl, payload, {
-                timeout: 120000,
-                headers: this.getN8nHeaders()
-            });
-            const duration = Date.now() - startTime;
-            console.log(`✅ [N8N Response][AI Regenerate Image] (${duration}ms) Status: ${response.status}`);
-            console.log(`📥 [N8N Response Data][AI Regenerate Image]:`, JSON.stringify(response.data, null, 2));
+        const result = await this.callAzembliaAutomation(
+            NocNewsSchedulerService.AZEMBLIA_AUTOMATIONS.newsRegenerateImage,
+            payload,
+            120000,
+            'Regeneración de Imagen con IA',
+            this.formatDraftReference(draftId)
+        );
 
-            const result = response.data?.output || response.data;
-            if (result && (result.newUrl || result.imageUrl || result.url)) {
-                const tempUrl = result.newUrl || result.imageUrl || result.url;
+        if (result && (result.newUrl || result.imageUrl || result.url)) {
+            const tempUrl = result.newUrl || result.imageUrl || result.url;
 
-                const persistentUrl = await this.persistImage(tempUrl, 'noc-news-regen');
-                return {
-                    success: true,
-                    blockId: result.blockId || blockId,
-                    newUrl: persistentUrl,
-                    prompt: result.prompt || result.newPrompt || prompt,
-                    caption: result.caption || `Imagen adaptada por IA según la directriz: "${instruction}".`,
-                    timestamp: new Date().toISOString()
-                };
-            }
-            throw new Error('La respuesta de n8n no devolvió una URL válida de imagen (newUrl/imageUrl)');
-        } catch (err: any) {
-            console.error(`❌ [N8N Error][AI Regenerate Image] Webhook call to ${n8nRegenerateImageUrl} failed:`, {
-                message: err.message,
-                status: err.response?.status,
-                data: err.response?.data
-            });
-            throw new Error(`Error al regenerar imagen con IA: ${err.response?.data?.message || err.message}`);
+            const persistentUrl = await this.persistImage(tempUrl, 'noc-news-regen');
+            return {
+                success: true,
+                blockId: result.blockId || blockId,
+                newUrl: persistentUrl,
+                prompt: result.prompt || result.newPrompt || prompt,
+                caption: result.caption || `Imagen adaptada por IA según la directriz: "${instruction}".`,
+                timestamp: new Date().toISOString()
+            };
         }
+        throw new Error('La respuesta de Azemblia no devolvió una URL válida de imagen (newUrl/imageUrl)');
     }
 
     async publishDraftToCmsOnly(draftId: number) {
@@ -950,22 +969,7 @@ export class NocNewsSchedulerService {
         return { success: true, message: 'Preview is now handled locally by structured draft editor' };
     }
 
-    private getN8nHeaders(): Record<string, string> {
-        const headers: Record<string, string> = {
-            'Content-Type': 'application/json'
-        };
-        const secret = process.env.N8N_WEBHOOK_SECRET || process.env.WEBHOOK_SECRET;
-        if (secret) {
-            headers['X-Webhook-Secret'] = secret;
-        }
-        return headers;
-    }
-
-    private async step1_extractNews(topic: string, userInstructions: string | null, sources: string[]): Promise<any> {
-        if (!this.extractNewsUrl) {
-            throw new Error('La variable de entorno N8N_AI_EXTRACT_NEWS_URL no está configurada en el servidor');
-        }
-
+    private async step1_extractNews(topic: string, userInstructions: string | null, sources: string[], reference?: string): Promise<any> {
         const payload = {
             environment: 'prod',
             async: false,
@@ -975,38 +979,22 @@ export class NocNewsSchedulerService {
                 sources
             }
         };
-        try {
-            console.log(`📡 [N8N Request][Pipeline Step 1 - Extract News] Sending to: ${this.extractNewsUrl}`);
-            console.log(`📦 [N8N Payload][Pipeline Step 1]:`, JSON.stringify(payload, null, 2));
-            const startTime = Date.now();
-            const response = await axios.post(this.extractNewsUrl, payload, {
-                timeout: 180000,
-                headers: this.getN8nHeaders()
-            });
-            const duration = Date.now() - startTime;
-            console.log(`✅ [N8N Response][Pipeline Step 1] (${duration}ms) Status: ${response.status}`);
-            console.log(`📥 [N8N Response Data][Pipeline Step 1]:`, JSON.stringify(response.data, null, 2));
 
-            const result = response.data?.output || response.data;
-            if (result && (result.rawFacts || result.keyContext)) {
-                return result;
-            }
-            throw new Error('La respuesta de n8n no contiene la estructura esperada (rawFacts/keyContext)');
-        } catch (err: any) {
-            console.error(`❌ [N8N Error][Pipeline Step 1 - Extract News] Webhook call failed:`, {
-                message: err.message,
-                status: err.response?.status,
-                data: err.response?.data
-            });
-            throw new Error(`Error en el Paso 1 (Extracción de Noticias con IA): ${err.response?.data?.message || err.message}`);
+        const result = await this.callAzembliaAutomation(
+            NocNewsSchedulerService.AZEMBLIA_AUTOMATIONS.newsResearch,
+            payload,
+            180000,
+            'Paso 1 - Extracción de Noticias con IA',
+            reference
+        );
+
+        if (result && (result.rawFacts || result.keyContext)) {
+            return result;
         }
+        throw new Error('La respuesta de Azemblia no contiene la estructura esperada (rawFacts/keyContext)');
     }
 
-    private async step2_draftArticle(topic: string, userInstructions: string | null, extractedData: any): Promise<any> {
-        if (!this.draftArticleUrl) {
-            throw new Error('La variable de entorno N8N_AI_DRAFT_ARTICLE_URL no está configurada en el servidor');
-        }
-
+    private async step2_draftArticle(topic: string, userInstructions: string | null, extractedData: any, reference?: string): Promise<any> {
         const payload = {
             environment: 'prod',
             async: false,
@@ -1018,31 +1006,19 @@ export class NocNewsSchedulerService {
                 userInstructions
             }
         };
-        try {
-            console.log(`📡 [N8N Request][Pipeline Step 2 - Draft Article] Sending to: ${this.draftArticleUrl}`);
-            console.log(`📦 [N8N Payload][Pipeline Step 2]:`, JSON.stringify(payload, null, 2));
-            const startTime = Date.now();
-            const response = await axios.post(this.draftArticleUrl, payload, {
-                timeout: 180000,
-                headers: this.getN8nHeaders()
-            });
-            const duration = Date.now() - startTime;
-            console.log(`✅ [N8N Response][Pipeline Step 2] (${duration}ms) Status: ${response.status}`);
-            console.log(`📥 [N8N Response Data][Pipeline Step 2]:`, JSON.stringify(response.data, null, 2));
 
-            const result = response.data?.output || response.data;
-            if (result && result.title && (result.blocks || result.paragraphs)) {
-                return result;
-            }
-            throw new Error('La respuesta de n8n no contiene la estructura esperada del artículo (title/blocks)');
-        } catch (err: any) {
-            console.error('❌ [AI Pipeline] Error en paso 2 (Periodista IA):', {
-                message: err.message,
-                status: err.response?.status,
-                data: err.response?.data
-            });
-            throw new Error(`Error en el Paso 2 (Redacción Periodística con IA): ${err.response?.data?.message || err.message}`);
+        const result = await this.callAzembliaAutomation(
+            NocNewsSchedulerService.AZEMBLIA_AUTOMATIONS.newsDraft,
+            payload,
+            180000,
+            'Paso 2 - Redacción Periodística con IA',
+            reference
+        );
+
+        if (result && result.title && (result.blocks || result.paragraphs)) {
+            return result;
         }
+        throw new Error('La respuesta de Azemblia no contiene la estructura esperada del artículo (title/blocks)');
     }
 
     private isSafeImageUrl(urlStr: string): boolean {
@@ -1154,11 +1130,7 @@ export class NocNewsSchedulerService {
         return permanentUrl;
     }
 
-    private async step3_generateImage(prompt: string, contextTopic: string): Promise<string> {
-        if (!this.generateImageUrl) {
-            throw new Error('La variable de entorno N8N_AI_GENERATE_IMAGE_URL no está configurada en el servidor');
-        }
-
+    private async step3_generateImage(prompt: string, contextTopic: string, reference?: string): Promise<string> {
         const payload = {
             environment: 'prod',
             async: false,
@@ -1167,34 +1139,21 @@ export class NocNewsSchedulerService {
                 context: contextTopic
             }
         };
-        try {
-            console.log(`📡 [N8N Request][Pipeline Step 3 - Generate Image] Sending to: ${this.generateImageUrl}`);
-            console.log(`📦 [N8N Payload][Pipeline Step 3]:`, JSON.stringify(payload, null, 2));
-            const startTime = Date.now();
-            const response = await axios.post(this.generateImageUrl, payload, {
-                timeout: 120000,
-                headers: this.getN8nHeaders()
-            });
-            const duration = Date.now() - startTime;
-            console.log(`✅ [N8N Response][Pipeline Step 3] (${duration}ms) Status: ${response.status}`);
-            console.log(`📥 [N8N Response Data][Pipeline Step 3]:`, JSON.stringify(response.data, null, 2));
 
-            const result = response.data?.output || response.data;
-            if (result && (result.imageUrl || result.url)) {
-                const tempUrl = result.imageUrl || result.url;
+        const result = await this.callAzembliaAutomation(
+            NocNewsSchedulerService.AZEMBLIA_AUTOMATIONS.newsImage,
+            payload,
+            120000,
+            'Paso 3 - Generación de Imagen con IA',
+            reference
+        );
 
-                const persistentUrl = await this.persistImage(tempUrl, 'noc-news');
-                return persistentUrl;
-            }
-            throw new Error('La respuesta de n8n no devolvió una URL válida de imagen (imageUrl/url)');
-        } catch (err: any) {
-            console.error(`❌ [N8N Error][Pipeline Step 3 - Generate Image] Webhook call failed:`, {
-                message: err.message,
-                status: err.response?.status,
-                data: err.response?.data
-            });
-            throw new Error(`Error en el Paso 3 (Generación de Imagen con IA): ${err.response?.data?.message || err.message}`);
+        if (result && (result.imageUrl || result.url)) {
+            const tempUrl = result.imageUrl || result.url;
+            const persistentUrl = await this.persistImage(tempUrl, 'noc-news');
+            return persistentUrl;
         }
+        throw new Error('La respuesta de Azemblia no devolvió una URL válida de imagen (imageUrl/url)');
     }
 
     async executeSchedule(id: string) {
@@ -1208,63 +1167,97 @@ export class NocNewsSchedulerService {
 
         const sources = schedule.sources ? (typeof schedule.sources === 'string' ? JSON.parse(schedule.sources) : schedule.sources) : [];
 
+        // Pre-crear el borrador para obtener su ID único y enviar la misma reference (borrador-<id>)
+        // en todos los pasos de generación y futuros ajustes de la misma noticia.
+        const draftRepo = AppDataSource.getRepository(NocNewsDraft);
+        const initialDraft = await draftRepo.save(
+            draftRepo.create({
+                scheduleId: schedule.id,
+                title: schedule.name,
+                subtitle: null,
+                content: null,
+                path: null,
+                status: 'generating',
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                publishedAt: null
+            })
+        );
+        const reference = this.formatDraftReference(initialDraft.id);
+
         const startTime = Date.now();
-        console.log(`🚀 [Pipeline Orchestrator] Starting news generation for Schedule ID: "${id}" | Name: "${schedule.name}" | Topic: "${schedule.topic}"`);
+        console.log(`🚀 [Pipeline Orchestrator] Starting news generation for Schedule ID: "${id}" | Draft Ref: "${reference}" | Name: "${schedule.name}" | Topic: "${schedule.topic}"`);
 
-        const extractedData = await this.step1_extractNews(
-            schedule.topic,
-            schedule.userInstructions,
-            Array.isArray(sources) ? sources : []
-        );
-        console.log(`📋 [Pipeline Step 1 Done] Facts extracted: ${extractedData.rawFacts?.length || 0} | Context length: ${extractedData.keyContext?.length || 0} chars`);
-
-        const draftedContent = await this.step2_draftArticle(
-            schedule.topic,
-            schedule.userInstructions,
-            extractedData
-        );
-        console.log(`✍️ [Pipeline Step 2 Done] Article drafted: "${draftedContent.title}" | Proposed blocks: ${draftedContent.blocks?.length || 0}`);
-
-        console.log(`🎨 [Pipeline Step 3 Starting] Generating cover image with prompt: "${draftedContent.coverImagePrompt}"`);
-        const coverImageUrl = await this.step3_generateImage(
-            draftedContent.coverImagePrompt || `Photojournalism of ${schedule.topic}`,
-            schedule.topic
-        );
-        console.log(`🖼️ [Pipeline Step 3 Cover Done] Cover URL: ${coverImageUrl}`);
-
+        let extractedData: any;
+        let draftedContent: any;
+        let coverImageUrl: string;
         const blocks: NewsBlock[] = [];
-        let blockIndex = 1;
 
-        if (draftedContent.blocks && Array.isArray(draftedContent.blocks)) {
-            for (const b of draftedContent.blocks) {
-                if (b.type === 'image') {
-                    const imgPrompt = b.content || b.prompt || `Photojournalism illustrating ${schedule.topic}`;
-                    console.log(`🎨 [Pipeline Block Image] Generating in-article image #${blockIndex} with prompt: "${imgPrompt}"`);
-                    const imgUrl = await this.step3_generateImage(imgPrompt, schedule.topic);
-                    blocks.push({
-                        id: `block-${blockIndex++}`,
-                        type: 'image',
-                        url: imgUrl,
-                        prompt: imgPrompt,
-                        caption: b.caption || `Fotografía ilustrativa generada con IA.`,
-                        alt: `Ilustración periodística para ${draftedContent.title}`
-                    });
-                } else {
+        try {
+            extractedData = await this.step1_extractNews(
+                schedule.topic,
+                schedule.userInstructions,
+                Array.isArray(sources) ? sources : [],
+                reference
+            );
+            console.log(`📋 [Pipeline Step 1 Done] Facts extracted: ${extractedData.rawFacts?.length || 0} | Context length: ${extractedData.keyContext?.length || 0} chars`);
+
+            draftedContent = await this.step2_draftArticle(
+                schedule.topic,
+                schedule.userInstructions,
+                extractedData,
+                reference
+            );
+            console.log(`✍️ [Pipeline Step 2 Done] Article drafted: "${draftedContent.title}" | Proposed blocks: ${draftedContent.blocks?.length || 0}`);
+
+            console.log(`🎨 [Pipeline Step 3 Starting] Generating cover image with prompt: "${draftedContent.coverImagePrompt}"`);
+            coverImageUrl = await this.step3_generateImage(
+                draftedContent.coverImagePrompt || `Photojournalism of ${schedule.topic}`,
+                schedule.topic,
+                reference
+            );
+            console.log(`🖼️ [Pipeline Step 3 Cover Done] Cover URL: ${coverImageUrl}`);
+
+            let blockIndex = 1;
+
+            if (draftedContent.blocks && Array.isArray(draftedContent.blocks)) {
+                for (const b of draftedContent.blocks) {
+                    if (b.type === 'image') {
+                        const imgPrompt = b.content || b.prompt || `Photojournalism illustrating ${schedule.topic}`;
+                        console.log(`🎨 [Pipeline Block Image] Generating in-article image #${blockIndex} with prompt: "${imgPrompt}"`);
+                        const imgUrl = await this.step3_generateImage(imgPrompt, schedule.topic, reference);
+                        blocks.push({
+                            id: `block-${blockIndex++}`,
+                            type: 'image',
+                            url: imgUrl,
+                            prompt: imgPrompt,
+                            caption: b.caption || `Fotografía ilustrativa generada con IA.`,
+                            alt: `Ilustración periodística para ${draftedContent.title}`
+                        });
+                    } else {
+                        blocks.push({
+                            id: `block-${blockIndex++}`,
+                            type: 'paragraph',
+                            content: b.content || b.text || ''
+                        });
+                    }
+                }
+            } else if (draftedContent.paragraphs && Array.isArray(draftedContent.paragraphs)) {
+                draftedContent.paragraphs.forEach((p: any) => {
                     blocks.push({
                         id: `block-${blockIndex++}`,
                         type: 'paragraph',
-                        content: b.content || b.text || ''
+                        content: p.text || p.content || p
                     });
-                }
-            }
-        } else if (draftedContent.paragraphs && Array.isArray(draftedContent.paragraphs)) {
-            draftedContent.paragraphs.forEach((p: any) => {
-                blocks.push({
-                    id: `block-${blockIndex++}`,
-                    type: 'paragraph',
-                    content: p.text || p.content || p
                 });
-            });
+            }
+        } catch (pipelineErr) {
+            try {
+                await draftRepo.delete({ id: initialDraft.id });
+            } catch (cleanupErr) {
+                console.error(`⚠️ [Pipeline Cleanup] Could not delete temporary draft ${initialDraft.id}:`, cleanupErr);
+            }
+            throw pipelineErr;
         }
 
         const createdArticleData: NewsArticleData = {
@@ -1300,19 +1293,13 @@ export class NocNewsSchedulerService {
 
         const updatedSchedule = await this.repository.save(schedule);
 
-        const draftRepo = AppDataSource.getRepository(NocNewsDraft);
-        const newDraft = draftRepo.create({
-            scheduleId: schedule.id,
-            title: createdArticleData.title,
-            subtitle: createdArticleData.subtitle,
-            content: JSON.stringify(createdArticleData),
-            path: null,
-            status: 'pending',
-            createdAt: now,
-            updatedAt: now,
-            publishedAt: null
-        });
-        let savedDraft = await draftRepo.save(newDraft);
+        initialDraft.title = createdArticleData.title;
+        initialDraft.subtitle = createdArticleData.subtitle;
+        initialDraft.content = JSON.stringify(createdArticleData);
+        initialDraft.path = null;
+        initialDraft.status = 'pending';
+        initialDraft.updatedAt = now;
+        let savedDraft = await draftRepo.save(initialDraft);
 
         const totalDurationSec = ((Date.now() - startTime) / 1000).toFixed(1);
         console.log(`✅ [Pipeline Completed] Draft ID: ${savedDraft.id} | Total Time: ${totalDurationSec}s | Next Run: ${nextRun ? nextRun.toISOString() : 'None'}`);

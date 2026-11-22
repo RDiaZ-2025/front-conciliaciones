@@ -189,8 +189,13 @@ export class NocNewsSchedulerController {
             res.status(400).json({ message: 'La instrucción en lenguaje natural es requerida' });
             return;
         }
-        const result = await schedulerService.aiAdjustParagraph(parseInt(id, 10), blockId, currentText || '', instruction);
-        res.status(200).json(result);
+        try {
+            const result = await schedulerService.aiAdjustParagraph(parseInt(id, 10), blockId, currentText || '', instruction);
+            res.status(200).json(result);
+        } catch (error: any) {
+            const status = error.statusCode || 500;
+            res.status(status).json({ success: false, message: error.message });
+        }
     });
 
     aiAdjustArticle = asyncHandler(async (req: Request, res: Response) => {
@@ -200,8 +205,13 @@ export class NocNewsSchedulerController {
             res.status(400).json({ message: 'La instrucción y la estructura del artículo son requeridas' });
             return;
         }
-        const result = await schedulerService.aiAdjustArticle(parseInt(id, 10), instruction, articleData);
-        res.status(200).json(result);
+        try {
+            const result = await schedulerService.aiAdjustArticle(parseInt(id, 10), instruction, articleData);
+            res.status(200).json(result);
+        } catch (error: any) {
+            const status = error.statusCode || 500;
+            res.status(status).json({ success: false, message: error.message });
+        }
     });
 
     aiRegenerateImage = asyncHandler(async (req: Request, res: Response) => {
@@ -211,13 +221,23 @@ export class NocNewsSchedulerController {
             res.status(400).json({ message: 'Se requiere una instrucción o prompt para la imagen' });
             return;
         }
-        const result = await schedulerService.aiRegenerateImage(parseInt(id, 10), blockId, currentUrl || '', prompt || '', instruction || '');
-        res.status(200).json(result);
+        try {
+            const result = await schedulerService.aiRegenerateImage(parseInt(id, 10), blockId, currentUrl || '', prompt || '', instruction || '');
+            res.status(200).json(result);
+        } catch (error: any) {
+            const status = error.statusCode || 500;
+            res.status(status).json({ success: false, message: error.message });
+        }
     });
 
     executeSchedule = asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
-        const result = await schedulerService.executeSchedule(id);
-        res.status(200).json(result);
+        try {
+            const result = await schedulerService.executeSchedule(id);
+            res.status(200).json(result);
+        } catch (error: any) {
+            const status = error.statusCode || 500;
+            res.status(status).json({ success: false, message: error.message });
+        }
     });
 }

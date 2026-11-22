@@ -237,36 +237,36 @@
       </div>
     </div>
 
-    <!-- Tarjeta 6: Pipeline IA (n8n Webhooks) -->
-    <div *ngIf="healthData.n8nPipeline as n8n" class="col-12 md:col-6 p-2">
+    <!-- Tarjeta 6: Pipeline IA (API Azemblia) -->
+    <div *ngIf="healthData.azembliaAi as azemblia" class="col-12 md:col-6 p-2">
       <div class="surface-card border-1 border-200 border-round-xl p-4 h-full flex flex-column justify-content-between shadow-1">
         <div>
           <div class="flex align-items-center justify-content-between mb-3">
             <span class="font-bold text-base text-900 flex align-items-center gap-2">
-              <lucide-icon name="sparkles" class="text-purple-500"></lucide-icon> Pipeline IA (n8n Webhooks)
+              <lucide-icon name="sparkles" class="text-purple-500"></lucide-icon> Pipeline IA (API Azemblia)
             </span>
-            <span [class]="n8n.configured ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'"
+            <span [class]="azemblia.configured ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'"
               class="text-xs font-bold px-2 py-1 border-round">
-              {{ n8n.configured ? 'Conectado' : 'Webhooks Pendientes' }}
+              {{ azemblia.configured ? 'Conectado' : 'Variables Pendientes' }}
             </span>
           </div>
           <div class="flex flex-column gap-2 text-sm text-700">
             <div class="flex justify-content-between pb-2 border-bottom-1 surface-border">
-              <span class="text-500">Estado de Webhooks:</span>
-              <span class="font-semibold" [class.text-green-600]="n8n.configured" [class.text-orange-600]="!n8n.configured">
-                {{ n8n.configured ? 'URLs configuradas' : 'Incompletas' }}
+              <span class="text-500">Estado de Integración:</span>
+              <span class="font-semibold" [class.text-green-600]="azemblia.configured" [class.text-orange-600]="!azemblia.configured">
+                {{ azemblia.configured ? 'Credenciales configuradas' : 'Incompletas' }}
               </span>
             </div>
-            <div *ngIf="!n8n.configured" class="flex flex-column gap-1 pt-1">
-              <span class="text-xs font-semibold text-orange-600">Webhooks pendientes en Azure Portal:</span>
+            <div *ngIf="!azemblia.configured" class="flex flex-column gap-1 pt-1">
+              <span class="text-xs font-semibold text-orange-600">Variables pendientes en Azure Portal:</span>
               <div class="flex flex-wrap gap-1">
-                <code *ngFor="let v of n8n.missingVars" class="text-xs bg-orange-50 text-orange-700 px-2 py-1 border-round border-1 border-orange-200">
+                <code *ngFor="let v of azemblia.missingVars" class="text-xs bg-orange-50 text-orange-700 px-2 py-1 border-round border-1 border-orange-200">
                   {{ v }}
                 </code>
               </div>
             </div>
-            <div *ngIf="n8n.configured" class="text-xs text-500 pt-1">
-              Los endpoints de extracción, redacción y generación de imágenes están configurados.
+            <div *ngIf="azemblia.configured" class="text-xs text-500 pt-1">
+              URL base, API Key y Company ID configurados para generación y edición de noticias con IA.
             </div>
           </div>
         </div>

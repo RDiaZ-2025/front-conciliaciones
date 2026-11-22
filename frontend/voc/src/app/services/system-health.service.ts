@@ -35,7 +35,7 @@ export interface SystemHealthResponse {
     configured: boolean;
     missingVars: string[];
   };
-  n8nPipeline?: {
+  azembliaAi?: {
     configured: boolean;
     missingVars: string[];
   };

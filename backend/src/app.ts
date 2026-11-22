@@ -169,8 +169,8 @@ const packageJson = (() => {
   }
 })();
 
-const APP_VERSION = packageJson?.version || '1.18.13';
-const APP_VERSION_DATE = packageJson?.versionDate || '2026-11-13';
+const APP_VERSION = packageJson?.version || '1.19.0';
+const APP_VERSION_DATE = packageJson?.versionDate || '2026-11-22';
 
 const getHealthPayload = () => {
   const mem = process.memoryUsage();
@@ -190,16 +190,13 @@ const getHealthPayload = () => {
   const missingBluestacks = bluestacksVars.filter(v => !process.env[v]?.trim());
   const bluestacksConfigured = missingBluestacks.length === 0;
 
-  const n8nVars = [
-    'N8N_AI_EXTRACT_NEWS_URL',
-    'N8N_AI_DRAFT_ARTICLE_URL',
-    'N8N_AI_GENERATE_IMAGE_URL',
-    'N8N_AI_ADJUST_PARAGRAPH_URL',
-    'N8N_AI_REGENERATE_IMAGE_URL',
-    'N8N_AI_ADJUST_ARTICLE_URL'
+  const azembliaAiVars = [
+    'AZEMBLIA_API_URL',
+    'AZEMBLIA_API_KEY',
+    'AZEMBLIA_COMPANY_ID'
   ];
-  const missingN8n = n8nVars.filter(v => !process.env[v]?.trim());
-  const n8nConfigured = missingN8n.length === 0;
+  const missingAzembliaAi = azembliaAiVars.filter(v => !process.env[v]?.trim());
+  const azembliaAiConfigured = missingAzembliaAi.length === 0;
 
   return {
     success: true,
@@ -224,9 +221,9 @@ const getHealthPayload = () => {
       configured: bluestacksConfigured,
       missingVars: missingBluestacks
     },
-    n8nPipeline: {
-      configured: n8nConfigured,
-      missingVars: missingN8n
+    azembliaAi: {
+      configured: azembliaAiConfigured,
+      missingVars: missingAzembliaAi
     },
     system: {
       nodeVersion: process.version,

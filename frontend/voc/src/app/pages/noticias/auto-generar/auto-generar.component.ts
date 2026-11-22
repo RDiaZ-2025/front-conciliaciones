@@ -716,7 +716,7 @@ export class AutoGenerarComponent implements OnInit {
         this.messageService.add({
           severity: 'error',
           summary: 'Error IA',
-          detail: 'No se pudo procesar el ajuste del párrafo.'
+          detail: err?.error?.message || 'No se pudo procesar el ajuste del párrafo.'
         });
       }
     });
@@ -776,7 +776,7 @@ export class AutoGenerarComponent implements OnInit {
         this.messageService.add({
           severity: 'error',
           summary: 'Error IA',
-          detail: 'No se pudo regenerar la imagen.'
+          detail: err?.error?.message || 'No se pudo regenerar la imagen.'
         });
       }
     });
@@ -835,7 +835,7 @@ export class AutoGenerarComponent implements OnInit {
         this.messageService.add({
           severity: 'error',
           summary: 'Error IA',
-          detail: 'No se pudo regenerar la portada.'
+          detail: err?.error?.message || 'No se pudo regenerar la portada.'
         });
       }
     });
@@ -881,7 +881,7 @@ export class AutoGenerarComponent implements OnInit {
         this.messageService.add({
           severity: 'error',
           summary: 'Error IA',
-          detail: 'No se pudo aplicar el ajuste global.'
+          detail: err?.error?.message || 'No se pudo aplicar el ajuste global.'
         });
       }
     });
