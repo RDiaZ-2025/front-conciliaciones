@@ -1,4 +1,4 @@
-import { ProductionRequest, Product, User, FormatType, RightsDuration, Team, Subteam, SubteamUser, ProductionRequestType, DynamicWorkflow, DynamicForm, DynamicFormField, DynamicFormSubmission, DynamicFormFieldValue, DynamicWorkflowStage, DynamicSubmissionWorkflowState, DynamicSubmissionComment } from "../models";
+import { ProductionRequest, Product, User, FormatType, RightsDuration, Team, Subteam, SubteamUser, ProductionRequestType, DynamicWorkflow, DynamicForm, DynamicFormField, DynamicFormSubmission, DynamicFormFieldValue, DynamicWorkflowStage, DynamicSubmissionWorkflowState, DynamicSubmissionComment, DynamicStageUserPriority, StagePriorityLevel } from "../models";
 import { AppDataSource } from "../config/typeorm.config";
 import { NotificationService } from './notification.service';
 import { ProductionRequestHistoryService } from './production_request_history.service';
@@ -1237,12 +1237,149 @@ export class ProductionService {
         return new Set<number>([rootSub.formId]);
     }
 
+    async ensureStagePrioritiesTable(): Promise<void> {
+        if (!AppDataSource.isInitialized) return;
+        await AppDataSource.query(`
+            IF OBJECT_ID(N'[dbo].[DynamicStageUserPriorities]', N'U') IS NULL
+            BEGIN
+                CREATE TABLE [DynamicStageUserPriorities] (
+                    [Id] int NOT NULL IDENTITY(1,1),
+                    [SubmissionId] int NOT NULL,
+                    [StateId] int NOT NULL,
+                    [StageId] int NULL,
+                    [UserId] int NOT NULL,
+                    [Priority] nvarchar(20) NOT NULL,
+                    [CreatedAt] datetime NOT NULL CONSTRAINT [DF_DynamicStageUserPriorities_CreatedAt] DEFAULT getdate(),
+                    [UpdatedAt] datetime NOT NULL CONSTRAINT [DF_DynamicStageUserPriorities_UpdatedAt] DEFAULT getdate(),
+                    CONSTRAINT [PK_DynamicStageUserPriorities] PRIMARY KEY ([Id]),
+                    CONSTRAINT [UQ_DynamicStageUserPriorities_State_User] UNIQUE ([StateId], [UserId]),
+                    CONSTRAINT [CK_DynamicStageUserPriorities_Priority] CHECK ([Priority] IN (N'Alta', N'Media', N'Baja')),
+                    CONSTRAINT [FK_DynamicStageUserPriorities_Submission] FOREIGN KEY ([SubmissionId]) REFERENCES [DynamicFormSubmissions]([Id]),
+                    CONSTRAINT [FK_DynamicStageUserPriorities_State] FOREIGN KEY ([StateId]) REFERENCES [DynamicSubmissionWorkflowState]([Id]),
+                    CONSTRAINT [FK_DynamicStageUserPriorities_User] FOREIGN KEY ([UserId]) REFERENCES [Users]([Id])
+                );
+                CREATE INDEX [IX_DynamicStageUserPriorities_User_State] ON [DynamicStageUserPriorities]([UserId], [StateId]);
+                CREATE INDEX [IX_DynamicStageUserPriorities_SubmissionId] ON [DynamicStageUserPriorities]([SubmissionId]);
+            END
+        `);
+    }
+
+    private normalizeStagePriority(raw: unknown): StagePriorityLevel | null {
+        if (raw === null || raw === undefined || String(raw).trim() === '') {
+            return null;
+        }
+        const normalized = String(raw).trim().toLowerCase();
+        if (normalized === 'alta' || normalized === 'high') return 'Alta';
+        if (normalized === 'media' || normalized === 'medium') return 'Media';
+        if (normalized === 'baja' || normalized === 'low') return 'Baja';
+        const err: any = new Error('Prioridad inválida. Los valores permitidos son: Alta, Media, Baja o null.');
+        err.statusCode = 400;
+        throw err;
+    }
+
+    private getPrioritySortWeight(priority: StagePriorityLevel | null | undefined): number {
+        if (priority === 'Alta') return 1;
+        if (priority === 'Media') return 2;
+        if (priority === 'Baja') return 3;
+        return 4;
+    }
+
+    private async loadStagePrioritiesMap(
+        stateIds: number[]
+    ): Promise<Map<number, { userId: number; priority: StagePriorityLevel; updatedAt: Date }>> {
+        const result = new Map<number, { userId: number; priority: StagePriorityLevel; updatedAt: Date }>();
+        const uniqueIds = Array.from(new Set(stateIds.filter(id => Number.isFinite(id) && id > 0)));
+        if (uniqueIds.length === 0) return result;
+
+        try {
+            const prioRepo = AppDataSource.getRepository(DynamicStageUserPriority);
+            const rows = await prioRepo.find({
+                where: { stateId: In(uniqueIds) }
+            });
+            for (const row of rows) {
+                result.set(Number(row.stateId), {
+                    userId: Number(row.userId),
+                    priority: row.priority,
+                    updatedAt: row.updatedAt
+                });
+            }
+        } catch (err: any) {
+            console.warn('⚠️ [StagePriorities] No se pudieron cargar prioridades por etapa:', err?.message || err);
+        }
+        return result;
+    }
+
+    async setStagePriority(stateId: number, userId: number, rawPriority: unknown) {
+        if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
+
+        const priority = this.normalizeStagePriority(rawPriority);
+        const stateRepo = AppDataSource.getRepository(DynamicSubmissionWorkflowState);
+        const state = await stateRepo.findOne({ where: { id: stateId } });
+        if (!state) {
+            const err: any = new Error('Etapa de solicitud no encontrada.');
+            err.statusCode = 404;
+            throw err;
+        }
+
+        if (Number(state.assignedUserId) !== Number(userId)) {
+            const err: any = new Error('Solo el usuario asignado a esta etapa puede establecer o modificar su prioridad.');
+            err.statusCode = 403;
+            throw err;
+        }
+
+        if (state.status !== 'Pending') {
+            const err: any = new Error('Solo se puede establecer o modificar la prioridad mientras la etapa está pendiente.');
+            err.statusCode = 400;
+            throw err;
+        }
+
+        const prioRepo = AppDataSource.getRepository(DynamicStageUserPriority);
+        const existing = await prioRepo.findOne({
+            where: { stateId: state.id, userId }
+        });
+
+        if (priority === null) {
+            if (existing) {
+                await prioRepo.remove(existing);
+            }
+            return {
+                success: true,
+                stateId: state.id,
+                submissionId: state.submissionId,
+                priority: null
+            };
+        }
+
+        if (existing) {
+            existing.priority = priority;
+            await prioRepo.save(existing);
+        } else {
+            const created = prioRepo.create({
+                submissionId: state.submissionId,
+                stateId: state.id,
+                stageId: state.stageId || null,
+                userId,
+                priority
+            });
+            await prioRepo.save(created);
+        }
+
+        return {
+            success: true,
+            stateId: state.id,
+            submissionId: state.submissionId,
+            priority
+        };
+    }
+
     private buildHistoryStages(
         currentSub: DynamicFormSubmission,
         parentSubmissions: DynamicFormSubmission[],
         allStatesToInclude: DynamicSubmissionWorkflowState[],
         allValuesToInclude: DynamicFormFieldValue[],
-        allComments: any[]
+        allComments: any[],
+        stagePrioritiesMap?: Map<number, { userId: number; priority: StagePriorityLevel; updatedAt: Date }>,
+        viewerUserId?: number
     ) {
         const initialFormIds = this.getInitialFormIds(currentSub, parentSubmissions);
         const rootRequesterId = parentSubmissions.length > 0 ? parentSubmissions[0].requesterUserId : currentSub.requesterUserId;
@@ -1343,6 +1480,14 @@ export class ProductionService {
                 }
             }
 
+            const priorityRecord = stagePrioritiesMap?.get(Number(cState.id));
+            const isOwnerPriority = !!(priorityRecord && Number(priorityRecord.userId) === Number(cState.assignedUserId));
+            const canShowStagePriority = isOwnerPriority && (
+                cState.status !== 'Pending' ||
+                (viewerUserId !== undefined && Number(cState.assignedUserId) === Number(viewerUserId))
+            );
+            const stagePriority = canShowStagePriority ? priorityRecord!.priority : null;
+
             return {
                 stateId: cState.id,
                 stageId: cState.stageId || cState.stage?.id || null,
@@ -1356,6 +1501,7 @@ export class ProductionService {
                 actionedByUserEmail: user?.email || '',
                 actionedAt: cState.updatedAt,
                 status: stateStatus,
+                priority: stagePriority,
                 notes: hasDuplicateNoteInComments ? null : cState.notes,
                 comments: stageComments,
                 values: (() => {
@@ -1494,7 +1640,7 @@ export class ProductionService {
         return states;
     }
 
-    async getSubmissionDetails(submissionId: number) {
+    async getSubmissionDetails(submissionId: number, viewerUserId?: number) {
         if (!AppDataSource.isInitialized) throw new Error('Base de datos no disponible');
         const subRepo = AppDataSource.getRepository(DynamicFormSubmission);
         const valRepo = AppDataSource.getRepository(DynamicFormFieldValue);
@@ -1535,7 +1681,16 @@ export class ProductionService {
         const allComments = await this.getSubmissionComments(treeIds);
 
         const parentSubmissions = await this.getAncestorSubmissions(sub.id);
-        const historyStages = this.buildHistoryStages(sub, parentSubmissions, allStatesToInclude, allValuesToInclude, allComments);
+        const stagePrioritiesMap = await this.loadStagePrioritiesMap(allStatesToInclude.map(s => s.id));
+        const historyStages = this.buildHistoryStages(
+            sub,
+            parentSubmissions,
+            allStatesToInclude,
+            allValuesToInclude,
+            allComments,
+            stagePrioritiesMap,
+            viewerUserId
+        );
         const initialParentSubmissions = parentSubmissions.filter(p => p.form && (p.form.isInitialForm || p.form.isEntryForm || !p.parentSubmissionId));
         const parentSubIds = initialParentSubmissions.map(p => p.id);
         const parentValues: any[] = [];
@@ -2451,6 +2606,7 @@ export class ProductionService {
         search?: string;
         forms?: string[];
         status?: string[];
+        priorities?: string[];
         dateFrom?: string;
         dateTo?: string;
         requester?: string;
@@ -2594,6 +2750,31 @@ export class ProductionService {
             });
         }
 
+        // 6. Cargar prioridades privadas por etapa del usuario autenticado, filtrar y ordenar por prioridad
+        const pendingPrioritiesMap = await this.loadStagePrioritiesMap(states.map(s => s.id));
+        const getViewerPendingPriority = (st: DynamicSubmissionWorkflowState): StagePriorityLevel | null => {
+            if (Number(st.assignedUserId) !== Number(userId)) return null;
+            const rec = pendingPrioritiesMap.get(Number(st.id));
+            if (!rec || Number(rec.userId) !== Number(userId)) return null;
+            return rec.priority;
+        };
+
+        if (options?.priorities && options.priorities.length > 0) {
+            const prioFilterSet = new Set(options.priorities.map(p => p.toLowerCase().trim()));
+            states = states.filter(s => {
+                const p = getViewerPendingPriority(s);
+                const key = p ? p.toLowerCase() : 'none';
+                return prioFilterSet.has(key);
+            });
+        }
+
+        // Ordenar automáticamente: Alta -> Media -> Baja -> Sin prioridad (y dentro del mismo nivel, más recientes primero)
+        states.sort((a, b) => {
+            const rankDiff = this.getPrioritySortWeight(getViewerPendingPriority(a)) - this.getPrioritySortWeight(getViewerPendingPriority(b));
+            if (rankDiff !== 0) return rankDiff;
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+
         const total = states.length;
         const page = options?.page ? Math.max(1, options.page) : 1;
         const limit = options?.limit ? Math.max(1, options.limit) : 4;
@@ -2623,6 +2804,7 @@ export class ProductionService {
                   this.getSubmissionComments(pagedFullTreeIds)
               ])
             : [[], [], []];
+        const allPrioritiesForPagedTrees = await this.loadStagePrioritiesMap(allStatesForPagedTrees.map(s => s.id));
 
         const results = [];
         for (const state of pagedStates) {
@@ -2698,7 +2880,9 @@ export class ProductionService {
                 parentSubmissions,
                 allStatesToInclude,
                 allValuesToInclude,
-                allComments
+                allComments,
+                allPrioritiesForPagedTrees,
+                userId
             );
 
             const initialParentSubmissions = parentSubmissions.filter(p => p.form && (p.form.isInitialForm || p.form.isEntryForm || !p.parentSubmissionId));
@@ -2934,8 +3118,11 @@ export class ProductionService {
                 cardFields,
                 requesterName: state.submission.requesterUser ? state.submission.requesterUser.name : 'Usuario',
                 requesterEmail: state.submission.requesterUser ? state.submission.requesterUser.email : '',
+                assignedUserId: state.assignedUserId,
                 assignedUserName: (state as any).assignedUser ? (state as any).assignedUser.name : 'Sin Asignar',
                 assignedUserEmail: (state as any).assignedUser ? (state as any).assignedUser.email : '',
+                priority: getViewerPendingPriority(state),
+                canEditPriority: Number(state.assignedUserId) === Number(userId),
                 createdAt: state.submission.createdAt,
                 assignedAt: state.createdAt,
                 stageName: stageName,

@@ -32,6 +32,7 @@ export * from './DynamicFormFieldValue';
 export * from './DynamicWorkflowStage';
 export * from './DynamicSubmissionWorkflowState';
 export * from './DynamicSubmissionComment';
+export * from './DynamicStageUserPriority';
 export * from './Customer';
 export * from './Subteam';
 export * from './SubteamUser';
@@ -85,6 +86,7 @@ import { DynamicFormFieldValue } from './DynamicFormFieldValue';
 import { DynamicWorkflowStage } from './DynamicWorkflowStage';
 import { DynamicSubmissionWorkflowState } from './DynamicSubmissionWorkflowState';
 import { DynamicSubmissionComment } from './DynamicSubmissionComment';
+import { DynamicStageUserPriority } from './DynamicStageUserPriority';
 import { Customer } from './Customer';
 import { Subteam } from './Subteam';
 import { SubteamUser } from './SubteamUser';
@@ -134,6 +136,7 @@ export const entities = [
   DynamicWorkflowStage,
   DynamicSubmissionWorkflowState,
   DynamicSubmissionComment,
+  DynamicStageUserPriority,
   Customer
 ];
 

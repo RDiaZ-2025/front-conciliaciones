@@ -11,6 +11,7 @@ import { CardModule } from 'primeng/card';
 import { ChipModule } from 'primeng/chip';
 import { TagModule } from 'primeng/tag';
 import { MenuModule } from 'primeng/menu';
+import { PopoverModule, Popover } from 'primeng/popover';
 import { ToastModule } from 'primeng/toast';
 import { PaginatorModule } from 'primeng/paginator';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -48,6 +49,7 @@ import { AssignImplementationDialogComponent } from '../production_2/assign-impl
 import { MaterialRegisterListDialogComponent } from '../production_2/material-register-list-dialog/material-register-list-dialog.component';
 
 import { CustomerAutocompleteComponent } from '../../components/customer-autocomplete/customer-autocomplete.component';
+import { RequestCardComponent } from '../../components/request-card/request-card.component';
 import { DatePickerModule } from 'primeng/datepicker';
 
 @Component({
@@ -60,6 +62,7 @@ import { DatePickerModule } from 'primeng/datepicker';
     CardModule,
     TagModule,
     MenuModule,
+    PopoverModule,
     ToastModule,
     ConfirmDialogModule,
     TooltipModule,
@@ -79,6 +82,7 @@ import { DatePickerModule } from 'primeng/datepicker';
     DatePickerModule,
     FormsModule,
     CustomerAutocompleteComponent,
+    RequestCardComponent,
     PaginatorModule
   ],
   providers: [DialogService, ConfirmationService, MessageService],
@@ -107,6 +111,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
   filterSearch = signal<string>('');
   filterSelectedForms = signal<string[]>([]);
   filterStatus = signal<string[]>([]);
+  filterPriority = signal<string[]>([]);
   filterDatePreset = signal<string>('all');
   filterDateFrom = signal<Date | null>(null);
   filterDateTo = signal<Date | null>(null);
@@ -147,6 +152,51 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     { label: 'Personalizado (Rango)', value: 'custom' }
   ];
 
+  // --- Prioridad por Etapa (Privada por Usuario/Etapa) ---
+  priorityFilterOptions = [
+    { label: 'Prioridad Alta', value: 'alta' },
+    { label: 'Prioridad Media', value: 'media' },
+    { label: 'Prioridad Baja', value: 'baja' },
+    { label: 'Sin prioridad', value: 'none' }
+  ];
+
+  priorityOptions: Array<{
+    value: 'Alta' | 'Media' | 'Baja';
+    label: string;
+    subtitle: string;
+    icon: string;
+    dotColor: string;
+    badgeClass: string;
+  }> = [
+    {
+      value: 'Alta',
+      label: 'Prioridad Alta',
+      subtitle: 'Atención inmediata requerida',
+      icon: 'alert-circle',
+      dotColor: '#dc2626',
+      badgeClass: 'priority-pill-alta'
+    },
+    {
+      value: 'Media',
+      label: 'Prioridad Media',
+      subtitle: 'En proceso normal de gestión',
+      icon: 'clock',
+      dotColor: '#d97706',
+      badgeClass: 'priority-pill-media'
+    },
+    {
+      value: 'Baja',
+      label: 'Prioridad Baja',
+      subtitle: 'Sin urgencia programada',
+      icon: 'check-circle',
+      dotColor: '#2563eb',
+      badgeClass: 'priority-pill-baja'
+    }
+  ];
+
+  priorityPopoverTask = signal<any>(null);
+  savingPriorityStateId = signal<number | null>(null);
+
   // --- Paginación Real del Servidor ---
   approvalsPage = signal<number>(1);
   approvalsLimit = signal<number>(4);
@@ -173,6 +223,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     if ((this.filterSearch() || '').trim()) count++;
     if ((this.filterSelectedForms() || []).length > 0) count++;
     if ((this.filterStatus() || []).length > 0) count++;
+    if ((this.filterPriority() || []).length > 0) count++;
     if (this.filterDatePreset() !== 'all') count++;
     if ((this.filterRequester() || '').trim()) count++;
     if (this.filterAllUsers()) count++;
@@ -238,6 +289,12 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.onFilterChange();
   }
 
+  onPriorityFilterChange(selected: string[] | null) {
+    this.filterPriority.set(Array.isArray(selected) ? selected : []);
+    this.approvalsPage.set(1);
+    this.loadPendingTasks();
+  }
+
   onFilterChange() {
     this.approvalsPage.set(1);
     this.historyPage.set(1);
@@ -249,6 +306,7 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     this.filterSearch.set('');
     this.filterSelectedForms.set([]);
     this.filterStatus.set([]);
+    this.filterPriority.set([]);
     this.filterDatePreset.set('all');
     this.filterDateFrom.set(null);
     this.filterDateTo.set(null);
@@ -1578,6 +1636,136 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     return 'text-secondary';
   }
 
+  openPriorityPopover(event: Event, task: any, popover: Popover) {
+    event.stopPropagation();
+    if (!task?.canEditPriority || !task?.stateId) return;
+    this.priorityPopoverTask.set(task);
+    popover.toggle(event);
+  }
+
+  private getPrioritySortWeight(priority: string | null | undefined): number {
+    const p = (priority || '').toLowerCase();
+    if (p === 'alta') return 1;
+    if (p === 'media') return 2;
+    if (p === 'baja') return 3;
+    return 4;
+  }
+
+  private sortPendingTasksByPriority(tasks: any[]): any[] {
+    return [...tasks].sort((a, b) => {
+      const diff = this.getPrioritySortWeight(a?.priority) - this.getPrioritySortWeight(b?.priority);
+      if (diff !== 0) return diff;
+      const timeA = a?.assignedAt ? new Date(a.assignedAt).getTime() : 0;
+      const timeB = b?.assignedAt ? new Date(b.assignedAt).getTime() : 0;
+      return timeB - timeA;
+    });
+  }
+
+  selectTaskPriority(priority: 'Alta' | 'Media' | 'Baja' | null, popover: Popover) {
+    const task = this.priorityPopoverTask();
+    if (!task?.stateId || !task?.canEditPriority) {
+      popover.hide();
+      return;
+    }
+
+    const previousPriority = task.priority || null;
+    if (previousPriority === priority) {
+      popover.hide();
+      return;
+    }
+
+    popover.hide();
+
+    // Actualización optimista inmediata (sin recargar todo el listado)
+    this.pendingTasks.update(tasks =>
+      this.sortPendingTasksByPriority(
+        tasks.map(t => t.stateId === task.stateId ? { ...t, priority } : t)
+      )
+    );
+    this.priorityPopoverTask.set({ ...task, priority });
+
+    this.productionService.setStagePriority(task.stateId, priority).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'success',
+          summary: priority ? `Prioridad ${priority}` : 'Prioridad removida',
+          detail: priority
+            ? `Se asignó prioridad ${priority.toLowerCase()} a tu etapa en la solicitud #${task.submissionId || task.id}.`
+            : `Se quitó la prioridad de tu etapa en la solicitud #${task.submissionId || task.id}.`
+        });
+      },
+      error: (err) => {
+        // Revertir al color/prioridad anterior si falla en BD
+        this.pendingTasks.update(tasks =>
+          this.sortPendingTasksByPriority(
+            tasks.map(t => t.stateId === task.stateId ? { ...t, priority: previousPriority } : t)
+          )
+        );
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error al actualizar prioridad',
+          detail: err?.error?.message || 'No se pudo actualizar la prioridad de la etapa. Se restauró la prioridad anterior.'
+        });
+      }
+    });
+  }
+
+  getPriorityCardClass(task: any): string {
+    const p = (task?.priority || '').toLowerCase();
+    if (p === 'alta') return 'priority-card-alta';
+    if (p === 'media') return 'priority-card-media';
+    if (p === 'baja') return 'priority-card-baja';
+    return '';
+  }
+
+  getPriorityBadgeClass(priority: string | null | undefined): string {
+    const p = (priority || '').toLowerCase();
+    if (p === 'alta') return 'priority-pill-alta';
+    if (p === 'media') return 'priority-pill-media';
+    if (p === 'baja') return 'priority-pill-baja';
+    return '';
+  }
+
+  getPriorityIcon(priority: string | null | undefined): string {
+    const p = (priority || '').toLowerCase();
+    if (p === 'alta') return 'alert-circle';
+    if (p === 'media') return 'clock';
+    if (p === 'baja') return 'check-circle';
+    return 'tag';
+  }
+
+  getPriorityLabel(priority: string | null | undefined): string {
+    const p = (priority || '').toLowerCase();
+    if (p === 'alta') return 'PRIORIDAD ALTA';
+    if (p === 'media') return 'PRIORIDAD MEDIA';
+    if (p === 'baja') return 'PRIORIDAD BAJA';
+    return '';
+  }
+
+  getPriorityTagColorClass(task: any): string {
+    const p = (task?.priority || '').toLowerCase();
+    if (p === 'alta') return 'priority-tag-alta';
+    if (p === 'media') return 'priority-tag-media';
+    if (p === 'baja') return 'priority-tag-baja';
+    return this.getFormIconColor(task);
+  }
+
+  getPriorityDotClass(task: any): string {
+    const p = (task?.priority || '').toLowerCase();
+    if (p === 'alta') return 'priority-dot-alta';
+    if (p === 'media') return 'priority-dot-media';
+    if (p === 'baja') return 'priority-dot-baja';
+    return 'priority-dot-none';
+  }
+
+  getPriorityTooltip(task: any): string {
+    if (!task?.canEditPriority) return '';
+    if (task.priority) {
+      return `Prioridad ${task.priority} (haz clic para cambiarla o quitarla)`;
+    }
+    return 'Haz clic para asignar prioridad a tu etapa';
+  }
+
   getStatusSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
     if (!status) return 'secondary';
     const s = status.toLowerCase();
@@ -2045,6 +2233,10 @@ export class ProductionBetaComponent implements OnInit, OnDestroy {
     const seq = ++this.tasksSeq;
     this.loadingTasks.set(true);
     const params = this.buildFilterParams(this.approvalsPage(), this.approvalsLimit());
+    const priorities = this.filterPriority();
+    if (priorities && priorities.length > 0) {
+      params.priority = priorities;
+    }
     this.tasksLoadSub = this.productionService.getPendingApprovals(params).subscribe({
       next: (res) => {
         if (seq !== this.tasksSeq) return;

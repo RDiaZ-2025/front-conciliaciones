@@ -255,6 +255,10 @@ export class ProductionService extends BaseApiService {
     return this.http.post<any>(`${this.apiUrl}/approvals/${stateId}/action`, { action, notes, formValues, consecutive, chosenNextAssignee, attachments });
   }
 
+  setStagePriority(stateId: number, priority: 'Alta' | 'Media' | 'Baja' | null): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/approvals/${stateId}/priority`, { priority });
+  }
+
   addApprovalComment(stateId: number, comment: string, attachments?: { name: string; url: string }[]): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/approvals/${stateId}/comment`, { comment, attachments });
   }

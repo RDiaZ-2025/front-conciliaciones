@@ -10,6 +10,7 @@ import app from './app';
 import { AppDataSource } from './config/typeorm.config';
 import { azureServiceBusSchedulerService } from './services/azure_service_bus_scheduler.service';
 import { NocNewsSchedulerService } from './services/noc_news_scheduler.service';
+import { ProductionService } from './services/production.service';
 
 const PORT = process.env.PORT || 22741;
 
@@ -19,6 +20,13 @@ const startServer = async (): Promise<void> => {
     try {
       await AppDataSource.initialize();
       console.log('✅ Base de datos conectada');
+
+      try {
+        const productionService = new ProductionService();
+        await productionService.ensureStagePrioritiesTable();
+      } catch (schemaErr) {
+        console.warn('⚠️ No se pudo verificar la tabla DynamicStageUserPriorities al iniciar:', schemaErr);
+      }
 
       const nocNewsSchedulerService = new NocNewsSchedulerService();
       azureServiceBusSchedulerService.startListener(async (scheduleId: string) => {

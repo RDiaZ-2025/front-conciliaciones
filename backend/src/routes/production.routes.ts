@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { ProductionController, getAllProductionRequests, getProductionRequestById, createProductionRequest, updateProductionRequest, getProducts, moveProductionRequest, updateStepGeneral, updateStepCustomer, updateStepCampaign, updateStepAudience, updateStepProduction, updateMaterialData, getFormFields, createSubmission, getSubmissions, adminGetForms, adminCreateForm, adminUpdateForm, adminDeleteForm, adminSaveFields, adminGetStages, adminSaveStages, adminGetWorkflows, adminCreateWorkflow, adminUpdateWorkflow, adminDeleteWorkflow, adminGetWorkflowStages, adminSaveWorkflowStages, getPendingApprovals, actionApproval, addApprovalComment, getSubmissionDetails, deleteSubmission, returnSubmissionToStage } from '../controllers/production.controller';
+import { ProductionController, getAllProductionRequests, getProductionRequestById, createProductionRequest, updateProductionRequest, getProducts, moveProductionRequest, updateStepGeneral, updateStepCustomer, updateStepCampaign, updateStepAudience, updateStepProduction, updateMaterialData, getFormFields, createSubmission, getSubmissions, adminGetForms, adminCreateForm, adminUpdateForm, adminDeleteForm, adminSaveFields, adminGetStages, adminSaveStages, adminGetWorkflows, adminCreateWorkflow, adminUpdateWorkflow, adminDeleteWorkflow, adminGetWorkflowStages, adminSaveWorkflowStages, getPendingApprovals, setStagePriority, actionApproval, addApprovalComment, getSubmissionDetails, deleteSubmission, returnSubmissionToStage } from '../controllers/production.controller';
 import { addMaterialRegister, getMaterialRegisters } from '../controllers/material_register.controller';
 import { RequestsReportController } from '../controllers/requests_report.controller';
 import { getProductionRequestHistory } from '../controllers/production_request_history.controller';
@@ -42,6 +42,7 @@ router.get('/admin/workflows/:id/stages', adminFormsAuth, adminGetWorkflowStages
 router.post('/admin/workflows/:id/stages', adminFormsAuth, adminSaveWorkflowStages);
 
 router.get('/approvals/pending', getPendingApprovals);
+router.put('/approvals/:stateId/priority', setStagePriority);
 router.post('/approvals/:stateId/action', actionApproval);
 router.post('/approvals/:stateId/comment', addApprovalComment);
 

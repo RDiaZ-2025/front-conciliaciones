@@ -1,0 +1,241 @@
+:host {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+::ng-deep {
+    p-card {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .request-card.p-card {
+        overflow: hidden;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        border: 1px solid var(--p-content-border-color, #e5e7eb);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+        .p-card-body {
+            padding: 0.75rem 1rem 0.9rem 1rem;
+            gap: 0.5rem;
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .p-card-content {
+            padding: 0.25rem 0;
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .p-card-footer {
+            margin-top: auto;
+        }
+    }
+
+    .card-line-truncate {
+        display: block;
+        min-width: 0;
+        flex: 1 1 auto;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .stage-tag-wrap,
+    .stage-tag-pill.p-tag {
+        max-width: 35% !important;
+        min-width: 0 !important;
+        flex-shrink: 1 !important;
+        overflow: hidden !important;
+
+        .p-tag-label {
+            display: block;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
+
+    .request-card .priority-top-bar {
+        height: 5px;
+        width: 100%;
+    }
+
+    .priority-card-alta.p-card {
+        border: 1.5px solid #fca5a5 !important;
+        .priority-top-bar {
+            background: linear-gradient(90deg, #dc2626, #ef4444);
+        }
+    }
+
+    .priority-card-media.p-card {
+        border: 1.5px solid #fcd34d !important;
+        .priority-top-bar {
+            background: linear-gradient(90deg, #d97706, #f59e0b);
+        }
+    }
+
+    .priority-card-baja.p-card {
+        border: 1.5px solid #93c5fd !important;
+        .priority-top-bar {
+            background: linear-gradient(90deg, #2563eb, #3b82f6);
+        }
+    }
+}
+
+.priority-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.15rem;
+    height: 2.15rem;
+    padding: 0;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background-color: #ffffff;
+    color: #6b7280;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+
+    &:hover {
+        transform: translateY(-1px);
+    }
+
+    &.is-saving {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+}
+
+.priority-btn-none {
+    border-color: #d1d5db;
+    color: #6b7280;
+    background-color: #f9fafb;
+
+    &:hover {
+        border-color: #9ca3af;
+        color: #374151;
+        background-color: #f3f4f6;
+    }
+}
+
+.priority-btn-alta {
+    border-color: #fca5a5;
+    background-color: #fef2f2;
+    color: #dc2626;
+
+    &:hover {
+        background-color: #fee2e2;
+        border-color: #f87171;
+    }
+}
+
+.priority-btn-media {
+    border-color: #fcd34d;
+    background-color: #fffbeb;
+    color: #d97706;
+
+    &:hover {
+        background-color: #fef3c7;
+        border-color: #fbbf24;
+    }
+}
+
+.priority-btn-baja {
+    border-color: #93c5fd;
+    background-color: #eff6ff;
+    color: #2563eb;
+
+    &:hover {
+        background-color: #dbeafe;
+        border-color: #60a5fa;
+    }
+}
+
+.priority-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.24rem 0.65rem;
+    border-radius: 999px;
+    border: none;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: filter 0.15s ease, transform 0.15s ease;
+
+    &:hover:not(:disabled) {
+        filter: brightness(0.95);
+        transform: translateY(-1px);
+    }
+
+    &:disabled {
+        cursor: default;
+        transform: none;
+    }
+}
+
+.priority-pill-alta {
+    background-color: #fee2e2;
+    color: #b91c1c;
+}
+
+.priority-pill-media {
+    background-color: #fef3c7;
+    color: #b45309;
+}
+
+.priority-pill-baja {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+}
+
+:host-context(.my-app-dark) {
+    .priority-tag-trigger:hover {
+        background-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .priority-tag-dot {
+        border-color: #1e293b;
+    }
+
+    .priority-pill-alta {
+        background-color: rgba(220, 38, 38, 0.22);
+        color: #fca5a5;
+    }
+
+    .priority-pill-media {
+        background-color: rgba(217, 119, 6, 0.22);
+        color: #fcd34d;
+    }
+
+    .priority-pill-baja {
+        background-color: rgba(37, 99, 235, 0.22);
+        color: #93c5fd;
+    }
+
+    ::ng-deep {
+        .priority-card-alta.p-card {
+            border-color: rgba(239, 68, 68, 0.55) !important;
+        }
+        .priority-card-media.p-card {
+            border-color: rgba(245, 158, 11, 0.55) !important;
+        }
+        .priority-card-baja.p-card {
+            border-color: rgba(59, 130, 246, 0.55) !important;
+        }
+    }
+}

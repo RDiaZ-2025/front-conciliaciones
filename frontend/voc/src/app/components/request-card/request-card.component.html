@@ -1,0 +1,172 @@
+<p-card [style]="{ height: '100%', display: 'flex', flexDirection: 'column' }"
+    [styleClass]="'flex flex-column h-full shadow-2 hover:shadow-6 transition-duration-200 border-round-xl request-card ' + priorityCardClass">
+    <ng-template pTemplate="header">
+        <div class="priority-top-bar" *ngIf="item?.priority"></div>
+        <div class="flex flex-column gap-2 px-3 pt-3 pb-0">
+            <div class="flex justify-content-between align-items-center gap-2 min-w-0">
+                <div class="flex align-items-center gap-2 flex-1 min-w-0">
+                    <lucide-icon
+                        [name]="formIcon"
+                        [class]="formIconColor + ' flex-shrink-0'"
+                        style="width: 1.25rem; height: 1.25rem;"></lucide-icon>
+                    <h3 class="text-lg font-bold m-0 card-line-truncate"
+                        [pTooltip]="item?.formName"
+                        tooltipPosition="top">
+                        {{ item?.formName }}
+                    </h3>
+                </div>
+                <p-tag
+                    class="stage-tag-wrap"
+                    styleClass="stage-tag-pill"
+                    [severity]="tagSeverity"
+                    [value]="tagLabel"
+                    [pTooltip]="tagLabel"
+                    tooltipPosition="top">
+                </p-tag>
+            </div>
+
+            <!-- Pill de Prioridad debajo del título (clickeable para cambiarla en pendientes) -->
+            <div *ngIf="item?.priority" class="flex align-items-center">
+                <button
+                    type="button"
+                    class="priority-pill"
+                    [ngClass]="priorityBadgeClass"
+                    [disabled]="!canEditPriority"
+                    [pTooltip]="priorityTooltip"
+                    tooltipPosition="top"
+                    (click)="priorityTagClick.emit($event)">
+                    <lucide-icon [name]="priorityIcon" style="width: 0.85rem; height: 0.85rem;"></lucide-icon>
+                    <span>{{ priorityLabel }}</span>
+                </button>
+            </div>
+        </div>
+    </ng-template>
+
+    <div class="flex flex-column gap-2 px-1 pt-1 pb-1 flex-grow-1" style="min-width: 0;">
+        <div class="flex align-items-center gap-2 text-sm text-600 min-w-0">
+            <lucide-icon name="hash" class="flex-shrink-0"></lucide-icon>
+            <span class="card-line-truncate" [pTooltip]="'ID Solicitud: #' + displayId" tooltipPosition="top">
+                ID Solicitud: <strong class="font-mono text-900">#{{ displayId }}</strong>
+            </span>
+        </div>
+
+        <!-- Campos configurados para mostrarse en tarjeta -->
+        <ng-container *ngIf="item?.cardFields && item.cardFields.length > 0">
+            <div *ngFor="let cf of item.cardFields" class="flex align-items-center gap-2 text-sm text-600 min-w-0">
+                <lucide-icon name="tag" class="text-primary flex-shrink-0" style="width: 1rem; height: 1rem;"></lucide-icon>
+                <span class="card-line-truncate" [pTooltip]="cf.label + ': ' + formatCardValue(cf)" tooltipPosition="top">
+                    {{ cf.label }}: <strong class="text-900">{{ formatCardValue(cf) }}</strong>
+                </span>
+            </div>
+        </ng-container>
+
+        <div class="flex align-items-center gap-2 text-sm text-600 min-w-0" *ngIf="item?.requesterName">
+            <lucide-icon name="user" class="flex-shrink-0"></lucide-icon>
+            <span class="card-line-truncate" [pTooltip]="'Solicitante: ' + item.requesterName" tooltipPosition="top">
+                Solicitante: <strong>{{ item.requesterName }}</strong>
+            </span>
+        </div>
+
+        <div class="flex align-items-center gap-2 text-sm text-600 min-w-0">
+            <lucide-icon name="calendar" class="flex-shrink-0"></lucide-icon>
+            <span class="card-line-truncate">
+                Solicitado: <strong>{{ item?.createdAt | date:'dd/MM/yyyy HH:mm' }}</strong>
+            </span>
+        </div>
+
+        <!-- Pendientes: fecha de asignación -->
+        <div class="flex align-items-center gap-2 text-sm text-600 min-w-0" *ngIf="mode === 'pending'">
+            <lucide-icon name="clock" class="flex-shrink-0"></lucide-icon>
+            <span class="card-line-truncate">
+                Asignado: <strong>{{ item?.assignedAt | date:'dd/MM/yyyy HH:mm' }}</strong>
+            </span>
+        </div>
+
+        <!-- Pendientes (Modo Admin): Asignado a -->
+        <div class="flex align-items-center gap-2 text-sm text-600 min-w-0" *ngIf="mode === 'pending' && showAssignedTo && item?.assignedUserName">
+            <lucide-icon name="user-check" class="text-primary flex-shrink-0"></lucide-icon>
+            <span class="card-line-truncate" [pTooltip]="'Asignado a: ' + item.assignedUserName" tooltipPosition="top">
+                Asignado a: <strong class="text-900">{{ item.assignedUserName }}</strong>
+            </span>
+        </div>
+
+        <!-- Historial: Etapa actual y Asignado a -->
+        <div class="flex align-items-center gap-2 text-sm text-600 min-w-0" *ngIf="mode === 'history'">
+            <lucide-icon name="cog" class="flex-shrink-0"></lucide-icon>
+            <span class="card-line-truncate" [pTooltip]="'Etapa actual: ' + (item?.stageName || '')" tooltipPosition="top">
+                Etapa actual: <strong>{{ item?.stageName }}</strong>
+            </span>
+        </div>
+
+        <div class="flex align-items-center gap-2 text-sm text-600 min-w-0" *ngIf="mode === 'history'">
+            <lucide-icon name="user-check" class="flex-shrink-0"></lucide-icon>
+            <div class="flex flex-column min-w-0 flex-1">
+                <span class="card-line-truncate" [pTooltip]="'Asignado a: ' + (item?.assigneeName || '')" tooltipPosition="top">
+                    Asignado a: <strong>{{ item?.assigneeName }}</strong>
+                </span>
+                <span *ngIf="item?.assigneeEmail" class="text-xs text-500 font-medium card-line-truncate" [pTooltip]="item.assigneeEmail" tooltipPosition="top">
+                    {{ item.assigneeEmail }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <ng-template pTemplate="footer">
+        <div class="flex justify-content-between align-items-center border-top-1 surface-border pt-2 pb-1 gap-2 flex-wrap">
+            <div class="flex align-items-center gap-1">
+                <p-button *ngIf="showDeleteButton"
+                          severity="danger"
+                          size="small"
+                          [outlined]="true"
+                          styleClass="px-2"
+                          aria-label="Eliminar solicitud"
+                          (onClick)="deleteClick.emit()"
+                          pTooltip="Eliminar solicitud (Solo Admin)">
+                    <lucide-icon name="trash-2" style="width: 1rem; height: 1rem;"></lucide-icon>
+                </p-button>
+                <p-button *ngIf="mode === 'history' && canReturn"
+                          severity="warn"
+                          size="small"
+                          [outlined]="true"
+                          styleClass="px-2"
+                          aria-label="Regresar a etapa previa"
+                          (onClick)="returnClick.emit()"
+                          pTooltip="Regresar a etapa previa">
+                    <lucide-icon name="undo-2" style="width: 1rem; height: 1rem;"></lucide-icon>
+                </p-button>
+            </div>
+            <div class="flex-1" *ngIf="!showDeleteButton && (mode !== 'history' || !canReturn)"></div>
+
+            <div class="flex align-items-center gap-1" *ngIf="mode === 'pending'">
+                <button *ngIf="canEditPriority"
+                        type="button"
+                        class="priority-action-btn"
+                        [ngClass]="priorityBtnClass"
+                        [class.is-saving]="isSavingPriority"
+                        [pTooltip]="priorityTooltip"
+                        tooltipPosition="top"
+                        aria-label="Asignar prioridad a esta etapa"
+                        (click)="priorityTagClick.emit($event)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <line x1="12" y1="5" x2="12" y2="14"></line>
+                        <line x1="12" y1="19" x2="12.01" y2="19"></line>
+                    </svg>
+                </button>
+                <p-button [severity]="isCorrection ? 'danger' : 'primary'"
+                          size="small"
+                          (onClick)="actionClick.emit()">
+                    <lucide-icon [name]="isCorrection ? 'edit-3' : 'search'" class="mr-2"></lucide-icon>
+                    {{ isCorrection ? 'Corregir Solicitud' : 'Revisar y Decidir' }}
+                </p-button>
+            </div>
+
+            <p-button *ngIf="mode === 'history'"
+                      size="small"
+                      [outlined]="true"
+                      (onClick)="detailsClick.emit()">
+                <lucide-icon name="eye" class="mr-2"></lucide-icon>
+                Ver Detalles
+            </p-button>
+        </div>
+    </ng-template>
+</p-card>

@@ -150,7 +150,8 @@ export const getSubmissions = asyncHandler(async (req: Request, res: Response): 
 
 export const getSubmissionDetails = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
     const { submissionId } = req.params;
-    const result = await productionService.getSubmissionDetails(parseInt(submissionId));
+    const viewerUserId = req.user?.userId;
+    const result = await productionService.getSubmissionDetails(parseInt(submissionId), viewerUserId);
     return res.json(result);
 });
 
@@ -263,6 +264,13 @@ export const getPendingApprovals = asyncHandler(async (req: Request, res: Respon
             ? req.query.status as string[]
             : (req.query.status as string).split(',').map(st => st.trim()).filter(Boolean);
     }
+    let priorities: string[] | undefined = undefined;
+    const rawPriorityParam = req.query.priority ?? req.query.priorities;
+    if (rawPriorityParam) {
+        priorities = Array.isArray(rawPriorityParam)
+            ? rawPriorityParam as string[]
+            : (rawPriorityParam as string).split(',').map(p => p.trim()).filter(Boolean);
+    }
     const dateFrom = req.query.dateFrom as string | undefined;
     const dateTo = req.query.dateTo as string | undefined;
     const requester = req.query.requester as string | undefined;
@@ -273,12 +281,34 @@ export const getPendingApprovals = asyncHandler(async (req: Request, res: Respon
         search,
         forms,
         status,
+        priorities,
         dateFrom,
         dateTo,
         requester,
         allUsers
     });
     return res.json(approvals);
+});
+
+export const setStagePriority = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ message: 'Usuario no autenticado' });
+
+    const stateId = parseInt(req.params.stateId, 10);
+    if (isNaN(stateId)) {
+        return res.status(400).json({ message: 'ID de etapa inválido' });
+    }
+
+    try {
+        const result = await productionService.setStagePriority(stateId, userId, req.body?.priority ?? null);
+        return res.json(result);
+    } catch (error: any) {
+        const status = error?.statusCode || 500;
+        return res.status(status).json({
+            success: false,
+            message: error?.message || 'Error al actualizar la prioridad de la etapa.'
+        });
+    }
 });
 
 export const actionApproval = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
