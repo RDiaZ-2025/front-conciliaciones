@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "1.19.1",
+  "version": "1.19.2",
   "versionDate": "2026-11-23",
   "description": "VOC Backend API",
   "main": "dist/server.js",

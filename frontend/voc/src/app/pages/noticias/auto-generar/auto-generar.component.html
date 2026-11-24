@@ -218,9 +218,9 @@
       </div>
 
       <!-- Publicación Automática -->
-      <div class="form-checkbox-field flex align-items-center gap-2 mt-2 p-3 border-round-lg border-1 border-main">
+      <div class="form-checkbox-field flex align-items-center gap-2 mt-2 p-3 border-round-lg border-1 border-main opacity-60">
         <input type="checkbox" id="publishAutomatically" formControlName="publishAutomatically" class="custom-checkbox" />
-        <label for="publishAutomatically" class="form-label cursor-pointer m-0 text-sm font-medium">Publicar automáticamente (sin revisión humana)</label>
+        <label for="publishAutomatically" class="form-label m-0 text-sm font-medium">Publicar automáticamente (deshabilitado: solo creación de borradores)</label>
       </div>
 
       <!-- Estado Activo/Inactivo -->
@@ -285,7 +285,8 @@
                 <lucide-icon name="file-up"></lucide-icon>
               </button>
               <button *ngIf="draft.status !== 'published'" pButton pRipple type="button" class="p-button-rounded p-button-success p-button-text" 
-                      pTooltip="Publicar Noticia en la Web Oficial" tooltipPosition="top" (click)="publishDraft(draft)">
+                      [disabled]="true"
+                      pTooltip="Publicación directa deshabilitada (solo creación de borradores)" tooltipPosition="top" (click)="publishDraft(draft)">
                 <lucide-icon name="globe"></lucide-icon>
               </button>
               <button *ngIf="draft.status !== 'published'" pButton pRipple type="button" class="p-button-rounded p-button-danger p-button-text" 
@@ -596,9 +597,10 @@
         </button>
         <button *ngIf="currentDraft?.status !== 'published'" pButton pRipple type="button" 
                 class="p-button-success border-round-lg"
+                [disabled]="true"
                 [loading]="publishingNews()"
                 (click)="publishCurrentDraft()" 
-                pTooltip="Publicar definitivamente en el sitio web oficial" tooltipPosition="top">
+                pTooltip="Publicación directa deshabilitada (solo creación de borradores)" tooltipPosition="top">
           <lucide-icon name="globe" class="mr-2" [size]="16"></lucide-icon>Publicar Noticia
         </button>
       </div>

@@ -120,7 +120,7 @@ export class AutoGenerarComponent implements OnInit {
       endAt: [''],
       weeklyRules: this.fb.array([]),
       isActive: [true],
-      publishAutomatically: [false]
+      publishAutomatically: [{ value: false, disabled: true }]
     });
 
     this.addWeeklyRule(1, '12:00');
@@ -305,7 +305,7 @@ export class AutoGenerarComponent implements OnInit {
       intervalMinutes: interval > 0 ? interval : 1440,
       scheduleConfig,
       isActive: formVal.isActive,
-      publishAutomatically: formVal.publishAutomatically
+      publishAutomatically: false
     };
 
     if (this.isEditMode && this.currentScheduleId) {
